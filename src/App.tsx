@@ -606,6 +606,10 @@ export default function App() {
 
     try {
       const worker = await createWorker('eng');
+      // PSM 11 = sparse text (better for monitor screens with isolated numbers)
+      await worker.setParameters({
+        tessedit_pageseg_mode: '11',
+      });
       const { data: { text } } = await worker.recognize(imageFile);
       await worker.terminate();
 
