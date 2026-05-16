@@ -1169,8 +1169,7 @@ export default function App() {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                e.target.value = ''; // Reset immediately, before processing
-                                handleMonitorScan(file); // Process async (don't await here)
+                                handleMonitorScan(file);
                               }
                             }}
                             className="hidden"
