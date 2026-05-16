@@ -609,12 +609,17 @@ export default function App() {
       const { data: { text } } = await worker.recognize(imageFile);
       await worker.terminate();
 
-      // Look for time patterns: MM:SS or M:SS
-      const timePattern = /(\d{1,2}):(\d{2})/g;
+      console.log('OCR extracted text:', text); // Debug output
+
+      // Look for time patterns: HH:MM:SS, MM:SS, M:SS, or H:MM:SS
+      // Try to find times in various formats
+      const timePattern = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
       const matches = [...text.matchAll(timePattern)];
 
+      console.log('Time matches found:', matches.length); // Debug output
+
       if (matches.length >= 2) {
-        // First match: elapsed time
+        // First match: elapsed time (take minutes and seconds, ignore hours if present)
         const elapsedMins = parseInt(matches[0][1]);
         const elapsedSecs = parseInt(matches[0][2]);
         
@@ -628,7 +633,8 @@ export default function App() {
         
         setIsProcessingOCR(false);
       } else {
-        setOcrError('Could not find two time values in the image. Please enter manually.');
+        // Show what was actually found for debugging
+        setOcrError(`Found ${matches.length} time value(s). Extracted text: "${text.substring(0, 100)}..." Please enter manually or try again with better lighting.`);
         setIsProcessingOCR(false);
       }
     } catch (error) {
@@ -1099,19 +1105,25 @@ export default function App() {
                             type="file"
                             accept="image/*"
                             capture="environment"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
-                              if (file) handleMonitorScan(file);
+                              if (file) {
+                                await handleMonitorScan(file);
+                                e.target.value = ''; // Reset after processing
+                              }
                             }}
                             className="hidden"
                             id="monitor-camera"
                           />
                           <div
-                            onClick={() => document.getElementById('monitor-camera')?.click()}
+                            onClick={() => {
+                              setOcrError(null);
+                              document.getElementById('monitor-camera')?.click();
+                            }}
                             className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2 cursor-pointer"
                           >
                             <Camera size={20} />
-                            Scan Monitor
+                            {photoTimestamp ? 'Scan Again' : 'Scan Monitor'}
                           </div>
                         </label>
                         <div className="text-neutral-400 text-sm">or enter manually below</div>
@@ -1124,8 +1136,10 @@ export default function App() {
                       )}
                       
                       {photoTimestamp && (
-                        <div className="bg-blue-50 text-blue-700 p-3 rounded-xl text-sm">
-                          ✓ Monitor scanned - times will auto-adjust when you start
+                        <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-sm space-y-1">
+                          <div className="font-bold">✓ Monitor scanned successfully</div>
+                          <div className="text-xs">Extracted: {catchupElapsed.mins}:{catchupElapsed.secs.toString().padStart(2, '0')} elapsed, {catchupRhythm.mins}:{catchupRhythm.secs.toString().padStart(2, '0')} CPR timer</div>
+                          <div className="text-xs">Times will auto-adjust when you start</div>
                         </div>
                       )}
                       
