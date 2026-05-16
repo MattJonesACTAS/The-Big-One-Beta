@@ -253,6 +253,7 @@ export default function App() {
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+  const [photoTimestamp, setPhotoTimestamp] = useState<number | null>(null);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -536,10 +537,22 @@ export default function App() {
 
   // --- Catchup Handlers ---
   const handleCatchupStart = () => {
-    const elapsedTotal = catchupElapsed.mins * 60 + catchupElapsed.secs;
-    const rhythmTotal = catchupRhythm.mins * 60 + catchupRhythm.secs;
+    let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
+    let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
+    
+    // If photo was taken, adjust times based on elapsed time since photo
+    if (photoTimestamp) {
+      const timeSincePhoto = Math.floor((Date.now() - photoTimestamp) / 1000); // seconds
+      
+      // Elapsed time: ADD time since photo (total case time keeps increasing)
+      adjustedElapsed += timeSincePhoto;
+      
+      // CPR counter: SUBTRACT time since photo (counting down to next rhythm check)
+      adjustedRhythm = Math.max(0, adjustedRhythm - timeSincePhoto);
+    }
+    
     const now = Date.now();
-    const startClockTime = now - (elapsedTotal * 1000);
+    const startClockTime = now - (adjustedElapsed * 1000);
 
     const initialTxs: Treatment[] = [];
     const baseClock = new Date(startClockTime);
@@ -569,23 +582,27 @@ export default function App() {
       ...INITIAL_STATE,
       running: true,
       startTime: now,
-      pausedTime: elapsedTotal * 1000,
-      elapsedSeconds: elapsedTotal,
-      rhythmCheckTarget: rhythmTotal,
-      cprRound: Math.floor(elapsedTotal / 120) + 1,
+      pausedTime: adjustedElapsed * 1000,
+      elapsedSeconds: adjustedElapsed,
+      rhythmCheckTarget: adjustedRhythm,
+      cprRound: Math.floor(adjustedElapsed / 120) + 1,
       shocks: priorCounts.shock,
       treatments: initialTxs,
-      catchupElapsed: elapsedTotal,
+      catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
       patientWeight: weightInput ? parseFloat(weightInput) : null,
       patientType: weightType
     });
     setShowCatchup(false);
+    setPhotoTimestamp(null); // Reset timestamp
   };
 
   const handleMonitorScan = async (imageFile: File) => {
     setIsProcessingOCR(true);
     setOcrError(null);
+    
+    // Record the timestamp when photo was taken
+    const timestamp = Date.now();
 
     try {
       const worker = await createWorker('eng');
@@ -607,6 +624,7 @@ export default function App() {
 
         setCatchupElapsed({ mins: elapsedMins, secs: elapsedSecs });
         setCatchupRhythm({ mins: rhythmMins, secs: rhythmSecs });
+        setPhotoTimestamp(timestamp);
         
         setIsProcessingOCR(false);
       } else {
@@ -1102,6 +1120,12 @@ export default function App() {
                       {ocrError && (
                         <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">
                           {ocrError}
+                        </div>
+                      )}
+                      
+                      {photoTimestamp && (
+                        <div className="bg-blue-50 text-blue-700 p-3 rounded-xl text-sm">
+                          ✓ Monitor scanned - times will auto-adjust when you start
                         </div>
                       )}
                       
