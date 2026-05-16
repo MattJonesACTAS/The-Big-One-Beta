@@ -609,7 +609,10 @@ export default function App() {
       const { data: { text } } = await worker.recognize(imageFile);
       await worker.terminate();
 
-      console.log('OCR extracted text:', text);
+      console.log('=== OCR DEBUG START ===');
+      console.log('Full extracted text:', text);
+      console.log('Text length:', text.length);
+      console.log('=== OCR DEBUG END ===');
 
       // Try multiple time pattern formats
       const times: Array<{mins: number, secs: number}> = [];
@@ -617,6 +620,8 @@ export default function App() {
       // Pattern 1: HH:MM:SS or MM:SS with colons
       const colonPattern = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
       const colonMatches = [...text.matchAll(colonPattern)];
+      
+      console.log('Colon pattern matches:', colonMatches.map(m => m[0]));
       
       colonMatches.forEach(match => {
         if (match[3]) {
@@ -635,6 +640,8 @@ export default function App() {
       const compactPattern = /\b0*(\d{2})(\d{2})(\d{2})\b/g;
       const compactMatches = [...text.matchAll(compactPattern)];
       
+      console.log('Compact pattern matches:', compactMatches.map(m => m[0]));
+      
       compactMatches.forEach(match => {
         const hours = parseInt(match[1]);
         const mins = parseInt(match[2]);
@@ -645,7 +652,7 @@ export default function App() {
         }
       });
 
-      console.log('Times found:', times);
+      console.log('All times found:', times);
 
       // Identify CPR timer: should be ≤ 2:00 (120 seconds total)
       const cprTimerIndex = times.findIndex(t => t.mins * 60 + t.secs <= 120);
