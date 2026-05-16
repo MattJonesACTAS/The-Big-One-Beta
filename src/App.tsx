@@ -609,32 +609,82 @@ export default function App() {
       const { data: { text } } = await worker.recognize(imageFile);
       await worker.terminate();
 
-      console.log('OCR extracted text:', text); // Debug output
+      console.log('OCR extracted text:', text);
 
-      // Look for time patterns: HH:MM:SS, MM:SS, M:SS, or H:MM:SS
-      // Try to find times in various formats
-      const timePattern = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
-      const matches = [...text.matchAll(timePattern)];
+      // Try multiple time pattern formats
+      const times: Array<{mins: number, secs: number}> = [];
+      
+      // Pattern 1: HH:MM:SS or MM:SS with colons
+      const colonPattern = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
+      const colonMatches = [...text.matchAll(colonPattern)];
+      
+      colonMatches.forEach(match => {
+        if (match[3]) {
+          // HH:MM:SS format - convert to total seconds, then to mins:secs
+          const hours = parseInt(match[1]);
+          const mins = parseInt(match[2]);
+          const secs = parseInt(match[3]);
+          times.push({ mins: hours * 60 + mins, secs: secs });
+        } else {
+          // MM:SS or M:SS format
+          times.push({ mins: parseInt(match[1]), secs: parseInt(match[2]) });
+        }
+      });
+      
+      // Pattern 2: 6-digit number (HHMMSS without colons) like "002109"
+      const compactPattern = /\b0*(\d{2})(\d{2})(\d{2})\b/g;
+      const compactMatches = [...text.matchAll(compactPattern)];
+      
+      compactMatches.forEach(match => {
+        const hours = parseInt(match[1]);
+        const mins = parseInt(match[2]);
+        const secs = parseInt(match[3]);
+        // Only add if it looks like a valid time
+        if (mins < 60 && secs < 60) {
+          times.push({ mins: hours * 60 + mins, secs: secs });
+        }
+      });
 
-      console.log('Time matches found:', matches.length); // Debug output
+      console.log('Times found:', times);
 
-      if (matches.length >= 2) {
-        // First match: elapsed time (take minutes and seconds, ignore hours if present)
-        const elapsedMins = parseInt(matches[0][1]);
-        const elapsedSecs = parseInt(matches[0][2]);
+      // Identify CPR timer: should be ≤ 2:00 (120 seconds total)
+      const cprTimerIndex = times.findIndex(t => t.mins * 60 + t.secs <= 120);
+      const cprTimer = cprTimerIndex >= 0 ? times[cprTimerIndex] : null;
+      
+      // Get remaining times (excluding CPR timer)
+      const remainingTimes = times.filter((_, i) => i !== cprTimerIndex);
+      
+      // Prioritize times that look like elapsed time (start with 00: or 01:)
+      // Elapsed times rarely exceed 2 hours in cardiac arrest scenarios
+      let elapsed = remainingTimes.find(t => {
+        const hours = Math.floor(t.mins / 60);
+        return hours <= 1; // 0 or 1 hour
+      });
+      
+      // If no low-hour time found, fall back to comparing with current time
+      if (!elapsed && remainingTimes.length > 0) {
+        const now = new Date();
+        const currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
         
-        // Second match: CPR/rhythm timer
-        const rhythmMins = parseInt(matches[1][1]);
-        const rhythmSecs = parseInt(matches[1][2]);
+        elapsed = remainingTimes.reduce((furthest, t) => {
+          const timeInSeconds = t.mins * 60 + t.secs;
+          const diff = Math.abs(timeInSeconds - currentTimeInSeconds);
+          const furthestDiff = Math.abs((furthest.mins * 60 + furthest.secs) - currentTimeInSeconds);
+          return diff > furthestDiff ? t : furthest;
+        }, remainingTimes[0]);
+      }
 
-        setCatchupElapsed({ mins: elapsedMins, secs: elapsedSecs });
-        setCatchupRhythm({ mins: rhythmMins, secs: rhythmSecs });
+      console.log('Identified CPR timer:', cprTimer);
+      console.log('Identified elapsed time:', elapsed);
+
+      if (cprTimer && elapsed) {
+        setCatchupElapsed(elapsed);
+        setCatchupRhythm(cprTimer);
         setPhotoTimestamp(timestamp);
         
         setIsProcessingOCR(false);
       } else {
-        // Show what was actually found for debugging
-        setOcrError(`Found ${matches.length} time value(s). Extracted text: "${text.substring(0, 100)}..." Please enter manually or try again with better lighting.`);
+        setOcrError(`Could not identify both times. Found ${times.length} time value(s). Extracted text: "${text.substring(0, 150)}..." Please enter manually or try again.`);
         setIsProcessingOCR(false);
       }
     } catch (error) {
