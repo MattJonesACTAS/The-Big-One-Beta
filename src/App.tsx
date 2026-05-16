@@ -1168,7 +1168,8 @@ export default function App() {
                             capture="environment"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
-                              if (file) {
+                              if (file && !isProcessingOCR) {
+                                e.target.value = '';
                                 handleMonitorScan(file);
                               }
                             }}
