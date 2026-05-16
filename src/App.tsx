@@ -613,19 +613,12 @@ export default function App() {
       const { data: { text } } = await worker.recognize(imageFile);
       await worker.terminate();
 
-      console.log('=== OCR DEBUG START ===');
-      console.log('Full extracted text:', text);
-      console.log('Text length:', text.length);
-      console.log('=== OCR DEBUG END ===');
-
       // Try multiple time pattern formats
-      const times: Array<{mins: number, secs: number}> = [];
+      const times: Array<{mins: number, secs: number, hasHours?: boolean, hours?: number}> = [];
       
       // Pattern 1: HH:MM:SS or MM:SS with colons
       const colonPattern = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
       const colonMatches = [...text.matchAll(colonPattern)];
-      
-      console.log('Colon pattern matches:', colonMatches.map(m => m[0]));
       
       colonMatches.forEach(match => {
         if (match[3]) {
@@ -653,8 +646,6 @@ export default function App() {
       const compactPattern = /\b0*(\d{2})(\d{2})(\d{2})\b/g;
       const compactMatches = [...text.matchAll(compactPattern)];
       
-      console.log('Compact pattern matches:', compactMatches.map(m => m[0]));
-      
       compactMatches.forEach(match => {
         const hours = parseInt(match[1]);
         const mins = parseInt(match[2]);
@@ -669,8 +660,6 @@ export default function App() {
           });
         }
       });
-
-      console.log('All times found:', times);
 
       // Identify CPR timer: should be ≤ 2:00 (120 seconds total)
       const cprTimerIndex = times.findIndex(t => t.mins * 60 + t.secs <= 120);
@@ -698,9 +687,6 @@ export default function App() {
       if (!elapsed && remainingTimes.length > 0) {
         elapsed = remainingTimes[0];
       }
-
-      console.log('Identified CPR timer:', cprTimer);
-      console.log('Identified elapsed time:', elapsed);
 
       if (cprTimer && elapsed) {
         setCatchupElapsed(elapsed);
@@ -1180,11 +1166,11 @@ export default function App() {
                             type="file"
                             accept="image/*"
                             capture="environment"
-                            onChange={async (e) => {
+                            onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                await handleMonitorScan(file);
-                                e.target.value = ''; // Reset after processing
+                                e.target.value = ''; // Reset immediately, before processing
+                                handleMonitorScan(file); // Process async (don't await here)
                               }
                             }}
                             className="hidden"
