@@ -633,10 +633,19 @@ export default function App() {
           const hours = parseInt(match[1]);
           const mins = parseInt(match[2]);
           const secs = parseInt(match[3]);
-          times.push({ mins: hours * 60 + mins, secs: secs });
+          times.push({ 
+            mins: hours * 60 + mins, 
+            secs: secs,
+            hasHours: true, // Mark as HH:MM:SS format
+            hours: hours
+          });
         } else {
           // MM:SS or M:SS format
-          times.push({ mins: parseInt(match[1]), secs: parseInt(match[2]) });
+          times.push({ 
+            mins: parseInt(match[1]), 
+            secs: parseInt(match[2]),
+            hasHours: false
+          });
         }
       });
       
@@ -652,7 +661,12 @@ export default function App() {
         const secs = parseInt(match[3]);
         // Only add if it looks like a valid time
         if (mins < 60 && secs < 60) {
-          times.push({ mins: hours * 60 + mins, secs: secs });
+          times.push({ 
+            mins: hours * 60 + mins, 
+            secs: secs,
+            hasHours: true, // Compact format is HH:MM:SS without colons
+            hours: hours
+          });
         }
       });
 
@@ -665,24 +679,24 @@ export default function App() {
       // Get remaining times (excluding CPR timer)
       const remainingTimes = times.filter((_, i) => i !== cprTimerIndex);
       
-      // Prioritize times that look like elapsed time (start with 00: or 01:)
-      // Elapsed times rarely exceed 2 hours in cardiac arrest scenarios
+      // Prioritize times that look like elapsed time:
+      // 1. HH:MM:SS format (hasHours=true) 
+      // 2. With hours <= 1 (00:XX:XX or 01:XX:XX)
       let elapsed = remainingTimes.find(t => {
-        const hours = Math.floor(t.mins / 60);
-        return hours <= 1; // 0 or 1 hour
+        return t.hasHours && t.hours !== undefined && t.hours <= 1;
       });
       
-      // If no low-hour time found, fall back to comparing with current time
+      // If no HH:MM:SS format with low hours, fall back to any time with hours <= 1
+      if (!elapsed) {
+        elapsed = remainingTimes.find(t => {
+          const hours = Math.floor(t.mins / 60);
+          return hours <= 1;
+        });
+      }
+      
+      // Last resort: take any remaining time
       if (!elapsed && remainingTimes.length > 0) {
-        const now = new Date();
-        const currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-        
-        elapsed = remainingTimes.reduce((furthest, t) => {
-          const timeInSeconds = t.mins * 60 + t.secs;
-          const diff = Math.abs(timeInSeconds - currentTimeInSeconds);
-          const furthestDiff = Math.abs((furthest.mins * 60 + furthest.secs) - currentTimeInSeconds);
-          return diff > furthestDiff ? t : furthest;
-        }, remainingTimes[0]);
+        elapsed = remainingTimes[0];
       }
 
       console.log('Identified CPR timer:', cprTimer);
