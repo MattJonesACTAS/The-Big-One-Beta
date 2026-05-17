@@ -216,6 +216,41 @@ const cleanDoseForLog = (doseStr: string): string => {
   return doseStr;
 };
 
+// Component to display ticking timers from scanned monitor
+const LiveTimerDisplay: React.FC<{
+  photoTimestamp: number;
+  photoElapsed: { mins: number; secs: number };
+  photoCprTimer: { mins: number; secs: number };
+}> = ({ photoTimestamp, photoElapsed, photoCprTimer }) => {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate time elapsed since photo
+  const secondsSincePhoto = Math.floor((currentTime - photoTimestamp) / 1000);
+
+  // Calculate current elapsed time (photo time + seconds since)
+  const totalElapsedSecs = photoElapsed.mins * 60 + photoElapsed.secs + secondsSincePhoto;
+  const currentElapsedMins = Math.floor(totalElapsedSecs / 60);
+  const currentElapsedSecs = totalElapsedSecs % 60;
+
+  // Calculate current CPR timer (photo timer - seconds since, min 0)
+  const totalCprSecs = photoCprTimer.mins * 60 + photoCprTimer.secs - secondsSincePhoto;
+  const currentCprMins = Math.max(0, Math.floor(totalCprSecs / 60));
+  const currentCprSecs = Math.max(0, totalCprSecs % 60);
+
+  return (
+    <div className="text-sm font-mono">
+      Extracted: {currentElapsedMins}:{currentElapsedSecs.toString().padStart(2, '0')} elapsed, {currentCprMins}:{currentCprSecs.toString().padStart(2, '0')} CPR timer
+    </div>
+  );
+};
+
 export default function App() {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('theBigOneState');
@@ -256,6 +291,7 @@ export default function App() {
   const [photoTimestamp, setPhotoTimestamp] = useState<number | null>(null);
   const [showCameraTips, setShowCameraTips] = useState(false);
   const [useManualEntry, setUseManualEntry] = useState(false);
+  const [timesFromScan, setTimesFromScan] = useState(false);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -690,6 +726,7 @@ export default function App() {
         setCatchupElapsed(elapsed);
         setCatchupRhythm(cprTimer);
         setPhotoTimestamp(timestamp);
+        setTimesFromScan(true); // Mark that times came from scan
         
         setIsProcessingOCR(false);
       } else {
@@ -1182,20 +1219,20 @@ export default function App() {
                         <h3 className="text-lg font-bold text-neutral-900">For best results:</h3>
                         <ul className="text-left space-y-2 text-neutral-700">
                           <li className="flex gap-2">
-                            <span>📱</span>
+                            <span>1.</span>
                             <span>Rotate phone to <strong>landscape</strong></span>
                           </li>
                           <li className="flex gap-2">
-                            <span>🔍</span>
+                            <span>2.</span>
                             <span>Use <strong>2x zoom</strong> if available</span>
                           </li>
                           <li className="flex gap-2">
-                            <span>💡</span>
-                            <span>Ensure good <strong>lighting</strong></span>
+                            <span>3.</span>
+                            <span>Get close to the <strong>monitor</strong></span>
                           </li>
                           <li className="flex gap-2">
-                            <span>🎯</span>
-                            <span>Get close to the <strong>monitor</strong></span>
+                            <span>4.</span>
+                            <span><strong>Hold steady</strong></span>
                           </li>
                         </ul>
                         <button
@@ -1247,13 +1284,18 @@ export default function App() {
                     <>
                       <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl space-y-2">
                         <div className="font-bold text-lg">✓ Monitor scanned successfully</div>
-                        <div className="text-sm">Extracted: {catchupElapsed.mins}:{catchupElapsed.secs.toString().padStart(2, '0')} elapsed, {catchupRhythm.mins}:{catchupRhythm.secs.toString().padStart(2, '0')} CPR timer</div>
+                        <LiveTimerDisplay 
+                          photoTimestamp={photoTimestamp}
+                          photoElapsed={catchupElapsed}
+                          photoCprTimer={catchupRhythm}
+                        />
                         <div className="text-xs">Times will auto-adjust when you start the timer</div>
                       </div>
                       <button
                         onClick={() => {
                           setPhotoTimestamp(null);
                           setOcrError(null);
+                          setTimesFromScan(false);
                         }}
                         className="text-blue-600 font-semibold text-sm"
                       >
@@ -1318,6 +1360,7 @@ export default function App() {
                           setPhotoTimestamp(null);
                           setOcrError(null);
                           setUseManualEntry(false);
+                          setTimesFromScan(false);
                         }} 
                         className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
                       >
@@ -1325,8 +1368,14 @@ export default function App() {
                       </button>
                       <button 
                         onClick={() => { 
-                          setCatchupRhythm(catchupElapsed); 
-                          setCatchupStep(3); 
+                          if (timesFromScan) {
+                            // If scanned, CPR timer is already set, skip step 3
+                            setCatchupStep(4);
+                          } else {
+                            // If manual, need to enter CPR timer in step 3
+                            setCatchupRhythm(catchupElapsed); 
+                            setCatchupStep(3);
+                          }
                         }} 
                         className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
                       >
@@ -1349,12 +1398,12 @@ export default function App() {
 
               {catchupStep === 3 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-xl font-bold text-neutral-900 px-4">What will the case time be when the next rhythm check is due?</h2>
-                  <p className="text-neutral-600 text-sm px-4">Verify or adjust the CPR timer value</p>
+                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter current CPR timer</h2>
+                  <p className="text-neutral-600 text-sm px-4">What does the CPR countdown timer currently show?</p>
                   <TimePicker 
                     value={catchupRhythm} 
                     onChange={setCatchupRhythm} 
-                    maxSeconds={catchupElapsed.mins * 60 + catchupElapsed.secs + 120}
+                    maxSeconds={120}
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
