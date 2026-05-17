@@ -304,6 +304,7 @@ export default function App() {
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt15 = useRef<boolean>(false);
+  const previousCountdown = useRef<number | null>(null);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -373,12 +374,20 @@ export default function App() {
             hasAutoClosedAt15.current = true;
           }
 
-          // Force shock at 0:00, but only once, not during catchup, and not at the very start
-          if (countdown <= 0 && prev.elapsedSeconds > 0 && !hasShownForcedShock && !showCatchup) {
+          // Force shock at 0:00, but only when TRANSITIONING from >0 to <=0
+          // This prevents multiple triggers when starting the app late into an arrest
+          if (countdown <= 0 && 
+              (previousCountdown.current === null || previousCountdown.current > 0) && 
+              prev.elapsedSeconds > 0 && 
+              !hasShownForcedShock && 
+              !showCatchup) {
             nextOverlay = 'treatment';
             setIsShockForced(true);
             setHasShownForcedShock(true); // Mark as shown
           }
+          
+          // Update previous countdown for next iteration
+          previousCountdown.current = countdown;
 
           // Beep logic between 15 and 10
           if (countdown <= 15 && countdown >= 10 && lastBeepSecond.current !== newElapsed) {
@@ -461,6 +470,7 @@ export default function App() {
     // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
     if (name.includes('Shock') || name.includes('Disarm')) {
       setHasShownForcedShock(false);
+      previousCountdown.current = null; // Reset countdown tracking
     }
     
     // Reset disregard states when new doses given
