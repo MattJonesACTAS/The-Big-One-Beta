@@ -1179,7 +1179,7 @@ export default function App() {
                                 alert('Already processing');
                               }
                             }}
-                            className="hidden"
+                            className="border border-red-500"
                             id="monitor-camera"
                           />
                           <div
