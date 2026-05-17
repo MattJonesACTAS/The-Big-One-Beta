@@ -1165,18 +1165,17 @@ export default function App() {
                           <input
                             type="file"
                             accept="image/*"
-                            capture="environment"
-                            onChange={(e) => {
-                              alert('onChange fired!'); // DEBUG: Test if this fires on mobile
+                            onInput={(e) => {
+                              alert('onInput fired!');
                               const file = e.target.files?.[0];
                               if (file && !isProcessingOCR) {
-                                alert(`File selected: ${file.name}`); // DEBUG: Test if file exists
+                                alert(`File selected: ${file.name}`);
                                 e.target.value = '';
                                 handleMonitorScan(file);
                               } else if (!file) {
-                                alert('No file found'); // DEBUG
+                                alert('No file found');
                               } else if (isProcessingOCR) {
-                                alert('Already processing'); // DEBUG
+                                alert('Already processing');
                               }
                             }}
                             className="hidden"
