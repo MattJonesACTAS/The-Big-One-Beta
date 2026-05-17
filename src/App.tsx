@@ -245,8 +245,9 @@ const LiveTimerDisplay: React.FC<{
   const currentCprSecs = Math.max(0, totalCprSecs % 60);
 
   return (
-    <div className="text-sm font-mono">
-      Extracted: {currentElapsedMins}:{currentElapsedSecs.toString().padStart(2, '0')} elapsed, {currentCprMins}:{currentCprSecs.toString().padStart(2, '0')} CPR timer
+    <div className="text-sm space-y-1">
+      <div>Elapsed time: {currentElapsedMins}:{currentElapsedSecs.toString().padStart(2, '0')}</div>
+      <div>CPR timer: {currentCprMins}:{currentCprSecs.toString().padStart(2, '0')}</div>
     </div>
   );
 };
@@ -300,6 +301,7 @@ export default function App() {
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [isShockForced, setIsShockForced] = useState(false);
+  const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt15 = useRef<boolean>(false);
 
@@ -371,10 +373,11 @@ export default function App() {
             hasAutoClosedAt15.current = true;
           }
 
-          // Force shock at 0:00, but not if it's the very start of the case
-          if (countdown <= 0 && prev.elapsedSeconds > 0) {
+          // Force shock at 0:00, but only once, not during catchup, and not at the very start
+          if (countdown <= 0 && prev.elapsedSeconds > 0 && !hasShownForcedShock && !showCatchup) {
             nextOverlay = 'treatment';
             setIsShockForced(true);
+            setHasShownForcedShock(true); // Mark as shown
           }
 
           // Beep logic between 15 and 10
@@ -454,6 +457,11 @@ export default function App() {
       currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : null
     }));
     setIsShockForced(false);
+    
+    // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
+    if (name.includes('Shock') || name.includes('Disarm')) {
+      setHasShownForcedShock(false);
+    }
     
     // Reset disregard states when new doses given
     if (name.includes('Adrenaline')) {
@@ -1203,7 +1211,10 @@ export default function App() {
                           Scan Monitor
                         </button>
                         <button
-                          onClick={() => setUseManualEntry(true)}
+                          onClick={() => {
+                            setUseManualEntry(true);
+                            setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
+                          }}
                           className="w-full bg-neutral-100 text-neutral-700 p-4 rounded-xl font-bold btn-base"
                         >
                           Enter Manually
@@ -1220,18 +1231,14 @@ export default function App() {
                         <ul className="text-left space-y-2 text-neutral-700">
                           <li className="flex gap-2">
                             <span>1.</span>
-                            <span>Rotate phone to <strong>landscape</strong></span>
-                          </li>
-                          <li className="flex gap-2">
-                            <span>2.</span>
                             <span>Use <strong>2x zoom</strong> if available</span>
                           </li>
                           <li className="flex gap-2">
-                            <span>3.</span>
+                            <span>2.</span>
                             <span>Get close to the <strong>monitor</strong></span>
                           </li>
                           <li className="flex gap-2">
-                            <span>4.</span>
+                            <span>3.</span>
                             <span><strong>Hold steady</strong></span>
                           </li>
                         </ul>
@@ -1325,6 +1332,7 @@ export default function App() {
                           onClick={() => {
                             setOcrError(null);
                             setUseManualEntry(true);
+                            setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
                           }}
                           className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
                         >
@@ -1372,8 +1380,8 @@ export default function App() {
                             // If scanned, CPR timer is already set, skip step 3
                             setCatchupStep(4);
                           } else {
-                            // If manual, need to enter CPR timer in step 3
-                            setCatchupRhythm(catchupElapsed); 
+                            // If manual, start CPR timer at 0:00 for user to enter
+                            setCatchupRhythm({ mins: 0, secs: 0 }); 
                             setCatchupStep(3);
                           }
                         }} 
