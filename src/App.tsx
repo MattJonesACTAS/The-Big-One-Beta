@@ -44,7 +44,7 @@ const INITIAL_STATE: AppState = {
 
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
-  'Atropine', 'Calcium', 'Glucose', 'Heparin', 'Ketamine', 'Ketamine infusion', 'Lignocaine',
+  'Atropine', 'Calcium', 'Glucose', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Lignocaine',
   'Magnesium', 'Midazolam', 'Normal Saline', 'Oxygen', 'Sodium Bicarbonate', 'Suxamethonium'
 ];
 
@@ -93,6 +93,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Glucose': { 
     doses: [
       { dose: '100mL 10%', population: 'both' },
+      { dose: '50mL 50%', population: 'both' },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -102,16 +103,17 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: 'Other', population: 'both' }
     ]
   },
-  'Ketamine': { 
+  'Ketamine push': { 
     doses: [
-      { dose: '0.5mg/kg', population: 'both', indication: 'CPR-IC' },
+      { dose: '0.5mg/kg', population: 'both', indication: 'CPR induced consciousness' },
+      { dose: '1mg/kg', population: 'adult', indication: 'Intubation induction with Suxamethonium' },
+      { dose: '2mg/kg', population: 'adult', indication: 'Intubation when suxamethonium is contraindicated' },
+      { dose: '1mg/kg', population: 'both', indication: 'Post intubation analgosedation' },
       { dose: 'Other', population: 'both' }
     ] 
   },
   'Ketamine infusion': {
     doses: [
-      { dose: '100mg/hr', population: 'both' },
-      { dose: '20mg (2mL)', population: 'both' },
       { dose: 'Other', population: 'both' }
     ]
   },
@@ -299,29 +301,8 @@ export default function App() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
-
-  // Show notification using vanilla DOM (bypasses React state issues)
-  const showNotification = (treatmentName: string) => {
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] transition-all duration-300';
-    notification.style.transform = 'translateY(-100%)';
-    notification.innerHTML = `✓ ${treatmentName} logged`;
-    
-    document.body.appendChild(notification);
-    
-    // Slide in
-    setTimeout(() => {
-      notification.style.transform = 'translateY(0)';
-    }, 10);
-    
-    // Slide out and remove
-    setTimeout(() => {
-      notification.style.transform = 'translateY(-100%)';
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 300);
-    }, 2000);
-  };
+  const [showLoggedNotification, setShowLoggedNotification] = useState(false);
+  const loggedTreatmentRef = useRef<string>('');
   const [isShockForced, setIsShockForced] = useState(false);
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
@@ -489,9 +470,11 @@ export default function App() {
     }));
     setIsShockForced(false);
     
-    // Show notification
+    // Show notification with treatment name
     if (name !== 'Disarm — ROSC') {
-      showNotification(name);
+      loggedTreatmentRef.current = name;
+      setShowLoggedNotification(true);
+      setTimeout(() => setShowLoggedNotification(false), 2000);
     }
     
     // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
@@ -1891,7 +1874,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                 className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1"
               >
                 {doseOpt.indication && (
-                  <span className="text-[10px] opacity-60 font-normal uppercase tracking-wide">{doseOpt.indication}</span>
+                  <span className="text-[10px] font-normal uppercase tracking-wide">{doseOpt.indication}</span>
                 )}
                 <span className="text-lg">{calculateDose(doseOpt.dose, state.patientWeight)}</span>
               </button>
@@ -2011,7 +1994,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           <TxSection 
             title="Other Tx" 
             color="neutral" 
-            items={['Corpuls', 'Extrication', 'IO access', 'IV access', 'Pacing', 'Reassurance provided']} 
+            items={['Shock', 'Corpuls', 'Extrication', 'IO', 'IV access', 'Pacing', 'Reassurance provided']} 
             onSelect={addTreatment}
             sectionId="otherTx"
             expandedSection={expandedSection}
@@ -2037,6 +2020,27 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           </div>
         </>
       )}
+
+      {/* Option 3: Large Centered Checkmark */}
+      {showLoggedNotification && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[2000]">
+          <div className="bg-emerald-600 text-white rounded-full p-8 shadow-2xl flex flex-col items-center gap-3 animate-fade-in">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <div className="font-bold text-lg">{loggedTreatmentRef.current}</div>
+            <div className="text-sm opacity-90">logged</div>
+          </div>
+        </div>
+      )}
+
+      {/* Option 4: Success Banner (Top Edge) - COMMENTED OUT, UNCOMMENT TO USE INSTEAD
+      {showLoggedNotification && (
+        <div className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] animate-slide-down">
+          ✓ {loggedTreatmentRef.current} logged
+        </div>
+      )}
+      */}
     </div>
   );
 }
