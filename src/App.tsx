@@ -1805,13 +1805,25 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   const [customDose, setCustomDose] = useState('');
   const [expandedSection, setExpandedSection] = useState<string | null>(isShockForced ? 'rhythmCheck' : null);
   const [customInputValues, setCustomInputValues] = useState<Record<string, string>>({});
+  const [showLoggedNotification, setShowLoggedNotification] = useState(false);
+  const loggedTreatmentRef = useRef<string>('');
+  
+  // Wrapper to show notification when adding treatment
+  const addTreatmentWithNotification = (name: string) => {
+    addTreatment(name);
+    if (name !== 'Disarm — ROSC') {
+      loggedTreatmentRef.current = name;
+      setShowLoggedNotification(true);
+      setTimeout(() => setShowLoggedNotification(false), 2000);
+    }
+  };
   
   const handleMedClick = (med: string) => {
     if (DOSE_CONFIG[med]) {
       setSelectedMed(med);
       setExpandedSection('medications'); // Keep medications section expanded
     } else {
-      addTreatment(med);
+      addTreatmentWithNotification(med);
     }
   };
   
@@ -1819,7 +1831,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
     if (selectedMed) {
       const displayDose = calculateDose(dose, state.patientWeight);
       const cleanDose = cleanDoseForLog(displayDose);
-      addTreatment(`${selectedMed} ${cleanDose}`);
+      addTreatmentWithNotification(`${selectedMed} ${cleanDose}`);
       setSelectedMed(null);
       setCustomDose('');
     }
@@ -1840,7 +1852,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       const unit = unitMatches.length > 0 ? unitMatches[0] : '';
       const doseWithUnit = unit ? `${customDose}${unit}` : customDose;
       
-      addTreatment(`${selectedMed} ${doseWithUnit}`);
+      addTreatmentWithNotification(`${selectedMed} ${doseWithUnit}`);
       setSelectedMed(null);
       setCustomDose('');
     }
@@ -1875,7 +1887,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       if (value) {
         // Check if this is the shared morph/midaz infusion treatment
         if (doseOpt.indication === 'Post intubation sedation morph/midaz infusion') {
-          addTreatment(`Morph/midaz infusion ${value}${doseOpt.dose}`);
+          addTreatmentWithNotification(`Morph/midaz infusion ${value}${doseOpt.dose}`);
         } else {
           handleDoseSelect(`${value}${doseOpt.dose}`);
         }
@@ -2030,7 +2042,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         items={[
           'Shock — VT', 'Disarm — VF', 'Disarm — PEA', 'Disarm — Asystole', 'Disarm — ROSC'
         ]} 
-        onSelect={addTreatment}
+        onSelect={addTreatmentWithNotification}
       />
 
       {!isShockForced && (
@@ -2049,7 +2061,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             title="Airway" 
             color="blue" 
             items={['ETT', 'FONA', 'IGT', 'LMA']} 
-            onSelect={addTreatment}
+            onSelect={addTreatmentWithNotification}
             sectionId="airway"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
@@ -2059,7 +2071,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             title="Other Tx" 
             color="neutral" 
             items={['Shock', 'Corpuls', 'Extrication', 'IO', 'IV access', 'Pacing', 'Reassurance provided']} 
-            onSelect={addTreatment}
+            onSelect={addTreatmentWithNotification}
             sectionId="otherTx"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
@@ -2075,7 +2087,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                 className="flex-1 bg-white border border-neutral-200 rounded-xl p-4 text-base focus:ring-2 focus:ring-emerald-500 outline-none"
               />
               <button 
-                onClick={() => { if(customTx) { addTreatment(customTx); setCustomTx(''); } }} 
+                onClick={() => { if(customTx) { addTreatmentWithNotification(customTx); setCustomTx(''); } }} 
                 className="bg-emerald-600 text-white px-6 rounded-xl font-bold btn-base"
               >
                 Add
