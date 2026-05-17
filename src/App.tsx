@@ -1162,35 +1162,25 @@ export default function App() {
                     <>
                       <div className="space-y-3">
                         <label className="block">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onInput={(e) => {
-                              alert('onInput fired!');
-                              const file = e.target.files?.[0];
-                              if (file && !isProcessingOCR) {
-                                alert(`File selected: ${file.name}`);
-                                e.target.value = '';
-                                handleMonitorScan(file);
-                              } else if (!file) {
-                                alert('No file found');
-                              } else if (isProcessingOCR) {
-                                alert('Already processing');
-                              }
-                            }}
-                            className="border border-red-500"
-                            id="monitor-camera"
-                          />
-                          <div
-                            onClick={() => {
-                              setOcrError(null);
-                              document.getElementById('monitor-camera')?.click();
-                            }}
-                            className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2 cursor-pointer"
-                          >
-                            <Camera size={20} />
-                            {photoTimestamp ? 'Scan Again' : 'Scan Monitor'}
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onInput={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file && !isProcessingOCR) {
+                                  e.target.value = '';
+                                  handleMonitorScan(file);
+                                }
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              id="monitor-camera"
+                            />
+                            <div className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2">
+                              <Camera size={20} />
+                              {photoTimestamp ? 'Scan Again' : 'Scan Monitor'}
+                            </div>
                           </div>
                         </label>
                         <div className="text-neutral-400 text-sm">or enter manually below</div>
