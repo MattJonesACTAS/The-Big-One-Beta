@@ -93,7 +93,6 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Glucose': { 
     doses: [
       { dose: '100mL 10%', population: 'both' },
-      { dose: '50mL 50%', population: 'both' },
       { dose: 'Other', population: 'both' }
     ] 
   },
