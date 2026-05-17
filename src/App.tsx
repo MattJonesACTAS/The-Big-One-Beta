@@ -254,6 +254,8 @@ export default function App() {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [photoTimestamp, setPhotoTimestamp] = useState<number | null>(null);
+  const [showCameraTips, setShowCameraTips] = useState(false);
+  const [useManualEntry, setUseManualEntry] = useState(false);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -675,17 +677,13 @@ export default function App() {
         return t.hasHours && t.hours !== undefined && t.hours <= 1;
       });
       
-      // If no HH:MM:SS format with low hours, fall back to any time with hours <= 1
+      // If no HH:MM:SS format found, only accept MM:SS if it's long enough (> 5 mins)
+      // This filters out battery times like "3:00"
       if (!elapsed) {
         elapsed = remainingTimes.find(t => {
-          const hours = Math.floor(t.mins / 60);
-          return hours <= 1;
+          const totalMinutes = t.mins + (t.secs / 60);
+          return !t.hasHours && totalMinutes > 5; // Must be > 5 minutes to be elapsed time
         });
-      }
-      
-      // Last resort: take any remaining time
-      if (!elapsed && remainingTimes.length > 0) {
-        elapsed = remainingTimes[0];
       }
 
       if (cprTimer && elapsed) {
@@ -695,7 +693,7 @@ export default function App() {
         
         setIsProcessingOCR(false);
       } else {
-        setOcrError(`Could not identify both times. Found ${times.length} time value(s). Extracted text: "${text.substring(0, 150)}..." Please enter manually or try again.`);
+        setOcrError('Could not read monitor times clearly. Please try again with better lighting and focus, or enter times manually.');
         setIsProcessingOCR(false);
       }
     } catch (error) {
@@ -1155,66 +1153,197 @@ export default function App() {
 
               {catchupStep === 2 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-xl font-bold text-neutral-900 px-4">Scan or enter monitor times</h2>
-                  <p className="text-neutral-600 text-sm px-4">The app will extract both the elapsed time and CPR timer from your monitor</p>
-                  
-                  {!isProcessingOCR && (
+                  {/* Initial choice: Scan or Manual */}
+                  {!useManualEntry && !photoTimestamp && !ocrError && !isProcessingOCR && (
                     <>
-                      <div className="space-y-3">
-                        <label className="block">
-                          <div className="relative">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              onInput={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file && !isProcessingOCR) {
-                                  e.target.value = '';
-                                  handleMonitorScan(file);
-                                }
-                              }}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                              id="monitor-camera"
-                            />
-                            <div className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2">
-                              <Camera size={20} />
-                              {photoTimestamp ? 'Scan Again' : 'Scan Monitor'}
-                            </div>
-                          </div>
-                        </label>
-                        <div className="text-neutral-400 text-sm">or enter manually below</div>
+                      <h2 className="text-xl font-bold text-neutral-900 px-4">How do you want to enter times?</h2>
+                      <div className="space-y-3 px-4">
+                        <button
+                          onClick={() => setShowCameraTips(true)}
+                          className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2"
+                        >
+                          <Camera size={20} />
+                          Scan Monitor
+                        </button>
+                        <button
+                          onClick={() => setUseManualEntry(true)}
+                          className="w-full bg-neutral-100 text-neutral-700 p-4 rounded-xl font-bold btn-base"
+                        >
+                          Enter Manually
+                        </button>
                       </div>
-                      
-                      {ocrError && (
-                        <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">
-                          {ocrError}
-                        </div>
-                      )}
-                      
-                      {photoTimestamp && (
-                        <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-sm space-y-1">
-                          <div className="font-bold">✓ Monitor scanned successfully</div>
-                          <div className="text-xs">Extracted: {catchupElapsed.mins}:{catchupElapsed.secs.toString().padStart(2, '0')} elapsed, {catchupRhythm.mins}:{catchupRhythm.secs.toString().padStart(2, '0')} CPR timer</div>
-                          <div className="text-xs">Times will auto-adjust when you start</div>
-                        </div>
-                      )}
-                      
-                      <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
                     </>
                   )}
-                  
+
+                  {/* Camera Tips Modal */}
+                  {showCameraTips && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-2xl p-6 max-w-sm space-y-4">
+                        <h3 className="text-lg font-bold text-neutral-900">For best results:</h3>
+                        <ul className="text-left space-y-2 text-neutral-700">
+                          <li className="flex gap-2">
+                            <span>📱</span>
+                            <span>Rotate phone to <strong>landscape</strong></span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span>🔍</span>
+                            <span>Use <strong>2x zoom</strong> if available</span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span>💡</span>
+                            <span>Ensure good <strong>lighting</strong></span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span>🎯</span>
+                            <span>Get close to the <strong>monitor</strong></span>
+                          </li>
+                        </ul>
+                        <button
+                          onClick={() => {
+                            setShowCameraTips(false);
+                            document.getElementById('monitor-camera')?.click();
+                          }}
+                          className="w-full bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                        >
+                          Ready - Open Camera
+                        </button>
+                        <button
+                          onClick={() => setShowCameraTips(false)}
+                          className="w-full bg-neutral-100 text-neutral-700 p-2 rounded-xl font-semibold text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hidden file input */}
+                  <div className="hidden">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onInput={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && !isProcessingOCR) {
+                          e.target.value = '';
+                          handleMonitorScan(file);
+                        }
+                      }}
+                      id="monitor-camera"
+                    />
+                  </div>
+
+                  {/* Processing spinner */}
                   {isProcessingOCR && (
                     <div className="py-12">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
                       <p className="text-neutral-600">Processing monitor image...</p>
                     </div>
                   )}
+
+                  {/* Success message */}
+                  {photoTimestamp && !isProcessingOCR && (
+                    <>
+                      <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl space-y-2">
+                        <div className="font-bold text-lg">✓ Monitor scanned successfully</div>
+                        <div className="text-sm">Extracted: {catchupElapsed.mins}:{catchupElapsed.secs.toString().padStart(2, '0')} elapsed, {catchupRhythm.mins}:{catchupRhythm.secs.toString().padStart(2, '0')} CPR timer</div>
+                        <div className="text-xs">Times will auto-adjust when you start the timer</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setPhotoTimestamp(null);
+                          setOcrError(null);
+                        }}
+                        className="text-blue-600 font-semibold text-sm"
+                      >
+                        Scan again
+                      </button>
+                    </>
+                  )}
+
+                  {/* Error message with options */}
+                  {ocrError && !isProcessingOCR && (
+                    <>
+                      <div className="bg-red-50 text-red-700 p-4 rounded-xl">
+                        <div className="font-bold mb-1">Scan failed</div>
+                        <div className="text-sm">{ocrError}</div>
+                      </div>
+                      <div className="space-y-3 px-4">
+                        <button
+                          onClick={() => {
+                            setOcrError(null);
+                            setShowCameraTips(true);
+                          }}
+                          className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
+                        >
+                          Scan Again
+                        </button>
+                        <button
+                          onClick={() => {
+                            setOcrError(null);
+                            setUseManualEntry(true);
+                          }}
+                          className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
+                        >
+                          Enter Manually
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Manual entry UI */}
+                  {useManualEntry && !isProcessingOCR && (
+                    <>
+                      <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
+                      <p className="text-neutral-600 text-sm px-4">How long has the case been running?</p>
+                      <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
+                      <button
+                        onClick={() => {
+                          setUseManualEntry(false);
+                        }}
+                        className="text-blue-600 font-semibold text-sm"
+                      >
+                        Use camera instead
+                      </button>
+                    </>
+                  )}
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(1)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => { setCatchupRhythm(catchupElapsed); setCatchupStep(3); }} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
-                  </div>
+                  {/* Navigation buttons */}
+                  {!isProcessingOCR && (photoTimestamp || useManualEntry) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={() => {
+                          setCatchupStep(1);
+                          setPhotoTimestamp(null);
+                          setOcrError(null);
+                          setUseManualEntry(false);
+                        }} 
+                        className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
+                      >
+                        Back
+                      </button>
+                      <button 
+                        onClick={() => { 
+                          setCatchupRhythm(catchupElapsed); 
+                          setCatchupStep(3); 
+                        }} 
+                        className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Back button for initial choice screen */}
+                  {!useManualEntry && !photoTimestamp && !ocrError && !isProcessingOCR && (
+                    <button 
+                      onClick={() => setCatchupStep(1)} 
+                      className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
+                    >
+                      Back
+                    </button>
+                  )}
                 </div>
               )}
 
