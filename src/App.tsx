@@ -1804,6 +1804,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
   const [expandedSection, setExpandedSection] = useState<string | null>(isShockForced ? 'rhythmCheck' : null);
+  const [customInputValues, setCustomInputValues] = useState<Record<string, string>>({});
   
   const handleMedClick = (med: string) => {
     if (DOSE_CONFIG[med]) {
@@ -1867,9 +1868,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
     const customInputDoses = filteredDoses.filter(d => isCustomInput(d.dose));
     const doses = filteredDoses.map(d => d.dose);
     const showOther = doses.includes('Other');
-    
-    // State for custom inputs (keyed by dose+indication to support multiple)
-    const [customInputValues, setCustomInputValues] = React.useState<Record<string, string>>({});
     
     const handleCustomInputAdd = (doseOpt: DoseOption) => {
       const key = `${doseOpt.dose}-${doseOpt.indication}`;
