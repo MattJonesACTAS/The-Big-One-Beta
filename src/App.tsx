@@ -552,6 +552,28 @@ export default function App() {
     const summary: Record<string, { totalDose: number, unit: string, count: number, display: string }> = {};
     
     state.treatments.forEach(tx => {
+      // Special handling for morph/midaz infusion
+      if (tx.name.startsWith('Morph/midaz infusion')) {
+        const medName = 'Morph/midaz infusion';
+        if (!summary[medName]) {
+          summary[medName] = { totalDose: 0, unit: '', count: 0, display: '' };
+        }
+        
+        const doseStr = tx.name.substring(medName.length).trim();
+        if (doseStr) {
+          const directMatch = doseStr.match(/([\d.]+)(mg\/h|mg|mL|mMol|mcg|g|u|%)/i);
+          if (directMatch) {
+            const [_, amount, unit] = directMatch;
+            if (!summary[medName].unit) summary[medName].unit = unit;
+            if (summary[medName].unit === unit) {
+              summary[medName].totalDose += parseFloat(amount);
+            }
+          }
+        }
+        summary[medName].count++;
+        return; // Skip regular medication processing for this treatment
+      }
+      
       for (const med of MEDICATIONS) {
         // Skip Oxygen in pharma summary
         if (med === 'Oxygen') continue;
