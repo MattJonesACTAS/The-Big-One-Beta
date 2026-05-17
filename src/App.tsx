@@ -300,6 +300,7 @@ export default function App() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
+  const [justLoggedTreatment, setJustLoggedTreatment] = useState<string | null>(null);
   const [isShockForced, setIsShockForced] = useState(false);
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
@@ -463,7 +464,7 @@ export default function App() {
       ...prev,
       treatments: [...prev.treatments, treatment],
       shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
-      currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : null
+      currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : prev.currentOverlay // Keep overlay open temporarily
     }));
     setIsShockForced(false);
     
@@ -479,6 +480,15 @@ export default function App() {
     }
     if (name.includes('Amiodarone')) {
       setDisregardAmiodarone(null);
+    }
+    
+    // Flash "Logged" confirmation
+    if (name !== 'Disarm — ROSC') {
+      setJustLoggedTreatment(name);
+      setTimeout(() => {
+        setState(prev => ({ ...prev, currentOverlay: null }));
+        setJustLoggedTreatment(null);
+      }, 600);
     }
   };
 
@@ -592,9 +602,12 @@ export default function App() {
   }, [state.treatments]);
 
   // --- Catchup Handlers ---
-  const handleCatchupStart = () => {
+  const handleCatchupStart = (overrideWeight?: string) => {
     let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
     let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
+    
+    // Use override weight if provided, otherwise use weightInput state
+    const finalWeight = overrideWeight || weightInput;
     
     // If photo was taken, adjust times based on elapsed time since photo
     if (photoTimestamp) {
@@ -646,7 +659,7 @@ export default function App() {
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
-      patientWeight: weightInput ? parseFloat(weightInput) : null,
+      patientWeight: finalWeight ? parseFloat(finalWeight) : null,
       patientType: weightType
     });
     setShowCatchup(false);
@@ -1195,7 +1208,7 @@ export default function App() {
                     ].map(([age, weight]) => (
                       <button
                         key={age}
-                        onClick={() => { setWeightInput(String(weight)); handleCatchupStart(); }}
+                        onClick={() => handleCatchupStart(String(weight))}
                         className="w-full bg-pink-400 text-white p-3 rounded-xl text-sm font-bold btn-base flex justify-between items-center"
                       >
                         <span>{age}</span>
@@ -1854,18 +1867,27 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           )}
           
           <div className="space-y-3">
-            {filteredDoses.filter(d => d.dose !== 'Other').map(doseOpt => (
-              <button
-                key={doseOpt.dose}
-                onClick={() => handleDoseSelect(doseOpt.dose)}
-                className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1"
-              >
-                {doseOpt.indication && (
-                  <span className="text-[10px] opacity-60 font-normal uppercase tracking-wide">{doseOpt.indication}</span>
-                )}
-                <span className="text-lg">{calculateDose(doseOpt.dose, state.patientWeight)}</span>
-              </button>
-            ))}
+            {filteredDoses.filter(d => d.dose !== 'Other').map(doseOpt => {
+              const displayDose = calculateDose(doseOpt.dose, state.patientWeight);
+              const cleanDose = cleanDoseForLog(displayDose);
+              const fullTreatmentName = `${selectedMed} ${cleanDose}`;
+              const isJustLogged = justLoggedTreatment === fullTreatmentName;
+              
+              return (
+                <button
+                  key={doseOpt.dose}
+                  onClick={() => handleDoseSelect(doseOpt.dose)}
+                  className={`w-full p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1 transition-all ${
+                    isJustLogged ? 'bg-emerald-600 text-white' : 'bg-emerald-600 text-white'
+                  }`}
+                >
+                  {doseOpt.indication && !isJustLogged && (
+                    <span className="text-[10px] opacity-60 font-normal uppercase tracking-wide">{doseOpt.indication}</span>
+                  )}
+                  <span className="text-lg">{isJustLogged ? '✓ Logged' : displayDose}</span>
+                </button>
+              );
+            })}
             
             {showOther && (() => {
               // Extract common unit from dose strings
@@ -1953,7 +1975,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         items={[
           'Shock — VT', 'Disarm — VF', 'Disarm — PEA', 'Disarm — Asystole', 'Disarm — ROSC'
         ]} 
-        onSelect={addTreatment} 
+        onSelect={addTreatment}
+        justLoggedTreatment={justLoggedTreatment}
       />
 
       {!isShockForced && (
@@ -1966,6 +1989,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             sectionId="medications"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
+            justLoggedTreatment={justLoggedTreatment}
           />
           
           <TxSection 
@@ -1976,6 +2000,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             sectionId="airway"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
+            justLoggedTreatment={justLoggedTreatment}
           />
           
           <TxSection 
@@ -1986,6 +2011,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             sectionId="otherTx"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
+            justLoggedTreatment={justLoggedTreatment}
           />
           
           <div className="p-6 border-t border-neutral-100 bg-neutral-50 px-2 sm:px-6 mb-4">
@@ -2019,7 +2045,8 @@ function TxSection({
   initiallyExpanded = false,
   sectionId,
   expandedSection,
-  onToggle
+  onToggle,
+  justLoggedTreatment
 }: { 
   title: string;
   color: string;
@@ -2029,6 +2056,7 @@ function TxSection({
   sectionId?: string;
   expandedSection?: string | null;
   onToggle?: (id: string) => void;
+  justLoggedTreatment?: string | null;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   
@@ -2069,8 +2097,16 @@ function TxSection({
       >
         <div className="p-3 grid grid-cols-1 gap-2">
           {items.map(item => (
-            <button key={item} onClick={() => onSelect(item)} className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700 hover:bg-neutral-100 btn-base">
-              {item}
+            <button 
+              key={item} 
+              onClick={() => onSelect(item)} 
+              className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base transition-all ${
+                justLoggedTreatment === item 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
+              }`}
+            >
+              {justLoggedTreatment === item ? '✓ Logged' : item}
             </button>
           ))}
         </div>
