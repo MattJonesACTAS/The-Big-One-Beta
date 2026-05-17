@@ -1165,6 +1165,7 @@ export default function App() {
                           <input
                             type="file"
                             accept="image/*"
+                            capture="environment"
                             onInput={(e) => {
                               alert('onInput fired!');
                               const file = e.target.files?.[0];
