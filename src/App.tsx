@@ -640,7 +640,7 @@ export default function App() {
       startTime: now,
       pausedTime: adjustedElapsed * 1000,
       elapsedSeconds: adjustedElapsed,
-      rhythmCheckTarget: adjustedRhythm,
+      rhythmCheckTarget: adjustedElapsed + adjustedRhythm, // Target time = current elapsed + countdown
       cprRound: Math.floor(adjustedElapsed / 120) + 1,
       shocks: priorCounts.shock,
       treatments: initialTxs,
@@ -651,6 +651,7 @@ export default function App() {
     });
     setShowCatchup(false);
     setPhotoTimestamp(null); // Reset timestamp
+    previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
   };
 
   const handleMonitorScan = async (imageFile: File) => {
