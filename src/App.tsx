@@ -45,7 +45,7 @@ const INITIAL_STATE: AppState = {
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
   'Atropine', 'Calcium', 'Glucose', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Lignocaine',
-  'Magnesium', 'Midazolam', 'Normal Saline', 'Oxygen', 'Sodium Bicarbonate', 'Suxamethonium'
+  'Magnesium', 'Midazolam', 'Morphine', 'Normal Saline', 'Oxygen', 'Sodium Bicarbonate', 'Suxamethonium'
 ];
 
 type DoseOption = {
@@ -132,10 +132,16 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Midazolam': { 
     doses: [
-      { dose: '5mg', population: 'both' },
-      { dose: '0.1mg/kg', population: 'both' },
-      { dose: 'Other', population: 'both' }
+      { dose: '0.05mg/kg', population: 'both', indication: 'Post intubation sedation with ketamine - push dose' },
+      { dose: 'mg/hr', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
+      { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with morphine - push dose' }
     ] 
+  },
+  'Morphine': {
+    doses: [
+      { dose: 'mg/hr', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
+      { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with midazolam - push dose' }
+    ]
   },
   'Normal Saline': { 
     doses: [
@@ -1852,8 +1858,32 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       ? allDoses.filter(d => d.population === 'both' || d.population === state.patientType)
       : allDoses;
     
+    // Check if a dose is a unit-only custom input (e.g., "mg/hr", "mg")
+    const isCustomInput = (dose: string) => {
+      return dose === 'mg/hr' || dose === 'mg' || dose === 'mL/hr' || dose === 'mcg/hr';
+    };
+    
+    const regularDoses = filteredDoses.filter(d => d.dose !== 'Other' && !isCustomInput(d.dose));
+    const customInputDoses = filteredDoses.filter(d => isCustomInput(d.dose));
     const doses = filteredDoses.map(d => d.dose);
     const showOther = doses.includes('Other');
+    
+    // State for custom inputs (keyed by dose+indication to support multiple)
+    const [customInputValues, setCustomInputValues] = React.useState<Record<string, string>>({});
+    
+    const handleCustomInputAdd = (doseOpt: DoseOption) => {
+      const key = `${doseOpt.dose}-${doseOpt.indication}`;
+      const value = customInputValues[key];
+      if (value) {
+        // Check if this is the shared morph/midaz infusion treatment
+        if (doseOpt.indication === 'Post intubation sedation morph/midaz infusion') {
+          addTreatment(`Morph/midaz infusion ${value}${doseOpt.dose}`);
+        } else {
+          handleDoseSelect(`${value}${doseOpt.dose}`);
+        }
+        setCustomInputValues({ ...customInputValues, [key]: '' });
+      }
+    };
     
     return (
       <div className="h-full overflow-y-auto pb-4">
@@ -1867,7 +1897,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           )}
           
           <div className="space-y-3">
-            {filteredDoses.filter(d => d.dose !== 'Other').map(doseOpt => (
+            {regularDoses.map(doseOpt => (
               <button
                 key={doseOpt.dose}
                 onClick={() => handleDoseSelect(doseOpt.dose)}
@@ -1879,6 +1909,42 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                 <span className="text-lg">{calculateDose(doseOpt.dose, state.patientWeight)}</span>
               </button>
             ))}
+            
+            {customInputDoses.map(doseOpt => {
+              const key = `${doseOpt.dose}-${doseOpt.indication}`;
+              return (
+                <div key={key} className="w-full">
+                  {doseOpt.indication && (
+                    <label className="block text-xs text-neutral-600 mb-1 font-medium">
+                      {doseOpt.indication}
+                    </label>
+                  )}
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1 relative flex items-center bg-white border border-neutral-200 rounded-xl focus-within:ring-2 focus-within:ring-emerald-500 min-w-0">
+                      <input
+                        type="text"
+                        value={customInputValues[key] || ''}
+                        onChange={e => setCustomInputValues({ ...customInputValues, [key]: e.target.value })}
+                        onKeyPress={e => e.key === 'Enter' && customInputValues[key] && handleCustomInputAdd(doseOpt)}
+                        placeholder={`Enter dose...`}
+                        className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
+                      />
+                      <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">{doseOpt.dose}</span>
+                    </div>
+                    <button
+                      onClick={() => handleCustomInputAdd(doseOpt)}
+                      className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold btn-base disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      disabled={!customInputValues[key]}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
             
             {showOther && (() => {
               // Extract common unit from dose strings
