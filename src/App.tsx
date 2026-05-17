@@ -300,6 +300,8 @@ export default function App() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
+  const [showLoggedNotification, setShowLoggedNotification] = useState(false);
+  const loggedTreatmentRef = useRef<string>('');
   const [isShockForced, setIsShockForced] = useState(false);
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
@@ -466,6 +468,13 @@ export default function App() {
       currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : null
     }));
     setIsShockForced(false);
+    
+    // Show notification with treatment name
+    if (name !== 'Disarm — ROSC') {
+      loggedTreatmentRef.current = name;
+      setShowLoggedNotification(true);
+      setTimeout(() => setShowLoggedNotification(false), 2000);
+    }
     
     // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
     if (name.includes('Shock') || name.includes('Disarm')) {
@@ -2010,6 +2019,27 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           </div>
         </>
       )}
+
+      {/* Option 3: Large Centered Checkmark */}
+      {showLoggedNotification && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[2000]">
+          <div className="bg-emerald-600 text-white rounded-full p-8 shadow-2xl flex flex-col items-center gap-3 animate-fade-in">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <div className="font-bold text-lg">{loggedTreatmentRef.current}</div>
+            <div className="text-sm opacity-90">logged</div>
+          </div>
+        </div>
+      )}
+
+      {/* Option 4: Success Banner (Top Edge) - COMMENTED OUT, UNCOMMENT TO USE INSTEAD
+      {showLoggedNotification && (
+        <div className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] animate-slide-down">
+          ✓ {loggedTreatmentRef.current} logged
+        </div>
+      )}
+      */}
     </div>
   );
 }
