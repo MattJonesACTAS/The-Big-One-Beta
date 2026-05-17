@@ -1871,7 +1871,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
               const displayDose = calculateDose(doseOpt.dose, state.patientWeight);
               const cleanDose = cleanDoseForLog(displayDose);
               const fullTreatmentName = `${selectedMed} ${cleanDose}`;
-              const isJustLogged = justLoggedTreatment === fullTreatmentName;
+              const isJustLogged = justLoggedTreatment ? justLoggedTreatment === fullTreatmentName : false;
               
               return (
                 <button
@@ -2096,19 +2096,22 @@ function TxSection({
         className="overflow-hidden bg-white"
       >
         <div className="p-3 grid grid-cols-1 gap-2">
-          {items.map(item => (
-            <button 
-              key={item} 
-              onClick={() => onSelect(item)} 
-              className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base transition-all ${
-                justLoggedTreatment === item 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
-              }`}
-            >
-              {justLoggedTreatment === item ? '✓ Logged' : item}
-            </button>
-          ))}
+          {items.map(item => {
+            const isLogged = justLoggedTreatment ? justLoggedTreatment === item : false;
+            return (
+              <button 
+                key={item} 
+                onClick={() => onSelect(item)} 
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base transition-all ${
+                  isLogged
+                    ? 'bg-emerald-600 text-white' 
+                    : 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
+                }`}
+              >
+                {isLogged ? '✓ Logged' : item}
+              </button>
+            );
+          })}
         </div>
       </motion.div>
     </div>
