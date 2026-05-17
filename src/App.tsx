@@ -204,7 +204,7 @@ const getLocalTimeWithSeconds = (date?: Date) => {
 const calculateDose = (doseStr: string, weight: number | null): string => {
   if (!weight || !doseStr.includes('/kg')) return doseStr;
   
-  const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml)\/kg/);
+  const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL)\/kg/i);
   if (!match) return doseStr;
   
   const [_, amount, unit] = match;
@@ -653,6 +653,9 @@ export default function App() {
       initialTxs.push({ name: `Adrenaline push #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
     }
 
+    const parsedWeight = finalWeight ? parseFloat(finalWeight) : null;
+    const validWeight = parsedWeight && !isNaN(parsedWeight) ? parsedWeight : null;
+    
     setState({
       ...INITIAL_STATE,
       running: true,
@@ -665,7 +668,7 @@ export default function App() {
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
-      patientWeight: finalWeight ? parseFloat(finalWeight) : null,
+      patientWeight: validWeight,
       patientType: weightType
     });
     setShowCatchup(false);
@@ -1131,7 +1134,9 @@ export default function App() {
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative">
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="Enter weight"
                         value={weightInput}
                         onChange={(e) => setWeightInput(e.target.value)}
@@ -1179,7 +1184,9 @@ export default function App() {
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative">
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="Enter weight"
                         value={weightInput}
                         onChange={(e) => setWeightInput(e.target.value)}
