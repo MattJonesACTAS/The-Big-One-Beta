@@ -300,7 +300,6 @@ export default function App() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
-  const [lastLoggedTreatment, setLastLoggedTreatment] = useState<string | null>(null);
   const [isShockForced, setIsShockForced] = useState(false);
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
@@ -467,12 +466,6 @@ export default function App() {
       currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : null
     }));
     setIsShockForced(false);
-    
-    // Show toast notification
-    if (name !== 'Disarm — ROSC') {
-      setLastLoggedTreatment(name);
-      setTimeout(() => setLastLoggedTreatment(null), 2000);
-    }
     
     // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
     if (name.includes('Shock') || name.includes('Disarm')) {
@@ -2016,16 +2009,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             </div>
           </div>
         </>
-      )}
-
-      {/* Toast notification for logged treatments */}
-      {lastLoggedTreatment && (
-        <div 
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-lg font-bold text-sm z-[2000] transition-all duration-300 ease-in-out animate-bounce-in"
-          style={{ animation: 'fadeInUp 0.3s ease-out' }}
-        >
-          ✓ {lastLoggedTreatment} logged
-        </div>
       )}
     </div>
   );
