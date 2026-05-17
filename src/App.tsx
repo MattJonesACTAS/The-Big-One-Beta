@@ -1976,7 +1976,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           'Shock — VT', 'Disarm — VF', 'Disarm — PEA', 'Disarm — Asystole', 'Disarm — ROSC'
         ]} 
         onSelect={addTreatment}
-        justLoggedTreatment={justLoggedTreatment}
       />
 
       {!isShockForced && (
@@ -1989,7 +1988,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             sectionId="medications"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
-            justLoggedTreatment={justLoggedTreatment}
           />
           
           <TxSection 
@@ -2000,7 +1998,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             sectionId="airway"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
-            justLoggedTreatment={justLoggedTreatment}
           />
           
           <TxSection 
@@ -2011,7 +2008,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
             sectionId="otherTx"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
-            justLoggedTreatment={justLoggedTreatment}
           />
           
           <div className="p-6 border-t border-neutral-100 bg-neutral-50 px-2 sm:px-6 mb-4">
@@ -2045,8 +2041,7 @@ function TxSection({
   initiallyExpanded = false,
   sectionId,
   expandedSection,
-  onToggle,
-  justLoggedTreatment = null
+  onToggle
 }: { 
   title: string;
   color: string;
@@ -2056,7 +2051,6 @@ function TxSection({
   sectionId?: string;
   expandedSection?: string | null;
   onToggle?: (id: string) => void;
-  justLoggedTreatment?: string | null;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   
@@ -2096,22 +2090,15 @@ function TxSection({
         className="overflow-hidden bg-white"
       >
         <div className="p-3 grid grid-cols-1 gap-2">
-          {items.map(item => {
-            const isLogged = justLoggedTreatment !== null && justLoggedTreatment === item;
-            return (
-              <button 
-                key={item} 
-                onClick={() => onSelect(item)} 
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base transition-all ${
-                  isLogged
-                    ? 'bg-emerald-600 text-white' 
-                    : 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
-                }`}
-              >
-                {isLogged ? '✓ Logged' : item}
-              </button>
-            );
-          })}
+          {items.map(item => (
+            <button 
+              key={item} 
+              onClick={() => onSelect(item)} 
+              className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700 hover:bg-neutral-100 btn-base"
+            >
+              {item}
+            </button>
+          ))}
         </div>
       </motion.div>
     </div>
