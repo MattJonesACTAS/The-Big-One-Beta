@@ -300,7 +300,6 @@ export default function App() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
-  const [justLoggedTreatment, setJustLoggedTreatment] = useState<string | null>(null);
   const [isShockForced, setIsShockForced] = useState(false);
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
@@ -464,7 +463,7 @@ export default function App() {
       ...prev,
       treatments: [...prev.treatments, treatment],
       shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
-      currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : prev.currentOverlay // Keep overlay open temporarily
+      currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : null
     }));
     setIsShockForced(false);
     
@@ -480,15 +479,6 @@ export default function App() {
     }
     if (name.includes('Amiodarone')) {
       setDisregardAmiodarone(null);
-    }
-    
-    // Flash "Logged" confirmation
-    if (name !== 'Disarm — ROSC') {
-      setJustLoggedTreatment(name);
-      setTimeout(() => {
-        setState(prev => ({ ...prev, currentOverlay: null }));
-        setJustLoggedTreatment(null);
-      }, 600);
     }
   };
 
@@ -1867,27 +1857,18 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           )}
           
           <div className="space-y-3">
-            {filteredDoses.filter(d => d.dose !== 'Other').map(doseOpt => {
-              const displayDose = calculateDose(doseOpt.dose, state.patientWeight);
-              const cleanDose = cleanDoseForLog(displayDose);
-              const fullTreatmentName = `${selectedMed} ${cleanDose}`;
-              const isJustLogged = justLoggedTreatment !== null && justLoggedTreatment === fullTreatmentName;
-              
-              return (
-                <button
-                  key={doseOpt.dose}
-                  onClick={() => handleDoseSelect(doseOpt.dose)}
-                  className={`w-full p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1 transition-all ${
-                    isJustLogged ? 'bg-emerald-600 text-white' : 'bg-emerald-600 text-white'
-                  }`}
-                >
-                  {doseOpt.indication && !isJustLogged && (
-                    <span className="text-[10px] opacity-60 font-normal uppercase tracking-wide">{doseOpt.indication}</span>
-                  )}
-                  <span className="text-lg">{isJustLogged ? '✓ Logged' : displayDose}</span>
-                </button>
-              );
-            })}
+            {filteredDoses.filter(d => d.dose !== 'Other').map(doseOpt => (
+              <button
+                key={doseOpt.dose}
+                onClick={() => handleDoseSelect(doseOpt.dose)}
+                className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1"
+              >
+                {doseOpt.indication && (
+                  <span className="text-[10px] opacity-60 font-normal uppercase tracking-wide">{doseOpt.indication}</span>
+                )}
+                <span className="text-lg">{calculateDose(doseOpt.dose, state.patientWeight)}</span>
+              </button>
+            ))}
             
             {showOther && (() => {
               // Extract common unit from dose strings
