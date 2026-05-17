@@ -2019,19 +2019,14 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       )}
 
       {/* Toast notification for logged treatments */}
-      <AnimatePresence>
-        {lastLoggedTreatment && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.3 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-lg font-bold text-sm z-[2000]"
-          >
-            ✓ {lastLoggedTreatment} logged
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {lastLoggedTreatment && (
+        <div 
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-lg font-bold text-sm z-[2000] transition-all duration-300 ease-in-out animate-bounce-in"
+          style={{ animation: 'fadeInUp 0.3s ease-out' }}
+        >
+          ✓ {lastLoggedTreatment} logged
+        </div>
+      )}
     </div>
   );
 }
