@@ -1167,10 +1167,16 @@ export default function App() {
                             accept="image/*"
                             capture="environment"
                             onChange={(e) => {
+                              alert('onChange fired!'); // DEBUG: Test if this fires on mobile
                               const file = e.target.files?.[0];
                               if (file && !isProcessingOCR) {
+                                alert(`File selected: ${file.name}`); // DEBUG: Test if file exists
                                 e.target.value = '';
                                 handleMonitorScan(file);
+                              } else if (!file) {
+                                alert('No file found'); // DEBUG
+                              } else if (isProcessingOCR) {
+                                alert('Already processing'); // DEBUG
                               }
                             }}
                             className="hidden"
