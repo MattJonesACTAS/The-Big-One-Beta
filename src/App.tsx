@@ -1871,7 +1871,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
               const displayDose = calculateDose(doseOpt.dose, state.patientWeight);
               const cleanDose = cleanDoseForLog(displayDose);
               const fullTreatmentName = `${selectedMed} ${cleanDose}`;
-              const isJustLogged = justLoggedTreatment ? justLoggedTreatment === fullTreatmentName : false;
+              const isJustLogged = justLoggedTreatment !== null && justLoggedTreatment === fullTreatmentName;
               
               return (
                 <button
@@ -2046,7 +2046,7 @@ function TxSection({
   sectionId,
   expandedSection,
   onToggle,
-  justLoggedTreatment
+  justLoggedTreatment = null
 }: { 
   title: string;
   color: string;
@@ -2097,7 +2097,7 @@ function TxSection({
       >
         <div className="p-3 grid grid-cols-1 gap-2">
           {items.map(item => {
-            const isLogged = justLoggedTreatment ? justLoggedTreatment === item : false;
+            const isLogged = justLoggedTreatment !== null && justLoggedTreatment === item;
             return (
               <button 
                 key={item} 
