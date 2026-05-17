@@ -114,7 +114,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Ketamine infusion': {
     doses: [
-      { dose: 'Other', population: 'both' }
+      { dose: 'mg/h', population: 'both' }
     ]
   },
   'Lignocaine': { 
@@ -133,13 +133,13 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Midazolam': { 
     doses: [
       { dose: '0.05mg/kg', population: 'both', indication: 'Post intubation sedation with ketamine - push dose' },
-      { dose: 'mg/hr', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
+      { dose: 'mg/h', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
       { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with morphine - push dose' }
     ] 
   },
   'Morphine': {
     doses: [
-      { dose: 'mg/hr', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
+      { dose: 'mg/h', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
       { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with midazolam - push dose' }
     ]
   },
@@ -1871,9 +1871,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       ? allDoses.filter(d => d.population === 'both' || d.population === state.patientType)
       : allDoses;
     
-    // Check if a dose is a unit-only custom input (e.g., "mg/hr", "mg")
+    // Check if a dose is a unit-only custom input (e.g., "mg/h", "mg")
     const isCustomInput = (dose: string) => {
-      return dose === 'mg/hr' || dose === 'mg' || dose === 'mL/hr' || dose === 'mcg/hr';
+      return dose === 'mg/h' || dose === 'mg' || dose === 'mL/h' || dose === 'mcg/h';
     };
     
     const regularDoses = filteredDoses.filter(d => d.dose !== 'Other' && !isCustomInput(d.dose));
@@ -1930,7 +1930,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                     </label>
                   )}
                   <div className="flex gap-2 items-center">
-                    <div className="flex-1 relative flex items-center bg-white border border-neutral-200 rounded-xl focus-within:ring-2 focus-within:ring-emerald-500 min-w-0">
+                    <div className="flex-1 relative flex items-center bg-white border-2 border-emerald-500 rounded-xl focus-within:ring-2 focus-within:ring-emerald-600 min-w-0">
                       <input
                         type="text"
                         value={customInputValues[key] || ''}
@@ -2097,7 +2097,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         </>
       )}
 
-      {/* Option 3: Large Centered Checkmark */}
+      {/* Option 3: Large Centered Checkmark - COMMENTED OUT
       {showLoggedNotification && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[2000]">
           <div className="bg-emerald-600 text-white rounded-full p-8 shadow-2xl flex flex-col items-center gap-3 animate-fade-in">
@@ -2109,14 +2109,14 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           </div>
         </div>
       )}
+      */}
 
-      {/* Option 4: Success Banner (Top Edge) - COMMENTED OUT, UNCOMMENT TO USE INSTEAD
+      {/* Option 4: Success Banner (Top Edge) */}
       {showLoggedNotification && (
         <div className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] animate-slide-down">
           ✓ {loggedTreatmentRef.current} logged
         </div>
       )}
-      */}
     </div>
   );
 }
