@@ -708,6 +708,8 @@ export default function App() {
     });
     console.log('State set with weight:', parsedWeight, 'and type:', weightType);
     setShowCatchup(false);
+    setDisregardAdrenaline(null);
+    setDisregardAmiodarone(null);
     setPhotoTimestamp(null); // Reset timestamp
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
   };
