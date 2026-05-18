@@ -202,23 +202,16 @@ const getLocalTimeWithSeconds = (date?: Date) => {
 };
 
 const calculateDose = (doseStr: string, weight: number | null): string => {
-  console.log('calculateDose called:', { doseStr, weight, hasSlashKg: doseStr.includes('/kg') });
-  
   if (!weight || !doseStr.includes('/kg')) return doseStr;
   
   const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL)\/kg/i);
-  console.log('Regex match result:', match);
-  
   if (!match) return doseStr;
   
   const [_, amount, unit] = match;
   const calculated = parseFloat(amount) * weight;
   const rounded = Math.round(calculated * 10) / 10;
   
-  const result = `${amount}${unit}/kg (${rounded}${unit})`;
-  console.log('Calculated result:', result);
-  
-  return result;
+  return `${amount}${unit}/kg (${rounded}${unit})`;
 };
 
 const cleanDoseForLog = (doseStr: string): string => {
@@ -643,11 +636,6 @@ export default function App() {
     
     // Use override weight if provided, otherwise use weightInput state
     const finalWeight = overrideWeight || weightInput;
-    console.log('handleCatchupStart - weightInput:', weightInput, 'overrideWeight:', overrideWeight, 'finalWeight:', finalWeight);
-    
-    const parsedWeight = finalWeight ? parseFloat(finalWeight) : null;
-    const validWeight = parsedWeight && !isNaN(parsedWeight) ? parsedWeight : null;
-    console.log('Weight validation - parsed:', parsedWeight, 'valid:', validWeight);
     
     // If photo was taken, adjust times based on elapsed time since photo
     if (photoTimestamp) {
@@ -699,7 +687,7 @@ export default function App() {
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
-      patientWeight: validWeight,
+      patientWeight: finalWeight ? parseFloat(finalWeight) : null,
       patientType: weightType
     });
     setShowCatchup(false);
@@ -1165,9 +1153,7 @@ export default function App() {
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative">
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        type="number"
                         placeholder="Enter weight"
                         value={weightInput}
                         onChange={(e) => setWeightInput(e.target.value)}
@@ -1215,9 +1201,7 @@ export default function App() {
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative">
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        type="number"
                         placeholder="Enter weight"
                         value={weightInput}
                         onChange={(e) => setWeightInput(e.target.value)}
