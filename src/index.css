@@ -29,6 +29,17 @@
     animation: slideDown 0.3s ease-out;
   }
   
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  
   @keyframes slideDown {
     from {
       transform: translateY(-100%);
