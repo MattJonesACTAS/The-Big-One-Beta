@@ -1541,6 +1541,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Treatment Logged Notification Banner */}
+      {showLoggedNotification && (
+        <div className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] animate-slide-down">
+          ✓ {loggedTreatmentRef.current} logged
+        </div>
+      )}
     </div>
   );
 }
