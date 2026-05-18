@@ -631,6 +631,8 @@ export default function App() {
 
   // --- Catchup Handlers ---
   const handleCatchupStart = (overrideWeight?: string) => {
+    console.log('handleCatchupStart called', { overrideWeight, weightInput });
+    
     let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
     let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
     
@@ -645,6 +647,8 @@ export default function App() {
         parsedWeight = parsed;
       }
     }
+    
+    console.log('Parsed weight:', parsedWeight);
     
     // If photo was taken, adjust times based on elapsed time since photo
     if (photoTimestamp) {
