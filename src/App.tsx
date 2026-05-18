@@ -1641,7 +1641,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'reversibles' && <ReversiblesOverlay />}
         {type === 'rosc' && <ROSCSelection />}
         {type === 'phea' && <PHEASelection />}
-        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} />}
+        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} deleteTreatment={deleteTreatment} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
     </motion.div>
@@ -1823,7 +1823,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
+function SummaryOverlay({ state, pharmaSummary, deleteTreatment }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, deleteTreatment: (index: number) => void }) {
   return (
     <div className="space-y-6 pb-20">
       <SummaryStats state={state} pharmaSummary={pharmaSummary} />
