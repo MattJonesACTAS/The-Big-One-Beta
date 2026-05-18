@@ -350,21 +350,6 @@ export default function App() {
     });
   }, []);
 
-  // Control body overflow based on whether case is closed
-  useEffect(() => {
-    if (isCaseClosed) {
-      document.body.style.overflow = 'auto';
-      document.body.style.height = 'auto';
-    } else {
-      document.body.style.overflow = 'hidden';
-      document.body.style.height = '100vh';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-    };
-  }, [isCaseClosed]);
-
   const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -878,8 +863,7 @@ export default function App() {
 
   if (isCaseClosed) {
     return (
-      <div className="h-screen bg-white flex flex-col p-6 max-w-2xl mx-auto overflow-hidden">
-        <div className="flex-1 overflow-y-auto pb-24 space-y-6">
+      <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
         <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
         
         <div className="grid grid-cols-2 gap-4">
@@ -915,7 +899,6 @@ export default function App() {
            </div>
          </div>
         )}
-        </div>
       </div>
     );
   }
@@ -971,10 +954,7 @@ export default function App() {
       </div>
 
       {/* Main Center Display */}
-      <div 
-        key={state.startTime}
-        style={{ height: 'calc(100vh - 320px)' }}
-        className={`bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 ${
+      <div className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
