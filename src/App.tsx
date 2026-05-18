@@ -498,6 +498,25 @@ export default function App() {
     }
   };
 
+  const deleteTreatment = (index: number) => {
+    setState(prev => {
+      const newTreatments = [...prev.treatments];
+      const deletedTx = newTreatments[index];
+      newTreatments.splice(index, 1);
+      
+      // Adjust shock count if deleting a shock
+      const newShocks = (deletedTx.name.includes('Shock') && !deletedTx.name.includes('Disarm')) 
+        ? Math.max(0, prev.shocks - 1) 
+        : prev.shocks;
+      
+      return {
+        ...prev,
+        treatments: newTreatments,
+        shocks: newShocks
+      };
+    });
+  };
+
   const adrenalineRoundStatus = useMemo(() => {
     const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline'));
     const lastAdr = adrTreatments.pop();
@@ -994,7 +1013,7 @@ export default function App() {
                   setDisregardAdrenaline('pending');
                 }
               }}
-              className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 ${
+              className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[90px] sm:min-h-[120px] ${
                 !adrenalineRoundStatus.show || disregardAdrenaline === 'confirmed' 
                   ? 'opacity-0 pointer-events-none' 
                   : 'opacity-100 cursor-pointer'
@@ -1038,7 +1057,7 @@ export default function App() {
                     setDisregardAmiodarone('pending');
                   }
                 }}
-                className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 ${
+                className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[90px] sm:min-h-[120px] ${
                   !amiodaroneStatus.show || disregardAmiodarone === 'confirmed'
                     ? 'opacity-0 pointer-events-none'
                     : 'opacity-100 cursor-pointer'
@@ -1698,7 +1717,7 @@ function SectionGroup({ title, color, items }: { title: string, color: string, i
 }
 
 // --- TREATMENT LOG (EVEN COLUMNS) ---
-function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = false }: { treatments: Treatment[], elapsedSeconds: number, catchupElapsed: number, isSummary?: boolean }) {
+function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, deleteTreatment, isSummary = false }: { treatments: Treatment[], elapsedSeconds: number, catchupElapsed: number, deleteTreatment?: (index: number) => void, isSummary?: boolean }) {
   // Helper to split treatment name into medication and dose
   const splitTreatmentName = (name: string): { med: string, dose: string | null } => {
     // Match dose patterns at the end: numbers followed by units (mg, mcg, mL, mMol, g, kg, %)
@@ -1712,11 +1731,12 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
   return (
     <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
       {/* Balanced columns: More space for name, even space for times */}
-      <div className={`grid ${isSummary ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]'} bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
+      <div className={`grid ${isSummary ? 'grid-cols-[2fr_1fr_1fr]' : deleteTreatment ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr_0.5fr]' : 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]'} bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>
         {!isSummary && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>}
+        {deleteTreatment && <div></div>}
       </div>
       
       {/* Table Body */}
@@ -1733,7 +1753,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
             const { med, dose } = splitTreatmentName(tx.name);
             
             return (
-              <div key={i} className={`grid ${isSummary ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]'} px-4 py-4 items-center gap-1`}>
+              <div key={i} className={`grid ${isSummary ? 'grid-cols-[2fr_1fr_1fr]' : deleteTreatment ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr_0.5fr]' : 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]'} px-4 py-4 items-center gap-1`}>
                 <div className="pr-1">
                   <div className={`text-[15px] font-bold ${
                     tx.name.toLowerCase().includes('shock') ? 'text-red-600' : 
@@ -1745,6 +1765,25 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
                 <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{timeDisplay}</div>
                 <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{elapsedDisplay}</div>
                 {!isSummary && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">{ago}</div>}
+                {deleteTreatment && (
+                  <button
+                    onClick={() => {
+                      const actualIndex = treatments.length - 1 - i; // Convert reversed display index to actual array index
+                      if (window.confirm(`Delete "${tx.name}"?`)) {
+                        deleteTreatment(actualIndex);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1 transition-colors"
+                    aria-label="Delete treatment"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                  </button>
+                )}
               </div>
             );
           })
@@ -1790,7 +1829,7 @@ function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSumma
       <SummaryStats state={state} pharmaSummary={pharmaSummary} />
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
-        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} />
+        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} deleteTreatment={deleteTreatment} />
       </div>
     </div>
   );
