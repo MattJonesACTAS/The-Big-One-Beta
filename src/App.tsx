@@ -2106,27 +2106,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           </div>
         </>
       )}
-
-      {/* Option 3: Large Centered Checkmark - COMMENTED OUT
-      {showLoggedNotification && (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[2000]">
-          <div className="bg-emerald-600 text-white rounded-full p-8 shadow-2xl flex flex-col items-center gap-3 animate-fade-in">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            <div className="font-bold text-lg">{loggedTreatmentRef.current}</div>
-            <div className="text-sm opacity-90">logged</div>
-          </div>
-        </div>
-      )}
-      */}
-
-      {/* Option 4: Success Banner (Top Edge) */}
-      {showLoggedNotification && (
-        <div className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] animate-slide-down">
-          ✓ {loggedTreatmentRef.current} logged
-        </div>
-      )}
     </div>
   );
 }
