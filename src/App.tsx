@@ -872,7 +872,8 @@ export default function App() {
 
   if (isCaseClosed) {
     return (
-      <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
+      <div className="h-screen bg-white flex flex-col p-6 max-w-2xl mx-auto overflow-hidden">
+        <div className="flex-1 overflow-y-auto pb-24 space-y-6">
         <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
         
         <div className="grid grid-cols-2 gap-4">
@@ -908,6 +909,7 @@ export default function App() {
            </div>
          </div>
         )}
+        </div>
       </div>
     );
   }
