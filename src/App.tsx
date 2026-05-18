@@ -707,10 +707,21 @@ export default function App() {
       patientType: weightType
     });
     console.log('State set with weight:', parsedWeight, 'and type:', weightType);
+    
+    // Reset all UI states for clean new case
     setShowCatchup(false);
     setDisregardAdrenaline(null);
     setDisregardAmiodarone(null);
-    setPhotoTimestamp(null); // Reset timestamp
+    setShowLoggedNotification(false);
+    setIsShockForced(false);
+    setHasShownForcedShock(false);
+    setCatchupStep(1);
+    setWeightType(null);
+    setPaedWeightMethod(null);
+    setWeightInput('');
+    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0 });
+    setPriorTxs([]);
+    setPhotoTimestamp(null);
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
   };
 
