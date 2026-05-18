@@ -641,10 +641,13 @@ export default function App() {
     
     // Parse weight, checking for valid number
     let parsedWeight: number | null = null;
-    if (finalWeight && finalWeight.trim()) {
-      const parsed = parseFloat(finalWeight);
-      if (!isNaN(parsed) && parsed > 0) {
-        parsedWeight = parsed;
+    if (finalWeight) {
+      const weightStr = String(finalWeight).trim();
+      if (weightStr) {
+        const parsed = parseFloat(weightStr);
+        if (!isNaN(parsed) && parsed > 0) {
+          parsedWeight = parsed;
+        }
       }
     }
     
