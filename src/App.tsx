@@ -638,7 +638,13 @@ export default function App() {
     const finalWeight = overrideWeight || weightInput;
     
     // Parse weight, checking for valid number
-    const parsedWeight = finalWeight && finalWeight.trim() ? parseFloat(finalWeight) : null;
+    let parsedWeight: number | null = null;
+    if (finalWeight && finalWeight.trim()) {
+      const parsed = parseFloat(finalWeight);
+      if (!isNaN(parsed) && parsed > 0) {
+        parsedWeight = parsed;
+      }
+    }
     
     // If photo was taken, adjust times based on elapsed time since photo
     if (photoTimestamp) {
