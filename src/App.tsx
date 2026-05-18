@@ -334,6 +334,17 @@ export default function App() {
     }
   }, [disregardAmiodarone]);
 
+  // Force scroll reset and layout recalculation on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    // Force a layout recalculation
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+  }, []);
+
   const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
