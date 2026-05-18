@@ -633,6 +633,9 @@ export default function App() {
   const handleCatchupStart = (overrideWeight?: string) => {
     console.log('handleCatchupStart called', { overrideWeight, weightInput });
     
+    // Clear localStorage for a completely fresh start
+    localStorage.removeItem('theBigOneState');
+    
     let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
     let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
     
