@@ -942,7 +942,7 @@ export default function App() {
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
       }`}>
-        <div className="h-full flex flex-col items-center justify-between p-4 relative">
+        <div className="h-full flex flex-col items-center p-4 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
             <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
@@ -955,8 +955,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Rhythm Check - Centered vertically and responsive size */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full pt-8 sm:pt-10">
+          {/* Rhythm Check - Centered */}
+          <div className="flex flex-col items-center justify-center w-full" style={{ paddingTop: '120px', paddingBottom: '40px' }}>
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                 <circle
