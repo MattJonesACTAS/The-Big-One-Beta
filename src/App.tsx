@@ -973,7 +973,8 @@ export default function App() {
       {/* Main Center Display */}
       <div 
         key={state.startTime}
-        className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
+        style={{ height: 'calc(100vh - 320px)' }}
+        className={`bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 ${
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
