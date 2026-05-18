@@ -637,6 +637,9 @@ export default function App() {
     // Use override weight if provided, otherwise use weightInput state
     const finalWeight = overrideWeight || weightInput;
     
+    // Parse weight, checking for valid number
+    const parsedWeight = finalWeight && finalWeight.trim() ? parseFloat(finalWeight) : null;
+    
     // If photo was taken, adjust times based on elapsed time since photo
     if (photoTimestamp) {
       const timeSincePhoto = Math.floor((Date.now() - photoTimestamp) / 1000); // seconds
@@ -687,7 +690,7 @@ export default function App() {
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
-      patientWeight: finalWeight ? parseFloat(finalWeight) : null,
+      patientWeight: parsedWeight,
       patientType: weightType
     });
     setShowCatchup(false);
