@@ -889,7 +889,7 @@ export default function App() {
   return (
     <div className="h-screen bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
       {/* Top Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           {state.running ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
           {state.running ? 'Pause' : 'Resume'}
@@ -903,7 +903,7 @@ export default function App() {
       </div>
 
       {/* Top Quick Tools */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
@@ -937,7 +937,7 @@ export default function App() {
       </div>
 
       {/* Main Center Display */}
-      <div className={`bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 max-h-[calc(100vh-320px)] ${
+      <div className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
@@ -1107,7 +1107,7 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
