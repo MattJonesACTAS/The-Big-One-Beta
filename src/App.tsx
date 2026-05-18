@@ -706,6 +706,7 @@ export default function App() {
       patientWeight: parsedWeight,
       patientType: weightType
     });
+    console.log('State set with weight:', parsedWeight, 'and type:', weightType);
     setShowCatchup(false);
     setPhotoTimestamp(null); // Reset timestamp
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
@@ -1179,7 +1180,7 @@ export default function App() {
                       {weightInput && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-neutral-400 text-lg font-bold pointer-events-none">kg</span>}
                     </div>
                     <button 
-                      onClick={handleCatchupStart}
+                      onClick={() => handleCatchupStart()}
                       className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold btn-base"
                     >
                       {weightInput ? 'Set' : 'Skip'}
