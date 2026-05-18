@@ -339,9 +339,14 @@ export default function App() {
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-    // Force a layout recalculation
+    // Force complete style and layout recalculation
     window.requestAnimationFrame(() => {
+      // Trigger reflow
+      document.body.offsetHeight;
       window.dispatchEvent(new Event('resize'));
+      // Clear any inline styles that might have persisted
+      document.body.removeAttribute('style');
+      document.documentElement.removeAttribute('style');
     });
   }, []);
 
@@ -860,7 +865,8 @@ export default function App() {
 
   const deleteCase = () => {
     localStorage.removeItem('theBigOneState');
-    window.location.reload();
+    // Force complete reload with cache bust
+    window.location.href = window.location.pathname + '?t=' + Date.now();
   };
 
   const closeCase = () => {
