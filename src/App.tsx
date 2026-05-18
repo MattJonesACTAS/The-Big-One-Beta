@@ -345,6 +345,21 @@ export default function App() {
     });
   }, []);
 
+  // Control body overflow based on whether case is closed
+  useEffect(() => {
+    if (isCaseClosed) {
+      document.body.style.overflow = 'auto';
+      document.body.style.height = 'auto';
+    } else {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, [isCaseClosed]);
+
   const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
