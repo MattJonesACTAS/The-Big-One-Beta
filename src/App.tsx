@@ -955,8 +955,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Rhythm Check - Centered */}
-          <div className="flex flex-col items-center justify-center w-full" style={{ paddingTop: '120px', paddingBottom: '40px' }}>
+          {/* Rhythm Check - Centered vertically and responsive size */}
+          <div className="flex-1 flex flex-col items-center justify-center w-full">
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                 <circle
@@ -1015,9 +1015,9 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* Adrenaline & Amiodarone Status - Conditionally rendered */}
+          {/* Adrenaline & Amiodarone Status - Absolutely positioned at bottom */}
           {((adrenalineRoundStatus.show && disregardAdrenaline !== 'confirmed') || (amiodaroneStatus.show && disregardAmiodarone !== 'confirmed')) && (
-            <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-2 sm:mb-4">
+            <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 flex gap-2 sm:gap-3 justify-between">
               {/* Adrenaline Warning */}
               {adrenalineRoundStatus.show && disregardAdrenaline !== 'confirmed' && (
                 <div 
