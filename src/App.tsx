@@ -507,12 +507,8 @@ export default function App() {
       return;
     }
     
-    // Otherwise handle normal pause/resume
-    if (state.running) {
-      setShowPauseWarning(true);
-    } else {
-      togglePause();
-    }
+    // Pause or resume directly without warning
+    togglePause();
   };
 
   const resetTimer = () => {
@@ -554,8 +550,11 @@ export default function App() {
       shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
       currentOverlay: null, // Don't open overlay for ROSC anymore
       // For ROSC: pause rhythm check at 2:00 (but keep elapsed time running)
-      rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : prev.rhythmCheckTarget,
-      rhythmCheckOvertime: name === 'Disarm - ROSC' ? 0 : prev.rhythmCheckOvertime,
+      rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : 
+                        // For other shock/disarm: if resuming from paused state, reset to 2:00
+                        ((name.includes('Shock') || name.includes('Disarm')) && prev.rhythmCheckPaused) ? prev.elapsedSeconds + 120 :
+                        prev.rhythmCheckTarget,
+      rhythmCheckOvertime: (name === 'Disarm - ROSC' || ((name.includes('Shock') || name.includes('Disarm')) && prev.rhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
       // Pause rhythm check for ROSC, unpause for any other shock/disarm
       rhythmCheckPaused: (name.includes('Shock') || name.includes('Disarm')) 
         ? (name === 'Disarm - ROSC' ? true : false)
