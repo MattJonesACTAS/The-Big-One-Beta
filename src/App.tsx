@@ -544,22 +544,25 @@ export default function App() {
       clockSeconds: getLocalTimeWithSeconds(now)
     };
 
-    setState(prev => ({
-      ...prev,
-      treatments: [...prev.treatments, treatment],
-      shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
-      currentOverlay: null, // Don't open overlay for ROSC anymore
-      // For ROSC: pause rhythm check at 2:00 (but keep elapsed time running)
-      rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : 
-                        // For other shock/disarm: if resuming from paused state, reset to 2:00
-                        ((name.includes('Shock') || name.includes('Disarm')) && prev.rhythmCheckPaused) ? prev.elapsedSeconds + 120 :
-                        prev.rhythmCheckTarget,
-      rhythmCheckOvertime: (name === 'Disarm - ROSC' || ((name.includes('Shock') || name.includes('Disarm')) && prev.rhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
-      // Pause rhythm check for ROSC, unpause for any other shock/disarm
-      rhythmCheckPaused: (name.includes('Shock') || name.includes('Disarm')) 
-        ? (name === 'Disarm - ROSC' ? true : false)
-        : prev.rhythmCheckPaused
-    }));
+    setState(prev => {
+      const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
+      const isROSC = name === 'Disarm - ROSC';
+      const wasRhythmCheckPaused = prev.rhythmCheckPaused;
+      
+      return {
+        ...prev,
+        treatments: [...prev.treatments, treatment],
+        shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
+        currentOverlay: null,
+        // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
+        rhythmCheckTarget: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) 
+          ? prev.elapsedSeconds + 120 
+          : prev.rhythmCheckTarget,
+        rhythmCheckOvertime: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
+        // Pause for ROSC, unpause for other shock/disarm
+        rhythmCheckPaused: isShockOrDisarm ? isROSC : prev.rhythmCheckPaused
+      };
+    });
     
     // Make ROSC button flash when ROSC is selected
     if (name === 'Disarm - ROSC') {
@@ -1309,125 +1312,126 @@ export default function App() {
                 </div>
               )}
 
-              {catchupStep === 5 && !weightType && (
-                <div className="text-center space-y-5">
+              {catchupStep === 5 && (
+                <div className="text-center space-y-5 px-2">
                   <h2 className="text-xl font-bold text-neutral-900">Patient Type</h2>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => setWeightType('adult')}
-                      className="bg-emerald-600 text-white p-5 rounded-2xl text-base font-bold btn-base"
-                    >
-                      Adult
-                    </button>
-                    <button 
-                      onClick={() => setWeightType('paed')}
-                      className="bg-pink-400 text-white p-5 rounded-2xl text-base font-bold btn-base"
-                    >
-                      Paediatric
-                    </button>
-                  </div>
-                  <button onClick={() => setCatchupStep(4)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                </div>
-              )}
-
-              {catchupStep === 5 && weightType === 'adult' && (
-                <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900">Patient Weight (Optional)</h2>
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        placeholder="Enter weight"
-                        value={weightInput}
-                        onChange={(e) => setWeightInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCatchupStart()}
-                        className="w-40 bg-white border-2 border-emerald-300 rounded-xl px-5 py-3 text-xl font-bold text-center focus:ring-4 focus:ring-emerald-500 outline-none"
-                      />
-                      {weightInput && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-neutral-400 text-lg font-bold pointer-events-none">kg</span>}
+                  <p className="text-neutral-600 text-sm">This will update the in-app drug doses</p>
+                  
+                  <div className="space-y-4">
+                    {/* Adult option */}
+                    <div className={`border-2 rounded-2xl p-4 transition-all ${weightType === 'adult' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200'}`}>
+                      <button 
+                        onClick={() => {
+                          setWeightType('adult');
+                          setPaedWeightMethod(null);
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-lg font-bold text-neutral-900">Adult</span>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${weightType === 'adult' ? 'border-emerald-500 bg-emerald-500' : 'border-neutral-300'}`}>
+                            {weightType === 'adult' && <div className="w-2.5 h-2.5 bg-white rounded-full"></div>}
+                          </div>
+                        </div>
+                      </button>
+                      {weightType === 'adult' && (
+                        <div className="mt-3">
+                          <input
+                            type="number"
+                            placeholder="Weight (kg) - Optional"
+                            value={weightInput}
+                            onChange={(e) => setWeightInput(e.target.value)}
+                            className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-3 text-base font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
+                    
+                    {/* Paediatric with custom weight */}
+                    <div className={`border-2 rounded-2xl p-4 transition-all ${weightType === 'paed' && paedWeightMethod === 'weight' ? 'border-pink-400 bg-pink-50' : 'border-neutral-200'}`}>
+                      <button 
+                        onClick={() => {
+                          setWeightType('paed');
+                          setPaedWeightMethod('weight');
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-lg font-bold text-neutral-900">Paediatric (custom weight)</span>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${weightType === 'paed' && paedWeightMethod === 'weight' ? 'border-pink-400 bg-pink-400' : 'border-neutral-300'}`}>
+                            {weightType === 'paed' && paedWeightMethod === 'weight' && <div className="w-2.5 h-2.5 bg-white rounded-full"></div>}
+                          </div>
+                        </div>
+                      </button>
+                      {weightType === 'paed' && paedWeightMethod === 'weight' && (
+                        <div className="mt-3">
+                          <input
+                            type="number"
+                            placeholder="Weight (kg)"
+                            value={weightInput}
+                            onChange={(e) => setWeightInput(e.target.value)}
+                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-3 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Paediatric with age-based weight */}
+                    <div className={`border-2 rounded-2xl p-4 transition-all ${weightType === 'paed' && paedWeightMethod === 'age' ? 'border-pink-400 bg-pink-50' : 'border-neutral-200'}`}>
+                      <button 
+                        onClick={() => {
+                          setWeightType('paed');
+                          setPaedWeightMethod('age');
+                          setWeightInput('');
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-lg font-bold text-neutral-900">Paediatric (age-based weight)</span>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${weightType === 'paed' && paedWeightMethod === 'age' ? 'border-pink-400 bg-pink-400' : 'border-neutral-300'}`}>
+                            {weightType === 'paed' && paedWeightMethod === 'age' && <div className="w-2.5 h-2.5 bg-white rounded-full"></div>}
+                          </div>
+                        </div>
+                      </button>
+                      {weightType === 'paed' && paedWeightMethod === 'age' && (
+                        <div className="mt-3">
+                          <select
+                            value={weightInput}
+                            onChange={(e) => setWeightInput(e.target.value)}
+                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-3 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
+                          >
+                            <option value="">Select age</option>
+                            {[
+                              ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
+                              ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
+                              ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
+                              ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
+                              ['11 years', 35], ['12 years', 38]
+                            ].map(([age, weight]) => (
+                              <option key={age} value={weight}>{age} - {weight}kg</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button onClick={() => setCatchupStep(4)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                     <button 
                       onClick={() => handleCatchupStart()}
-                      className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold btn-base"
+                      disabled={weightType === 'paed' && paedWeightMethod === 'weight' && !weightInput}
+                      className={`p-3 rounded-xl font-bold btn-base ${
+                        (weightType === 'paed' && paedWeightMethod === 'weight' && !weightInput) 
+                          ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                          : weightType === 'adult' 
+                            ? 'bg-emerald-600 text-white' 
+                            : 'bg-pink-400 text-white'
+                      }`}
                     >
-                      {weightInput ? 'Set' : 'Skip'}
+                      {weightType === 'adult' && !weightInput ? 'Skip' : 'Continue'}
                     </button>
                   </div>
-                  <button onClick={() => { setWeightType(null); setWeightInput(''); }} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                </div>
-              )}
-
-              {catchupStep === 5 && weightType === 'paed' && !paedWeightMethod && (
-                <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900">Patient Weight</h2>
-                  <p className="text-neutral-500 text-sm">Choose how to enter weight</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => setPaedWeightMethod('weight')}
-                      className="bg-pink-400 text-white p-5 rounded-2xl text-base font-bold btn-base"
-                    >
-                      Enter weight
-                    </button>
-                    <button 
-                      onClick={() => setPaedWeightMethod('age')}
-                      className="bg-pink-400 text-white p-5 rounded-2xl text-base font-bold btn-base"
-                    >
-                      Age based weight
-                    </button>
-                  </div>
-                  <button onClick={() => { setWeightType(null); }} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                </div>
-              )}
-
-              {catchupStep === 5 && weightType === 'paed' && paedWeightMethod === 'weight' && (
-                <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900">Enter Patient Weight</h2>
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        placeholder="Enter weight"
-                        value={weightInput}
-                        onChange={(e) => setWeightInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && weightInput && handleCatchupStart()}
-                        className="w-40 bg-white border-2 border-pink-300 rounded-xl px-5 py-3 text-xl font-bold text-center focus:ring-4 focus:ring-pink-400 outline-none"
-                      />
-                      {weightInput && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-neutral-400 text-lg font-bold pointer-events-none">kg</span>}
-                    </div>
-                    {weightInput && (
-                      <button 
-                        onClick={handleCatchupStart}
-                        className="bg-pink-400 text-white px-6 py-2 rounded-xl font-bold btn-base"
-                      >
-                        Set
-                      </button>
-                    )}
-                  </div>
-                  <button onClick={() => { setPaedWeightMethod(null); setWeightInput(''); }} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                </div>
-              )}
-
-              {catchupStep === 5 && weightType === 'paed' && paedWeightMethod === 'age' && (
-                <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900 mb-3">Select Age</h2>
-                  <div className="space-y-2 max-h-[340px] overflow-y-auto p-2">
-                    {[
-                      ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
-                      ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
-                      ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
-                      ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
-                      ['11 years', 35], ['12 years', 38]
-                    ].map(([age, weight]) => (
-                      <button
-                        key={age}
-                        onClick={() => handleCatchupStart(String(weight))}
-                        className="w-full bg-pink-400 text-white p-3 rounded-xl text-sm font-bold btn-base flex justify-between items-center"
-                      >
-                        <span>{age}</span>
-                        <span>{weight}kg</span>
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={() => { setPaedWeightMethod(null); }} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                 </div>
               )}
 
@@ -1439,20 +1443,20 @@ export default function App() {
                       <h2 className="text-xl font-bold text-neutral-900 px-4">How do you want to enter times?</h2>
                       <div className="space-y-3 px-4">
                         <button
+                          onClick={() => {
+                            setUseManualEntry(true);
+                            setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
+                          }}
+                          className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
+                        >
+                          Enter Manually
+                        </button>
+                        <button
                           onClick={() => setShowCameraTips(true)}
                           className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2"
                         >
                           <Camera size={20} />
                           Scan Monitor
-                        </button>
-                        <button
-                          onClick={() => {
-                            setUseManualEntry(true);
-                            setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
-                          }}
-                          className="w-full bg-neutral-100 text-neutral-700 p-4 rounded-xl font-bold btn-base"
-                        >
-                          Enter Manually
                         </button>
                       </div>
                     </>
@@ -1461,19 +1465,22 @@ export default function App() {
                   {/* Camera Tips Modal */}
                   {showCameraTips && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                      <div className="bg-white rounded-2xl p-6 max-w-sm space-y-4">
-                        <p className="text-neutral-700">Capture the elapsed time (top right) and CPR timer in one frame.</p>
-                        <h3 className="text-lg font-bold text-neutral-900">For best results:</h3>
-                        <ul className="text-left space-y-2 text-neutral-700">
-                          <li className="flex gap-2">
-                            <span>•</span>
-                            <span>Through the camera, touch the <strong>CPR timer banner</strong>, which will darken the image</span>
-                          </li>
-                          <li className="flex gap-2">
-                            <span>•</span>
-                            <span>Take a <strong>breath and hold steady</strong></span>
-                          </li>
-                        </ul>
+                      <div className="bg-white rounded-2xl p-6 max-w-md space-y-4">
+                        <h2 className="text-xl font-bold text-neutral-900">Photograph the right side of the monitor</h2>
+                        
+                        {/* Example image */}
+                        <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
+                          <img 
+                            src="/mnt/user-data/uploads/Monitor.png" 
+                            alt="Monitor example showing elapsed time and CPR timer"
+                            className="w-full"
+                          />
+                        </div>
+                        
+                        <p className="text-neutral-700 text-sm">
+                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner (red circle) to correct the image's brightness
+                        </p>
+                        
                         <button
                           onClick={() => {
                             setShowCameraTips(false);
@@ -1578,7 +1585,7 @@ export default function App() {
                   {useManualEntry && !isProcessingOCR && (
                     <>
                       <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
-                      <p className="text-neutral-600 text-sm px-4">How long has the case been running?</p>
+                      <p className="text-neutral-600 text-sm px-4">This is the time at the top right corner of the monitor</p>
                       <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
                     </>
                   )}
@@ -1634,7 +1641,7 @@ export default function App() {
               {catchupStep === 3 && (
                 <div className="text-center space-y-6">
                   <h2 className="text-xl font-bold text-neutral-900 px-4">Enter current CPR timer</h2>
-                  <p className="text-neutral-600 text-sm px-4">What does the CPR countdown timer currently show?</p>
+                  <p className="text-neutral-600 text-sm px-4">This is the countdown above the diamond on the monitor</p>
                   <TimePicker 
                     value={catchupRhythm} 
                     onChange={setCatchupRhythm} 
@@ -1917,22 +1924,34 @@ interface CheckItemProps {
   label: string;
   key?: React.Key;
   subItems?: string[];
+  color?: string;
 }
 
-function CheckItem({ label, subItems }: CheckItemProps) {
+function CheckItem({ label, subItems, color = 'emerald' }: CheckItemProps) {
   const [checked, setChecked] = useState(false);
+  
+  const colorMap: Record<string, { bg: string, text: string, border: string, checkBg: string }> = {
+    orange: { bg: 'bg-orange-50', text: 'text-orange-900', border: 'border-orange-500', checkBg: 'bg-orange-500' },
+    purple: { bg: 'bg-purple-50', text: 'text-purple-900', border: 'border-purple-500', checkBg: 'bg-purple-500' },
+    darkPurple: { bg: 'bg-purple-50', text: 'text-purple-900', border: 'border-purple-500', checkBg: 'bg-purple-500' },
+    blue: { bg: 'bg-blue-50', text: 'text-blue-900', border: 'border-blue-500', checkBg: 'bg-blue-500' },
+    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-900', border: 'border-emerald-500', checkBg: 'bg-emerald-500' }
+  };
+  
+  const colors = colorMap[color];
+  
   return (
     <div>
-      <label onClick={() => setChecked(!checked)} className={`flex items-start p-2 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-emerald-50' : 'hover:bg-neutral-50'}`}>
-        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 mt-0.5 transition-colors flex-shrink-0 ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-300 bg-white'}`}>
+      <label onClick={() => setChecked(!checked)} className={`flex items-start p-2 rounded-lg cursor-pointer transition-colors ${checked ? colors.bg : 'hover:bg-neutral-50'}`}>
+        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 mt-0.5 transition-colors flex-shrink-0 ${checked ? `${colors.checkBg} ${colors.border}` : 'border-neutral-300 bg-white'}`}>
           {checked && <CheckCircle2 size={12} className="text-white" />}
         </div>
         <div className="flex-1">
-          <span className={`text-[17px] font-medium ${checked ? 'text-emerald-900' : 'text-neutral-700'}`}>{label}</span>
+          <span className={`text-[17px] font-medium ${checked ? colors.text : 'text-neutral-700'}`}>{label}</span>
           {subItems && subItems.length > 0 && (
             <ul className="mt-2 ml-0 space-y-1">
               {subItems.map((item, idx) => (
-                <li key={idx} className={`text-[16px] flex items-start ${checked ? 'text-emerald-800' : 'text-neutral-600'}`}>
+                <li key={idx} className={`text-[16px] flex items-start ${checked ? colors.text : 'text-neutral-600'}`}>
                   <span className="mr-2 font-bold">•</span>
                   <span>{item}</span>
                 </li>
@@ -1959,9 +1978,9 @@ function SectionGroup({ title, color, items }: { title: string, color: string, i
       <div className="p-1 space-y-0.5">
         {items.map((item, idx) => {
           if (typeof item === 'string') {
-            return <CheckItem key={item} label={item} />;
+            return <CheckItem key={item} label={item} color={color} />;
           } else {
-            return <CheckItem key={idx} label={item.label} subItems={item.subItems} />;
+            return <CheckItem key={idx} label={item.label} subItems={item.subItems} color={color} />;
           }
         })}
       </div>
