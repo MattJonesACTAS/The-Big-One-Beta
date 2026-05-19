@@ -22,7 +22,8 @@ import {
   Stethoscope,
   Camera,
   ArrowRight,
-  Sliders
+  Sliders,
+  RefreshCw
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { AppState, Treatment, OverlayType } from './types';
@@ -1075,7 +1076,7 @@ export default function App() {
           }} 
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
-          <Sliders size={14} className="sm:w-4 sm:h-4" /> Adjust
+          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
         <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
@@ -1358,7 +1359,7 @@ export default function App() {
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
                   <h2 className="text-2xl font-extrabold text-neutral-900">
-                    Welcome to The Big One<br />your cardiac arrest management tool
+                    It's The Big One!<br />Your cardiac arrest management tool.
                   </h2>
                   <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
                   <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
