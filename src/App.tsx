@@ -32,7 +32,7 @@ const INITIAL_STATE: AppState = {
   pausedTime: 0,
   elapsedSeconds: 0,
   rhythmCheckTarget: 120, // 2 minutes
-  rhythmCheckOvertime: 0, // Counts up from 0 to 5 after rhythm check hits 0:00
+  rhythmCheckOvertime: 0, // Counts up from 0 to 6 after rhythm check hits 0:00
   cprRound: 1,
   shocks: 0,
   treatments: [],
@@ -428,8 +428,8 @@ export default function App() {
             // Calculate overtime (how many seconds past the target)
             nextOvertime = newElapsed - prev.rhythmCheckTarget;
             
-            // When overtime reaches 5 seconds, force shock entry and reset immediately
-            if (nextOvertime >= 5) {
+            // When overtime reaches 6 seconds, force shock entry and reset immediately
+            if (nextOvertime >= 6) {
               // Force shock overlay (don't wait for user to complete it)
               if (!showCatchup) {
                 nextOverlay = 'treatment';
@@ -1040,7 +1040,7 @@ export default function App() {
                   }
                   animate={{ 
                     strokeDashoffset: state.rhythmCheckOvertime > 0 
-                      ? 1 - (state.rhythmCheckOvertime / 5) // Count up from 0 to 5
+                      ? 1 - (state.rhythmCheckOvertime / 6) // Count up from 0 to 6
                       : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
                   }}
                   style={{ strokeDasharray: 1 }}
