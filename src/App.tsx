@@ -650,7 +650,8 @@ export default function App() {
     console.log('handleCatchupStart called', { overrideWeight, weightInput });
     
     // Clear localStorage for a completely fresh start
-    localStorage.removeItem('theBigOneState');
+    localStorage.clear();
+    sessionStorage.clear();
     
     let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
     let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
@@ -849,7 +850,8 @@ export default function App() {
   };
 
   const deleteCase = () => {
-    localStorage.removeItem('theBigOneState');
+    localStorage.clear(); // Clear everything
+    sessionStorage.clear(); // Also clear session storage
     // Force complete reload with cache bust
     window.location.href = window.location.pathname + '?t=' + Date.now();
   };
