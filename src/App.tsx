@@ -1322,7 +1322,9 @@ export default function App() {
                     {/* Adult option - dropdown with weights */}
                     <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-emerald-50">
                       <div className="flex items-center gap-3">
-                        <span className="text-base font-bold text-neutral-900 w-24 text-left">Adult</span>
+                        <div className="w-28 text-left flex-shrink-0">
+                          <div className="text-base font-bold text-neutral-900">Adult</div>
+                        </div>
                         <select
                           value={weightType === 'adult' ? weightInput : ''}
                           onChange={(e) => {
@@ -1346,7 +1348,7 @@ export default function App() {
                         <button
                           onClick={() => weightType === 'adult' && weightInput && handleCatchupStart()}
                           disabled={!(weightType === 'adult' && weightInput)}
-                          className={`p-2.5 rounded-xl transition-all ${
+                          className={`p-3 rounded-xl transition-all flex-shrink-0 ${
                             weightType === 'adult' && weightInput
                               ? 'bg-emerald-600 text-white'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
@@ -1360,7 +1362,7 @@ export default function App() {
                     {/* Paediatric age-based - dropdown */}
                     <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-pink-50">
                       <div className="flex items-center gap-3">
-                        <div className="w-24 text-left">
+                        <div className="w-28 text-left flex-shrink-0">
                           <div className="text-base font-bold text-neutral-900">Paediatric</div>
                           <div className="text-xs text-neutral-600">(Age/weight)</div>
                         </div>
@@ -1387,7 +1389,7 @@ export default function App() {
                         <button
                           onClick={() => weightType === 'paed' && paedWeightMethod === 'age' && weightInput && handleCatchupStart()}
                           disabled={!(weightType === 'paed' && paedWeightMethod === 'age' && weightInput)}
-                          className={`p-2.5 rounded-xl transition-all ${
+                          className={`p-3 rounded-xl transition-all flex-shrink-0 ${
                             weightType === 'paed' && paedWeightMethod === 'age' && weightInput
                               ? 'bg-pink-400 text-white'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
@@ -1401,7 +1403,7 @@ export default function App() {
                     {/* Paediatric custom weight - text input */}
                     <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-pink-50">
                       <div className="flex items-center gap-3">
-                        <div className="w-24 text-left">
+                        <div className="w-28 text-left flex-shrink-0">
                           <div className="text-base font-bold text-neutral-900">Paediatric</div>
                           <div className="text-xs text-neutral-600">(custom weight)</div>
                         </div>
@@ -1415,14 +1417,14 @@ export default function App() {
                               setPaedWeightMethod('weight');
                               setWeightInput(e.target.value);
                             }}
-                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-3 py-2.5 pr-10 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
+                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-3 py-2.5 pr-12 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 text-base font-bold pointer-events-none">kg</span>
                         </div>
                         <button
                           onClick={() => weightType === 'paed' && paedWeightMethod === 'weight' && weightInput && handleCatchupStart()}
                           disabled={!(weightType === 'paed' && paedWeightMethod === 'weight' && weightInput)}
-                          className={`p-2.5 rounded-xl transition-all ${
+                          className={`p-3 rounded-xl transition-all flex-shrink-0 ${
                             weightType === 'paed' && paedWeightMethod === 'weight' && weightInput
                               ? 'bg-pink-400 text-white'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
