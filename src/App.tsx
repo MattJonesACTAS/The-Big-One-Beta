@@ -958,6 +958,14 @@ export default function App() {
 
   return (
     <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
+      
+      {/* Mobile Debug Info - visible on screen */}
+      <div className="fixed top-0 left-0 bg-black/80 text-white text-xs p-2 z-[9999] font-mono">
+        GB:{document.querySelector('[data-green-box]')?.clientHeight || '?'} 
+        MC:{document.querySelector('[data-main-container]')?.clientHeight || '?'} 
+        VH:{window.innerHeight}
+      </div>
+      
       {/* Top Controls */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
