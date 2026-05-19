@@ -207,11 +207,14 @@ const getLocalTimeWithSeconds = (date?: Date) => {
 const calculateDose = (doseStr: string, weight: number | null): string => {
   if (!weight || !doseStr.includes('/kg')) return doseStr;
   
+  // Handle ">100" special case - treat as 100 for calculations
+  const calcWeight = typeof weight === 'string' && weight === '>100' ? 100 : weight;
+  
   const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL)\/kg/i);
   if (!match) return doseStr;
   
   const [_, amount, unit] = match;
-  const calculated = parseFloat(amount) * weight;
+  const calculated = parseFloat(amount) * (typeof calcWeight === 'number' ? calcWeight : parseFloat(String(calcWeight)));
   const rounded = Math.round(calculated * 10) / 10;
   
   return `${amount}${unit}/kg (${rounded}${unit})`;
@@ -744,11 +747,14 @@ export default function App() {
     // Use override weight if provided, otherwise use weightInput state
     const finalWeight = overrideWeight || weightInput;
     
-    // Parse weight, checking for valid number
-    let parsedWeight: number | null = null;
+    // Parse weight, checking for valid number or ">100" special case
+    let parsedWeight: any = null;
     if (finalWeight) {
       const weightStr = String(finalWeight).trim();
-      if (weightStr) {
+      if (weightStr === '>100') {
+        // Store as string to preserve ">100" for display, but treat as 100 for calculations
+        parsedWeight = '>100';
+      } else if (weightStr) {
         const parsed = parseFloat(weightStr);
         if (!isNaN(parsed) && parsed > 0) {
           parsedWeight = parsed;
@@ -1364,7 +1370,7 @@ export default function App() {
                           <option value="80">80 kg</option>
                           <option value="90">90 kg</option>
                           <option value="100">100 kg</option>
-                          <option value="110">&gt;100 kg</option>
+                          <option value=">100">&gt;100 kg</option>
                         </select>
                         <button
                           onClick={(e) => {
@@ -2246,7 +2252,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         <div className="p-6 mb-4">
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">{selectedMed}</h2>
           {state.patientWeight && (
-            <p className="text-neutral-500 text-sm mb-2">Patient weight: {state.patientWeight}kg</p>
+            <p className="text-neutral-500 text-sm mb-2">
+              Patient weight: {state.patientWeight === '>100' ? '>100' : state.patientWeight}kg
+            </p>
           )}
           {state.patientType && (
             <p className="text-neutral-500 text-sm mb-6">Patient type: {state.patientType}</p>
