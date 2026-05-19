@@ -308,6 +308,7 @@ export default function App() {
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
   const [showCameraTips, setShowCameraTips] = useState(false);
+  const [monitorGifLoaded, setMonitorGifLoaded] = useState(false);
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [timesFromScan, setTimesFromScan] = useState(false);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
@@ -1571,12 +1572,24 @@ export default function App() {
                       <div className="bg-white rounded-2xl p-6 max-w-md space-y-4">
                         <h2 className="text-xl font-bold text-neutral-900">Photograph the right half of the monitor screen</h2>
                         
-                        {/* Example image */}
+                        {/* Example image with placeholder */}
                         <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
+                          <img 
+                            src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Monitor_placeholder.png?raw=true"
+                            alt="Monitor example showing elapsed time and CPR timer"
+                            className="w-full"
+                            style={{
+                              display: monitorGifLoaded ? 'none' : 'block'
+                            }}
+                          />
                           <img 
                             src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/monitor.gif?raw=true"
                             alt="Monitor example showing elapsed time and CPR timer"
                             className="w-full"
+                            style={{
+                              display: monitorGifLoaded ? 'block' : 'none'
+                            }}
+                            onLoad={() => setMonitorGifLoaded(true)}
                           />
                         </div>
                         
