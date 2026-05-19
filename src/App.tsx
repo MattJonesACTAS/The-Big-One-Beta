@@ -313,6 +313,7 @@ export default function App() {
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [showTimerAdjust, setShowTimerAdjust] = useState(false);
   const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
+  const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
   const [isShockForced, setIsShockForced] = useState(false);
@@ -495,6 +496,13 @@ export default function App() {
   };
 
   const confirmPause = () => {
+    // If rhythm check is paused but timer is running, just unpause rhythm check
+    if (state.running && state.rhythmCheckPaused) {
+      setState(prev => ({ ...prev, rhythmCheckPaused: false }));
+      return;
+    }
+    
+    // Otherwise handle normal pause/resume
     if (state.running) {
       setShowPauseWarning(true);
     } else {
@@ -539,7 +547,7 @@ export default function App() {
       ...prev,
       treatments: [...prev.treatments, treatment],
       shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
-      currentOverlay: name === 'Disarm - ROSC' ? 'rosc' : null,
+      currentOverlay: null, // Don't open overlay for ROSC anymore
       // For ROSC: pause rhythm check at 2:00 (but keep elapsed time running)
       rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : prev.rhythmCheckTarget,
       rhythmCheckOvertime: name === 'Disarm - ROSC' ? 0 : prev.rhythmCheckOvertime,
@@ -548,6 +556,12 @@ export default function App() {
         ? (name === 'Disarm - ROSC' ? true : false)
         : prev.rhythmCheckPaused
     }));
+    
+    // Make ROSC button flash when ROSC is selected
+    if (name === 'Disarm - ROSC') {
+      setRoscButtonFlashing(true);
+    }
+    
     setIsShockForced(false);
     
     // Show notification with treatment name
@@ -990,8 +1004,8 @@ export default function App() {
       {/* Top Controls */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          {state.running ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
-          {state.running ? 'Pause' : 'Resume'}
+          {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
+          {(state.running && !state.rhythmCheckPaused) ? 'Pause' : 'Play'}
         </button>
         <button 
           onClick={() => {
@@ -1025,10 +1039,15 @@ export default function App() {
         <button 
           onClick={() => {
             if (isShockForced) return;
+            setRoscButtonFlashing(false); // Clear flash when opened
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'rosc' ? null : 'rosc' }))
           }}
           disabled={isShockForced}
-          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'rosc' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${
+            state.currentOverlay === 'rosc' ? 'bg-red-100 text-red-800' : 
+            roscButtonFlashing ? 'bg-red-600 text-white animate-pulse' :
+            'bg-orange-100 text-orange-700'
+          } ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'rosc' ? 'Close' : 'ROSC'}
         </button>
@@ -1557,14 +1576,6 @@ export default function App() {
                       <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
                       <p className="text-neutral-600 text-sm px-4">How long has the case been running?</p>
                       <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
-                      <button
-                        onClick={() => {
-                          setUseManualEntry(false);
-                        }}
-                        className="text-blue-600 font-semibold text-sm"
-                      >
-                        Use camera instead
-                      </button>
                     </>
                   )}
                   
@@ -1780,17 +1791,44 @@ function TimePicker({ value, onChange, maxSeconds }: { value: { mins: number, se
 
   return (
     <div className="flex items-center justify-center gap-4">
+      {/* Minutes column with three arrows */}
       <div className="flex flex-col items-center">
-        <button onClick={() => adjust('mins', 1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-2">{value.mins}</div>
-        <button onClick={() => adjust('mins', -1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
+        <button onClick={() => adjust('mins', 1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▲</button>
+        <span className="text-xs text-neutral-400 font-bold">+1</span>
+        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-1">{value.mins}</div>
+        <span className="text-xs text-neutral-400 font-bold">-1</span>
+        <button onClick={() => adjust('mins', -1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▼</button>
         <span className="text-neutral-400 font-bold uppercase text-xs mt-2">min</span>
       </div>
+      
       <div className="text-5xl font-bold text-neutral-400 mb-8">:</div>
+      
+      {/* Seconds column with three sets of arrows */}
       <div className="flex flex-col items-center">
-        <button onClick={() => adjust('secs', 10)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-2">{value.secs.toString().padStart(2, '0')}</div>
-        <button onClick={() => adjust('secs', -10)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
+        <div className="flex gap-2">
+          <div className="flex flex-col items-center">
+            <button onClick={() => adjust('secs', 10)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▲</button>
+            <span className="text-xs text-neutral-400 font-bold">+10</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <button onClick={() => adjust('secs', 1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▲</button>
+            <span className="text-xs text-neutral-400 font-bold">+1</span>
+          </div>
+        </div>
+        
+        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-1">{value.secs.toString().padStart(2, '0')}</div>
+        
+        <div className="flex gap-2">
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-neutral-400 font-bold">-10</span>
+            <button onClick={() => adjust('secs', -10)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▼</button>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-neutral-400 font-bold">-1</span>
+            <button onClick={() => adjust('secs', -1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▼</button>
+          </div>
+        </div>
+        
         <span className="text-neutral-400 font-bold uppercase text-xs mt-2">sec</span>
       </div>
     </div>
@@ -1868,7 +1906,19 @@ function PHEASelection() {
       <SectionGroup title="MONITORING" color="purple" items={['ECG', 'BP — cycling', 'SpO2', 'EtCO2']} />
       <SectionGroup title="DRUGS & ACCESS EQUIPMENT" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication/s drawn up']} />
       <SectionGroup title="AIRWAY EQUIPMENT" color="purple" items={['Sufficient oxygen available?', 'Suction', 'BVM', 'OPA / NPA', 'Airtraq — loaded tube, switched on', 'ETT loaded with bougie', 'Laryngoscope checked', 'Syringe', 'Securing method', 'FONA scalpel']} />
-      <SectionGroup title="POST-INTUBATION" color="darkPurple" items={['Confirm ETT placement — EtCO2, visualise cords, auscultation, misting, chest rise', 'Colleague confirms placement', 'Secure tube — Thomas block / tube tie', 'Reassessment — ABCs and VSS', 'Sedation plan discussed', 'Deterioration plan discussed', 'Extrication and transport plan discussed']} />
+      <SectionGroup 
+        title="POST-INTUBATION" 
+        color="darkPurple" 
+        items={[
+          { label: 'Confirm ETT placement', subItems: ['EtCO2', 'Visualise cords', 'Auscultation', 'Misting', 'Chest rise'] },
+          'Colleague confirms placement',
+          'Secure tube — Thomas block / tube tie',
+          'Reassessment — ABCs and VSS',
+          'Sedation plan discussed',
+          'Deterioration plan discussed',
+          'Extrication and transport plan discussed'
+        ]} 
+      />
     </div>
   );
 }
@@ -1876,21 +1926,36 @@ function PHEASelection() {
 interface CheckItemProps {
   label: string;
   key?: React.Key;
+  subItems?: string[];
 }
 
-function CheckItem({ label }: CheckItemProps) {
+function CheckItem({ label, subItems }: CheckItemProps) {
   const [checked, setChecked] = useState(false);
   return (
-    <label onClick={() => setChecked(!checked)} className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-emerald-50' : 'hover:bg-neutral-50'}`}>
-      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 transition-colors ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-300 bg-white'}`}>
-        {checked && <CheckCircle2 size={12} className="text-white" />}
-      </div>
-      <span className={`text-[17px] font-medium ${checked ? 'text-emerald-900' : 'text-neutral-700'}`}>{label}</span>
-    </label>
+    <div>
+      <label onClick={() => setChecked(!checked)} className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-emerald-50' : 'hover:bg-neutral-50'}`}>
+        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 transition-colors flex-shrink-0 ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-300 bg-white'}`}>
+          {checked && <CheckCircle2 size={12} className="text-white" />}
+        </div>
+        <div className="flex-1">
+          <span className={`text-[17px] font-medium ${checked ? 'text-emerald-900' : 'text-neutral-700'}`}>{label}</span>
+          {subItems && subItems.length > 0 && (
+            <ul className="mt-1 ml-1 space-y-0.5">
+              {subItems.map((item, idx) => (
+                <li key={idx} className="text-[15px] text-neutral-600 flex items-start">
+                  <span className="mr-1.5">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </label>
+    </div>
   );
 }
 
-function SectionGroup({ title, color, items }: { title: string, color: string, items: string[] }) {
+function SectionGroup({ title, color, items }: { title: string, color: string, items: (string | { label: string, subItems: string[] })[] }) {
   const colorMap: Record<string, string> = {
     orange: 'bg-orange-50 text-orange-800 border-orange-200',
     purple: 'bg-purple-50 text-purple-800 border-purple-200',
@@ -1902,7 +1967,13 @@ function SectionGroup({ title, color, items }: { title: string, color: string, i
     <>
       <div className={`p-2.5 px-4 z-10 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center ${colorMap[color]}`}>{title}</div>
       <div className="p-1 space-y-0.5">
-        {items.map(item => <CheckItem key={item} label={item} />)}
+        {items.map((item, idx) => {
+          if (typeof item === 'string') {
+            return <CheckItem key={item} label={item} />;
+          } else {
+            return <CheckItem key={idx} label={item.label} subItems={item.subItems} />;
+          }
+        })}
       </div>
     </>
   );
@@ -2295,7 +2366,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           <TxSection 
             title="Other Tx" 
             color="neutral" 
-            items={['Shock', 'Corpuls', 'Extrication', 'IO', 'IV access', 'Pacing', 'Reassurance provided']} 
+            items={['Corpuls', 'Extrication', 'IO', 'IV access', 'Pacing', 'Reassurance provided']} 
             onSelect={addTreatment}
             sectionId="otherTx"
             expandedSection={expandedSection}
