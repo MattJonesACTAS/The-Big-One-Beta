@@ -988,7 +988,7 @@ export default function App() {
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
       }`}>
-        <div className="h-full flex flex-col items-center p-4 relative">
+        <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
             <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
@@ -1062,7 +1062,7 @@ export default function App() {
           </AnimatePresence>
 
           {/* Adrenaline & Amiodarone Status - Always rendered, visibility controlled */}
-          <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-2 sm:mb-4 mx-2 sm:mx-4">
+          <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-0">
             {/* Adrenaline Warning */}
             <div 
               onClick={() => {
