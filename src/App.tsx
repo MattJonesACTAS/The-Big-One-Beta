@@ -366,31 +366,6 @@ export default function App() {
     }
   }, []);
 
-  // Diagnostic: Monitor green box height changes
-  useEffect(() => {
-    const checkLayout = () => {
-      const greenBox = document.querySelector('[data-green-box]');
-      const mainContainer = document.querySelector('[data-main-container]');
-      if (greenBox && mainContainer) {
-        console.log('Layout check:', {
-          greenBoxHeight: greenBox.clientHeight,
-          mainContainerHeight: mainContainer.clientHeight,
-          viewportHeight: window.innerHeight,
-          timestamp: new Date().toISOString()
-        });
-      }
-    };
-
-    // Check immediately and after delays
-    checkLayout();
-    setTimeout(checkLayout, 100);
-    setTimeout(checkLayout, 500);
-    setTimeout(checkLayout, 1000);
-
-    window.addEventListener('resize', checkLayout);
-    return () => window.removeEventListener('resize', checkLayout);
-  }, []);
-
   const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -959,14 +934,6 @@ export default function App() {
 
   return (
     <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
-      
-      {/* Mobile Debug Info - visible on screen */}
-      <div className="fixed top-0 left-0 bg-black/80 text-white text-xs p-2 z-[9999] font-mono">
-        GB:{document.querySelector('[data-green-box]')?.clientHeight || '?'} 
-        MC:{document.querySelector('[data-main-container]')?.clientHeight || '?'} 
-        VH:{window.innerHeight}
-      </div>
-      
       {/* Top Controls */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
@@ -1035,7 +1002,7 @@ export default function App() {
           </div>
 
           {/* Rhythm Check - Centered vertically and responsive size */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full">
+          <div className="flex-1 flex flex-col items-center justify-center w-full pb-12 sm:pb-16">
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                 <circle
