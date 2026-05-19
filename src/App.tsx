@@ -2234,6 +2234,11 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         </div>
       )}
       
+      {/* Rhythm Check Section */}
+      <div className="bg-neutral-100 px-4 py-2">
+        <span className="font-bold text-neutral-700 text-sm uppercase tracking-wide">Rhythm Check</span>
+      </div>
+      
       <TxSection 
         title="Shock" 
         color="pink" 
