@@ -1398,6 +1398,7 @@ export default function App() {
                           onClick={() => {
                             setUseManualEntry(true);
                             setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
+                            setPhotoTimestamp(Date.now()); // Set timestamp to track elapsed time during catchup
                           }}
                           className="w-full bg-neutral-100 text-neutral-700 p-4 rounded-xl font-bold btn-base"
                         >
@@ -1596,18 +1597,7 @@ export default function App() {
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button 
-                      onClick={() => {
-                        // Set timestamp when times are manually entered
-                        if (!photoTimestamp) {
-                          setPhotoTimestamp(Date.now());
-                        }
-                        setCatchupStep(4);
-                      }} 
-                      className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
-                    >
-                      Next
-                    </button>
+                    <button onClick={() => setCatchupStep(4)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
                   </div>
                 </div>
               )}
