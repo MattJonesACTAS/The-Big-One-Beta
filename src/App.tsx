@@ -350,6 +350,31 @@ export default function App() {
     });
   }, []);
 
+  // Diagnostic: Monitor green box height changes
+  useEffect(() => {
+    const checkLayout = () => {
+      const greenBox = document.querySelector('[data-green-box]');
+      const mainContainer = document.querySelector('[data-main-container]');
+      if (greenBox && mainContainer) {
+        console.log('Layout check:', {
+          greenBoxHeight: greenBox.clientHeight,
+          mainContainerHeight: mainContainer.clientHeight,
+          viewportHeight: window.innerHeight,
+          timestamp: new Date().toISOString()
+        });
+      }
+    };
+
+    // Check immediately and after delays
+    checkLayout();
+    setTimeout(checkLayout, 100);
+    setTimeout(checkLayout, 500);
+    setTimeout(checkLayout, 1000);
+
+    window.addEventListener('resize', checkLayout);
+    return () => window.removeEventListener('resize', checkLayout);
+  }, []);
+
   const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -906,7 +931,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ height: '100dvh' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
+    <div data-main-container style={{ height: '100dvh' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
       {/* Top Controls */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
@@ -956,7 +981,7 @@ export default function App() {
       </div>
 
       {/* Main Center Display */}
-      <div className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
+      <div data-green-box className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
