@@ -33,6 +33,7 @@ const INITIAL_STATE: AppState = {
   elapsedSeconds: 0,
   rhythmCheckTarget: 120, // 2 minutes
   rhythmCheckOvertime: 0, // Counts up from 0 to 6 after rhythm check hits 0:00
+  rhythmCheckPaused: false, // When true, rhythm check stays frozen even while running
   cprRound: 1,
   shocks: 0,
   treatments: [],
@@ -412,53 +413,58 @@ export default function App() {
           let nextRound = prev.cprRound;
           let nextOverlay = prev.currentOverlay;
           let nextOvertime = prev.rhythmCheckOvertime;
+          let nextPaused = prev.rhythmCheckPaused;
           
-          const countdown = prev.rhythmCheckTarget - newElapsed;
+          // Only update rhythm check if not paused
+          if (!prev.rhythmCheckPaused) {
+            const countdown = prev.rhythmCheckTarget - newElapsed;
 
-          // Auto-close overlay ONCE at 15s
-          if (countdown === 15 && !hasAutoClosedAt15.current) {
-            nextOverlay = null;
-            hasAutoClosedAt15.current = true;
-          }
-
-          // Beep logic only between 10 and 5 seconds
-          if (countdown <= 10 && countdown > 5 && lastBeepSecond.current !== newElapsed) {
-            playBeep();
-            lastBeepSecond.current = newElapsed;
-          }
-
-          // Handle rhythm check reaching 0:00 and overtime
-          if (countdown <= 0) {
-            // Calculate overtime (how many seconds past the target)
-            nextOvertime = newElapsed - prev.rhythmCheckTarget;
-            
-            // When overtime reaches 6 seconds, force shock entry and reset immediately
-            if (nextOvertime >= 6) {
-              // Force shock overlay (don't wait for user to complete it)
-              if (!showCatchup) {
-                nextOverlay = 'treatment';
-                setIsShockForced(true);
-              }
-              
-              // Reset immediately regardless of shock entry
-              nextTarget = newElapsed + 120;
-              nextRound += 1;
-              nextOvertime = 0;
-              hasAutoClosedAt15.current = false;
-              setHasShownForcedShock(false); // Reset for next cycle
+            // Auto-close overlay ONCE at 15s
+            if (countdown === 15 && !hasAutoClosedAt15.current) {
+              nextOverlay = null;
+              hasAutoClosedAt15.current = true;
             }
-          } else {
-            nextOvertime = 0; // Reset overtime when not past target
+
+            // Beep logic only between 10 and 5 seconds
+            if (countdown <= 10 && countdown > 5 && lastBeepSecond.current !== newElapsed) {
+              playBeep();
+              lastBeepSecond.current = newElapsed;
+            }
+
+            // Handle rhythm check reaching 0:00 and overtime
+            if (countdown <= 0) {
+              // Calculate overtime (how many seconds past the target)
+              nextOvertime = newElapsed - prev.rhythmCheckTarget;
+              
+              // When overtime reaches 6 seconds, force shock entry and reset immediately
+              if (nextOvertime >= 6) {
+                // Force shock overlay (don't wait for user to complete it)
+                if (!showCatchup) {
+                  nextOverlay = 'treatment';
+                  setIsShockForced(true);
+                }
+                
+                // Reset immediately regardless of shock entry
+                nextTarget = newElapsed + 120;
+                nextRound += 1;
+                nextOvertime = 0;
+                hasAutoClosedAt15.current = false;
+                setHasShownForcedShock(false); // Reset for next cycle
+              }
+            } else {
+              nextOvertime = 0; // Reset overtime when not past target
+            }
+            
+            // Update previous countdown for next iteration
+            previousCountdown.current = countdown;
           }
-          
-          // Update previous countdown for next iteration
-          previousCountdown.current = countdown;
           
           return {
             ...prev,
             elapsedSeconds: newElapsed,
             rhythmCheckTarget: nextTarget,
             rhythmCheckOvertime: nextOvertime,
+            rhythmCheckPaused: nextPaused,
             cprRound: nextRound,
             currentOverlay: nextOverlay
           };
@@ -481,7 +487,8 @@ export default function App() {
         return {
           ...prev,
           running: true,
-          startTime: Date.now()
+          startTime: Date.now(),
+          rhythmCheckPaused: false // Unpause rhythm check when resuming
         };
       }
     });
@@ -533,10 +540,10 @@ export default function App() {
       treatments: [...prev.treatments, treatment],
       shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
       currentOverlay: name === 'Disarm - ROSC' ? 'rosc' : null,
-      // For ROSC: pause timer and reset rhythm check to 2:00
-      running: name === 'Disarm - ROSC' ? false : prev.running,
+      // For ROSC: pause rhythm check at 2:00 (but keep elapsed time running)
       rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : prev.rhythmCheckTarget,
-      rhythmCheckOvertime: name === 'Disarm - ROSC' ? 0 : prev.rhythmCheckOvertime
+      rhythmCheckOvertime: name === 'Disarm - ROSC' ? 0 : prev.rhythmCheckOvertime,
+      rhythmCheckPaused: name === 'Disarm - ROSC' ? true : prev.rhythmCheckPaused
     }));
     setIsShockForced(false);
     
@@ -551,6 +558,11 @@ export default function App() {
     if (name.includes('Shock') || name.includes('Disarm')) {
       setHasShownForcedShock(false);
       previousCountdown.current = null; // Reset countdown tracking
+      
+      // Unpause rhythm check for any shock/disarm except ROSC
+      if (name !== 'Disarm - ROSC') {
+        setState(prev => ({ ...prev, rhythmCheckPaused: false }));
+      }
     }
     
     // Reset disregard states when new doses given
