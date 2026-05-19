@@ -1298,7 +1298,7 @@ export default function App() {
         {showCatchup && (
           <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4">
             <motion.div 
-              key={`catchup-${catchupStep}-${weightType}-${paedWeightMethod}`}
+              key={catchupStep}
               initial={{ x: '100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
