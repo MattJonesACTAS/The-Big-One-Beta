@@ -308,6 +308,9 @@ export default function App() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
+  const [showTimerAdjust, setShowTimerAdjust] = useState(false);
+  const [timerAdjustMinutes, setTimerAdjustMinutes] = useState('2');
+  const [timerAdjustSeconds, setTimerAdjustSeconds] = useState('0');
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
   const [isShockForced, setIsShockForced] = useState(false);
@@ -498,6 +501,22 @@ export default function App() {
       rhythmCheckOvertime: 0
     }));
     setShowResetWarning(false);
+  };
+
+  const applyTimerAdjustment = () => {
+    const minutes = parseInt(timerAdjustMinutes) || 0;
+    const seconds = parseInt(timerAdjustSeconds) || 0;
+    const totalSeconds = minutes * 60 + seconds;
+    
+    if (totalSeconds > 0) {
+      setState(prev => ({
+        ...prev,
+        rhythmCheckTarget: prev.elapsedSeconds + totalSeconds,
+        rhythmCheckOvertime: 0
+      }));
+    }
+    
+    setShowTimerAdjust(false);
   };
 
   const addTreatment = (name: string) => {
@@ -950,7 +969,17 @@ export default function App() {
           {state.running ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
           {state.running ? 'Pause' : 'Resume'}
         </button>
-        <button onClick={() => setShowResetWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+        <button 
+          onClick={() => {
+            const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
+            const mins = Math.floor(currentCountdown / 60);
+            const secs = currentCountdown % 60;
+            setTimerAdjustMinutes(mins.toString());
+            setTimerAdjustSeconds(secs.toString());
+            setShowTimerAdjust(true);
+          }} 
+          className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
+        >
           <RotateCcw size={14} className="sm:w-4 sm:h-4" /> Reset
         </button>
         <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
@@ -1057,7 +1086,7 @@ export default function App() {
                   }`}
                 >
                   {state.rhythmCheckOvertime > 0 
-                    ? formatTime(state.rhythmCheckOvertime)
+                    ? formatTime(6 - state.rhythmCheckOvertime)
                     : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
                   }
                 </div>
@@ -1623,6 +1652,60 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowPauseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
               <button onClick={togglePause} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Pause</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTimerAdjust && (
+        <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Adjust CPR Timer</h2>
+            <p className="text-neutral-500 mb-6">Set the countdown time for the next rhythm check</p>
+            
+            <div className="flex items-center justify-center gap-3 mb-8">
+              <div className="flex flex-col items-center">
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={timerAdjustMinutes}
+                  onChange={(e) => setTimerAdjustMinutes(e.target.value)}
+                  className="w-20 text-4xl font-bold text-center border-2 border-neutral-300 rounded-xl p-3 focus:border-emerald-500 focus:outline-none"
+                />
+                <span className="text-xs text-neutral-500 mt-1">min</span>
+              </div>
+              <span className="text-4xl font-bold text-neutral-400">:</span>
+              <div className="flex flex-col items-center">
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={timerAdjustSeconds}
+                  onChange={(e) => setTimerAdjustSeconds(e.target.value)}
+                  className="w-20 text-4xl font-bold text-center border-2 border-neutral-300 rounded-xl p-3 focus:border-emerald-500 focus:outline-none"
+                />
+                <span className="text-xs text-neutral-500 mt-1">sec</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => {
+                  setShowTimerAdjust(false);
+                  setTimerAdjustMinutes('2');
+                  setTimerAdjustSeconds('0');
+                }} 
+                className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={applyTimerAdjustment} 
+                className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base"
+              >
+                Set Timer
+              </button>
             </div>
           </div>
         </div>
