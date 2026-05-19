@@ -1086,14 +1086,17 @@ export default function App() {
                   strokeLinecap="round"
                   pathLength="1"
                   className={
+                    state.rhythmCheckPaused ? 'text-emerald-500' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-500' :
                     (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && 
                     (state.rhythmCheckTarget - state.elapsedSeconds) > 5 ? 'text-red-500' : 'text-emerald-500'
                   }
                   animate={{ 
-                    strokeDashoffset: state.rhythmCheckOvertime > 0 
-                      ? 1 - (state.rhythmCheckOvertime / 6) // Count up from 0 to 6
-                      : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
+                    strokeDashoffset: state.rhythmCheckPaused
+                      ? 1 // Empty circle when paused
+                      : state.rhythmCheckOvertime > 0 
+                        ? 1 - (state.rhythmCheckOvertime / 6) // Count down from 6 to 0
+                        : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
                   }}
                   style={{ strokeDasharray: 1 }}
                   transition={{ duration: 0.5, ease: "linear" }}
@@ -1103,14 +1106,17 @@ export default function App() {
               <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
                   className={`text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none ${
+                    state.rhythmCheckPaused ? 'text-neutral-900' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-600' :
                     (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && 
                     (state.rhythmCheckTarget - state.elapsedSeconds) > 5 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
-                  {state.rhythmCheckOvertime > 0 
-                    ? formatTime(6 - state.rhythmCheckOvertime)
-                    : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
+                  {state.rhythmCheckPaused 
+                    ? formatTime(120)
+                    : state.rhythmCheckOvertime > 0 
+                      ? formatTime(6 - state.rhythmCheckOvertime)
+                      : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
                   }
                 </div>
                 <div className={`text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
