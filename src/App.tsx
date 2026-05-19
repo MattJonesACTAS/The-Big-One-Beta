@@ -334,6 +334,62 @@ export default function App() {
     }
   }, [disregardAmiodarone]);
 
+  // Force scroll reset and layout recalculation on mount
+  useEffect(() => {
+    // Aggressive scroll reset for mobile browsers
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // Force mobile browser to recalculate viewport
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        document.documentElement.style.setProperty('--vh', `${window.visualViewport.height * 0.01}px`);
+      });
+      document.documentElement.style.setProperty('--vh', `${window.visualViewport.height * 0.01}px`);
+    }
+    
+    // Force complete style and layout recalculation
+    window.requestAnimationFrame(() => {
+      // Trigger reflow
+      document.body.offsetHeight;
+      window.dispatchEvent(new Event('resize'));
+      // Clear any inline styles that might have persisted
+      document.body.removeAttribute('style');
+      document.documentElement.removeAttribute('style');
+      
+      // Second pass after a frame
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+      });
+    });
+  }, []);
+
+  // Diagnostic: Monitor green box height changes
+  useEffect(() => {
+    const checkLayout = () => {
+      const greenBox = document.querySelector('[data-green-box]');
+      const mainContainer = document.querySelector('[data-main-container]');
+      if (greenBox && mainContainer) {
+        console.log('Layout check:', {
+          greenBoxHeight: greenBox.clientHeight,
+          mainContainerHeight: mainContainer.clientHeight,
+          viewportHeight: window.innerHeight,
+          timestamp: new Date().toISOString()
+        });
+      }
+    };
+
+    // Check immediately and after delays
+    checkLayout();
+    setTimeout(checkLayout, 100);
+    setTimeout(checkLayout, 500);
+    setTimeout(checkLayout, 1000);
+
+    window.addEventListener('resize', checkLayout);
+    return () => window.removeEventListener('resize', checkLayout);
+  }, []);
+
   const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -633,6 +689,10 @@ export default function App() {
   const handleCatchupStart = (overrideWeight?: string) => {
     console.log('handleCatchupStart called', { overrideWeight, weightInput });
     
+    // Clear localStorage for a completely fresh start
+    localStorage.clear();
+    sessionStorage.clear();
+    
     let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
     let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
     
@@ -707,8 +767,21 @@ export default function App() {
       patientType: weightType
     });
     console.log('State set with weight:', parsedWeight, 'and type:', weightType);
+    
+    // Reset all UI states for clean new case
     setShowCatchup(false);
-    setPhotoTimestamp(null); // Reset timestamp
+    setDisregardAdrenaline(null);
+    setDisregardAmiodarone(null);
+    setShowLoggedNotification(false);
+    setIsShockForced(false);
+    setHasShownForcedShock(false);
+    setCatchupStep(1);
+    setWeightType(null);
+    setPaedWeightMethod(null);
+    setWeightInput('');
+    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0 });
+    setPriorTxs([]);
+    setPhotoTimestamp(null);
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
   };
 
@@ -723,7 +796,7 @@ export default function App() {
       const worker = await createWorker('eng');
       // PSM 11 = sparse text (better for monitor screens with isolated numbers)
       await worker.setParameters({
-        tessedit_pageseg_mode: '11' as any,
+        tessedit_pageseg_mode: '11',
       });
       const { data: { text } } = await worker.recognize(imageFile);
       await worker.terminate();
@@ -817,8 +890,10 @@ export default function App() {
   };
 
   const deleteCase = () => {
-    localStorage.removeItem('theBigOneState');
-    window.location.reload();
+    localStorage.clear(); // Clear everything
+    sessionStorage.clear(); // Also clear session storage
+    // Force complete reload with cache bust
+    window.location.href = window.location.pathname + '?t=' + Date.now();
   };
 
   const closeCase = () => {
@@ -871,30 +946,30 @@ export default function App() {
   }
 
   return (
-    <div className="h-[100dvh] bg-neutral-100 flex flex-col p-3 sm:p-4 max-w-2xl mx-auto overflow-hidden relative">
+    <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
       {/* Top Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-2 sm:mb-4 shrink-0">
-        <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base transition-colors hover:bg-neutral-300">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+        <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           {state.running ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
           {state.running ? 'Pause' : 'Resume'}
         </button>
-        <button onClick={() => setShowResetWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base transition-colors hover:bg-neutral-300">
+        <button onClick={() => setShowResetWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           <RotateCcw size={14} className="sm:w-4 sm:h-4" /> Reset
         </button>
-        <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base transition-colors hover:bg-neutral-300">
+        <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
         </button>
       </div>
 
       {/* Top Quick Tools */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-2 sm:mb-4 shrink-0">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'reversibles' ? null : 'reversibles' }))
           }}
           disabled={isShockForced}
-          className={`p-3 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'reversibles' ? 'Close' : 'Reversibles'}
         </button>
@@ -904,7 +979,7 @@ export default function App() {
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'rosc' ? null : 'rosc' }))
           }}
           disabled={isShockForced}
-          className={`p-3 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'rosc' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'rosc' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'rosc' ? 'Close' : 'ROSC'}
         </button>
@@ -914,34 +989,34 @@ export default function App() {
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'phea' ? null : 'phea' }))
           }}
           disabled={isShockForced}
-          className={`p-3 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'phea' ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'phea' ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'phea' ? 'Close' : 'PHEA'}
         </button>
       </div>
 
       {/* Main Center Display */}
-      <div className={`flex-1 min-h-0 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 ${
+      <div data-green-box className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
       }`}>
-        <div className="h-full flex flex-col items-center justify-between p-3 sm:p-4 relative">
+        <div className="h-full flex flex-col items-center p-4 relative">
           {/* Corner Cards */}
-          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex justify-between gap-2 sm:gap-4 z-20">
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-3 px-3 sm:py-7 sm:px-8 flex flex-col items-center min-w-[90px] sm:min-w-[140px]">
-              <span className="text-[9px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1 sm:mb-3">Total time</span>
-              <span className="text-[20px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
+          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
+            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
+              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
             </div>
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-3 px-3 sm:py-7 sm:px-8 flex flex-col items-center min-w-[90px] sm:min-w-[140px]">
-              <span className="text-[9px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1 sm:mb-3">CPR round</span>
-              <span className="text-[20px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
+            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
+              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
             </div>
           </div>
 
           {/* Rhythm Check - Centered vertically and responsive size */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full pt-4 sm:pt-10 min-h-0">
-            <div className="relative flex items-center justify-center w-[200px] h-[200px] sm:w-[320px] sm:h-[320px] max-h-full">
+          <div className="flex-1 flex flex-col items-center justify-center w-full">
+            <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                 <circle
                   cx="150"
@@ -970,15 +1045,15 @@ export default function App() {
                 />
               </svg>
               
-              <div className="flex flex-col items-center z-10 translate-y-2 sm:translate-y-4">
+              <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
-                  className={`text-6xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none ${
+                  className={`text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none ${
                     (state.rhythmCheckTarget - state.elapsedSeconds) <= 15 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
                   {formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))}
                 </div>
-                <div className="text-[12px] sm:text-[18px] text-neutral-400 uppercase tracking-widest font-bold mt-3 sm:mt-8">
+                <div className="text-[14px] sm:text-[18px] text-neutral-400 uppercase tracking-widest font-bold mt-4 sm:mt-8">
                   Rhythm Check
                 </div>
               </div>
@@ -999,8 +1074,8 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* Adrenaline & Amiodarone Status - Conditional rendering to prioritize space */}
-          <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-1 sm:mb-4 shrink-0 px-2 sm:px-0">
+          {/* Adrenaline & Amiodarone Status - Always rendered, visibility controlled */}
+          <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-2 sm:mb-4">
             {/* Adrenaline Warning */}
             <div 
               onClick={() => {
@@ -1011,10 +1086,10 @@ export default function App() {
                   setDisregardAdrenaline('pending');
                 }
               }}
-              className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[70px] sm:min-h-[120px] ${
+              className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[90px] sm:min-h-[120px] ${
                 !adrenalineRoundStatus.show || disregardAdrenaline === 'confirmed' 
-                  ? 'hidden' 
-                  : 'flex cursor-pointer'
+                  ? 'opacity-0 pointer-events-none' 
+                  : 'opacity-100 cursor-pointer'
               } ${
                 disregardAdrenaline === 'pending'
                   ? 'bg-red-50 text-red-700 border-neutral-100'
@@ -1024,20 +1099,20 @@ export default function App() {
               }`}
             >
               {disregardAdrenaline === 'pending' ? (
-                <span className="text-base sm:text-2xl font-bold tracking-tight text-center">Disregard?</span>
+                <span className="text-xl sm:text-2xl font-bold tracking-tight text-center">Disregard?</span>
               ) : (
                 <>
-                  <span className={`font-bold tracking-widest text-center mb-1 sm:mb-3 ${
+                  <span className={`font-bold tracking-widest text-center mb-1.5 sm:mb-3 ${
                     adrenalineRoundStatus.isDue 
-                      ? 'text-[9px] sm:text-[12px] text-red-700'
-                      : 'text-[9px] sm:text-[12px] text-neutral-900'
+                      ? 'text-[10px] sm:text-[12px] text-red-700'
+                      : 'text-[10px] sm:text-[12px] text-neutral-900'
                   }`}>
                     {adrenalineRoundStatus.text.split(':')[0] + ':'}
                   </span>
                   <span className={`font-bold text-center leading-none tabular-nums ${
                     adrenalineRoundStatus.isDue
-                      ? 'text-[18px] sm:text-[43px] text-red-700'
-                      : 'text-[18px] sm:text-[43px] text-neutral-400'
+                      ? 'text-[22px] sm:text-[43px] text-red-700'
+                      : 'text-[22px] sm:text-[43px] text-neutral-400'
                   }`}>
                     {adrenalineRoundStatus.text.split(':').slice(1).join(':').trim()}
                   </span>
@@ -1055,10 +1130,10 @@ export default function App() {
                     setDisregardAmiodarone('pending');
                   }
                 }}
-                className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[70px] sm:min-h-[120px] ${
+                className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[90px] sm:min-h-[120px] ${
                   !amiodaroneStatus.show || disregardAmiodarone === 'confirmed'
-                    ? 'hidden'
-                    : 'flex cursor-pointer'
+                    ? 'opacity-0 pointer-events-none'
+                    : 'opacity-100 cursor-pointer'
                 } ${
                   disregardAmiodarone === 'pending'
                     ? 'bg-red-50 text-red-700 border-neutral-100'
@@ -1068,34 +1143,34 @@ export default function App() {
                 }`}
               >
                 {disregardAmiodarone === 'pending' ? (
-                  <span className="text-base sm:text-2xl font-bold tracking-tight text-center">Disregard?</span>
+                  <span className="text-xl sm:text-2xl font-bold tracking-tight text-center">Disregard?</span>
                 ) : (
                   <>
-                    <span className={`font-bold tracking-widest text-center mb-1 sm:mb-3 ${
+                    <span className={`font-bold tracking-widest text-center mb-1.5 sm:mb-3 ${
                       amiodaroneStatus.flashRed
-                        ? 'text-[9px] sm:text-[12px] text-red-700'
-                        : 'text-[9px] sm:text-[12px] text-neutral-900'
+                        ? 'text-[10px] sm:text-[12px] text-red-700'
+                        : 'text-[10px] sm:text-[12px] text-neutral-900'
                     }`}>
                       {amiodaroneStatus.text.includes(':') ? amiodaroneStatus.text.split(':')[0] + ':' : amiodaroneStatus.text}
                     </span>
                     {amiodaroneStatus.text.includes(':') && (
                       <span className={`font-bold text-center leading-none tabular-nums ${
                         amiodaroneStatus.flashRed
-                          ? 'text-[18px] sm:text-[43px] text-red-700'
-                          : 'text-[18px] sm:text-[43px] text-neutral-400'
+                          ? 'text-[22px] sm:text-[43px] text-red-700'
+                          : 'text-[22px] sm:text-[43px] text-neutral-400'
                       }`}>
                         {amiodaroneStatus.text.split(':').slice(1).join(':').trim()}
                       </span>
                     )}
                   </>
                 )}
-            </div>
+              </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Main Controls */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 shrink-0">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
