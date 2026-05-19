@@ -1319,7 +1319,7 @@ export default function App() {
             >
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-2xl font-extrabold text-neutral-900">Cardiac arrest management tool</h2>
+                  <h2 className="text-2xl font-extrabold text-neutral-900">Welcome to The Big One, a cardiac arrest management tool</h2>
                   <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
                   <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
                 </div>
@@ -1528,14 +1528,14 @@ export default function App() {
                         {/* Example image */}
                         <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
                           <img 
-                            src="https://raw.githubusercontent.com/MattJonesACTAS/The-Big-One-Beta/main/public/Monitor.png"
+                            src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/monitor.gif?raw=true"
                             alt="Monitor example showing elapsed time and CPR timer"
                             className="w-full"
                           />
                         </div>
                         
                         <p className="text-neutral-700 text-sm">
-                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner (red circle) to correct the camera's brightness setting.
+                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner to correct the camera's brightness setting.
                         </p>
                         
                         <button
