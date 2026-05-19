@@ -496,9 +496,14 @@ export default function App() {
   };
 
   const confirmPause = () => {
-    // If rhythm check is paused but timer is running, just unpause rhythm check
+    // If rhythm check is paused but timer is running, unpause and reset to 2:00
     if (state.running && state.rhythmCheckPaused) {
-      setState(prev => ({ ...prev, rhythmCheckPaused: false }));
+      setState(prev => ({ 
+        ...prev, 
+        rhythmCheckPaused: false,
+        rhythmCheckTarget: prev.elapsedSeconds + 120, // Reset to 2:00 from current elapsed
+        rhythmCheckOvertime: 0
+      }));
       return;
     }
     
@@ -1791,13 +1796,11 @@ function TimePicker({ value, onChange, maxSeconds }: { value: { mins: number, se
 
   return (
     <div className="flex items-center justify-center gap-4">
-      {/* Minutes column with three arrows */}
+      {/* Minutes column */}
       <div className="flex flex-col items-center">
-        <button onClick={() => adjust('mins', 1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-        <span className="text-xs text-neutral-400 font-bold">+1</span>
-        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-1">{value.mins}</div>
-        <span className="text-xs text-neutral-400 font-bold">-1</span>
-        <button onClick={() => adjust('mins', -1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▼</button>
+        <button onClick={() => adjust('mins', 1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
+        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-2">{value.mins}</div>
+        <button onClick={() => adjust('mins', -1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
         <span className="text-neutral-400 font-bold uppercase text-xs mt-2">min</span>
       </div>
       
@@ -1806,27 +1809,15 @@ function TimePicker({ value, onChange, maxSeconds }: { value: { mins: number, se
       {/* Seconds column with three sets of arrows */}
       <div className="flex flex-col items-center">
         <div className="flex gap-2">
-          <div className="flex flex-col items-center">
-            <button onClick={() => adjust('secs', 10)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-            <span className="text-xs text-neutral-400 font-bold">+10</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <button onClick={() => adjust('secs', 1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-            <span className="text-xs text-neutral-400 font-bold">+1</span>
-          </div>
+          <button onClick={() => adjust('secs', 10)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
+          <button onClick={() => adjust('secs', 1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
         </div>
         
-        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-1">{value.secs.toString().padStart(2, '0')}</div>
+        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-2">{value.secs.toString().padStart(2, '0')}</div>
         
         <div className="flex gap-2">
-          <div className="flex flex-col items-center">
-            <span className="text-xs text-neutral-400 font-bold">-10</span>
-            <button onClick={() => adjust('secs', -10)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▼</button>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-xs text-neutral-400 font-bold">-1</span>
-            <button onClick={() => adjust('secs', -1)} className="p-1.5 bg-neutral-100 rounded-lg text-base font-bold text-neutral-400 hover:text-neutral-900">▼</button>
-          </div>
+          <button onClick={() => adjust('secs', -10)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
+          <button onClick={() => adjust('secs', -1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
         </div>
         
         <span className="text-neutral-400 font-bold uppercase text-xs mt-2">sec</span>
@@ -1933,17 +1924,17 @@ function CheckItem({ label, subItems }: CheckItemProps) {
   const [checked, setChecked] = useState(false);
   return (
     <div>
-      <label onClick={() => setChecked(!checked)} className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-emerald-50' : 'hover:bg-neutral-50'}`}>
-        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 transition-colors flex-shrink-0 ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-300 bg-white'}`}>
+      <label onClick={() => setChecked(!checked)} className={`flex items-start p-2 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-emerald-50' : 'hover:bg-neutral-50'}`}>
+        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 mt-0.5 transition-colors flex-shrink-0 ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-300 bg-white'}`}>
           {checked && <CheckCircle2 size={12} className="text-white" />}
         </div>
         <div className="flex-1">
           <span className={`text-[17px] font-medium ${checked ? 'text-emerald-900' : 'text-neutral-700'}`}>{label}</span>
           {subItems && subItems.length > 0 && (
-            <ul className="mt-1 ml-1 space-y-0.5">
+            <ul className="mt-2 ml-0 space-y-1">
               {subItems.map((item, idx) => (
-                <li key={idx} className="text-[15px] text-neutral-600 flex items-start">
-                  <span className="mr-1.5">•</span>
+                <li key={idx} className={`text-[16px] flex items-start ${checked ? 'text-emerald-800' : 'text-neutral-600'}`}>
+                  <span className="mr-2 font-bold">•</span>
                   <span>{item}</span>
                 </li>
               ))}
