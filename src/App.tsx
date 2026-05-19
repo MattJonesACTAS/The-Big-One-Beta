@@ -341,28 +341,29 @@ export default function App() {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
     
-    // Force mobile browser to recalculate viewport
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', () => {
-        document.documentElement.style.setProperty('--vh', `${window.visualViewport.height * 0.01}px`);
-      });
-      document.documentElement.style.setProperty('--vh', `${window.visualViewport.height * 0.01}px`);
-    }
+    // Force mobile browser to recalculate viewport - multiple passes
+    const setVh = () => {
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--vh', `${vh * 0.01}px`);
+    };
     
-    // Force complete style and layout recalculation
-    window.requestAnimationFrame(() => {
-      // Trigger reflow
-      document.body.offsetHeight;
-      window.dispatchEvent(new Event('resize'));
-      // Clear any inline styles that might have persisted
-      document.body.removeAttribute('style');
-      document.documentElement.removeAttribute('style');
-      
-      // Second pass after a frame
+    // Set immediately
+    setVh();
+    
+    // Set after layout stabilizes
+    requestAnimationFrame(() => {
+      setVh();
       requestAnimationFrame(() => {
-        window.scrollTo(0, 0);
+        setVh();
+        // Final set after 100ms to catch any late layout changes
+        setTimeout(setVh, 100);
       });
     });
+    
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', setVh);
+      return () => window.visualViewport.removeEventListener('resize', setVh);
+    }
   }, []);
 
   // Diagnostic: Monitor green box height changes
