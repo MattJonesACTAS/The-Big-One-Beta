@@ -532,12 +532,16 @@ export default function App() {
       ...prev,
       treatments: [...prev.treatments, treatment],
       shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
-      currentOverlay: name === 'Disarm — ROSC' ? 'rosc' : null
+      currentOverlay: name === 'Disarm - ROSC' ? 'rosc' : null,
+      // For ROSC: pause timer and reset rhythm check to 2:00
+      running: name === 'Disarm - ROSC' ? false : prev.running,
+      rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : prev.rhythmCheckTarget,
+      rhythmCheckOvertime: name === 'Disarm - ROSC' ? 0 : prev.rhythmCheckOvertime
     }));
     setIsShockForced(false);
     
     // Show notification with treatment name
-    if (name !== 'Disarm — ROSC') {
+    if (name !== 'Disarm - ROSC') {
       loggedTreatmentRef.current = name;
       setShowLoggedNotification(true);
       setTimeout(() => setShowLoggedNotification(false), 2000);
@@ -2234,31 +2238,18 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         </div>
       )}
       
-      {/* Rhythm Check Section */}
-      <div className="bg-neutral-100 px-4 py-2">
-        <span className="font-bold text-neutral-700 text-sm uppercase tracking-wide">Rhythm Check</span>
-      </div>
-      
       <TxSection 
-        title="Shock" 
+        title="Rhythm Check" 
         color="pink" 
-        sectionId="shock"
+        sectionId="rhythmCheck"
         expandedSection={expandedSection}
         onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
         items={[
-          'Shock - VF', 'Shock - pVT'
-        ]} 
-        onSelect={addTreatment}
-      />
-
-      <TxSection 
-        title="Disarm" 
-        color="blue" 
-        sectionId="disarm"
-        expandedSection={expandedSection}
-        onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
-        items={[
-          'Disarm - Asystole', 'Disarm - PEA', 'Disarm - ROSC'
+          { name: 'Shock - VF', color: 'red' },
+          { name: 'Shock - pVT', color: 'red' },
+          { name: 'Disarm - Asystole', color: 'blue' },
+          { name: 'Disarm - PEA', color: 'blue' },
+          { name: 'Disarm - ROSC', color: 'blue' }
         ]} 
         onSelect={addTreatment}
       />
@@ -2330,7 +2321,7 @@ function TxSection({
 }: { 
   title: string;
   color: string;
-  items: string[];
+  items: (string | { name: string; color?: string })[];
   onSelect: (n: string) => void;
   initiallyExpanded?: boolean;
   sectionId?: string;
@@ -2358,6 +2349,11 @@ function TxSection({
     blue: 'bg-blue-50 text-blue-800 border-blue-100',
     neutral: 'bg-neutral-100 text-neutral-800 border-neutral-200'
   };
+  
+  const textColorMap: Record<string, string> = {
+    red: 'text-red-600',
+    blue: 'text-blue-600'
+  };
 
   return (
     <div>
@@ -2375,15 +2371,21 @@ function TxSection({
         className="overflow-hidden bg-white"
       >
         <div className="p-3 grid grid-cols-1 gap-2">
-          {items.map(item => (
-            <button 
-              key={item} 
-              onClick={() => onSelect(item)} 
-              className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700 hover:bg-neutral-100 btn-base"
-            >
-              {item}
-            </button>
-          ))}
+          {items.map(item => {
+            const itemName = typeof item === 'string' ? item : item.name;
+            const itemColor = typeof item === 'string' ? null : item.color;
+            const textColorClass = itemColor ? textColorMap[itemColor] : 'text-neutral-700';
+            
+            return (
+              <button 
+                key={itemName} 
+                onClick={() => onSelect(itemName)} 
+                className={`w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm hover:bg-neutral-100 btn-base ${textColorClass}`}
+              >
+                {itemName}
+              </button>
+            );
+          })}
         </div>
       </motion.div>
     </div>
