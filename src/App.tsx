@@ -309,8 +309,7 @@ export default function App() {
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [showTimerAdjust, setShowTimerAdjust] = useState(false);
-  const [timerAdjustMinutes, setTimerAdjustMinutes] = useState('2');
-  const [timerAdjustSeconds, setTimerAdjustSeconds] = useState('0');
+  const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
   const [isShockForced, setIsShockForced] = useState(false);
@@ -504,9 +503,7 @@ export default function App() {
   };
 
   const applyTimerAdjustment = () => {
-    const minutes = parseInt(timerAdjustMinutes) || 0;
-    const seconds = parseInt(timerAdjustSeconds) || 0;
-    const totalSeconds = minutes * 60 + seconds;
+    const totalSeconds = timerAdjustValue.mins * 60 + timerAdjustValue.secs;
     
     if (totalSeconds > 0) {
       setState(prev => ({
@@ -700,6 +697,11 @@ export default function App() {
     
     let adjustedElapsed = catchupElapsed.mins * 60 + catchupElapsed.secs;
     let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
+    
+    // If rhythm check is too short (<= 6 seconds), start with full 2:00 instead
+    if (adjustedRhythm <= 6) {
+      adjustedRhythm = 120;
+    }
     
     // Use override weight if provided, otherwise use weightInput state
     const finalWeight = overrideWeight || weightInput;
@@ -974,8 +976,7 @@ export default function App() {
             const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
             const mins = Math.floor(currentCountdown / 60);
             const secs = currentCountdown % 60;
-            setTimerAdjustMinutes(mins.toString());
-            setTimerAdjustSeconds(secs.toString());
+            setTimerAdjustValue({ mins, secs });
             setShowTimerAdjust(true);
           }} 
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
@@ -1663,38 +1664,18 @@ export default function App() {
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Adjust CPR Timer</h2>
             <p className="text-neutral-500 mb-6">Set the countdown time for the next rhythm check</p>
             
-            <div className="flex items-center justify-center gap-3 mb-8">
-              <div className="flex flex-col items-center">
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={timerAdjustMinutes}
-                  onChange={(e) => setTimerAdjustMinutes(e.target.value)}
-                  className="w-20 text-4xl font-bold text-center border-2 border-neutral-300 rounded-xl p-3 focus:border-emerald-500 focus:outline-none"
-                />
-                <span className="text-xs text-neutral-500 mt-1">min</span>
-              </div>
-              <span className="text-4xl font-bold text-neutral-400">:</span>
-              <div className="flex flex-col items-center">
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={timerAdjustSeconds}
-                  onChange={(e) => setTimerAdjustSeconds(e.target.value)}
-                  className="w-20 text-4xl font-bold text-center border-2 border-neutral-300 rounded-xl p-3 focus:border-emerald-500 focus:outline-none"
-                />
-                <span className="text-xs text-neutral-500 mt-1">sec</span>
-              </div>
+            <div className="mb-8">
+              <TimePicker 
+                value={timerAdjustValue}
+                onChange={setTimerAdjustValue}
+              />
             </div>
             
             <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={() => {
                   setShowTimerAdjust(false);
-                  setTimerAdjustMinutes('2');
-                  setTimerAdjustSeconds('0');
+                  setTimerAdjustValue({ mins: 2, secs: 0 });
                 }} 
                 className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base"
               >
