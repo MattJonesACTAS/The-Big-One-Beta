@@ -554,9 +554,23 @@ export default function App() {
       const isROSC = name === 'Disarm - ROSC';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
       
+      // Auto-add OPA before BVM
+      const newTreatments = [...prev.treatments];
+      if (name === 'BVM') {
+        const opaTreatment: Treatment = {
+          name: 'OPA',
+          elapsed: state.elapsedSeconds,
+          round: state.cprRound,
+          clock: getLocalTime(now),
+          clockSeconds: getLocalTimeWithSeconds(now)
+        };
+        newTreatments.push(opaTreatment);
+      }
+      newTreatments.push(treatment);
+      
       return {
         ...prev,
-        treatments: [...prev.treatments, treatment],
+        treatments: newTreatments,
         shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
         currentOverlay: null,
         // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
@@ -790,6 +804,18 @@ export default function App() {
     const baseClock = new Date(startClockTime);
     
     priorTxs.forEach(name => {
+      // Auto-add OPA before BVM
+      if (name === 'BVM') {
+        initialTxs.push({
+          name: 'OPA',
+          elapsed: 0,
+          round: 0,
+          clock: getLocalTime(baseClock),
+          clockSeconds: getLocalTimeWithSeconds(baseClock),
+          prior: true
+        });
+      }
+      
       initialTxs.push({
         name,
         elapsed: 0,
@@ -799,6 +825,18 @@ export default function App() {
         prior: true
       });
     });
+
+    // Auto-add "Pads on" before shocks/disarms in catchup
+    if (priorCounts.shock > 0 || priorCounts.disarm > 0) {
+      initialTxs.push({ 
+        name: 'Pads on', 
+        elapsed: 0, 
+        round: 0, 
+        clock: getLocalTime(baseClock), 
+        clockSeconds: getLocalTimeWithSeconds(baseClock), 
+        prior: true 
+      });
+    }
 
     for (let i = 0; i < priorCounts.shock; i++) {
       initialTxs.push({ name: `Shock #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
@@ -1319,7 +1357,9 @@ export default function App() {
             >
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-2xl font-extrabold text-neutral-900">Welcome to The Big One, a cardiac arrest management tool</h2>
+                  <h2 className="text-2xl font-extrabold text-neutral-900">
+                    Welcome to The Big One<br />your cardiac arrest management tool
+                  </h2>
                   <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
                   <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
                 </div>
