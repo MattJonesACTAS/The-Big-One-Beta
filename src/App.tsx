@@ -1466,18 +1466,11 @@ export default function App() {
                         
                         {/* Example image */}
                         <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
-                          {/* 
-                            TODO: Replace this placeholder with the actual monitor image.
-                            Options:
-                            1. Host Monitor.png online and use: <img src="https://your-url.com/monitor.png" alt="Monitor example" className="w-full" />
-                            2. Convert Monitor.png to base64 and use: <img src="data:image/png;base64,YOUR_BASE64_HERE" alt="Monitor example" className="w-full" />
-                            The image file is available at: /mnt/user-data/uploads/Monitor.png
-                          */}
-                          <div className="bg-neutral-50 p-8 text-center">
-                            <div className="text-4xl mb-2">📸</div>
-                            <p className="text-sm text-neutral-600">Monitor Example Image</p>
-                            <p className="text-xs text-neutral-500 mt-1">(Shows elapsed time at top right and CPR timer above diamond)</p>
-                          </div>
+                          <img 
+                            src="https://raw.githubusercontent.com/MattJonesACTAS/The-Big-One-Beta/main/public/Monitor.png"
+                            alt="Monitor example showing elapsed time and CPR timer"
+                            className="w-full"
+                          />
                         </div>
                         
                         <p className="text-neutral-700 text-sm">
