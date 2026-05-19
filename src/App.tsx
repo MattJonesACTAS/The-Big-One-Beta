@@ -1358,9 +1358,14 @@ export default function App() {
             >
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-2xl font-extrabold text-neutral-900">
-                    It's The Big One!<br />Your cardiac arrest management tool.
-                  </h2>
+                  <div className="space-y-3">
+                    <h1 className="text-4xl font-extrabold text-neutral-900">
+                      It's The Big One!
+                    </h1>
+                    <p className="text-xl font-semibold text-neutral-600">
+                      Your cardiac arrest management tool.
+                    </p>
+                  </div>
                   <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
                   <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
                 </div>
