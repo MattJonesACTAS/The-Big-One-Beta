@@ -890,10 +890,21 @@ export default function App() {
   };
 
   const deleteCase = () => {
-    localStorage.clear(); // Clear everything
-    sessionStorage.clear(); // Also clear session storage
-    // Force complete reload with cache bust
-    window.location.href = window.location.pathname + '?t=' + Date.now();
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Unregister service worker and force true hard reload
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => registration.unregister());
+      });
+    }
+    
+    // Force hard reload with cache bypass
+    window.location.href = window.location.pathname + '?nocache=' + Date.now();
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 100);
   };
 
   const closeCase = () => {
