@@ -2235,13 +2235,25 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       )}
       
       <TxSection 
-        title="Rhythm Check" 
+        title="Shock" 
         color="pink" 
-        sectionId="rhythmCheck"
+        sectionId="shock"
         expandedSection={expandedSection}
         onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
         items={[
-          'Shock — VT', 'Disarm — VF', 'Disarm — PEA', 'Disarm — Asystole', 'Disarm — ROSC'
+          'Shock - VF', 'Shock - pVT'
+        ]} 
+        onSelect={addTreatment}
+      />
+
+      <TxSection 
+        title="Disarm" 
+        color="blue" 
+        sectionId="disarm"
+        expandedSection={expandedSection}
+        onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
+        items={[
+          'Disarm - Asystole', 'Disarm - PEA', 'Disarm - ROSC'
         ]} 
         onSelect={addTreatment}
       />
