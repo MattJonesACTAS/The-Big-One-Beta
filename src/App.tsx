@@ -1398,7 +1398,6 @@ export default function App() {
                           onClick={() => {
                             setUseManualEntry(true);
                             setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
-                            setPhotoTimestamp(Date.now()); // Set timestamp to track elapsed time during catchup
                           }}
                           className="w-full bg-neutral-100 text-neutral-700 p-4 rounded-xl font-bold btn-base"
                         >
@@ -1558,6 +1557,11 @@ export default function App() {
                       </button>
                       <button 
                         onClick={() => { 
+                          // Set timestamp when elapsed time is entered
+                          if (!photoTimestamp) {
+                            setPhotoTimestamp(Date.now());
+                          }
+                          
                           if (timesFromScan) {
                             // If scanned, CPR timer is already set, skip step 3
                             setCatchupStep(4);
