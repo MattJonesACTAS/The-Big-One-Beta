@@ -32,6 +32,7 @@ const INITIAL_STATE: AppState = {
   pausedTime: 0,
   elapsedSeconds: 0,
   rhythmCheckTarget: 120, // 2 minutes
+  rhythmCheckOvertime: 0, // Counts up from 0 to 5 after rhythm check hits 0:00
   cprRound: 1,
   shocks: 0,
   treatments: [],
@@ -406,6 +407,7 @@ export default function App() {
           let nextTarget = prev.rhythmCheckTarget;
           let nextRound = prev.cprRound;
           let nextOverlay = prev.currentOverlay;
+          let nextOvertime = prev.rhythmCheckOvertime;
           
           const countdown = prev.rhythmCheckTarget - newElapsed;
 
@@ -415,37 +417,44 @@ export default function App() {
             hasAutoClosedAt15.current = true;
           }
 
-          // Force shock at 0:00, but only when TRANSITIONING from >0 to <=0
-          // This prevents multiple triggers when starting the app late into an arrest
-          if (countdown <= 0 && 
-              (previousCountdown.current === null || previousCountdown.current > 0) && 
-              prev.elapsedSeconds > 0 && 
-              !hasShownForcedShock && 
-              !showCatchup) {
-            nextOverlay = 'treatment';
-            setIsShockForced(true);
-            setHasShownForcedShock(true); // Mark as shown
+          // Beep logic only between 10 and 5 seconds
+          if (countdown <= 10 && countdown > 5 && lastBeepSecond.current !== newElapsed) {
+            playBeep();
+            lastBeepSecond.current = newElapsed;
+          }
+
+          // Handle rhythm check reaching 0:00 and overtime
+          if (countdown <= 0) {
+            // Calculate overtime (how many seconds past the target)
+            nextOvertime = newElapsed - prev.rhythmCheckTarget;
+            
+            // When overtime reaches 5 seconds, force shock entry and reset immediately
+            if (nextOvertime >= 5) {
+              // Force shock overlay (don't wait for user to complete it)
+              if (!showCatchup) {
+                nextOverlay = 'treatment';
+                setIsShockForced(true);
+              }
+              
+              // Reset immediately regardless of shock entry
+              nextTarget = newElapsed + 120;
+              nextRound += 1;
+              nextOvertime = 0;
+              hasAutoClosedAt15.current = false;
+              setHasShownForcedShock(false); // Reset for next cycle
+            }
+          } else {
+            nextOvertime = 0; // Reset overtime when not past target
           }
           
           // Update previous countdown for next iteration
           previousCountdown.current = countdown;
-
-          // Beep logic between 15 and 10
-          if (countdown <= 15 && countdown >= 10 && lastBeepSecond.current !== newElapsed) {
-            playBeep();
-            lastBeepSecond.current = newElapsed;
-          }
-          
-          if (newElapsed >= prev.rhythmCheckTarget) {
-            nextTarget += 120;
-            nextRound += 1;
-            hasAutoClosedAt15.current = false;
-          }
           
           return {
             ...prev,
             elapsedSeconds: newElapsed,
             rhythmCheckTarget: nextTarget,
+            rhythmCheckOvertime: nextOvertime,
             cprRound: nextRound,
             currentOverlay: nextOverlay
           };
@@ -485,7 +494,8 @@ export default function App() {
   const resetTimer = () => {
     setState(prev => ({
       ...prev,
-      rhythmCheckTarget: prev.elapsedSeconds + 120
+      rhythmCheckTarget: prev.elapsedSeconds + 120,
+      rhythmCheckOvertime: 0
     }));
     setShowResetWarning(false);
   };
@@ -1023,9 +1033,15 @@ export default function App() {
                   strokeWidth="6"
                   strokeLinecap="round"
                   pathLength="1"
-                  className={(state.rhythmCheckTarget - state.elapsedSeconds) <= 15 ? 'text-red-500' : 'text-emerald-500'}
+                  className={
+                    state.rhythmCheckOvertime > 0 ? 'text-red-500' :
+                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && 
+                    (state.rhythmCheckTarget - state.elapsedSeconds) > 5 ? 'text-red-500' : 'text-emerald-500'
+                  }
                   animate={{ 
-                    strokeDashoffset: 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
+                    strokeDashoffset: state.rhythmCheckOvertime > 0 
+                      ? 1 - (state.rhythmCheckOvertime / 5) // Count up from 0 to 5
+                      : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
                   }}
                   style={{ strokeDasharray: 1 }}
                   transition={{ duration: 0.5, ease: "linear" }}
@@ -1035,12 +1051,19 @@ export default function App() {
               <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
                   className={`text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none ${
-                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 15 ? 'text-red-600' : 'text-neutral-900'
+                    state.rhythmCheckOvertime > 0 ? 'text-red-600' :
+                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && 
+                    (state.rhythmCheckTarget - state.elapsedSeconds) > 5 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
-                  {formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))}
+                  {state.rhythmCheckOvertime > 0 
+                    ? formatTime(state.rhythmCheckOvertime)
+                    : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
+                  }
                 </div>
-                <div className="text-[14px] sm:text-[18px] text-neutral-400 uppercase tracking-widest font-bold mt-4 sm:mt-8">
+                <div className={`text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
+                  state.rhythmCheckOvertime > 0 ? 'text-red-600 animate-pulse' : 'text-neutral-400'
+                }`}>
                   Rhythm Check
                 </div>
               </div>
@@ -1358,19 +1381,16 @@ export default function App() {
                   {showCameraTips && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                       <div className="bg-white rounded-2xl p-6 max-w-sm space-y-4">
+                        <p className="text-neutral-700">Capture the elapsed time (top right) and CPR timer in one frame.</p>
                         <h3 className="text-lg font-bold text-neutral-900">For best results:</h3>
                         <ul className="text-left space-y-2 text-neutral-700">
                           <li className="flex gap-2">
-                            <span>1.</span>
-                            <span>Use <strong>2x zoom</strong> if available</span>
+                            <span>•</span>
+                            <span>Through the camera, touch the <strong>CPR timer banner</strong>, which will darken the image</span>
                           </li>
                           <li className="flex gap-2">
-                            <span>2.</span>
-                            <span>Get close to the <strong>monitor</strong></span>
-                          </li>
-                          <li className="flex gap-2">
-                            <span>3.</span>
-                            <span><strong>Hold steady</strong></span>
+                            <span>•</span>
+                            <span>Take a <strong>breath and hold steady</strong></span>
                           </li>
                         </ul>
                         <button
