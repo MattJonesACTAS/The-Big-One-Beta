@@ -20,7 +20,8 @@ import {
   Zap,
   ShieldCheck,
   Stethoscope,
-  Camera
+  Camera,
+  ArrowRight
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { AppState, Treatment, OverlayType } from './types';
