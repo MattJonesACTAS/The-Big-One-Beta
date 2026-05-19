@@ -543,7 +543,10 @@ export default function App() {
       // For ROSC: pause rhythm check at 2:00 (but keep elapsed time running)
       rhythmCheckTarget: name === 'Disarm - ROSC' ? prev.elapsedSeconds + 120 : prev.rhythmCheckTarget,
       rhythmCheckOvertime: name === 'Disarm - ROSC' ? 0 : prev.rhythmCheckOvertime,
-      rhythmCheckPaused: name === 'Disarm - ROSC' ? true : prev.rhythmCheckPaused
+      // Pause rhythm check for ROSC, unpause for any other shock/disarm
+      rhythmCheckPaused: (name.includes('Shock') || name.includes('Disarm')) 
+        ? (name === 'Disarm - ROSC' ? true : false)
+        : prev.rhythmCheckPaused
     }));
     setIsShockForced(false);
     
@@ -558,11 +561,6 @@ export default function App() {
     if (name.includes('Shock') || name.includes('Disarm')) {
       setHasShownForcedShock(false);
       previousCountdown.current = null; // Reset countdown tracking
-      
-      // Unpause rhythm check for any shock/disarm except ROSC
-      if (name !== 'Disarm - ROSC') {
-        setState(prev => ({ ...prev, rhythmCheckPaused: false }));
-      }
     }
     
     // Reset disregard states when new doses given
