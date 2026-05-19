@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   Stethoscope,
   Camera,
-  ArrowRight
+  ArrowRight,
+  Sliders
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { AppState, Treatment, OverlayType } from './types';
@@ -207,11 +208,14 @@ const getLocalTimeWithSeconds = (date?: Date) => {
 const calculateDose = (doseStr: string, weight: number | null): string => {
   if (!weight || !doseStr.includes('/kg')) return doseStr;
   
+  // Handle ">100" special case - treat as 100 for calculations
+  const calcWeight = typeof weight === 'string' && weight === '>100' ? 100 : weight;
+  
   const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL)\/kg/i);
   if (!match) return doseStr;
   
   const [_, amount, unit] = match;
-  const calculated = parseFloat(amount) * weight;
+  const calculated = parseFloat(amount) * (typeof calcWeight === 'number' ? calcWeight : parseFloat(String(calcWeight)));
   const rounded = Math.round(calculated * 10) / 10;
   
   return `${amount}${unit}/kg (${rounded}${unit})`;
@@ -611,7 +615,7 @@ export default function App() {
     const isDue = state.cprRound >= nextDueRound;
     
     if (isDue) {
-      return { text: "Next adrenaline: Now", show: true, isDue: true };
+      return { text: "Next adrenaline: THIS ROUND", show: true, isDue: true };
     } else {
       return { text: `Next adrenaline: Round ${nextDueRound}`, show: true, isDue: false };
     }
@@ -633,7 +637,12 @@ export default function App() {
     const timeUntilNext = 300 - timeSinceLastDose; // 5 minutes = 300 seconds
     
     if (timeUntilNext <= 0) {
-      return { text: "Next amiodarone: Now", show: true, isDue: true, countdown: timeUntilNext, flashRed: true };
+      // Show negative countdown when overdue
+      const overdueTime = Math.abs(timeUntilNext);
+      const mins = Math.floor(overdueTime / 60);
+      const secs = overdueTime % 60;
+      const timeStr = `-${mins}:${secs.toString().padStart(2, '0')}`;
+      return { text: `Next amiodarone: ${timeStr}`, show: true, isDue: true, countdown: timeUntilNext, flashRed: true };
     } else {
       const mins = Math.floor(timeUntilNext / 60);
       const secs = timeUntilNext % 60;
@@ -744,11 +753,14 @@ export default function App() {
     // Use override weight if provided, otherwise use weightInput state
     const finalWeight = overrideWeight || weightInput;
     
-    // Parse weight, checking for valid number
-    let parsedWeight: number | null = null;
+    // Parse weight, checking for valid number or ">100" special case
+    let parsedWeight: any = null;
     if (finalWeight) {
       const weightStr = String(finalWeight).trim();
-      if (weightStr) {
+      if (weightStr === '>100') {
+        // Store as string to preserve ">100" for display, but treat as 100 for calculations
+        parsedWeight = '>100';
+      } else if (weightStr) {
         const parsed = parseFloat(weightStr);
         if (!isNaN(parsed) && parsed > 0) {
           parsedWeight = parsed;
@@ -1025,7 +1037,7 @@ export default function App() {
           }} 
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
-          <RotateCcw size={14} className="sm:w-4 sm:h-4" /> Reset
+          <Sliders size={14} className="sm:w-4 sm:h-4" /> Adjust
         </button>
         <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
@@ -1187,9 +1199,9 @@ export default function App() {
                   : 'opacity-100 cursor-pointer'
               } ${
                 disregardAdrenaline === 'pending'
-                  ? 'bg-red-50 text-red-700 border-neutral-100'
+                  ? 'bg-red-200 text-red-900 border-neutral-100'
                   : adrenalineRoundStatus.isDue 
-                  ? 'bg-red-50 text-red-700 border-neutral-100 animate-pulse' 
+                  ? 'bg-red-200 text-red-900 border-neutral-100 animate-pulse' 
                   : 'bg-neutral-100 text-neutral-900 border-neutral-100'
               }`}
             >
@@ -1199,14 +1211,14 @@ export default function App() {
                 <>
                   <span className={`font-bold tracking-widest text-center mb-1.5 sm:mb-3 ${
                     adrenalineRoundStatus.isDue 
-                      ? 'text-[10px] sm:text-[12px] text-red-700'
+                      ? 'text-[10px] sm:text-[12px] text-red-900'
                       : 'text-[10px] sm:text-[12px] text-neutral-900'
                   }`}>
                     {adrenalineRoundStatus.text.split(':')[0] + ':'}
                   </span>
                   <span className={`font-bold text-center leading-none tabular-nums ${
                     adrenalineRoundStatus.isDue
-                      ? 'text-[22px] sm:text-[43px] text-red-700'
+                      ? 'text-[22px] sm:text-[43px] text-red-900'
                       : 'text-[22px] sm:text-[43px] text-neutral-400'
                   }`}>
                     {adrenalineRoundStatus.text.split(':').slice(1).join(':').trim()}
@@ -1231,9 +1243,9 @@ export default function App() {
                     : 'opacity-100 cursor-pointer'
                 } ${
                   disregardAmiodarone === 'pending'
-                    ? 'bg-red-50 text-red-700 border-neutral-100'
+                    ? 'bg-red-200 text-red-900 border-neutral-100'
                     : amiodaroneStatus.flashRed
-                    ? 'bg-red-50 text-red-700 border-neutral-100 animate-pulse' 
+                    ? 'bg-red-200 text-red-900 border-neutral-100 animate-pulse' 
                     : 'bg-neutral-100 text-neutral-900 border-neutral-100'
                 }`}
               >
@@ -1243,7 +1255,7 @@ export default function App() {
                   <>
                     <span className={`font-bold tracking-widest text-center mb-1.5 sm:mb-3 ${
                       amiodaroneStatus.flashRed
-                        ? 'text-[10px] sm:text-[12px] text-red-700'
+                        ? 'text-[10px] sm:text-[12px] text-red-900'
                         : 'text-[10px] sm:text-[12px] text-neutral-900'
                     }`}>
                       {amiodaroneStatus.text.includes(':') ? amiodaroneStatus.text.split(':')[0] + ':' : amiodaroneStatus.text}
@@ -1251,7 +1263,7 @@ export default function App() {
                     {amiodaroneStatus.text.includes(':') && (
                       <span className={`font-bold text-center leading-none tabular-nums ${
                         amiodaroneStatus.flashRed
-                          ? 'text-[22px] sm:text-[43px] text-red-700'
+                          ? 'text-[22px] sm:text-[43px] text-red-900'
                           : 'text-[22px] sm:text-[43px] text-neutral-400'
                       }`}>
                         {amiodaroneStatus.text.split(':').slice(1).join(':').trim()}
@@ -1307,30 +1319,53 @@ export default function App() {
             >
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-2xl font-extrabold text-neutral-900">Arrest Started</h2>
-                  <p className="text-neutral-500 text-base leading-relaxed">Let's calibrate the timer with the monitor for accurate logging.</p>
+                  <h2 className="text-2xl font-extrabold text-neutral-900">Welcome to The Big One, a cardiac arrest management tool</h2>
+                  <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
                   <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
                 </div>
               )}
 
               {catchupStep === 5 && (
-                <div className="text-center space-y-5 px-4">
-                  <h2 className="text-xl font-bold text-neutral-900">Patient Type</h2>
-                  <p className="text-neutral-600 text-sm">This will update the in-app drug doses</p>
+                <div className="space-y-4 px-4">
+                  <div className="text-center space-y-2 mb-6">
+                    <h2 className="text-xl font-bold text-neutral-900">Select patient type and weight</h2>
+                    <p className="text-neutral-600 text-sm">This will give you patient specific drug calculations</p>
+                  </div>
                   
-                  <div className="space-y-3">
-                    {/* Adult option - dropdown with weights */}
-                    <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-emerald-50">
+                  {/* Adult Card */}
+                  <div 
+                    onClick={() => {
+                      setWeightType('adult');
+                      setPaedWeightMethod(null);
+                      setWeightInput('');
+                    }}
+                    className={`border-2 rounded-2xl p-5 cursor-pointer transition-all ${
+                      weightType === 'adult' 
+                        ? 'border-emerald-500 bg-emerald-50 shadow-sm' 
+                        : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <span className="text-base font-bold text-neutral-900 w-24 text-left">Adult</span>
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                          weightType === 'adult' 
+                            ? 'border-emerald-500 bg-emerald-500' 
+                            : 'border-neutral-300'
+                        }`}>
+                          {weightType === 'adult' && <div className="w-3 h-3 bg-white rounded-full"></div>}
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900">Adult</h3>
+                      </div>
+                    </div>
+                    
+                    {weightType === 'adult' && (
+                      <div className="space-y-3 mt-4 pt-4 border-t border-emerald-200">
+                        <label className="block text-sm font-semibold text-neutral-700 mb-2">Patient Weight</label>
                         <select
-                          value={weightType === 'adult' ? weightInput : ''}
-                          onChange={(e) => {
-                            setWeightType('adult');
-                            setWeightInput(e.target.value);
-                            setPaedWeightMethod(null);
-                          }}
-                          className="flex-1 bg-white border-2 border-emerald-300 rounded-xl px-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                          value={weightInput}
+                          onChange={(e) => setWeightInput(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-emerald-500 outline-none"
                         >
                           <option value="">Select weight</option>
                           <option value="30">30 kg</option>
@@ -1341,100 +1376,119 @@ export default function App() {
                           <option value="80">80 kg</option>
                           <option value="90">90 kg</option>
                           <option value="100">100 kg</option>
-                          <option value="110">&gt;100 kg</option>
+                          <option value=">100">&gt;100 kg</option>
                         </select>
                         <button
-                          onClick={() => weightType === 'adult' && weightInput && handleCatchupStart()}
-                          disabled={!(weightType === 'adult' && weightInput)}
-                          className={`p-2.5 rounded-xl transition-all ${
-                            weightType === 'adult' && weightInput
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                          }`}
-                        >
-                          <ArrowRight size={20} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Paediatric age-based - dropdown */}
-                    <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-pink-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 text-left">
-                          <div className="text-base font-bold text-neutral-900">Paediatric</div>
-                          <div className="text-xs text-neutral-600">(Age/weight)</div>
-                        </div>
-                        <select
-                          value={weightType === 'paed' && paedWeightMethod === 'age' ? weightInput : ''}
-                          onChange={(e) => {
-                            setWeightType('paed');
-                            setPaedWeightMethod('age');
-                            setWeightInput(e.target.value);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            weightInput && handleCatchupStart();
                           }}
-                          className="flex-1 bg-white border-2 border-pink-300 rounded-xl px-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
-                        >
-                          <option value="">Select age</option>
-                          {[
-                            ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
-                            ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
-                            ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
-                            ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
-                            ['11 years', 35], ['12 years', 38]
-                          ].map(([age, weight]) => (
-                            <option key={age} value={weight}>{age} - {weight}kg</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => weightType === 'paed' && paedWeightMethod === 'age' && weightInput && handleCatchupStart()}
-                          disabled={!(weightType === 'paed' && paedWeightMethod === 'age' && weightInput)}
-                          className={`p-2.5 rounded-xl transition-all ${
-                            weightType === 'paed' && paedWeightMethod === 'age' && weightInput
-                              ? 'bg-pink-400 text-white'
+                          disabled={!weightInput}
+                          className={`w-full py-3 rounded-xl font-bold transition-all ${
+                            weightInput
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                           }`}
                         >
-                          <ArrowRight size={20} />
+                          Continue
                         </button>
                       </div>
-                    </div>
-                    
-                    {/* Paediatric custom weight - text input */}
-                    <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-pink-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 text-left">
-                          <div className="text-base font-bold text-neutral-900">Paediatric</div>
-                          <div className="text-xs text-neutral-600">(custom weight)</div>
-                        </div>
-                        <div className="flex-1 relative">
-                          <input
-                            type="number"
-                            placeholder="Weight"
-                            value={weightType === 'paed' && paedWeightMethod === 'weight' ? weightInput : ''}
-                            onChange={(e) => {
-                              setWeightType('paed');
-                              setPaedWeightMethod('weight');
-                              setWeightInput(e.target.value);
-                            }}
-                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-3 py-2.5 pr-10 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 text-base font-bold pointer-events-none">kg</span>
-                        </div>
-                        <button
-                          onClick={() => weightType === 'paed' && paedWeightMethod === 'weight' && weightInput && handleCatchupStart()}
-                          disabled={!(weightType === 'paed' && paedWeightMethod === 'weight' && weightInput)}
-                          className={`p-2.5 rounded-xl transition-all ${
-                            weightType === 'paed' && paedWeightMethod === 'weight' && weightInput
-                              ? 'bg-pink-400 text-white'
-                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                          }`}
-                        >
-                          <ArrowRight size={20} />
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                   
-                  <button onClick={() => setCatchupStep(4)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                  {/* Paediatric Card */}
+                  <div 
+                    onClick={() => {
+                      setWeightType('paed');
+                      if (!paedWeightMethod) setPaedWeightMethod('age');
+                      setWeightInput('');
+                    }}
+                    className={`border-2 rounded-2xl p-5 cursor-pointer transition-all ${
+                      weightType === 'paed' 
+                        ? 'border-pink-400 bg-pink-50 shadow-sm' 
+                        : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                          weightType === 'paed' 
+                            ? 'border-pink-400 bg-pink-400' 
+                            : 'border-neutral-300'
+                        }`}>
+                          {weightType === 'paed' && <div className="w-3 h-3 bg-white rounded-full"></div>}
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900">Paediatric</h3>
+                      </div>
+                    </div>
+                    
+                    {weightType === 'paed' && (
+                      <div className="space-y-4 mt-4 pt-4 border-t border-pink-200">
+                        {/* Age-based weight */}
+                        <div>
+                          <label className="block text-sm font-semibold text-neutral-700 mb-2">Select by Age</label>
+                          <select
+                            value={paedWeightMethod === 'age' ? weightInput : ''}
+                            onChange={(e) => {
+                              setPaedWeightMethod('age');
+                              setWeightInput(e.target.value);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-pink-400 outline-none"
+                          >
+                            <option value="">Choose age</option>
+                            {[
+                              ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
+                              ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
+                              ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
+                              ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
+                              ['11 years', 35], ['12 years', 38]
+                            ].map(([age, weight]) => (
+                              <option key={age} value={weight}>{age} ({weight} kg)</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="text-center text-sm font-semibold text-neutral-400">OR</div>
+                        
+                        {/* Custom weight */}
+                        <div>
+                          <label className="block text-sm font-semibold text-neutral-700 mb-2">Enter Custom Weight</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              placeholder="Enter weight in kg"
+                              value={paedWeightMethod === 'weight' ? weightInput : ''}
+                              onChange={(e) => {
+                                setPaedWeightMethod('weight');
+                                setWeightInput(e.target.value);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-3 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 outline-none"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-semibold pointer-events-none">kg</span>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            weightInput && handleCatchupStart();
+                          }}
+                          disabled={!weightInput}
+                          className={`w-full py-3 rounded-xl font-bold transition-all ${
+                            weightInput
+                              ? 'bg-pink-400 text-white hover:bg-pink-500'
+                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button onClick={() => setCatchupStep(4)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base mt-2">Back</button>
                 </div>
               )}
 
@@ -1469,7 +1523,7 @@ export default function App() {
                   {showCameraTips && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                       <div className="bg-white rounded-2xl p-6 max-w-md space-y-4">
-                        <h2 className="text-xl font-bold text-neutral-900">Photograph the right side of the monitor</h2>
+                        <h2 className="text-xl font-bold text-neutral-900">Photograph the right half of the monitor screen</h2>
                         
                         {/* Example image */}
                         <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
@@ -1481,7 +1535,7 @@ export default function App() {
                         </div>
                         
                         <p className="text-neutral-700 text-sm">
-                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner (red circle) to correct the image's brightness
+                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner to correct the camera's brightness setting.
                         </p>
                         
                         <button
@@ -1489,7 +1543,7 @@ export default function App() {
                             setShowCameraTips(false);
                             document.getElementById('monitor-camera')?.click();
                           }}
-                          className="w-full bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                          className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
                         >
                           Ready - Open Camera
                         </button>
@@ -1598,7 +1652,7 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-3">
                       <button 
                         onClick={() => {
-                          setCatchupStep(1);
+                          setCatchupStep(2);
                           setPhotoTimestamp(null);
                           setElapsedTimestamp(null);
                           setCprTimestamp(null);
@@ -2204,7 +2258,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         <div className="p-6 mb-4">
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">{selectedMed}</h2>
           {state.patientWeight && (
-            <p className="text-neutral-500 text-sm mb-2">Patient weight: {state.patientWeight}kg</p>
+            <p className="text-neutral-500 text-sm mb-2">
+              Patient weight: {state.patientWeight === '>100' ? '>100' : state.patientWeight}kg
+            </p>
           )}
           {state.patientType && (
             <p className="text-neutral-500 text-sm mb-6">Patient type: {state.patientType}</p>
