@@ -1002,7 +1002,7 @@ export default function App() {
           </div>
 
           {/* Rhythm Check - Centered vertically and responsive size */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full pt-8 sm:pt-10">
+          <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                 <circle
@@ -1062,7 +1062,7 @@ export default function App() {
           </AnimatePresence>
 
           {/* Adrenaline & Amiodarone Status - Always rendered, visibility controlled */}
-          <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-2 sm:mb-4">
+          <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-2 sm:mb-4 mx-2 sm:mx-4">
             {/* Adrenaline Warning */}
             <div 
               onClick={() => {
