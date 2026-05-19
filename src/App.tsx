@@ -1313,8 +1313,8 @@ export default function App() {
             >
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-2xl font-extrabold text-neutral-900">Arrest Started</h2>
-                  <p className="text-neutral-500 text-base leading-relaxed">Let's calibrate the timer with the monitor for accurate logging.</p>
+                  <h2 className="text-2xl font-extrabold text-neutral-900">Cardiac arrest management tool</h2>
+                  <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
                   <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
                 </div>
               )}
@@ -1322,8 +1322,8 @@ export default function App() {
               {catchupStep === 5 && (
                 <div className="space-y-4 px-4">
                   <div className="text-center space-y-2 mb-6">
-                    <h2 className="text-xl font-bold text-neutral-900">Patient Type</h2>
-                    <p className="text-neutral-600 text-sm">Select patient type to calculate drug doses</p>
+                    <h2 className="text-xl font-bold text-neutral-900">Select patient type and weight</h2>
+                    <p className="text-neutral-600 text-sm">This will give you patient specific drug calculations</p>
                   </div>
                   
                   {/* Adult Card */}
@@ -1517,7 +1517,7 @@ export default function App() {
                   {showCameraTips && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                       <div className="bg-white rounded-2xl p-6 max-w-md space-y-4">
-                        <h2 className="text-xl font-bold text-neutral-900">Photograph the right side of the monitor</h2>
+                        <h2 className="text-xl font-bold text-neutral-900">Photograph the right half of the monitor screen</h2>
                         
                         {/* Example image */}
                         <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
@@ -1529,7 +1529,7 @@ export default function App() {
                         </div>
                         
                         <p className="text-neutral-700 text-sm">
-                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner (red circle) to correct the image's brightness
+                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner (red circle) to correct the camera's brightness setting.
                         </p>
                         
                         <button
@@ -1537,7 +1537,7 @@ export default function App() {
                             setShowCameraTips(false);
                             document.getElementById('monitor-camera')?.click();
                           }}
-                          className="w-full bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                          className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
                         >
                           Ready - Open Camera
                         </button>
@@ -1646,7 +1646,7 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-3">
                       <button 
                         onClick={() => {
-                          setCatchupStep(1);
+                          setCatchupStep(2);
                           setPhotoTimestamp(null);
                           setElapsedTimestamp(null);
                           setCprTimestamp(null);
