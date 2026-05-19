@@ -1668,6 +1668,7 @@ export default function App() {
               <TimePicker 
                 value={timerAdjustValue}
                 onChange={setTimerAdjustValue}
+                maxSeconds={120}
               />
             </div>
             
