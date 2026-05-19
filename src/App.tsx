@@ -1314,58 +1314,56 @@ export default function App() {
               )}
 
               {catchupStep === 5 && (
-                <div className="text-center space-y-5 px-4">
+                <div className="text-center space-y-6 px-4">
                   <h2 className="text-xl font-bold text-neutral-900">Patient Type</h2>
                   <p className="text-neutral-600 text-sm">This will update the in-app drug doses</p>
                   
+                  {/* Adult Section */}
                   <div className="space-y-3">
-                    {/* Adult option - dropdown with weights */}
-                    <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-emerald-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 text-left flex-shrink-0">
-                          <div className="text-base font-bold text-neutral-900">Adult</div>
-                        </div>
-                        <select
-                          value={weightType === 'adult' ? weightInput : ''}
-                          onChange={(e) => {
-                            setWeightType('adult');
-                            setWeightInput(e.target.value);
-                            setPaedWeightMethod(null);
-                          }}
-                          className="flex-1 bg-white border-2 border-emerald-300 rounded-xl px-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
-                        >
-                          <option value="">Select weight</option>
-                          <option value="30">30 kg</option>
-                          <option value="40">40 kg</option>
-                          <option value="50">50 kg</option>
-                          <option value="60">60 kg</option>
-                          <option value="70">70 kg</option>
-                          <option value="80">80 kg</option>
-                          <option value="90">90 kg</option>
-                          <option value="100">100 kg</option>
-                          <option value="110">&gt;100 kg</option>
-                        </select>
-                        <button
-                          onClick={() => weightType === 'adult' && weightInput && handleCatchupStart()}
-                          disabled={!(weightType === 'adult' && weightInput)}
-                          className={`p-3 rounded-xl transition-all flex-shrink-0 ${
-                            weightType === 'adult' && weightInput
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                          }`}
-                        >
-                          <ArrowRight size={20} />
-                        </button>
-                      </div>
+                    <h3 className="text-lg font-bold text-neutral-900">Adult</h3>
+                    <div className="flex items-center gap-3 justify-center">
+                      <select
+                        value={weightType === 'adult' ? weightInput : ''}
+                        onChange={(e) => {
+                          setWeightType('adult');
+                          setWeightInput(e.target.value);
+                          setPaedWeightMethod(null);
+                        }}
+                        className="w-48 bg-white border-2 border-emerald-300 rounded-xl px-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                      >
+                        <option value="">Select weight</option>
+                        <option value="30">30 kg</option>
+                        <option value="40">40 kg</option>
+                        <option value="50">50 kg</option>
+                        <option value="60">60 kg</option>
+                        <option value="70">70 kg</option>
+                        <option value="80">80 kg</option>
+                        <option value="90">90 kg</option>
+                        <option value="100">100 kg</option>
+                        <option value="110">&gt;100 kg</option>
+                      </select>
+                      <button
+                        onClick={() => weightType === 'adult' && weightInput && handleCatchupStart()}
+                        disabled={!(weightType === 'adult' && weightInput)}
+                        className={`p-3 rounded-xl transition-all ${
+                          weightType === 'adult' && weightInput
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <ArrowRight size={20} />
+                      </button>
                     </div>
+                  </div>
+                  
+                  {/* Paediatric Section */}
+                  <div className="space-y-4 pt-4">
+                    <h3 className="text-lg font-bold text-neutral-900">Paediatric</h3>
                     
-                    {/* Paediatric age-based - dropdown */}
-                    <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-pink-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 text-left flex-shrink-0">
-                          <div className="text-base font-bold text-neutral-900">Paediatric</div>
-                          <div className="text-xs text-neutral-600">(Age/weight)</div>
-                        </div>
+                    {/* Choose age option */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-neutral-700">Choose age</p>
+                      <div className="flex items-center gap-3 justify-center">
                         <select
                           value={weightType === 'paed' && paedWeightMethod === 'age' ? weightInput : ''}
                           onChange={(e) => {
@@ -1373,7 +1371,7 @@ export default function App() {
                             setPaedWeightMethod('age');
                             setWeightInput(e.target.value);
                           }}
-                          className="flex-1 bg-white border-2 border-pink-300 rounded-xl px-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
+                          className="w-48 bg-white border-2 border-pink-300 rounded-xl px-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-pink-400 outline-none"
                         >
                           <option value="">Select age</option>
                           {[
@@ -1389,7 +1387,7 @@ export default function App() {
                         <button
                           onClick={() => weightType === 'paed' && paedWeightMethod === 'age' && weightInput && handleCatchupStart()}
                           disabled={!(weightType === 'paed' && paedWeightMethod === 'age' && weightInput)}
-                          className={`p-3 rounded-xl transition-all flex-shrink-0 ${
+                          className={`p-3 rounded-xl transition-all ${
                             weightType === 'paed' && paedWeightMethod === 'age' && weightInput
                               ? 'bg-pink-400 text-white'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
@@ -1400,14 +1398,14 @@ export default function App() {
                       </div>
                     </div>
                     
-                    {/* Paediatric custom weight - text input */}
-                    <div className="border-2 border-neutral-200 rounded-2xl p-4 bg-pink-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 text-left flex-shrink-0">
-                          <div className="text-base font-bold text-neutral-900">Paediatric</div>
-                          <div className="text-xs text-neutral-600">(custom weight)</div>
-                        </div>
-                        <div className="flex-1 relative">
+                    {/* OR divider */}
+                    <div className="text-neutral-400 font-semibold text-sm">OR</div>
+                    
+                    {/* Choose custom weight option */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-neutral-700">Choose custom weight</p>
+                      <div className="flex items-center gap-3 justify-center">
+                        <div className="w-48 relative">
                           <input
                             type="number"
                             placeholder="Weight"
@@ -1424,7 +1422,7 @@ export default function App() {
                         <button
                           onClick={() => weightType === 'paed' && paedWeightMethod === 'weight' && weightInput && handleCatchupStart()}
                           disabled={!(weightType === 'paed' && paedWeightMethod === 'weight' && weightInput)}
-                          className={`p-3 rounded-xl transition-all flex-shrink-0 ${
+                          className={`p-3 rounded-xl transition-all ${
                             weightType === 'paed' && paedWeightMethod === 'weight' && weightInput
                               ? 'bg-pink-400 text-white'
                               : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
@@ -1436,7 +1434,7 @@ export default function App() {
                     </div>
                   </div>
                   
-                  <button onClick={() => setCatchupStep(4)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                  <button onClick={() => setCatchupStep(4)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base mt-4">Back</button>
                 </div>
               )}
 
