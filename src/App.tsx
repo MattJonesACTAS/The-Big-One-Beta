@@ -298,6 +298,8 @@ export default function App() {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [photoTimestamp, setPhotoTimestamp] = useState<number | null>(null);
+  const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
+  const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
   const [showCameraTips, setShowCameraTips] = useState(false);
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [timesFromScan, setTimesFromScan] = useState(false);
@@ -720,15 +722,17 @@ export default function App() {
     
     console.log('Parsed weight:', parsedWeight);
     
-    // If photo was taken, adjust times based on elapsed time since photo
-    if (photoTimestamp) {
-      const timeSincePhoto = Math.floor((Date.now() - photoTimestamp) / 1000); // seconds
-      
-      // Elapsed time: ADD time since photo (total case time keeps increasing)
-      adjustedElapsed += timeSincePhoto;
-      
-      // CPR counter: SUBTRACT time since photo (counting down to next rhythm check)
-      adjustedRhythm = Math.max(0, adjustedRhythm - timeSincePhoto);
+    // Adjust times based on elapsed time since they were entered
+    // For OCR: both use photoTimestamp
+    // For manual: use separate timestamps for each value
+    if (elapsedTimestamp) {
+      const timeSinceElapsed = Math.floor((Date.now() - elapsedTimestamp) / 1000);
+      adjustedElapsed += timeSinceElapsed;
+    }
+    
+    if (cprTimestamp) {
+      const timeSinceCpr = Math.floor((Date.now() - cprTimestamp) / 1000);
+      adjustedRhythm = Math.max(0, adjustedRhythm - timeSinceCpr);
     }
     
     const now = Date.now();
@@ -789,6 +793,8 @@ export default function App() {
     setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0 });
     setPriorTxs([]);
     setPhotoTimestamp(null);
+    setElapsedTimestamp(null);
+    setCprTimestamp(null);
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
   };
 
@@ -883,6 +889,8 @@ export default function App() {
         setCatchupElapsed(elapsed);
         setCatchupRhythm(cprTimer);
         setPhotoTimestamp(timestamp);
+        setElapsedTimestamp(timestamp); // Both values from same moment
+        setCprTimestamp(timestamp);
         setTimesFromScan(true); // Mark that times came from scan
         
         setIsProcessingOCR(false);
@@ -1547,6 +1555,8 @@ export default function App() {
                         onClick={() => {
                           setCatchupStep(1);
                           setPhotoTimestamp(null);
+                          setElapsedTimestamp(null);
+                          setCprTimestamp(null);
                           setOcrError(null);
                           setUseManualEntry(false);
                           setTimesFromScan(false);
@@ -1557,16 +1567,12 @@ export default function App() {
                       </button>
                       <button 
                         onClick={() => { 
-                          // Set timestamp when elapsed time is entered
-                          if (!photoTimestamp) {
-                            setPhotoTimestamp(Date.now());
-                          }
-                          
                           if (timesFromScan) {
-                            // If scanned, CPR timer is already set, skip step 3
+                            // If scanned, timestamps already set from OCR, skip step 3
                             setCatchupStep(4);
                           } else {
-                            // If manual, start CPR timer at 0:00 for user to enter
+                            // If manual, set timestamp for elapsed time entry
+                            setElapsedTimestamp(Date.now());
                             setCatchupRhythm({ mins: 0, secs: 0 }); 
                             setCatchupStep(3);
                           }
@@ -1601,7 +1607,16 @@ export default function App() {
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => setCatchupStep(4)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
+                    <button 
+                      onClick={() => {
+                        // Set timestamp for CPR timer entry
+                        setCprTimestamp(Date.now());
+                        setCatchupStep(4);
+                      }}
+                      className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
               )}
