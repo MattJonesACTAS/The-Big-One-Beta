@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   Stethoscope,
   Camera,
-  ArrowRight
+  ArrowRight,
+  Sliders
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { AppState, Treatment, OverlayType } from './types';
@@ -1036,7 +1037,7 @@ export default function App() {
           }} 
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
-          <RotateCcw size={14} className="sm:w-4 sm:h-4" /> Reset
+          <Sliders size={14} className="sm:w-4 sm:h-4" /> Adjust
         </button>
         <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
