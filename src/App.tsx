@@ -1718,8 +1718,8 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
 function ReversiblesOverlay() {
   return (
     <div className="h-full">
-      <SectionGroup title="FIELD-REVERSIBLE" color="blue" items={['Hypoxia', 'Hypovolaemia', 'Hypo / Hyperkalaemia', 'Hypo / Hyperthermia', 'Hypoglycaemia', 'Toxins', 'Tension Pneumothorax']} />
-      <SectionGroup title="IDENTIFY AND TEMPORISE" color="blue" items={['Tamponade', 'Thrombosis']} />
+      <SectionGroup title="PREHOSPITAL POTENTIAL CORRECTABLE" color="blue" items={['Hypoxia', 'Hypovolaemia', 'Hypothermia', 'Hyperkalaemia', 'Tension Pneumothorax', 'Some toxins']} />
+      <SectionGroup title="HOSPITAL ONLY CORRECTABLE" color="blue" items={['Hypokalaemia', 'Hydrogen Ion Excess', 'Thrombosis Coronary/Pulmonary', 'Tamponade']} />
     </div>
   );
 }
