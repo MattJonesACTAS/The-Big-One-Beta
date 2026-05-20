@@ -312,7 +312,7 @@ export default function App() {
   // Preload tutorial screenshot images for faster loading
   useEffect(() => {
     const imagesToPreload = [
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20home%20screen.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Home%20screen.png?raw=true',
       'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Alerts.png?raw=true',
       'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20log.png?raw=true',
       'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20headings.png?raw=true',
@@ -1800,7 +1800,7 @@ export default function App() {
               {/* Home Screen */}
               {tutorialDemo === 'homeScreen' && (
                 <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20home%20screen.png?raw=true" 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Home%20screen.png?raw=true" 
                   alt="Home Screen"
                   className="w-full shadow-2xl"
                 />
