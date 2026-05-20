@@ -329,6 +329,15 @@ export default function App() {
   const hasAutoClosedAt15 = useRef<boolean>(false);
   const previousCountdown = useRef<number | null>(null);
 
+  // Preload monitor images for faster loading in camera tips modal
+  useEffect(() => {
+    const preloadPlaceholder = new Image();
+    preloadPlaceholder.src = 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Monitor_placeholder.png?raw=true';
+    
+    const preloadGif = new Image();
+    preloadGif.src = 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/monitor.gif?raw=true';
+  }, []); // Run once on mount
+
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
     if (disregardAdrenaline === 'pending') {
