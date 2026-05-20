@@ -1414,19 +1414,18 @@ export default function App() {
                     >
                       Back
                     </button>
-                      <button 
-                        onClick={() => { 
-                          // Set timestamp for elapsed time entry
-                          setElapsedTimestamp(Date.now());
-                          setCatchupRhythm({ mins: 0, secs: 0 }); 
-                          setCatchupStep(3);
-                        }} 
-                        className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
+                    <button 
+                      onClick={() => { 
+                        // Set timestamp for elapsed time entry
+                        setElapsedTimestamp(Date.now());
+                        setCatchupRhythm({ mins: 0, secs: 0 }); 
+                        setCatchupStep(3);
+                      }} 
+                      className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
 
