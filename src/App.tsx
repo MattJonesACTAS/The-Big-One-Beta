@@ -271,6 +271,7 @@ export default function App() {
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(1);
+  const [tutorialDemo, setTutorialDemo] = useState<string | null>(null); // Track which demo is showing
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -1499,300 +1500,170 @@ export default function App() {
 
       {/* Tutorial Modal */}
       {showTutorial && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/95 via-neutral-900/95 to-black/95 z-[2000] flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
-            {/* Decorative gradient header */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500"></div>
+        <div className="fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
             
             {/* Tutorial Step 1: What is The Big One? */}
             {tutorialStep === 1 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">🚑</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">What is The Big One?</h2>
-                </div>
-                <p className="text-neutral-700 leading-relaxed text-lg">
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">What is The Big One?</h2>
+                <p className="text-neutral-700 leading-relaxed">
                   The Big One is a tool used by the team leader during cardiac arrest cases to help stay on top of everything.
                 </p>
                 <p className="text-neutral-700 leading-relaxed">As examples, it can help to keep track of:</p>
-                <ul className="space-y-3 ml-2">
-                  <li className="flex items-start gap-3">
-                    <span className="text-emerald-600 mt-1">⏱️</span>
-                    <span className="text-neutral-700">Time to next rhythm check</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-blue-600 mt-1">💊</span>
-                    <span className="text-neutral-700">Time to next medication re-dose</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-purple-600 mt-1">📊</span>
-                    <span className="text-neutral-700">Total volumes of any medications given</span>
-                  </li>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>Time to next rhythm check</li>
+                  <li>Time to next medication re-dose</li>
+                  <li>Total volumes of any medications given</li>
                 </ul>
               </div>
             )}
 
             {/* Tutorial Step 2: Calibration */}
             {tutorialStep === 2 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">⚙️</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Calibration</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Calibration</h2>
                 <p className="text-neutral-700 leading-relaxed">
                   Before accessing the home screen, you'll need to input some information so that the app is synchronised to the monitor and the case in general:
                 </p>
-                <ul className="space-y-3 ml-2">
-                  <li className="flex items-start gap-3">
-                    <span className="text-emerald-600 mt-1 font-bold">→</span>
-                    <div>
-                      <span className="font-semibold text-neutral-900">Current elapsed time</span>
-                      <p className="text-sm text-neutral-600">Timer going up in the top right corner of the monitor</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-blue-600 mt-1 font-bold">→</span>
-                    <div>
-                      <span className="font-semibold text-neutral-900">Current CPR timer</span>
-                      <p className="text-sm text-neutral-600">The 2:00 countdown that sits above the compression diamond</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-purple-600 mt-1 font-bold">→</span>
-                    <div>
-                      <span className="font-semibold text-neutral-900">Treatments already given</span>
-                      <p className="text-sm text-neutral-600">Log treatments you gave before starting the app</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-orange-600 mt-1 font-bold">→</span>
-                    <div>
-                      <span className="font-semibold text-neutral-900">Patient weight</span>
-                      <p className="text-sm text-neutral-600">Listing the patient's weight allows the app to pre-determine the correct dosages of weight based medications for you</p>
-                    </div>
-                  </li>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li><strong>Current elapsed time</strong> - Timer going up in the top right corner of the monitor</li>
+                  <li><strong>Current CPR timer</strong> - The 2:00 countdown that sits above the compression diamond</li>
+                  <li><strong>Treatments already given</strong> - Log treatments you gave before starting the app</li>
+                  <li><strong>Patient weight</strong> - Listing the patient's weight allows the app to pre-determine the correct dosages of weight based medications for you</li>
                 </ul>
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                  <p className="text-blue-900 text-sm">
-                    <span className="font-semibold">💡 Tip:</span> The elapsed timer and CPR countdown times you enter will continue updating in the background while you complete the later pages
-                  </p>
-                </div>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: The elapsed timer and CPR countdown times you enter will continue updating in the background while you complete the later pages
+                </p>
               </div>
             )}
 
             {/* Tutorial Step 3: The Home Screen */}
             {tutorialStep === 3 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">🏠</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">The Home Screen</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">The Home Screen</h2>
                 <p className="text-neutral-700 leading-relaxed">
                   The home screen shows:
                 </p>
-                <div className="space-y-3">
-                  <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-4 rounded-xl border-l-4 border-emerald-500">
-                    <p className="font-semibold text-emerald-900">Elapsed case time</p>
-                  </div>
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border-l-4 border-blue-500">
-                    <p className="font-semibold text-blue-900">Rhythm check countdown</p>
-                  </div>
-                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border-l-4 border-purple-500">
-                    <p className="font-semibold text-purple-900">CPR round counter</p>
-                  </div>
-                </div>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li><strong>Elapsed case time</strong></li>
+                  <li><strong>Rhythm check countdown</strong></li>
+                  <li><strong>CPR round counter</strong></li>
+                </ul>
               </div>
             )}
 
             {/* Tutorial Step 4: Rhythm Checks */}
             {tutorialStep === 4 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">⚡</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Rhythm Checks</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Rhythm Checks</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  When the rhythm check countdown reaches <span className="font-bold text-red-600">0:00</span> on the home screen:
+                  When the rhythm check countdown reaches 0:00 on the home screen:
                 </p>
-                <ul className="space-y-3 ml-2">
-                  <li className="flex items-start gap-3">
-                    <span className="text-2xl">1️⃣</span>
-                    <span className="text-neutral-700">The timer counts for 6 seconds, which is the desired time to perform a rhythm check</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-2xl">2️⃣</span>
-                    <span className="text-neutral-700">The countdown will then restart from 2:00</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-2xl">3️⃣</span>
-                    <span className="text-neutral-700">A popup will prompt you to log what the rhythm was</span>
-                  </li>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>The timer counts for 6 seconds, which is the desired time to perform a rhythm check</li>
+                  <li>The countdown will then restart from 2:00</li>
+                  <li>A popup will prompt you to log what the rhythm was</li>
                 </ul>
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
-                  <p className="text-amber-900 text-sm">
-                    <span className="font-semibold">💡 Tip:</span> Use the recalibrate button on the home screen to quickly bring the app back in line with reality if your rhythm checks are longer than 6 seconds
-                  </p>
-                </div>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: Use the recalibrate button on the home screen to quickly bring the app back in line with reality if your rhythm checks are longer than 6 seconds
+                </p>
               </div>
             )}
 
             {/* Tutorial Step 5: Logging Treatments */}
             {tutorialStep === 5 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">📝</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Logging Treatments</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Logging Treatments</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  When a treatment is administered, tap the <span className="font-bold text-emerald-600">'Add Tx'</span> button on the home screen. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
+                  When a treatment is administered, tap the <strong className="text-emerald-600">'Add Tx'</strong> button on the home screen. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
                 </p>
-                <p className="text-neutral-700 leading-relaxed font-semibold">The subheadings are:</p>
-                <div className="space-y-2 ml-2">
-                  <div className="flex items-center gap-2 text-neutral-700">
-                    <span className="text-red-500">⚡</span>
-                    <span>Rhythm check (shocks and disarms)</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-neutral-700">
-                    <span className="text-blue-500">💊</span>
-                    <span>Medications</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-neutral-700">
-                    <span className="text-green-500">🫁</span>
-                    <span>Airway interventions</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-neutral-700">
-                    <span className="text-purple-500">➕</span>
-                    <span>Other</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-neutral-700">
-                    <span className="text-orange-500">✏️</span>
-                    <span>Custom</span>
-                  </div>
-                </div>
-                <div className="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-lg">
-                  <p className="text-emerald-900 text-sm">
-                    <span className="font-semibold">💡 Tip:</span> The more disciplined you are, the easier your case sheet and handovers will be
-                  </p>
-                </div>
+                <p className="text-neutral-700 leading-relaxed">The subheadings are:</p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>Rhythm check (shocks and disarms)</li>
+                  <li>Medications</li>
+                  <li>Airway interventions</li>
+                  <li>Other</li>
+                  <li>Custom</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: The more disciplined you are, the easier your case sheet and handovers will be
+                </p>
+                
+                {/* Show me button for Add Tx demo */}
+                {!tutorialDemo && (
+                  <button
+                    onClick={() => setTutorialDemo('addTx')}
+                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                  >
+                    Show me
+                  </button>
+                )}
               </div>
             )}
 
             {/* Tutorial Step 6: Medication Reminders */}
             {tutorialStep === 6 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">⏰</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Medication Reminders</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
                 <p className="text-neutral-700 leading-relaxed">
                   The app will automatically alert you when adrenaline and amiodarone need to be repeated:
                 </p>
-                <div className="space-y-3">
-                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-                    <p className="font-semibold text-red-900 mb-2">💉 Adrenaline</p>
-                    <p className="text-red-800 text-sm">When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</p>
-                  </div>
-                  <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                    <p className="font-semibold text-purple-900 mb-2">💊 Amiodarone</p>
-                    <p className="text-purple-800 text-sm">When amiodarone is logged, a 5 minute timer will pop up counting down until the repeat dose</p>
-                  </div>
-                </div>
-                <div className="bg-neutral-50 border-l-4 border-neutral-400 p-4 rounded-r-lg">
-                  <p className="text-neutral-700 text-sm">
-                    <span className="font-semibold">💡 Tip:</span> Tap 'Disregard' on either alert to mute them
-                  </p>
-                </div>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</li>
+                  <li>When amiodarone is logged, a 5 minute timer will pop up counting down until the repeat dose</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: Tap 'Disregard' on either alert to mute them
+                </p>
               </div>
             )}
 
             {/* Tutorial Step 7: Case Summary */}
             {tutorialStep === 7 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">📊</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Case Summary</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  Tapping the <span className="font-bold text-blue-600">'Summary'</span> button on the home screen will take you to the running case summary which lists:
+                  Tapping the <strong className="text-blue-600">'Summary'</strong> button on the home screen will take you to the running case summary which lists:
                 </p>
-                <ul className="space-y-3 ml-2">
-                  <li className="flex items-start gap-3">
-                    <span className="text-emerald-600 mt-1">🔄</span>
-                    <span className="text-neutral-700">The number of CPR rounds you have performed</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-600 mt-1">⚡</span>
-                    <span className="text-neutral-700">The number of shocks and disarms</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-blue-600 mt-1">💉</span>
-                    <span className="text-neutral-700">The accumulated doses of all medications logged</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-purple-600 mt-1">📋</span>
-                    <span className="text-neutral-700">The full treatment log</span>
-                  </li>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>The number of CPR rounds you have performed</li>
+                  <li>The number of shocks and disarms</li>
+                  <li>The accumulated doses of all medications logged</li>
+                  <li>The full treatment log</li>
                 </ul>
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                  <p className="text-blue-900 text-sm">
-                    <span className="font-semibold">💡 Tip:</span> All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged to the minute
-                  </p>
-                </div>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged to the minute
+                </p>
               </div>
             )}
 
             {/* Tutorial Step 8: Checklists */}
             {tutorialStep === 8 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">✅</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Checklists</h2>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Checklists</h2>
                 <p className="text-neutral-700 leading-relaxed">
                   From the home screen, three essential checklists are accessible:
                 </p>
-                <div className="space-y-3">
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border-l-4 border-blue-500">
-                    <p className="font-semibold text-blue-900">🔄 Reversibles (4 H's & 4 T's)</p>
-                  </div>
-                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-xl border-l-4 border-orange-500">
-                    <p className="font-semibold text-orange-900">❤️ ROSC checklist</p>
-                  </div>
-                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border-l-4 border-purple-500">
-                    <p className="font-semibold text-purple-900">🎯 PHEA (Pre-hospital emergency anaesthesia) checklist</p>
-                  </div>
-                </div>
-                <div className="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-lg">
-                  <p className="text-emerald-900 text-sm">
-                    <span className="font-semibold">💡 Tip:</span> Tick off the checklists one by one in real time
-                  </p>
-                </div>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>Reversibles (4 H's & 4 T's)</li>
+                  <li>ROSC checklist</li>
+                  <li>PHEA (Pre-hospital emergency anaesthesia) checklist</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: Tick off the checklists one by one in real time
+                </p>
               </div>
             )}
 
             {/* Tutorial Step 9: Exporting the Case */}
             {tutorialStep === 9 && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">📤</div>
-                  <h2 className="text-3xl font-bold text-neutral-900">Exporting the Case</h2>
-                </div>
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-5 rounded-xl border-l-4 border-emerald-500">
-                    <p className="text-emerald-900 leading-relaxed">
-                      <span className="font-semibold">📝 Close Case:</span> When the case has finished, you can close the case and view the full case summary to assist you in writing your case sheet
-                    </p>
-                  </div>
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-5 rounded-xl border-l-4 border-blue-500">
-                    <p className="text-blue-900 leading-relaxed">
-                      <span className="font-semibold">📄 Export PDF:</span> The case summary can be exported as a PDF and emailed if needed for later review
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl text-center">
-                  <p className="text-purple-900 font-semibold text-lg">🎉 You're ready to go!</p>
-                  <p className="text-purple-700 text-sm mt-1">Tap "Got it!" to start using The Big One</p>
-                </div>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Exporting the Case</h2>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>When the case has finished, you can close the case and view the full case summary to assist you in writing your case sheet</li>
+                  <li>The case summary can be exported as a PDF and emailed if needed for later review</li>
+                </ul>
               </div>
             )}
 
@@ -1804,25 +1675,25 @@ export default function App() {
                     setShowTutorial(false);
                     setTutorialStep(1);
                   }}
-                  className="flex-1 bg-gradient-to-r from-neutral-100 to-neutral-200 hover:from-neutral-200 hover:to-neutral-300 text-neutral-700 p-4 rounded-xl font-bold btn-base shadow-md transition-all"
+                  className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
                 >
-                  ← Back
+                  Back
                 </button>
               )}
               {tutorialStep > 1 && (
                 <button
                   onClick={() => setTutorialStep(tutorialStep - 1)}
-                  className="flex-1 bg-gradient-to-r from-neutral-100 to-neutral-200 hover:from-neutral-200 hover:to-neutral-300 text-neutral-700 p-4 rounded-xl font-bold btn-base shadow-md transition-all"
+                  className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
                 >
-                  ← Back
+                  Back
                 </button>
               )}
               {tutorialStep < 9 ? (
                 <button
                   onClick={() => setTutorialStep(tutorialStep + 1)}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-4 rounded-xl font-bold btn-base shadow-lg transition-all"
+                  className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
                 >
-                  Next →
+                  Next
                 </button>
               ) : (
                 <button
@@ -1830,26 +1701,121 @@ export default function App() {
                     setShowTutorial(false);
                     setTutorialStep(1);
                   }}
-                  className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white p-4 rounded-xl font-bold btn-base shadow-lg transition-all"
+                  className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
                 >
-                  Got it! ✓
+                  Got it!
                 </button>
               )}
             </div>
             
             {/* Step indicator */}
-            <div className="flex justify-center gap-2 mt-6">
+            <div className="flex justify-center gap-2 mt-4">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(step => (
                 <div
                   key={step}
-                  className={`h-2.5 rounded-full transition-all duration-300 ${
-                    step === tutorialStep 
-                      ? 'w-8 bg-gradient-to-r from-blue-600 to-blue-700 shadow-md' 
-                      : 'w-2.5 bg-neutral-300 hover:bg-neutral-400'
+                  className={`h-2 w-2 rounded-full transition-colors ${
+                    step === tutorialStep ? 'bg-blue-600' : 'bg-neutral-300'
                   }`}
                 />
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tutorial Interactive Demo - Add Tx Menu */}
+      {showTutorial && tutorialDemo === 'addTx' && (
+        <div className="fixed inset-0 bg-black/70 z-[2100] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-neutral-900">Add Treatment</h3>
+              <button
+                onClick={() => setTutorialDemo(null)}
+                className="text-neutral-500 hover:text-neutral-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Rhythm check section */}
+              <div>
+                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Rhythm check</h4>
+                <div className="space-y-2">
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    Shock #{1}
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    Disarm
+                  </button>
+                </div>
+              </div>
+
+              {/* Medications section */}
+              <div>
+                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Medications</h4>
+                <div className="space-y-2">
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left">
+                    <span className="font-medium text-neutral-800">Adrenaline push</span>
+                    <span className="text-sm text-neutral-600 block">80mg</span>
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left">
+                    <span className="font-medium text-neutral-800">Amiodarone</span>
+                    <span className="text-sm text-neutral-600 block">300mg (first dose) / 150mg (repeat)</span>
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    Other medication...
+                  </button>
+                </div>
+              </div>
+
+              {/* Airway interventions section */}
+              <div>
+                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Airway interventions</h4>
+                <div className="space-y-2">
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    OPA
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    BVM
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    iGel
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    ETT
+                  </button>
+                </div>
+              </div>
+
+              {/* Other section */}
+              <div>
+                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Other</h4>
+                <div className="space-y-2">
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    IV access
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    IO access
+                  </button>
+                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                    Pads on
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom section */}
+              <div>
+                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Custom</h4>
+                <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
+                  Add custom treatment...
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-500 mt-6 text-center italic">
+              This is a demo. Clicking treatments won't add them to a real case.
+            </p>
           </div>
         </div>
       )}
