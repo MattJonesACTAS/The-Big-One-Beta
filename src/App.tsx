@@ -95,6 +95,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Glucose': { 
     doses: [
+      { dose: '2.5mL/kg', population: 'both', calculated: true },
       { dose: '100mL 10%', population: 'both' },
       { dose: '50mL 50%', population: 'both' },
       { dose: 'Other', population: 'both' }
@@ -156,7 +157,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Sodium Bicarbonate': { 
     doses: [
-      { dose: '1mMol/kg', population: 'both', indication: 'Cardiac arrest: Hyperkalaemia/OD' },
+      { dose: '1mMol/kg', population: 'both', indication: 'Cardiac arrest: Hyperkalaemia/OD', calculated: true },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -444,19 +445,19 @@ export default function App() {
 
   const togglePause = () => {
     setState(prev => {
-      if (prev.running) {
+      // Toggle rhythm check pause, but keep elapsed timer running
+      if (!prev.rhythmCheckPaused) {
+        // Pausing rhythm check
         setShowPauseWarning(false);
         return {
           ...prev,
-          running: false,
-          pausedTime: prev.pausedTime + (Date.now() - (prev.startTime || Date.now()))
+          rhythmCheckPaused: true
         };
       } else {
+        // Unpausing rhythm check
         return {
           ...prev,
-          running: true,
-          startTime: Date.now(),
-          rhythmCheckPaused: false // Unpause rhythm check when resuming
+          rhythmCheckPaused: false
         };
       }
     });
@@ -1627,6 +1628,16 @@ export default function App() {
                 <p className="text-neutral-600 text-sm italic mt-4">
                   Tip: Tap 'Disregard' on either alert to mute them
                 </p>
+                
+                {/* Show me button */}
+                {!tutorialDemo && (
+                  <button
+                    onClick={() => setTutorialDemo('medicationAlerts')}
+                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                  >
+                    Show me
+                  </button>
+                )}
               </div>
             )}
 
@@ -1764,131 +1775,122 @@ export default function App() {
           }}
         >
           <div 
-            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+            className="relative max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-neutral-900">
-                {tutorialDemo === 'addTx' && 'Add Treatment Menu'}
-                {tutorialDemo === 'homeScreen' && 'Home Screen'}
-                {tutorialDemo === 'caseSummary' && 'Case Summary'}
-                {tutorialDemo === 'reversibles' && 'Reversibles Checklist'}
-              </h3>
-              <button
-                onClick={() => {
-                  setTutorialDemo(null);
-                  setTutorialDemoStep(1);
-                }}
-                className="text-neutral-500 hover:text-neutral-700 text-2xl font-bold"
-              >
-                ×
-              </button>
-            </div>
-            
-            {/* Home Screen */}
-            {tutorialDemo === 'homeScreen' && (
-              <div className="space-y-3">
+            {/* Close button - top right */}
+            <button
+              onClick={() => {
+                setTutorialDemo(null);
+                setTutorialDemoStep(1);
+              }}
+              className="absolute -top-12 right-0 text-white hover:text-neutral-300 text-3xl font-bold z-10"
+            >
+              ×
+            </button>
+
+            {/* Screenshot */}
+            <div className="space-y-4">
+              {/* Home Screen */}
+              {tutorialDemo === 'homeScreen' && (
                 <img 
                   src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20home%20screen.png?raw=true" 
                   alt="Home Screen"
-                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                  className="w-full shadow-2xl"
                 />
-                <p className="text-sm text-neutral-600 text-center">
-                  The home screen shows elapsed time, rhythm check countdown, CPR round, and medication reminders
-                </p>
-              </div>
-            )}
+              )}
 
-            {/* Case Summary */}
-            {tutorialDemo === 'caseSummary' && (
-              <div className="space-y-3">
+              {/* Medication Alerts */}
+              {tutorialDemo === 'medicationAlerts' && (
+                <img 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Alerts.png?raw=true" 
+                  alt="Medication Alerts"
+                  className="w-full shadow-2xl"
+                />
+              )}
+
+              {/* Case Summary */}
+              {tutorialDemo === 'caseSummary' && (
                 <img 
                   src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20log.png?raw=true" 
                   alt="Case Summary"
-                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                  className="w-full shadow-2xl"
                 />
-                <p className="text-sm text-neutral-600 text-center">
-                  The case summary shows CPR rounds, shocks, medications, and a detailed treatment log with timestamps
-                </p>
-              </div>
-            )}
+              )}
 
-            {/* Reversibles Checklist */}
-            {tutorialDemo === 'reversibles' && (
-              <div className="space-y-3">
+              {/* Reversibles Checklist */}
+              {tutorialDemo === 'reversibles' && (
                 <img 
                   src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Reversibles.png?raw=true" 
                   alt="Reversibles Checklist"
-                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                  className="w-full shadow-2xl"
                 />
-                <p className="text-sm text-neutral-600 text-center">
-                  The reversibles checklist helps you systematically check the 4 H's and 4 T's during cardiac arrest
-                </p>
-              </div>
-            )}
+              )}
 
-            {/* Add Tx - Two screenshots with navigation */}
-            {tutorialDemo === 'addTx' && tutorialDemoStep === 1 && (
-              <div className="space-y-3">
+              {/* Add Tx - Screenshot 1 */}
+              {tutorialDemo === 'addTx' && tutorialDemoStep === 1 && (
                 <img 
                   src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20headings.png?raw=true" 
                   alt="Add Treatment Menu"
-                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                  className="w-full shadow-2xl"
                 />
-                <p className="text-sm text-neutral-600 text-center">
-                  This is what you'll see when you tap the <span className="font-semibold text-emerald-600">Add Tx</span> button
-                </p>
-              </div>
-            )}
+              )}
 
-            {tutorialDemo === 'addTx' && tutorialDemoStep === 2 && (
-              <div className="space-y-3">
+              {/* Add Tx - Screenshot 2 */}
+              {tutorialDemo === 'addTx' && tutorialDemoStep === 2 && (
                 <img 
                   src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20adrenaline.png?raw=true" 
                   alt="Adrenaline Medication Example"
-                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                  className="w-full shadow-2xl"
                 />
-                <p className="text-sm text-neutral-600 text-center">
-                  When you select a medication, the app shows the calculated dose based on patient weight
-                </p>
-              </div>
-            )}
+              )}
 
-            {/* Navigation for Add Tx (2 screenshots) */}
-            {tutorialDemo === 'addTx' && (
-              <>
-                <div className="flex gap-3 mt-4">
-                  {tutorialDemoStep === 2 && (
-                    <button
-                      onClick={() => setTutorialDemoStep(1)}
-                      className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
-                    >
-                      Back
-                    </button>
-                  )}
-                  {tutorialDemoStep === 1 && (
-                    <button
-                      onClick={() => setTutorialDemoStep(2)}
-                      className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold"
-                    >
-                      Next
-                    </button>
-                  )}
-                </div>
+              {/* Navigation for Add Tx (2 screenshots) */}
+              {tutorialDemo === 'addTx' && (
+                <>
+                  <div className="flex gap-3">
+                    {tutorialDemoStep === 2 && (
+                      <button
+                        onClick={() => setTutorialDemoStep(1)}
+                        className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold shadow-lg"
+                      >
+                        Back
+                      </button>
+                    )}
+                    {tutorialDemoStep === 1 ? (
+                      <button
+                        onClick={() => setTutorialDemoStep(2)}
+                        className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold shadow-lg"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setTutorialDemo(null);
+                          setTutorialDemoStep(1);
+                        }}
+                        className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold shadow-lg"
+                      >
+                        Close
+                      </button>
+                    )}
+                  </div>
 
-                {/* Progress dots */}
-                <div className="flex justify-center gap-2 mt-4">
-                  {[1, 2].map(step => (
-                    <div
-                      key={step}
-                      className={`h-2 w-2 rounded-full transition-colors ${
-                        step === tutorialDemoStep ? 'bg-blue-600' : 'bg-neutral-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+                  {/* Progress dots */}
+                  <div className="flex justify-center gap-2">
+                    {[1, 2].map(step => (
+                      <div
+                        key={step}
+                        className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                          step === tutorialDemoStep ? 'bg-white' : 'bg-white/40'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
