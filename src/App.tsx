@@ -229,42 +229,6 @@ const cleanDoseForLog = (doseStr: string): string => {
   return doseStr;
 };
 
-// Component to display ticking timers from scanned monitor
-const LiveTimerDisplay: React.FC<{
-  photoTimestamp: number;
-  photoElapsed: { mins: number; secs: number };
-  photoCprTimer: { mins: number; secs: number };
-}> = ({ photoTimestamp, photoElapsed, photoCprTimer }) => {
-  const [currentTime, setCurrentTime] = useState(Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Calculate time elapsed since photo
-  const secondsSincePhoto = Math.floor((currentTime - photoTimestamp) / 1000);
-
-  // Calculate current elapsed time (photo time + seconds since)
-  const totalElapsedSecs = photoElapsed.mins * 60 + photoElapsed.secs + secondsSincePhoto;
-  const currentElapsedMins = Math.floor(totalElapsedSecs / 60);
-  const currentElapsedSecs = totalElapsedSecs % 60;
-
-  // Calculate current CPR timer (photo timer - seconds since, min 0)
-  const totalCprSecs = photoCprTimer.mins * 60 + photoCprTimer.secs - secondsSincePhoto;
-  const currentCprMins = Math.max(0, Math.floor(totalCprSecs / 60));
-  const currentCprSecs = Math.max(0, totalCprSecs % 60);
-
-  return (
-    <div className="text-sm space-y-1">
-      <div>Elapsed time: {currentElapsedMins}:{currentElapsedSecs.toString().padStart(2, '0')}</div>
-      <div>CPR timer: {currentCprMins}:{currentCprSecs.toString().padStart(2, '0')}</div>
-    </div>
-  );
-};
-
 export default function App() {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('theBigOneState');
@@ -301,6 +265,8 @@ export default function App() {
   const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0 });
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [useManualEntry, setUseManualEntry] = useState(false);
+  const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
+  const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -777,8 +743,6 @@ export default function App() {
     console.log('Parsed weight:', parsedWeight);
     
     // Adjust times based on elapsed time since they were entered
-    // For OCR: both use photoTimestamp
-    // For manual: use separate timestamps for each value
     if (elapsedTimestamp) {
       const timeSinceElapsed = Math.floor((Date.now() - elapsedTimestamp) / 1000);
       adjustedElapsed += timeSinceElapsed;
@@ -874,112 +838,6 @@ export default function App() {
     setElapsedTimestamp(null);
     setCprTimestamp(null);
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
-  };
-
-  const handleMonitorScan = async (imageFile: File) => {
-    setIsProcessingOCR(true);
-    setOcrError(null);
-    
-    // Record the timestamp when photo was taken
-    const timestamp = Date.now();
-
-    try {
-      const worker = await createWorker('eng');
-      // PSM 11 = sparse text (better for monitor screens with isolated numbers)
-      await worker.setParameters({
-        tessedit_pageseg_mode: '11',
-      });
-      const { data: { text } } = await worker.recognize(imageFile);
-      await worker.terminate();
-
-      // Try multiple time pattern formats
-      const times: Array<{mins: number, secs: number, hasHours?: boolean, hours?: number}> = [];
-      
-      // Pattern 1: HH:MM:SS or MM:SS with colons
-      const colonPattern = /(\d{1,2}):(\d{2})(?::(\d{2}))?/g;
-      const colonMatches = [...text.matchAll(colonPattern)];
-      
-      colonMatches.forEach(match => {
-        if (match[3]) {
-          // HH:MM:SS format - convert to total seconds, then to mins:secs
-          const hours = parseInt(match[1]);
-          const mins = parseInt(match[2]);
-          const secs = parseInt(match[3]);
-          times.push({ 
-            mins: hours * 60 + mins, 
-            secs: secs,
-            hasHours: true, // Mark as HH:MM:SS format
-            hours: hours
-          });
-        } else {
-          // MM:SS or M:SS format
-          times.push({ 
-            mins: parseInt(match[1]), 
-            secs: parseInt(match[2]),
-            hasHours: false
-          });
-        }
-      });
-      
-      // Pattern 2: 6-digit number (HHMMSS without colons) like "002109"
-      const compactPattern = /\b0*(\d{2})(\d{2})(\d{2})\b/g;
-      const compactMatches = [...text.matchAll(compactPattern)];
-      
-      compactMatches.forEach(match => {
-        const hours = parseInt(match[1]);
-        const mins = parseInt(match[2]);
-        const secs = parseInt(match[3]);
-        // Only add if it looks like a valid time
-        if (mins < 60 && secs < 60) {
-          times.push({ 
-            mins: hours * 60 + mins, 
-            secs: secs,
-            hasHours: true, // Compact format is HH:MM:SS without colons
-            hours: hours
-          });
-        }
-      });
-
-      // Identify CPR timer: should be ≤ 2:00 (120 seconds total)
-      const cprTimerIndex = times.findIndex(t => t.mins * 60 + t.secs <= 120);
-      const cprTimer = cprTimerIndex >= 0 ? times[cprTimerIndex] : null;
-      
-      // Get remaining times (excluding CPR timer)
-      const remainingTimes = times.filter((_, i) => i !== cprTimerIndex);
-      
-      // Prioritize times that look like elapsed time:
-      // 1. HH:MM:SS format (hasHours=true) 
-      // 2. With hours <= 1 (00:XX:XX or 01:XX:XX)
-      let elapsed = remainingTimes.find(t => {
-        return t.hasHours && t.hours !== undefined && t.hours <= 1;
-      });
-      
-      // If no HH:MM:SS format found, only accept MM:SS if it's long enough (> 5 mins)
-      // This filters out battery times like "3:00"
-      if (!elapsed) {
-        elapsed = remainingTimes.find(t => {
-          const totalMinutes = t.mins + (t.secs / 60);
-          return !t.hasHours && totalMinutes > 5; // Must be > 5 minutes to be elapsed time
-        });
-      }
-
-      if (cprTimer && elapsed) {
-        setCatchupElapsed(elapsed);
-        setCatchupRhythm(cprTimer);
-        setPhotoTimestamp(timestamp);
-        setElapsedTimestamp(timestamp); // Both values from same moment
-        setCprTimestamp(timestamp);
-        setTimesFromScan(true); // Mark that times came from scan
-        
-        setIsProcessingOCR(false);
-      } else {
-        setOcrError('Could not read monitor times clearly. Please try again with better lighting and focus, or enter times manually.');
-        setIsProcessingOCR(false);
-      }
-    } catch (error) {
-      setOcrError('Failed to process image. Please try again or enter manually.');
-      setIsProcessingOCR(false);
-    }
   };
 
   const deleteCase = () => {
@@ -1558,31 +1416,16 @@ export default function App() {
                     </button>
                       <button 
                         onClick={() => { 
-                          if (timesFromScan) {
-                            // If scanned, timestamps already set from OCR, skip step 3
-                            setCatchupStep(4);
-                          } else {
-                            // If manual, set timestamp for elapsed time entry
-                            setElapsedTimestamp(Date.now());
-                            setCatchupRhythm({ mins: 0, secs: 0 }); 
-                            setCatchupStep(3);
-                          }
+                          // Set timestamp for elapsed time entry
+                          setElapsedTimestamp(Date.now());
+                          setCatchupRhythm({ mins: 0, secs: 0 }); 
+                          setCatchupStep(3);
                         }} 
                         className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
                       >
                         Next
                       </button>
                     </div>
-                  )}
-
-                  {/* Back button for initial choice screen */}
-                  {!useManualEntry && !photoTimestamp && !ocrError && !isProcessingOCR && (
-                    <button 
-                      onClick={() => setCatchupStep(1)} 
-                      className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
-                    >
-                      Back
-                    </button>
                   )}
                 </div>
               )}
