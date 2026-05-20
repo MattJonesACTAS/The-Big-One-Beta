@@ -481,18 +481,7 @@ export default function App() {
   };
 
   const confirmPause = () => {
-    // If rhythm check is paused but timer is running, unpause and reset to 2:00
-    if (state.running && state.rhythmCheckPaused) {
-      setState(prev => ({ 
-        ...prev, 
-        rhythmCheckPaused: false,
-        rhythmCheckTarget: prev.elapsedSeconds + 120, // Reset to 2:00 from current elapsed
-        rhythmCheckOvertime: 0
-      }));
-      return;
-    }
-    
-    // Pause or resume directly without warning
+    // Simply toggle the pause state without resetting the timer
     togglePause();
   };
 
