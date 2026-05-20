@@ -271,6 +271,9 @@ export default function App() {
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(1);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoTourStep, setDemoTourStep] = useState(0);
+  const [showDemoSpotlight, setShowDemoSpotlight] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -709,6 +712,46 @@ export default function App() {
   }, [state.treatments]);
 
   // --- Catchup Handlers ---
+  const startDemoMode = () => {
+    const now = Date.now();
+    const startTime = now - (15 * 60 * 1000); // 15 minutes ago
+    const baseClock = new Date(startTime);
+    
+    // Pre-populate demo with sample treatments
+    const demoTreatments: Treatment[] = [
+      { name: 'Pads on', elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true },
+      { name: 'Shock #1', elapsed: 60, round: 1, clock: getLocalTime(new Date(startTime + 60000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 60000)) },
+      { name: 'IV access', elapsed: 180, round: 1, clock: getLocalTime(new Date(startTime + 180000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 180000)) },
+      { name: 'Adrenaline push #1', elapsed: 240, round: 2, clock: getLocalTime(new Date(startTime + 240000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 240000)) },
+      { name: 'Shock #2', elapsed: 300, round: 2, clock: getLocalTime(new Date(startTime + 300000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 300000)) },
+      { name: 'OPA', elapsed: 420, round: 2, clock: getLocalTime(new Date(startTime + 420000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 420000)) },
+      { name: 'BVM', elapsed: 420, round: 2, clock: getLocalTime(new Date(startTime + 420000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 420000)) },
+      { name: 'Adrenaline push #2', elapsed: 480, round: 3, clock: getLocalTime(new Date(startTime + 480000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 480000)) },
+      { name: 'Shock #3', elapsed: 540, round: 3, clock: getLocalTime(new Date(startTime + 540000)), clockSeconds: getLocalTimeWithSeconds(new Date(startTime + 540000)) },
+    ];
+    
+    setState({
+      ...INITIAL_STATE,
+      running: true,
+      startTime: startTime,
+      pausedTime: 15 * 60 * 1000, // 15 minutes
+      elapsedSeconds: 900, // 15 minutes in seconds
+      rhythmCheckTarget: 900 + 105, // Currently at 1:45 on CPR timer
+      cprRound: 3,
+      shocks: 3,
+      treatments: demoTreatments,
+      catchupElapsed: 900,
+      startClockTime: startTime,
+      patientWeight: 75,
+      patientType: 'adult'
+    });
+    
+    setDemoMode(true);
+    setShowDemoSpotlight(true);
+    setDemoTourStep(1);
+    setShowCatchup(false);
+  };
+
   const handleCatchupStart = (overrideWeight?: string) => {
     console.log('handleCatchupStart called', { overrideWeight, weightInput });
     
@@ -1231,12 +1274,11 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => {
-                        setShowTutorial(true);
-                        setTutorialStep(1);
+                        startDemoMode();
                       }} 
                       className="w-full bg-blue-600 text-white p-4 rounded-2xl text-base font-bold btn-base"
                     >
-                      Tutorial
+                      Try Interactive Demo
                     </button>
                   </div>
                 </div>
@@ -1687,6 +1729,197 @@ export default function App() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Interactive Demo Spotlight Tour */}
+      {demoMode && showDemoSpotlight && (
+        <div className="fixed inset-0 z-[3000] pointer-events-none">
+          {/* Dimmed overlay */}
+          <div className="absolute inset-0 bg-black/70 pointer-events-auto" />
+          
+          {/* Spotlight tooltip */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+            <div className="bg-white rounded-3xl p-8 max-w-md shadow-2xl">
+              
+              {/* Step 1: Welcome */}
+              {demoTourStep === 1 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-emerald-600">🎯 Welcome to Demo Mode!</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    You're now in a safe demo with pre-loaded data. The timer is running, treatments are logged, and you can interact with everything!
+                  </p>
+                  <p className="text-neutral-700 leading-relaxed">
+                    This demo shows a case 15 minutes in, during round 3 of CPR.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 2: Timer Display */}
+              {demoTourStep === 2 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-neutral-900">⏱️ The Timer</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Look at the top of the screen - you'll see:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                    <li><strong>15:XX</strong> - Total elapsed time (ticking up)</li>
+                    <li><strong>1:XX</strong> - CPR countdown (ticking down)</li>
+                    <li><strong>Round 3</strong> - Current CPR round</li>
+                  </ul>
+                </div>
+              )}
+
+              {/* Step 3: Add Tx Button */}
+              {demoTourStep === 3 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-emerald-600">➕ Try Adding a Treatment</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Click the green <strong>"Add Tx"</strong> button at the bottom to open the treatment menu.
+                  </p>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Go ahead - try it! The demo is safe to explore.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 4: Medication Warning */}
+              {demoTourStep === 4 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-red-600">💉 Medication Warning</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    See the red warning box? It's reminding you that <strong>adrenaline is due THIS ROUND</strong>.
+                  </p>
+                  <p className="text-neutral-700 leading-relaxed">
+                    The dose is already calculated (75mg for this 75kg patient). You can tap "Disregard" if not giving it.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 5: Treatment Log */}
+              {demoTourStep === 5 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-neutral-900">📋 Treatment Log</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Tap the <strong>log icon</strong> (top right) to see all treatments with timestamps.
+                  </p>
+                  <p className="text-neutral-700 leading-relaxed">
+                    You'll see 3 shocks, 2 adrenaline doses, airway management, and more - all logged with elapsed time and round number.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 6: Recalibrate */}
+              {demoTourStep === 6 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-blue-600">🔄 Recalibrate</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    The <strong>"Recalibrate"</strong> button lets you resync the timer with your monitor anytime.
+                  </p>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Useful if the timer drifts during rhythm checks!
+                  </p>
+                </div>
+              )}
+
+              {/* Step 7: Checklists */}
+              {demoTourStep === 7 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-purple-600">✅ Checklists</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Swipe left or tap the colored buttons to see:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                    <li><strong className="text-blue-600">Reversible causes</strong> (4 H's & 4 T's)</li>
+                    <li><strong className="text-orange-600">ROSC protocol</strong></li>
+                    <li><strong className="text-purple-600">PHEA</strong></li>
+                  </ul>
+                </div>
+              )}
+
+              {/* Step 8: Final */}
+              {demoTourStep === 8 && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-emerald-600">🎉 You're Ready!</h2>
+                  <p className="text-neutral-700 leading-relaxed">
+                    Keep exploring the demo or exit to start a real case. Everything you learned here works the same way in actual use.
+                  </p>
+                  <p className="text-neutral-600 text-sm italic">
+                    Remember: Demo data won't be saved. When ready, tap "Exit Demo" to return to the opening screen.
+                  </p>
+                </div>
+              )}
+
+              {/* Navigation */}
+              <div className="flex gap-3 mt-8">
+                {demoTourStep > 1 && demoTourStep < 8 && (
+                  <button
+                    onClick={() => setDemoTourStep(demoTourStep - 1)}
+                    className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+                  >
+                    Back
+                  </button>
+                )}
+                {demoTourStep < 8 ? (
+                  <button
+                    onClick={() => setDemoTourStep(demoTourStep + 1)}
+                    className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold"
+                  >
+                    {demoTourStep === 1 ? "Start Tour" : "Next"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowDemoSpotlight(false);
+                      setDemoTourStep(0);
+                    }}
+                    className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold"
+                  >
+                    Explore Demo
+                  </button>
+                )}
+                {demoTourStep === 1 && (
+                  <button
+                    onClick={() => {
+                      setShowDemoSpotlight(false);
+                      setDemoTourStep(0);
+                    }}
+                    className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+                  >
+                    Skip Tour
+                  </button>
+                )}
+              </div>
+
+              {/* Step indicator */}
+              <div className="flex justify-center gap-2 mt-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(step => (
+                  <div
+                    key={step}
+                    className={`h-2 w-2 rounded-full transition-colors ${
+                      step === demoTourStep ? 'bg-blue-600' : 'bg-neutral-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Demo Button */}
+      {demoMode && !showDemoSpotlight && (
+        <div className="fixed top-4 right-4 z-[1500]">
+          <button
+            onClick={() => {
+              setDemoMode(false);
+              setState(INITIAL_STATE);
+              setShowCatchup(true);
+            }}
+            className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-red-700 transition-colors"
+          >
+            Exit Demo
+          </button>
         </div>
       )}
 
