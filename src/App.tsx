@@ -20,12 +20,10 @@ import {
   Zap,
   ShieldCheck,
   Stethoscope,
-  Camera,
   ArrowRight,
   Sliders,
   RefreshCw
 } from 'lucide-react';
-import { createWorker } from 'tesseract.js';
 import { AppState, Treatment, OverlayType } from './types';
 
 // --- Constants ---
@@ -302,15 +300,7 @@ export default function App() {
   const [weightInput, setWeightInput] = useState('');
   const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0 });
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
-  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const [photoTimestamp, setPhotoTimestamp] = useState<number | null>(null);
-  const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
-  const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
-  const [showCameraTips, setShowCameraTips] = useState(false);
-  const [monitorGifLoaded, setMonitorGifLoaded] = useState(false);
   const [useManualEntry, setUseManualEntry] = useState(false);
-  const [timesFromScan, setTimesFromScan] = useState(false);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -328,15 +318,6 @@ export default function App() {
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt15 = useRef<boolean>(false);
   const previousCountdown = useRef<number | null>(null);
-
-  // Preload monitor images for faster loading in camera tips modal
-  useEffect(() => {
-    const preloadPlaceholder = new Image();
-    preloadPlaceholder.src = 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Monitor_placeholder.png?raw=true';
-    
-    const preloadGif = new Image();
-    preloadGif.src = 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/monitor.gif?raw=true';
-  }, []); // Run once on mount
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -1377,7 +1358,16 @@ export default function App() {
                     </p>
                   </div>
                   <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
-                  <button onClick={() => setCatchupStep(2)} className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base">Calibrate</button>
+                  <button 
+                    onClick={() => {
+                      setCatchupStep(2);
+                      setUseManualEntry(true);
+                      setCatchupRhythm({ mins: 0, secs: 0 });
+                    }} 
+                    className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base"
+                  >
+                    Calibrate
+                  </button>
                 </div>
               )}
 
@@ -1550,188 +1540,22 @@ export default function App() {
 
               {catchupStep === 2 && (
                 <div className="text-center space-y-6">
-                  {/* Initial choice: Scan or Manual */}
-                  {!useManualEntry && !photoTimestamp && !ocrError && !isProcessingOCR && (
-                    <>
-                      <h2 className="text-xl font-bold text-neutral-900 px-4">How do you want to enter times?</h2>
-                      <div className="space-y-3 px-4">
-                        <button
-                          onClick={() => {
-                            setUseManualEntry(true);
-                            setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
-                          }}
-                          className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
-                        >
-                          Enter Manually
-                        </button>
-                        <button
-                          onClick={() => setShowCameraTips(true)}
-                          className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold btn-base flex items-center justify-center gap-2"
-                        >
-                          <Camera size={20} />
-                          Scan Monitor
-                        </button>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Camera Tips Modal */}
-                  {showCameraTips && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                      <div className="bg-white rounded-2xl p-6 max-w-md space-y-4">
-                        <h2 className="text-xl font-bold text-neutral-900">Photograph the right half of the monitor screen</h2>
-                        
-                        {/* Example image with placeholder */}
-                        <div className="rounded-xl overflow-hidden border-2 border-neutral-200">
-                          <img 
-                            src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Monitor_placeholder.png?raw=true"
-                            alt="Monitor example showing elapsed time and CPR timer"
-                            className="w-full"
-                            style={{
-                              display: monitorGifLoaded ? 'none' : 'block'
-                            }}
-                          />
-                          <img 
-                            src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/monitor.gif?raw=true"
-                            alt="Monitor example showing elapsed time and CPR timer"
-                            className="w-full"
-                            style={{
-                              display: monitorGifLoaded ? 'block' : 'none'
-                            }}
-                            onLoad={() => setMonitorGifLoaded(true)}
-                          />
-                        </div>
-                        
-                        <p className="text-neutral-700 text-sm">
-                          <strong>Tip:</strong> Before taking the picture, tap the CPR timer banner to correct the camera's brightness setting.
-                        </p>
-                        
-                        <button
-                          onClick={() => {
-                            setShowCameraTips(false);
-                            document.getElementById('monitor-camera')?.click();
-                          }}
-                          className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
-                        >
-                          Ready - Open Camera
-                        </button>
-                        <button
-                          onClick={() => setShowCameraTips(false)}
-                          className="w-full bg-neutral-100 text-neutral-700 p-2 rounded-xl font-semibold text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Hidden file input */}
-                  <div className="hidden">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onInput={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file && !isProcessingOCR) {
-                          e.target.value = '';
-                          handleMonitorScan(file);
-                        }
-                      }}
-                      id="monitor-camera"
-                    />
-                  </div>
-
-                  {/* Processing spinner */}
-                  {isProcessingOCR && (
-                    <div className="py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-                      <p className="text-neutral-600">Processing monitor image...</p>
-                    </div>
-                  )}
-
-                  {/* Success message */}
-                  {photoTimestamp && !isProcessingOCR && (
-                    <>
-                      <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl space-y-2">
-                        <div className="font-bold text-lg">✓ Monitor scanned successfully</div>
-                        <LiveTimerDisplay 
-                          photoTimestamp={photoTimestamp}
-                          photoElapsed={catchupElapsed}
-                          photoCprTimer={catchupRhythm}
-                        />
-                        <div className="text-xs">Times will auto-adjust when you start the timer</div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setPhotoTimestamp(null);
-                          setOcrError(null);
-                          setTimesFromScan(false);
-                        }}
-                        className="text-blue-600 font-semibold text-sm"
-                      >
-                        Scan again
-                      </button>
-                    </>
-                  )}
-
-                  {/* Error message with options */}
-                  {ocrError && !isProcessingOCR && (
-                    <>
-                      <div className="bg-red-50 text-red-700 p-4 rounded-xl">
-                        <div className="font-bold mb-1">Scan failed</div>
-                        <div className="text-sm">{ocrError}</div>
-                      </div>
-                      <div className="space-y-3 px-4">
-                        <button
-                          onClick={() => {
-                            setOcrError(null);
-                            setShowCameraTips(true);
-                          }}
-                          className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
-                        >
-                          Scan Again
-                        </button>
-                        <button
-                          onClick={() => {
-                            setOcrError(null);
-                            setUseManualEntry(true);
-                            setCatchupRhythm({ mins: 0, secs: 0 }); // Start at 0:00 for manual entry
-                          }}
-                          className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
-                        >
-                          Enter Manually
-                        </button>
-                      </div>
-                    </>
-                  )}
-
                   {/* Manual entry UI */}
-                  {useManualEntry && !isProcessingOCR && (
-                    <>
-                      <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
-                      <p className="text-neutral-600 text-sm px-4">This is the time at the top right corner of the monitor</p>
-                      <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
-                    </>
-                  )}
+                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
+                  <p className="text-neutral-600 text-sm px-4">This is the time at the top right corner of the monitor</p>
+                  <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
                   
                   {/* Navigation buttons */}
-                  {!isProcessingOCR && (photoTimestamp || useManualEntry) && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button 
-                        onClick={() => {
-                          setCatchupStep(2);
-                          setPhotoTimestamp(null);
-                          setElapsedTimestamp(null);
-                          setCprTimestamp(null);
-                          setOcrError(null);
-                          setUseManualEntry(false);
-                          setTimesFromScan(false);
-                        }} 
-                        className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
-                      >
-                        Back
-                      </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => {
+                        setCatchupStep(1);
+                        setUseManualEntry(false);
+                      }} 
+                      className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
+                    >
+                      Back
+                    </button>
                       <button 
                         onClick={() => { 
                           if (timesFromScan) {
