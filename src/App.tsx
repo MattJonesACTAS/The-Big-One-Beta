@@ -1591,8 +1591,25 @@ export default function App() {
               </div>
             )}
 
-            {/* Tutorial Step 6: Case Summary */}
+            {/* Tutorial Step 6: Medication Reminders */}
             {tutorialStep === 6 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  The app will automatically keep track of and warn you when some medications need to be repeated at specific intervals:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</li>
+                  <li>When amiodarone is logged, a 5 minute timer will pop up counting down until the repeat dose</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: Tap 'Disregard' on either alert to mute them
+                </p>
+              </div>
+            )}
+
+            {/* Tutorial Step 7: Case Summary */}
+            {tutorialStep === 7 && (
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
                 <p className="text-neutral-700 leading-relaxed">
@@ -1606,23 +1623,6 @@ export default function App() {
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
                   Tip: All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged to the minute
-                </p>
-              </div>
-            )}
-
-            {/* Tutorial Step 7: Medication Reminders */}
-            {tutorialStep === 7 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  The app will automatically keep track of and warn you when some medications need to be repeated at specific intervals:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</li>
-                  <li>When amiodarone is logged, a 5 minute timer will pop up counting down until the repeat dose</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Tap 'Disregard' on either alert to mute them
                 </p>
               </div>
             )}
