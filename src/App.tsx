@@ -269,6 +269,8 @@ export default function App() {
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(1);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -1216,16 +1218,27 @@ export default function App() {
                     </p>
                   </div>
                   <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
-                  <button 
-                    onClick={() => {
-                      setCatchupStep(2);
-                      setUseManualEntry(true);
-                      setCatchupRhythm({ mins: 0, secs: 0 });
-                    }} 
-                    className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base"
-                  >
-                    Calibrate
-                  </button>
+                  <div className="space-y-3">
+                    <button 
+                      onClick={() => {
+                        setCatchupStep(2);
+                        setUseManualEntry(true);
+                        setCatchupRhythm({ mins: 0, secs: 0 });
+                      }} 
+                      className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base"
+                    >
+                      Calibrate
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setShowTutorial(true);
+                        setTutorialStep(1);
+                      }} 
+                      className="w-full bg-blue-600 text-white p-4 rounded-2xl text-base font-bold btn-base"
+                    >
+                      Tutorial
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1483,6 +1496,183 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Tutorial Modal */}
+      {showTutorial && (
+        <div className="fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl">
+            
+            {/* Tutorial Step 1: Calibration */}
+            {tutorialStep === 1 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">1. Calibration</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  When you start a case, you'll calibrate the app to match your monitor by entering:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li><strong>Elapsed time</strong> - Top right corner of monitor</li>
+                  <li><strong>CPR timer</strong> - Countdown above the diamond</li>
+                  <li><strong>Current round/shock</strong> - Where you are in the arrest</li>
+                  <li><strong>Patient weight</strong> - For medication calculations</li>
+                </ul>
+              </div>
+            )}
+
+            {/* Tutorial Step 2: Timer Display */}
+            {tutorialStep === 2 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">2. Timer Display</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  The main screen shows:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li><strong>Elapsed time</strong> - Total case duration</li>
+                  <li><strong>CPR timer</strong> - 2:00 countdown for rhythm checks</li>
+                  <li><strong>Round counter</strong> - Current CPR round number</li>
+                  <li><strong>Recalibrate button</strong> - Resync timer with monitor anytime</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic">
+                  Tip: Use Recalibrate if the timer drifts from the monitor during rhythm checks
+                </p>
+              </div>
+            )}
+
+            {/* Tutorial Step 3: Adding Treatments */}
+            {tutorialStep === 3 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">3. Adding Treatments</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  Tap the <strong className="text-emerald-600">green + button</strong> to log treatments:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>Shocks and rhythm checks</li>
+                  <li>Medications (adrenaline, amiodarone)</li>
+                  <li>Airway management (OPA, LMA, ETT, BVM)</li>
+                  <li>Access (IV, IO)</li>
+                  <li>Special circumstances</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic">
+                  Each treatment is timestamped with elapsed time and round number
+                </p>
+              </div>
+            )}
+
+            {/* Tutorial Step 4: Rhythm Checks */}
+            {tutorialStep === 4 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">4. Rhythm Checks</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  When the CPR timer hits 0:00:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>Timer pauses automatically</li>
+                  <li>Add your shock/disarm decision</li>
+                  <li>Timer resets to 2:00 and continues</li>
+                  <li>Round counter increments</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic">
+                  After 3rd shock, you'll be prompted to give amiodarone
+                </p>
+              </div>
+            )}
+
+            {/* Tutorial Step 5: Medication Warnings */}
+            {tutorialStep === 5 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">5. Medication Reminders</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  The app tracks medication timing:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li><strong className="text-red-600">Red warning</strong> - Adrenaline due THIS ROUND</li>
+                  <li><strong className="text-orange-600">Orange countdown</strong> - Amiodarone approaching</li>
+                  <li>Doses calculated based on patient weight</li>
+                  <li>Tap "Disregard" if not giving medication</li>
+                </ul>
+              </div>
+            )}
+
+            {/* Tutorial Step 6: Checklists */}
+            {tutorialStep === 6 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">6. Checklists</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  Three essential checklists:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li><strong className="text-blue-600">Reversible Causes (4 H's & 4 T's)</strong> - Consider throughout</li>
+                  <li><strong className="text-orange-600">ROSC Protocol</strong> - Steps after return of circulation</li>
+                  <li><strong className="text-purple-600">PHEA</strong> - Pre-hospital emergency anaesthesia</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic">
+                  Checked items turn light colors to show progress
+                </p>
+              </div>
+            )}
+
+            {/* Tutorial Step 7: Treatment Log */}
+            {tutorialStep === 7 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">7. Treatment Log</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  View complete case timeline:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>All treatments with timestamps</li>
+                  <li>Elapsed time and round for each entry</li>
+                  <li>Real-time clock times</li>
+                  <li>Delete entries if needed</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic">
+                  Tap the log icon to open/close the treatment history
+                </p>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex gap-3 mt-8">
+              {tutorialStep > 1 && (
+                <button
+                  onClick={() => setTutorialStep(tutorialStep - 1)}
+                  className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
+                >
+                  Back
+                </button>
+              )}
+              {tutorialStep < 7 ? (
+                <button
+                  onClick={() => setTutorialStep(tutorialStep + 1)}
+                  className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowTutorial(false);
+                    setTutorialStep(1);
+                  }}
+                  className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                >
+                  Got it!
+                </button>
+              )}
+            </div>
+            
+            {/* Step indicator */}
+            <div className="flex justify-center gap-2 mt-4">
+              {[1, 2, 3, 4, 5, 6, 7].map(step => (
+                <div
+                  key={step}
+                  className={`h-2 w-2 rounded-full transition-colors ${
+                    step === tutorialStep ? 'bg-blue-600' : 'bg-neutral-300'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Warning Modals */}
       {showCloseWarning && (
