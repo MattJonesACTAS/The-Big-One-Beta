@@ -309,6 +309,23 @@ export default function App() {
     }
   }, [disregardAmiodarone]);
 
+  // Preload tutorial screenshot images for faster loading
+  useEffect(() => {
+    const imagesToPreload = [
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20home%20screen.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Alerts.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20log.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20headings.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20adrenaline.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Reversibles.png?raw=true'
+    ];
+
+    imagesToPreload.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
   // Force scroll reset and layout recalculation on mount
   useEffect(() => {
     // Aggressive scroll reset for mobile browsers
