@@ -1545,41 +1545,41 @@ export default function App() {
                   The home screen shows:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li><strong>Elapsed time</strong> - Total case duration</li>
-                  <li><strong>Rhythm check timer</strong> - Time to next rhythm check</li>
-                  <li><strong>CPR round counter</strong> - Current CPR round number</li>
+                  <li><strong>Elapsed case time</strong></li>
+                  <li><strong>Rhythm check countdown</strong></li>
+                  <li><strong>CPR round counter</strong></li>
                 </ul>
               </div>
             )}
 
-            {/* Tutorial Step 4: Rhythm checks */}
+            {/* Tutorial Step 4: Rhythm Checks */}
             {tutorialStep === 4 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Rhythm checks</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">Rhythm Checks</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  When the CPR counter reaches 0:00 on the home screen:
+                  When the rhythm check countdown reaches 0:00 on the home screen:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
                   <li>The timer counts for 6 seconds, which is the desired time to perform a rhythm check</li>
-                  <li>The timer will then restart counting down from 2:00</li>
+                  <li>The countdown will then restart from 2:00</li>
                   <li>A popup will prompt you to log what the rhythm was</li>
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Use the recalibrate button on the home screen to bring the app back in line with reality if your rhythm checks are longer than 6 seconds
+                  Tip: Use the recalibrate button on the home screen to quickly bring the app back in line with reality if your rhythm checks are longer than 6 seconds
                 </p>
               </div>
             )}
 
-            {/* Tutorial Step 5: Logging treatments */}
+            {/* Tutorial Step 5: Logging Treatments */}
             {tutorialStep === 5 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Logging treatments</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">Logging Treatments</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  When a treatment is administered to your patient, tap the <strong className="text-emerald-600">'Add Tx'</strong> button. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
+                  When a treatment is administered, tap the <strong className="text-emerald-600">'Add Tx'</strong> button. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
                 </p>
-                <p className="text-neutral-700 leading-relaxed">The options include:</p>
+                <p className="text-neutral-700 leading-relaxed">The subheadings are:</p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>Shocks and disarms</li>
+                  <li>Rhythm check (Shocks and disarms)</li>
                   <li>Medications</li>
                   <li>Airway interventions</li>
                   <li>Other</li>
@@ -1591,8 +1591,27 @@ export default function App() {
               </div>
             )}
 
-            {/* Tutorial Step 6: Medication Reminders */}
+            {/* Tutorial Step 6: Case Summary */}
             {tutorialStep === 6 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  The running case summary page lists:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>The number of CPR rounds you have performed</li>
+                  <li>The number of shocks and disarms</li>
+                  <li>The accumulated doses of all medications logged</li>
+                  <li>The full treatment log</li>
+                </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged to the minute
+                </p>
+              </div>
+            )}
+
+            {/* Tutorial Step 7: Medication Reminders */}
+            {tutorialStep === 7 && (
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
                 <p className="text-neutral-700 leading-relaxed">
@@ -1604,25 +1623,6 @@ export default function App() {
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
                   Tip: Tap 'Disregard' on either alert to mute them
-                </p>
-              </div>
-            )}
-
-            {/* Tutorial Step 7: Case Summary */}
-            {tutorialStep === 7 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  The running case summary page lists:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>The number of CPR rounds you have performed</li>
-                  <li>The number of shocks and disarms</li>
-                  <li>The accumulated doses of all medications logged</li>
-                  <li>All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: For simplicity, these times are listed in minutes, not seconds
                 </p>
               </div>
             )}
