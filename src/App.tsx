@@ -272,6 +272,7 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(1);
   const [tutorialDemo, setTutorialDemo] = useState<string | null>(null); // Track which demo is showing
+  const [tutorialDemoStep, setTutorialDemoStep] = useState(1); // Track which screenshot (1 or 2)
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -1550,6 +1551,16 @@ export default function App() {
                   <li><strong>Rhythm check countdown</strong></li>
                   <li><strong>CPR round counter</strong></li>
                 </ul>
+                
+                {/* Show me button */}
+                {!tutorialDemo && (
+                  <button
+                    onClick={() => setTutorialDemo('homeScreen')}
+                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                  >
+                    Show me
+                  </button>
+                )}
               </div>
             )}
 
@@ -1635,6 +1646,16 @@ export default function App() {
                 <p className="text-neutral-600 text-sm italic mt-4">
                   Tip: All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged to the minute
                 </p>
+                
+                {/* Show me button */}
+                {!tutorialDemo && (
+                  <button
+                    onClick={() => setTutorialDemo('caseSummary')}
+                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                  >
+                    Show me
+                  </button>
+                )}
               </div>
             )}
 
@@ -1653,6 +1674,16 @@ export default function App() {
                 <p className="text-neutral-600 text-sm italic mt-4">
                   Tip: Tick off the checklists one by one in real time
                 </p>
+                
+                {/* Show me button */}
+                {!tutorialDemo && (
+                  <button
+                    onClick={() => setTutorialDemo('reversibles')}
+                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                  >
+                    Show me
+                  </button>
+                )}
               </div>
             )}
 
@@ -1723,99 +1754,141 @@ export default function App() {
         </div>
       )}
 
-      {/* Tutorial Interactive Demo - Add Tx Menu */}
-      {showTutorial && tutorialDemo === 'addTx' && (
-        <div className="fixed inset-0 bg-black/70 z-[2100] flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-neutral-900">Add Treatment</h3>
+      {/* Tutorial Interactive Demo - Screenshots */}
+      {showTutorial && tutorialDemo && (
+        <div 
+          className="fixed inset-0 bg-black/70 z-[2100] flex items-center justify-center p-6"
+          onClick={() => {
+            setTutorialDemo(null);
+            setTutorialDemoStep(1);
+          }}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-neutral-900">
+                {tutorialDemo === 'addTx' && 'Add Treatment Menu'}
+                {tutorialDemo === 'homeScreen' && 'Home Screen'}
+                {tutorialDemo === 'caseSummary' && 'Case Summary'}
+                {tutorialDemo === 'reversibles' && 'Reversibles Checklist'}
+              </h3>
               <button
-                onClick={() => setTutorialDemo(null)}
+                onClick={() => {
+                  setTutorialDemo(null);
+                  setTutorialDemoStep(1);
+                }}
                 className="text-neutral-500 hover:text-neutral-700 text-2xl font-bold"
               >
                 ×
               </button>
             </div>
             
-            <div className="space-y-3">
-              {/* Rhythm check section */}
-              <div>
-                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Rhythm check</h4>
-                <div className="space-y-2">
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    Shock #{1}
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    Disarm
-                  </button>
+            {/* Home Screen */}
+            {tutorialDemo === 'homeScreen' && (
+              <div className="space-y-3">
+                <img 
+                  src="/mnt/user-data/uploads/Screenshot_home_screen.png" 
+                  alt="Home Screen"
+                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                />
+                <p className="text-sm text-neutral-600 text-center">
+                  The home screen shows elapsed time, rhythm check countdown, CPR round, and medication reminders
+                </p>
+              </div>
+            )}
+
+            {/* Case Summary */}
+            {tutorialDemo === 'caseSummary' && (
+              <div className="space-y-3">
+                <img 
+                  src="/mnt/user-data/uploads/Screenshot_Tx_log.png" 
+                  alt="Case Summary"
+                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                />
+                <p className="text-sm text-neutral-600 text-center">
+                  The case summary shows CPR rounds, shocks, medications, and a detailed treatment log with timestamps
+                </p>
+              </div>
+            )}
+
+            {/* Reversibles Checklist */}
+            {tutorialDemo === 'reversibles' && (
+              <div className="space-y-3">
+                <img 
+                  src="/mnt/user-data/uploads/Screenshot_Reversibles.png" 
+                  alt="Reversibles Checklist"
+                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                />
+                <p className="text-sm text-neutral-600 text-center">
+                  The reversibles checklist helps you systematically check the 4 H's and 4 T's during cardiac arrest
+                </p>
+              </div>
+            )}
+
+            {/* Add Tx - Two screenshots with navigation */}
+            {tutorialDemo === 'addTx' && tutorialDemoStep === 1 && (
+              <div className="space-y-3">
+                <img 
+                  src="/mnt/user-data/uploads/Screenshot.png" 
+                  alt="Add Treatment Menu"
+                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                />
+                <p className="text-sm text-neutral-600 text-center">
+                  This is what you'll see when you tap the <span className="font-semibold text-emerald-600">Add Tx</span> button
+                </p>
+              </div>
+            )}
+
+            {tutorialDemo === 'addTx' && tutorialDemoStep === 2 && (
+              <div className="space-y-3">
+                <img 
+                  src="/mnt/user-data/uploads/Screenshot_2.png" 
+                  alt="Adrenaline Medication Example"
+                  className="w-full rounded-2xl shadow-lg border border-neutral-200"
+                />
+                <p className="text-sm text-neutral-600 text-center">
+                  When you select a medication, the app shows the calculated dose based on patient weight
+                </p>
+              </div>
+            )}
+
+            {/* Navigation for Add Tx (2 screenshots) */}
+            {tutorialDemo === 'addTx' && (
+              <>
+                <div className="flex gap-3 mt-4">
+                  {tutorialDemoStep === 2 && (
+                    <button
+                      onClick={() => setTutorialDemoStep(1)}
+                      className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+                    >
+                      Back
+                    </button>
+                  )}
+                  {tutorialDemoStep === 1 && (
+                    <button
+                      onClick={() => setTutorialDemoStep(2)}
+                      className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold"
+                    >
+                      Next
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              {/* Medications section */}
-              <div>
-                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Medications</h4>
-                <div className="space-y-2">
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left">
-                    <span className="font-medium text-neutral-800">Adrenaline push</span>
-                    <span className="text-sm text-neutral-600 block">80mg</span>
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left">
-                    <span className="font-medium text-neutral-800">Amiodarone</span>
-                    <span className="text-sm text-neutral-600 block">300mg (first dose) / 150mg (repeat)</span>
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    Other medication...
-                  </button>
+                {/* Progress dots */}
+                <div className="flex justify-center gap-2 mt-4">
+                  {[1, 2].map(step => (
+                    <div
+                      key={step}
+                      className={`h-2 w-2 rounded-full transition-colors ${
+                        step === tutorialDemoStep ? 'bg-blue-600' : 'bg-neutral-300'
+                      }`}
+                    />
+                  ))}
                 </div>
-              </div>
-
-              {/* Airway interventions section */}
-              <div>
-                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Airway interventions</h4>
-                <div className="space-y-2">
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    OPA
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    BVM
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    iGel
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    ETT
-                  </button>
-                </div>
-              </div>
-
-              {/* Other section */}
-              <div>
-                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Other</h4>
-                <div className="space-y-2">
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    IV access
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    IO access
-                  </button>
-                  <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                    Pads on
-                  </button>
-                </div>
-              </div>
-
-              {/* Custom section */}
-              <div>
-                <h4 className="text-sm font-semibold text-neutral-600 mb-2">Custom</h4>
-                <button className="w-full bg-neutral-50 hover:bg-neutral-100 p-3 rounded-xl text-left font-medium text-neutral-800">
-                  Add custom treatment...
-                </button>
-              </div>
-            </div>
-
-            <p className="text-xs text-neutral-500 mt-6 text-center italic">
-              This is a demo. Clicking treatments won't add them to a real case.
-            </p>
+              </>
+            )}
           </div>
         </div>
       )}
