@@ -1789,7 +1789,7 @@ export default function App() {
             {tutorialDemo === 'homeScreen' && (
               <div className="space-y-3">
                 <img 
-                  src="/mnt/user-data/uploads/Screenshot_home_screen.png" 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20home%20screen.png?raw=true" 
                   alt="Home Screen"
                   className="w-full rounded-2xl shadow-lg border border-neutral-200"
                 />
@@ -1803,7 +1803,7 @@ export default function App() {
             {tutorialDemo === 'caseSummary' && (
               <div className="space-y-3">
                 <img 
-                  src="/mnt/user-data/uploads/Screenshot_Tx_log.png" 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20log.png?raw=true" 
                   alt="Case Summary"
                   className="w-full rounded-2xl shadow-lg border border-neutral-200"
                 />
@@ -1817,7 +1817,7 @@ export default function App() {
             {tutorialDemo === 'reversibles' && (
               <div className="space-y-3">
                 <img 
-                  src="/mnt/user-data/uploads/Screenshot_Reversibles.png" 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Reversibles.png?raw=true" 
                   alt="Reversibles Checklist"
                   className="w-full rounded-2xl shadow-lg border border-neutral-200"
                 />
@@ -1831,7 +1831,7 @@ export default function App() {
             {tutorialDemo === 'addTx' && tutorialDemoStep === 1 && (
               <div className="space-y-3">
                 <img 
-                  src="/mnt/user-data/uploads/Screenshot.png" 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20headings.png?raw=true" 
                   alt="Add Treatment Menu"
                   className="w-full rounded-2xl shadow-lg border border-neutral-200"
                 />
@@ -1844,7 +1844,7 @@ export default function App() {
             {tutorialDemo === 'addTx' && tutorialDemoStep === 2 && (
               <div className="space-y-3">
                 <img 
-                  src="/mnt/user-data/uploads/Screenshot_2.png" 
+                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20adrenaline.png?raw=true" 
                   alt="Adrenaline Medication Example"
                   className="w-full rounded-2xl shadow-lg border border-neutral-200"
                 />
