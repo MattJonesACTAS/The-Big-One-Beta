@@ -1507,8 +1507,14 @@ export default function App() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">What is The Big One?</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  The Big One is an app designed to help the team leader on a cardiac arrest keep track of rhythm checks, medication re-doses and total medication doses and much more.
+                  The Big One is a tool used by the team leader during cardiac arrest cases to help stay on top of everything.
                 </p>
+                <p className="text-neutral-700 leading-relaxed">As examples, it can help to keep track of:</p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>Time to next rhythm check</li>
+                  <li>Time to next medication re-dose</li>
+                  <li>Total volumes of any medications given</li>
+                </ul>
               </div>
             )}
 
@@ -1517,43 +1523,57 @@ export default function App() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Calibration</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  When you start a new case in the app, you'll need to configure it to match the real world events in front of you by entering:
+                  Before accessing the home screen, you'll need to input some information so that the app is synchronised to the monitor and the case in general:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li><strong>Current elapsed time</strong> - Top right corner of the monitor</li>
-                  <li><strong>Current CPR timer</strong> - The 2:00 timer that sits above the compression diamond</li>
+                  <li><strong>Current elapsed time</strong> - Timer going up in the top right corner of the monitor</li>
+                  <li><strong>Current CPR timer</strong> - The 2:00 countdown that sits above the compression diamond</li>
                   <li><strong>Treatments already given</strong> - Log treatments you gave before starting the app</li>
-                  <li><strong>Patient weight</strong> - The doses for medications you want to log will already be calculated</li>
+                  <li><strong>Patient weight</strong> - Listing the patient's weight allows the app to pre-determine the correct dosages of weight based medications for you</li>
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: The elapsed time and CPR counter you enter will continue counting in the background while you complete the following pages
+                  Tip: The elapsed timer and CPR count down times you enter will continue updating in the background while you complete the later pages
                 </p>
               </div>
             )}
 
-            {/* Tutorial Step 3: The home page */}
+            {/* Tutorial Step 3: The Home Screen */}
             {tutorialStep === 3 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">The home page</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">The Home Screen</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  The main screen shows:
+                  The home screen shows:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
                   <li><strong>Elapsed time</strong> - Total case duration</li>
-                  <li><strong>CPR timer</strong> - 2:00 countdown for rhythm checks</li>
-                  <li><strong>Round counter</strong> - Current CPR round number</li>
-                  <li><strong>Recalibrate button</strong> - Resync timer with monitor anytime</li>
+                  <li><strong>Rhythm check timer</strong> - Time to next rhythm check</li>
+                  <li><strong>CPR round counter</strong> - Current CPR round number</li>
+                </ul>
+              </div>
+            )}
+
+            {/* Tutorial Step 4: Rhythm checks */}
+            {tutorialStep === 4 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-neutral-900">Rhythm checks</h2>
+                <p className="text-neutral-700 leading-relaxed">
+                  When the CPR counter reaches 0:00 on the home screen:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
+                  <li>The timer counts for 6 seconds, which is the desired time to perform a rhythm check</li>
+                  <li>The timer will then restart counting down from 2:00</li>
+                  <li>A popup will prompt you to log what the rhythm was</li>
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Use Recalibrate if the timer drifts from the monitor during rhythm checks
+                  Tip: Use the recalibrate button on the home screen to bring the app back in line with reality if your rhythm checks are longer than 6 seconds
                 </p>
               </div>
             )}
 
-            {/* Tutorial Step 4: Add Tx */}
-            {tutorialStep === 4 && (
+            {/* Tutorial Step 5: Logging treatments */}
+            {tutorialStep === 5 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Adding treatments</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">Logging treatments</h2>
                 <p className="text-neutral-700 leading-relaxed">
                   When a treatment is administered to your patient, tap the <strong className="text-emerald-600">'Add Tx'</strong> button. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
                 </p>
@@ -1563,49 +1583,37 @@ export default function App() {
                   <li>Medications</li>
                   <li>Airway interventions</li>
                   <li>Other</li>
+                  <li>Custom</li>
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: The more disciplined you are, the easier your case sheet will be
+                  Tip: The more disciplined you are, the easier your case sheet and handovers will be
                 </p>
               </div>
             )}
 
-            {/* Tutorial Step 5: Rhythm checks */}
-            {tutorialStep === 5 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Rhythm checks</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  When the CPR counter reaches 0:00:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>Timer pauses for 6 seconds for a rhythm check to be performed</li>
-                  <li>Timer will then restart again from 2:00</li>
-                  <li>A popup will prompt you to log what the rhythm was</li>
-                </ul>
-              </div>
-            )}
-
-            {/* Tutorial Step 6: Medication reminders */}
+            {/* Tutorial Step 6: Medication Reminders */}
             {tutorialStep === 6 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Medication reminders</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  Some medications which are meant to be repeated will give you warnings.
+                  The app will automatically keep track of and warn you when some medications need to be repeated at specific intervals:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>When push dose adrenaline is logged, a reminder will pop up reminding you to repeat in 2 rounds time</li>
-                  <li>When amiodarone is logged, a 5 minute timer will start to remind you of the repeat dose</li>
-                  <li>Tap 'Disregard' if not giving the medication again</li>
+                  <li>When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</li>
+                  <li>When amiodarone is logged, a 5 minute timer will pop up counting down until the repeat dose</li>
                 </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: Tap 'Disregard' on either alert to mute them
+                </p>
               </div>
             )}
 
-            {/* Tutorial Step 7: Summary list */}
+            {/* Tutorial Step 7: Case Summary */}
             {tutorialStep === 7 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Summary list</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  The Summary page lists:
+                  The running case summary page lists:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
                   <li>The number of CPR rounds you have performed</li>
@@ -1613,6 +1621,9 @@ export default function App() {
                   <li>The accumulated doses of all medications logged</li>
                   <li>All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged</li>
                 </ul>
+                <p className="text-neutral-600 text-sm italic mt-4">
+                  Tip: For simplicity, these times are listed in minutes, not seconds
+                </p>
               </div>
             )}
 
@@ -1621,26 +1632,26 @@ export default function App() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Checklists</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  Three essential checklists:
+                  From the home screen, three essential checklists are accessible:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li><strong className="text-blue-600">Reversible Causes (4 H's & 4 T's)</strong> - Consider throughout</li>
-                  <li><strong className="text-orange-600">ROSC Protocol</strong> - Steps after return of circulation</li>
-                  <li><strong className="text-purple-600">PHEA</strong> - Pre-hospital emergency anaesthesia</li>
+                  <li>Reversibles (4 H's & 4 T's)</li>
+                  <li>ROSC checklist</li>
+                  <li>PHEA (Pre-hospital emergency anaesthesia) checklist</li>
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Checked items turn light colors to show progress
+                  Tip: Tick off the checklists one by one in real time
                 </p>
               </div>
             )}
 
-            {/* Tutorial Step 9: Export the case */}
+            {/* Tutorial Step 9: Exporting the Case */}
             {tutorialStep === 9 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Export the case</h2>
+                <h2 className="text-2xl font-bold text-neutral-900">Exporting the Case</h2>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
                   <li>When the case has finished, you can close the case and view the full case summary to assist you in writing your case sheet</li>
-                  <li>The case summary can be exported as a pdf and emailed if needed for later review</li>
+                  <li>The case summary can be exported as a PDF and emailed if needed for later review</li>
                 </ul>
               </div>
             )}
