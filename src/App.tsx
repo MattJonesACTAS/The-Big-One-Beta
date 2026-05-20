@@ -811,7 +811,7 @@ export default function App() {
       pausedTime: adjustedElapsed * 1000,
       elapsedSeconds: adjustedElapsed,
       rhythmCheckTarget: adjustedElapsed + adjustedRhythm, // Target time = current elapsed + countdown
-      cprRound: Math.floor(adjustedElapsed / 120) + 1,
+      cprRound: Math.max(1, priorCounts.shock + priorCounts.disarm), // Round = total shocks + disarms (min 1)
       shocks: priorCounts.shock,
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
@@ -1414,20 +1414,20 @@ export default function App() {
                     >
                       Back
                     </button>
-                    <button 
-                      onClick={() => { 
-                        // Set timestamp for elapsed time entry
-                        setElapsedTimestamp(Date.now());
-                        setCatchupRhythm({ mins: 0, secs: 0 }); 
-                        setCatchupStep(3);
-                      }} 
-                      className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
-                    >
-                      Next
-                    </button>
+                      <button 
+                        onClick={() => { 
+                          // Set timestamp for elapsed time entry
+                          setElapsedTimestamp(Date.now());
+                          setCatchupRhythm({ mins: 0, secs: 0 }); 
+                          setCatchupStep(3);
+                        }} 
+                        className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {catchupStep === 3 && (
                 <div className="text-center space-y-6">
