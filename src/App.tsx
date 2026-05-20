@@ -1532,7 +1532,7 @@ export default function App() {
                   <li><strong>Patient weight</strong> - Listing the patient's weight allows the app to pre-determine the correct dosages of weight based medications for you</li>
                 </ul>
                 <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: The elapsed timer and CPR count down times you enter will continue updating in the background while you complete the later pages
+                  Tip: The elapsed timer and CPR countdown times you enter will continue updating in the background while you complete the later pages
                 </p>
               </div>
             )}
@@ -1575,11 +1575,11 @@ export default function App() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Logging Treatments</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  When a treatment is administered, tap the <strong className="text-emerald-600">'Add Tx'</strong> button. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
+                  When a treatment is administered, tap the <strong className="text-emerald-600">'Add Tx'</strong> button on the home screen. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
                 </p>
                 <p className="text-neutral-700 leading-relaxed">The subheadings are:</p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>Rhythm check (Shocks and disarms)</li>
+                  <li>Rhythm check (shocks and disarms)</li>
                   <li>Medications</li>
                   <li>Airway interventions</li>
                   <li>Other</li>
@@ -1596,7 +1596,7 @@ export default function App() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  The app will automatically keep track of and warn you when some medications need to be repeated at specific intervals:
+                  The app will automatically alert you when adrenaline and amiodarone need to be repeated:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
                   <li>When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</li>
@@ -1613,7 +1613,7 @@ export default function App() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
                 <p className="text-neutral-700 leading-relaxed">
-                  The running case summary page lists:
+                  Tapping the <strong className="text-blue-600">'Summary'</strong> button on the home screen will take you to the running case summary which lists:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
                   <li>The number of CPR rounds you have performed</li>
@@ -1658,6 +1658,17 @@ export default function App() {
 
             {/* Navigation */}
             <div className="flex gap-3 mt-8">
+              {tutorialStep === 1 && (
+                <button
+                  onClick={() => {
+                    setShowTutorial(false);
+                    setTutorialStep(1);
+                  }}
+                  className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
+                >
+                  Back
+                </button>
+              )}
               {tutorialStep > 1 && (
                 <button
                   onClick={() => setTutorialStep(tutorialStep - 1)}
