@@ -47,7 +47,7 @@ const INITIAL_STATE: AppState = {
 
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
-  'Atropine', 'Calcium', 'Glucose', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Lignocaine',
+  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Lignocaine',
   'Magnesium', 'Midazolam', 'Morphine', 'Normal Saline', 'Oxygen', 'Sodium Bicarbonate', 'Suxamethonium'
 ];
 
@@ -93,13 +93,12 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: 'Other', population: 'both' }
     ] 
   },
-  'Glucose': { 
+  'Glucose 10%': { 
     doses: [
       { dose: '2.5mL/kg', population: 'both', calculated: true },
-      { dose: '100mL 10%', population: 'both' },
-      { dose: '50mL 50%', population: 'both' },
       { dose: 'Other', population: 'both' }
-    ] 
+    ],
+    customUnit: 'mls'
   },
   'Heparin': {
     doses: [
@@ -211,7 +210,7 @@ const calculateDose = (doseStr: string, weight: number | null): string => {
   // Handle ">100" special case - treat as 100 for calculations
   const calcWeight = typeof weight === 'string' && weight === '>100' ? 100 : weight;
   
-  const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL)\/kg/i);
+  const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL|mMol)\/kg/i);
   if (!match) return doseStr;
   
   const [_, amount, unit] = match;
