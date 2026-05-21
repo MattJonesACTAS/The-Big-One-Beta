@@ -1265,7 +1265,7 @@ export default function App() {
                       onClick={() => {
                         setState(p => ({ ...p, currentOverlay: 'tutorial' }));
                       }} 
-                      className="w-full bg-blue-600 text-white p-4 rounded-2xl text-base font-bold btn-base"
+                      className="w-full bg-purple-600 text-white p-4 rounded-2xl text-base font-bold btn-base"
                     >
                       Tutorial
                     </button>

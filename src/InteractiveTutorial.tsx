@@ -201,8 +201,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
                 position: 'absolute',
                 left: `${element.x}%`,
                 top: `${element.y}%`,
-                width: '32px',
-                height: '32px',
+                width: '37px',
+                height: '37px',
                 transform: 'translate(-50%, -50%)',
                 cursor: 'pointer',
                 zIndex: 10,
@@ -225,8 +225,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
-                width: '20px',
-                height: '20px',
+                width: '23px',
+                height: '23px',
                 transform: 'translate(-50%, -50%)',
                 borderRadius: '50%',
                 backgroundColor: '#fff',
@@ -235,7 +235,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '11px',
+                fontSize: '13px',
                 fontWeight: '700',
                 color: '#10b981',
               }}>
@@ -259,14 +259,15 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         `}</style>
       </div>
 
-      {/* Next button - positioned in top-right corner */}
+      {/* Next button - centered, 15% from bottom */}
       {allExplored && currentScreenData.nextScreen && (
         <button
           onClick={handleNext}
           style={{
             position: 'absolute',
-            top: '20px',
-            right: '180px',
+            bottom: '15%',
+            left: '50%',
+            transform: 'translateX(-50%)',
             padding: '12px 24px',
             backgroundColor: '#10b981',
             color: '#fff',
