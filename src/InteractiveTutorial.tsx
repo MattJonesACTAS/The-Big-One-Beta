@@ -242,12 +242,15 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         `}</style>
       </div>
 
+      {/* Next button - positioned in top-right corner */}
       {allExplored && currentScreenData.nextScreen && (
         <button
           onClick={handleNext}
           style={{
-            marginTop: '20px',
-            padding: '12px 32px',
+            position: 'absolute',
+            top: '20px',
+            right: '180px',
+            padding: '12px 24px',
             backgroundColor: '#10b981',
             color: '#fff',
             border: 'none',
