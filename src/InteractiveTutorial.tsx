@@ -147,11 +147,16 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     setActiveExplanation(null);
   };
 
-  const handleNext = () => {
-    if (currentScreenData.nextScreen) {
-      setCurrentScreen(currentScreenData.nextScreen);
+  // Auto-advance to next screen when all nodes explored (except final screen)
+  useEffect(() => {
+    if (allExplored && currentScreenData.nextScreen && currentScreen !== 'caseSummary') {
+      const timer = setTimeout(() => {
+        setCurrentScreen(currentScreenData.nextScreen);
+        setExploredElements(new Set()); // Reset for next screen
+      }, 800); // Small delay so user sees they completed the screen
+      return () => clearTimeout(timer);
     }
-  };
+  }, [allExplored, currentScreenData.nextScreen, currentScreen]);
 
   return (
     <div style={{
@@ -279,29 +284,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
           }
         `}</style>
       </div>
-
-      {/* Next button - top-right corner */}
-      {allExplored && currentScreenData.nextScreen && (
-        <button
-          onClick={handleNext}
-          style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            padding: '12px 24px',
-            backgroundColor: '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-          }}
-        >
-          Next
-        </button>
-      )}
 
       {/* Finish button - appears on final screen in top-right */}
       {currentScreen === 'caseSummary' && allExplored && (
