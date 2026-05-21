@@ -1035,7 +1035,7 @@ export default function App() {
                   }
                   animate={{ 
                     strokeDashoffset: state.rhythmCheckPaused
-                      ? 1 // Empty circle when paused
+                      ? 1 - Math.max(0, (state.frozenCountdown || 0) / 120) // Show frozen progress
                       : state.rhythmCheckOvertime > 0 
                         ? 1 - (state.rhythmCheckOvertime / 6) // Count down from 6 to 0
                         : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
@@ -1055,7 +1055,7 @@ export default function App() {
                   }`}
                 >
                   {state.rhythmCheckPaused 
-                    ? formatTime(120)
+                    ? formatTime(state.frozenCountdown || 0)
                     : state.rhythmCheckOvertime > 0 
                       ? formatTime(6 - state.rhythmCheckOvertime)
                       : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
