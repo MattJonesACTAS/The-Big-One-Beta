@@ -1373,7 +1373,7 @@ export default function App() {
                       className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4"
                     >
                       <div>
-                        <label className="block text-sm font-bold text-pink-900 mb-3">Select by Age</label>
+                        <label className="block text-sm font-bold text-pink-900 mb-3">Select weight by age</label>
                         <select
                           value={paedWeightMethod === 'age' ? weightInput : ''}
                           onChange={(e) => {
