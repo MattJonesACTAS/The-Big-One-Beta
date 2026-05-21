@@ -154,6 +154,18 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     }
   };
 
+  // Auto-advance for same-screen transitions (home1→home1_addTx, home2→home2_summary)
+  useEffect(() => {
+    const autoAdvanceScreens = ['home1', 'home2'];
+    if (allExplored && currentScreenData.nextScreen && autoAdvanceScreens.includes(currentScreen)) {
+      const timer = setTimeout(() => {
+        setCurrentScreen(currentScreenData.nextScreen);
+        setExploredElements(new Set());
+      }, 800); // 0.8 second delay
+      return () => clearTimeout(timer);
+    }
+  }, [allExplored, currentScreenData.nextScreen, currentScreen]);
+
   return (
     <div style={{
       position: 'fixed',
@@ -171,27 +183,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       zIndex: 9999,
       overflowY: 'auto',
     }}>
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          backgroundColor: '#ef4444',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          padding: '8px 16px',
-          fontSize: '14px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          zIndex: 10000,
-        }}
-      >
-        Exit Tutorial
-      </button>
-
       <div style={{
         position: 'relative',
         width: '100%',
@@ -300,12 +291,12 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             bottom: '15%',
             left: '50%',
             transform: 'translateX(-50%)',
-            padding: '12px 24px',
+            padding: '12px 36px',
             backgroundColor: '#10b981',
             color: '#fff',
             border: 'none',
             borderRadius: '8px',
-            fontSize: '15px',
+            fontSize: '17px',
             fontWeight: '600',
             cursor: 'pointer',
             boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
