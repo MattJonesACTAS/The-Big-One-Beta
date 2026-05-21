@@ -222,7 +222,7 @@ const calculateDose = (doseStr: string, weight: number | null): string => {
 
 const cleanDoseForLog = (doseStr: string): string => {
   // Extract calculated dose from parentheses if present: "0.01mg/kg (0.3mg)" -> "0.3mg"
-  const match = doseStr.match(/\(([\d.]+(?:mg|g|mcg|ml|mL))\)/);
+  const match = doseStr.match(/\(([\d.]+(?:mg|g|mcg|ml|mL|mls|mMol))\)/i);
   if (match) {
     return match[1];
   }
@@ -231,8 +231,8 @@ const cleanDoseForLog = (doseStr: string): string => {
 
 const formatGlucose10Dose = (doseStr: string): string => {
   // For Glucose 10%, format as (xxxml/xxg) - 0.1g per mL
-  // Extract mL amount: "200mls" -> 200, "2.5mL/kg (200mL)" -> 200
-  const mlMatch = doseStr.match(/([\d.]+)mL?s?/i);
+  // Extract mL amount from various formats: "200mls", "200mL", "200ml", "2.5mL/kg (200mL)"
+  const mlMatch = doseStr.match(/([\d.]+)\s*(?:ml|mls|mL|mLs)/i);
   if (mlMatch) {
     const mls = parseFloat(mlMatch[1]);
     const grams = Math.round(mls * 0.1 * 10) / 10; // 0.1g per mL, rounded to 1 decimal
@@ -243,8 +243,8 @@ const formatGlucose10Dose = (doseStr: string): string => {
 
 const formatSodiumBicarbonateDose = (doseStr: string): string => {
   // For Sodium Bicarbonate 8.4%, format as (xxxmMol/xxxml) - 1mMol/mL concentration
-  // Extract mMol amount: "80mMol" -> 80, "1mMol/kg (80mMol)" -> 80
-  const mmolMatch = doseStr.match(/([\d.]+)mMol/i);
+  // Extract mMol amount from various formats: "80mMol", "1mMol/kg (80mMol)"
+  const mmolMatch = doseStr.match(/([\d.]+)\s*(?:mmol|mMol|MMOL)/i);
   if (mmolMatch) {
     const mmol = parseFloat(mmolMatch[1]);
     const mls = Math.round(mmol * 10) / 10; // 1mMol = 1mL, rounded to 1 decimal
