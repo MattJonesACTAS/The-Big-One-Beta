@@ -883,7 +883,7 @@ export default function App() {
     setWeightInput('');
     setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0 });
     setPriorTxs([]);
-    setPhotoTimestamp(null);
+    // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
     setCprTimestamp(null);
     previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
