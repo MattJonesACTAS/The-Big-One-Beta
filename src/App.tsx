@@ -1268,177 +1268,183 @@ export default function App() {
               )}
 
               {catchupStep === 2 && (
-                <div className="space-y-4 px-4">
-                  <div className="text-center space-y-2 mb-6">
-                    <h2 className="text-xl font-bold text-neutral-900">Select patient type and weight</h2>
-                    <p className="text-neutral-600 text-sm">This will give you patient specific drug calculations</p>
+                <div className="space-y-6 px-4 max-w-md mx-auto">
+                  <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold text-neutral-900">Patient Details</h2>
+                    <p className="text-neutral-500 text-sm">Select patient type for dosage calculations</p>
                   </div>
                   
-                  {/* Adult Card */}
-                  <div 
-                    onClick={() => {
-                      setWeightType('adult');
-                      setPaedWeightMethod(null);
-                      setWeightInput('');
-                    }}
-                    className={`border-2 rounded-2xl p-5 cursor-pointer transition-all ${
-                      weightType === 'adult' 
-                        ? 'border-emerald-500 bg-emerald-50 shadow-sm' 
-                        : 'border-neutral-200 bg-white hover:border-neutral-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                          weightType === 'adult' 
-                            ? 'border-emerald-500 bg-emerald-500' 
-                            : 'border-neutral-300'
-                        }`}>
-                          {weightType === 'adult' && <div className="w-3 h-3 bg-white rounded-full"></div>}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Adult Card */}
+                    <button 
+                      onClick={() => {
+                        setWeightType('adult');
+                        setPaedWeightMethod(null);
+                        setWeightInput('');
+                      }}
+                      className={`relative p-6 rounded-2xl transition-all duration-200 ${
+                        weightType === 'adult' 
+                          ? 'bg-emerald-500 text-white shadow-lg scale-105' 
+                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className={`text-5xl ${weightType === 'adult' ? 'opacity-100' : 'opacity-60'}`}>
+                          👤
                         </div>
-                        <h3 className="text-lg font-bold text-neutral-900">Adult</h3>
-                      </div>
-                    </div>
-                    
-                    {weightType === 'adult' && (
-                      <div className="space-y-3 mt-4 pt-4 border-t border-emerald-200">
-                        <label className="block text-sm font-semibold text-neutral-700 mb-2">Patient Weight</label>
-                        <select
-                          value={weightInput}
-                          onChange={(e) => setWeightInput(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-emerald-500 outline-none"
-                        >
-                          <option value="">Select weight</option>
-                          <option value="40">40 kg</option>
-                          <option value="50">50 kg</option>
-                          <option value="60">60 kg</option>
-                          <option value="70">70 kg</option>
-                          <option value="80">80 kg</option>
-                          <option value="90">90 kg</option>
-                          <option value="100">100 kg</option>
-                          <option value="110">110 kg</option>
-                          <option value="120">120 kg</option>
-                          <option value="130">130 kg</option>
-                          <option value="140">140 kg</option>
-                          <option value="150">150 kg</option>
-                          <option value="160">160 kg</option>
-                          <option value="170">170 kg</option>
-                          <option value="180">180 kg</option>
-                          <option value="190">190 kg</option>
-                          <option value="200">200 kg</option>
-                        </select>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            weightInput && setCatchupStep(3);
-                          }}
-                          disabled={!weightInput}
-                          className={`w-full py-3 rounded-xl font-bold transition-all ${
-                            weightInput
-                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                          }`}
-                        >
-                          Continue
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Paediatric Card */}
-                  <div 
-                    onClick={() => {
-                      setWeightType('paed');
-                      if (!paedWeightMethod) setPaedWeightMethod('age');
-                      setWeightInput('');
-                    }}
-                    className={`border-2 rounded-2xl p-5 cursor-pointer transition-all ${
-                      weightType === 'paed' 
-                        ? 'border-pink-400 bg-pink-50 shadow-sm' 
-                        : 'border-neutral-200 bg-white hover:border-neutral-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                          weightType === 'paed' 
-                            ? 'border-pink-400 bg-pink-400' 
-                            : 'border-neutral-300'
-                        }`}>
-                          {weightType === 'paed' && <div className="w-3 h-3 bg-white rounded-full"></div>}
-                        </div>
-                        <h3 className="text-lg font-bold text-neutral-900">Paediatric</h3>
-                      </div>
-                    </div>
-                    
-                    {weightType === 'paed' && (
-                      <div className="space-y-4 mt-4 pt-4 border-t border-pink-200">
-                        {/* Age-based weight */}
-                        <div>
-                          <label className="block text-sm font-semibold text-neutral-700 mb-2">Select by Age</label>
-                          <select
-                            value={paedWeightMethod === 'age' ? weightInput : ''}
-                            onChange={(e) => {
-                              setPaedWeightMethod('age');
-                              setWeightInput(e.target.value);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-pink-400 outline-none"
-                          >
-                            <option value="">Choose age</option>
-                            {[
-                              ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
-                              ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
-                              ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
-                              ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
-                              ['11 years', 35], ['12 years', 38]
-                            ].map(([age, weight]) => (
-                              <option key={age} value={weight}>{age} ({weight} kg)</option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div className="text-center text-sm font-semibold text-neutral-400">OR</div>
-                        
-                        {/* Custom weight */}
-                        <div>
-                          <label className="block text-sm font-semibold text-neutral-700 mb-2">Enter Custom Weight</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              placeholder="Enter weight in kg"
-                              value={paedWeightMethod === 'weight' ? weightInput : ''}
-                              onChange={(e) => {
-                                setPaedWeightMethod('weight');
-                                setWeightInput(e.target.value);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-3 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 outline-none"
-                            />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-semibold pointer-events-none">kg</span>
+                        <div className="text-center">
+                          <div className="font-bold text-lg">Adult</div>
+                          <div className={`text-xs mt-1 ${weightType === 'adult' ? 'text-emerald-100' : 'text-neutral-400'}`}>
+                            40-200 kg
                           </div>
                         </div>
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            weightInput && setCatchupStep(3);
-                          }}
-                          disabled={!weightInput}
-                          className={`w-full py-3 rounded-xl font-bold transition-all ${
-                            weightInput
-                              ? 'bg-pink-400 text-white hover:bg-pink-500'
-                              : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                          }`}
-                        >
-                          Continue
-                        </button>
                       </div>
-                    )}
+                    </button>
+                    
+                    {/* Paediatric Card */}
+                    <button 
+                      onClick={() => {
+                        setWeightType('paed');
+                        if (!paedWeightMethod) setPaedWeightMethod('age');
+                        setWeightInput('');
+                      }}
+                      className={`relative p-6 rounded-2xl transition-all duration-200 ${
+                        weightType === 'paed' 
+                          ? 'bg-pink-400 text-white shadow-lg scale-105' 
+                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-pink-300'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className={`text-5xl ${weightType === 'paed' ? 'opacity-100' : 'opacity-60'}`}>
+                          👶
+                        </div>
+                        <div className="text-center">
+                          <div className="font-bold text-lg">Paediatric</div>
+                          <div className={`text-xs mt-1 ${weightType === 'paed' ? 'text-pink-100' : 'text-neutral-400'}`}>
+                            Newborn-12 yrs
+                          </div>
+                        </div>
+                      </div>
+                    </button>
                   </div>
                   
-                  <button onClick={() => setCatchupStep(1)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base mt-2">Back</button>
+                  {/* Weight Selection - Adult */}
+                  {weightType === 'adult' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-emerald-50 rounded-2xl p-6 border-2 border-emerald-200"
+                    >
+                      <label className="block text-sm font-bold text-emerald-900 mb-3">Patient Weight</label>
+                      <select
+                        value={weightInput}
+                        onChange={(e) => setWeightInput(e.target.value)}
+                        className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                      >
+                        <option value="">Select weight</option>
+                        <option value="40">40 kg</option>
+                        <option value="50">50 kg</option>
+                        <option value="60">60 kg</option>
+                        <option value="70">70 kg</option>
+                        <option value="80">80 kg</option>
+                        <option value="90">90 kg</option>
+                        <option value="100">100 kg</option>
+                        <option value="110">110 kg</option>
+                        <option value="120">120 kg</option>
+                        <option value="130">130 kg</option>
+                        <option value="140">140 kg</option>
+                        <option value="150">150 kg</option>
+                        <option value="160">160 kg</option>
+                        <option value="170">170 kg</option>
+                        <option value="180">180 kg</option>
+                        <option value="190">190 kg</option>
+                        <option value="200">200 kg</option>
+                      </select>
+                    </motion.div>
+                  )}
+                  
+                  {/* Weight Selection - Paediatric */}
+                  {weightType === 'paed' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4"
+                    >
+                      <div>
+                        <label className="block text-sm font-bold text-pink-900 mb-3">Select by Age</label>
+                        <select
+                          value={paedWeightMethod === 'age' ? weightInput : ''}
+                          onChange={(e) => {
+                            setPaedWeightMethod('age');
+                            setWeightInput(e.target.value);
+                          }}
+                          className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
+                        >
+                          <option value="">Choose age</option>
+                          {[
+                            ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
+                            ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
+                            ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
+                            ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
+                            ['11 years', 35], ['12 years', 38]
+                          ].map(([age, weight]) => (
+                            <option key={age} value={weight}>{age} ({weight} kg)</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-pink-200"></div>
+                        </div>
+                        <div className="relative flex justify-center">
+                          <span className="bg-pink-50 px-3 text-xs font-bold text-pink-400">OR</span>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            placeholder="Enter weight"
+                            value={paedWeightMethod === 'weight' ? weightInput : ''}
+                            onChange={(e) => {
+                              setPaedWeightMethod('weight');
+                              setWeightInput(e.target.value);
+                            }}
+                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  
+                  {/* Navigation Buttons */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button 
+                      onClick={() => setCatchupStep(1)} 
+                      className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => weightInput && setCatchupStep(3)}
+                      disabled={!weightInput}
+                      className={`py-4 rounded-xl font-bold transition-all ${
+                        weightInput
+                          ? weightType === 'adult'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
+                            : 'bg-pink-400 text-white hover:bg-pink-500 shadow-md'
+                          : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Continue
+                    </button>
+                  </div>
                 </div>
               )}
 
