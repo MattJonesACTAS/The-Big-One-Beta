@@ -208,14 +208,11 @@ const getLocalTimeWithSeconds = (date?: Date) => {
 const calculateDose = (doseStr: string, weight: number | null): string => {
   if (!weight || !doseStr.includes('/kg')) return doseStr;
   
-  // Handle ">100" special case - treat as 100 for calculations
-  const calcWeight = typeof weight === 'string' && weight === '>100' ? 100 : weight;
-  
   const match = doseStr.match(/([\d.]+)(mg|g|mcg|ml|mL|mMol)\/kg/i);
   if (!match) return doseStr;
   
   const [_, amount, unit] = match;
-  const calculated = parseFloat(amount) * (typeof calcWeight === 'number' ? calcWeight : parseFloat(String(calcWeight)));
+  const calculated = parseFloat(amount) * (typeof weight === 'number' ? weight : parseFloat(String(weight)));
   const rounded = Math.round(calculated * 10) / 10;
   
   return `${amount}${unit}/kg (${rounded}${unit})`;
@@ -758,10 +755,7 @@ export default function App() {
     let parsedWeight: any = null;
     if (finalWeight) {
       const weightStr = String(finalWeight).trim();
-      if (weightStr === '>100') {
-        // Store as string to preserve ">100" for display, but treat as 100 for calculations
-        parsedWeight = '>100';
-      } else if (weightStr) {
+      if (weightStr) {
         const parsed = parseFloat(weightStr);
         if (!isNaN(parsed) && parsed > 0) {
           parsedWeight = parsed;
@@ -1316,7 +1310,6 @@ export default function App() {
                           className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-emerald-500 outline-none"
                         >
                           <option value="">Select weight</option>
-                          <option value="30">30 kg</option>
                           <option value="40">40 kg</option>
                           <option value="50">50 kg</option>
                           <option value="60">60 kg</option>
@@ -1324,7 +1317,16 @@ export default function App() {
                           <option value="80">80 kg</option>
                           <option value="90">90 kg</option>
                           <option value="100">100 kg</option>
-                          <option value=">100">&gt;100 kg</option>
+                          <option value="110">110 kg</option>
+                          <option value="120">120 kg</option>
+                          <option value="130">130 kg</option>
+                          <option value="140">140 kg</option>
+                          <option value="150">150 kg</option>
+                          <option value="160">160 kg</option>
+                          <option value="170">170 kg</option>
+                          <option value="180">180 kg</option>
+                          <option value="190">190 kg</option>
+                          <option value="200">200 kg</option>
                         </select>
                         <button
                           onClick={(e) => {
