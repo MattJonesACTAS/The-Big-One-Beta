@@ -230,25 +230,25 @@ const cleanDoseForLog = (doseStr: string): string => {
 };
 
 const formatGlucose10Dose = (doseStr: string): string => {
-  // For Glucose 10%, add grams calculation (0.1g per mL)
+  // For Glucose 10%, format as (xxxmL/xxg) - 0.1g per mL
   // Extract mL amount: "200mls" -> 200, "2.5mL/kg (200mL)" -> 200
   const mlMatch = doseStr.match(/([\d.]+)mL?s?/i);
   if (mlMatch) {
     const mls = parseFloat(mlMatch[1]);
     const grams = Math.round(mls * 0.1 * 10) / 10; // 0.1g per mL, rounded to 1 decimal
-    return `${mls}mls (${grams}g)`;
+    return `(${mls}mL/${grams}g)`;
   }
   return doseStr;
 };
 
 const formatSodiumBicarbonateDose = (doseStr: string): string => {
-  // For Sodium Bicarbonate 8.4%, add mls (1mMol/ml concentration)
+  // For Sodium Bicarbonate 8.4%, format as (xxxmMol/xxxmL) - 1mMol/mL concentration
   // Extract mMol amount: "80mMol" -> 80, "1mMol/kg (80mMol)" -> 80
   const mmolMatch = doseStr.match(/([\d.]+)mMol/i);
   if (mmolMatch) {
     const mmol = parseFloat(mmolMatch[1]);
-    const mls = Math.round(mmol * 10) / 10; // 1mMol = 1ml, rounded to 1 decimal
-    return `${mmol}mMol (${mls}mls)`;
+    const mls = Math.round(mmol * 10) / 10; // 1mMol = 1mL, rounded to 1 decimal
+    return `(${mmol}mMol/${mls}mL)`;
   }
   return doseStr;
 };
@@ -1591,7 +1591,7 @@ export default function App() {
                 {!tutorialDemo && (
                   <button
                     onClick={() => setTutorialDemo('homeScreen')}
-                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
                   >
                     Show me
                   </button>
@@ -1640,7 +1640,7 @@ export default function App() {
                 {!tutorialDemo && (
                   <button
                     onClick={() => setTutorialDemo('addTx')}
-                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
                   >
                     Show me
                   </button>
@@ -1667,7 +1667,7 @@ export default function App() {
                 {!tutorialDemo && (
                   <button
                     onClick={() => setTutorialDemo('medicationAlerts')}
-                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
                   >
                     Show me
                   </button>
@@ -1696,7 +1696,7 @@ export default function App() {
                 {!tutorialDemo && (
                   <button
                     onClick={() => setTutorialDemo('caseSummary')}
-                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
                   >
                     Show me
                   </button>
@@ -1724,7 +1724,7 @@ export default function App() {
                 {!tutorialDemo && (
                   <button
                     onClick={() => setTutorialDemo('reversibles')}
-                    className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-4"
+                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
                   >
                     Show me
                   </button>
@@ -2549,6 +2549,26 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
               const unit = DOSE_CONFIG[selectedMed].customUnit || getUnitFromDoses(doses);
               const placeholder = unit ? `Custom dose (${unit})...` : 'Custom dose...';
               
+              // Calculate secondary unit for live display
+              const getSecondaryUnit = () => {
+                if (!customDose || isNaN(parseFloat(customDose))) return null;
+                const value = parseFloat(customDose);
+                
+                if (selectedMed === 'Glucose 10%') {
+                  const grams = Math.round(value * 0.1 * 10) / 10;
+                  return `/ ${grams}g`;
+                }
+                
+                if (selectedMed === 'Sodium Bicarbonate') {
+                  const mls = Math.round(value * 10) / 10;
+                  return `/ ${mls}mL`;
+                }
+                
+                return null;
+              };
+              
+              const secondaryUnit = getSecondaryUnit();
+              
               return (
               <div className="w-full flex gap-2 items-center">
                 <div className="flex-1 relative flex items-center bg-white border border-neutral-200 rounded-xl focus-within:ring-2 focus-within:ring-emerald-500 min-w-0">
@@ -2560,8 +2580,10 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                     placeholder={placeholder}
                     className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
                   />
-                  {unit && (
-                    <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">{unit}</span>
+                  {(unit || secondaryUnit) && (
+                    <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">
+                      {unit}{secondaryUnit ? ` ${secondaryUnit}` : ''}
+                    </span>
                   )}
                 </div>
                 <button
