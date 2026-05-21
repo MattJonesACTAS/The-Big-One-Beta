@@ -278,17 +278,28 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
               opacity: 0;
             }
           }
+          @keyframes buttonPulse {
+            0%, 100% {
+              transform: translateX(-50%) scale(1);
+              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            }
+            50% {
+              transform: translateX(-50%) scale(1.05);
+              box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+            }
+          }
         `}</style>
       </div>
 
-      {/* Next button - top-right corner */}
+      {/* Next button - centered bottom with pulsing animation */}
       {allExplored && currentScreenData.nextScreen && (
         <button
           onClick={handleNext}
           style={{
             position: 'absolute',
-            top: '20px',
-            right: '20px',
+            bottom: '15%',
+            left: '50%',
+            transform: 'translateX(-50%)',
             padding: '12px 24px',
             backgroundColor: '#10b981',
             color: '#fff',
@@ -298,6 +309,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             fontWeight: '600',
             cursor: 'pointer',
             boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+            animation: 'buttonPulse 2s infinite',
           }}
         >
           Next
