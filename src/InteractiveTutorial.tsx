@@ -3,7 +3,7 @@
  * Displays clickable nodes over app screenshots to guide users
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TutorialElement {
   id: string;
@@ -99,6 +99,23 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
   const currentScreenData = screens[currentScreen];
   const requiredElements = new Set(currentScreenData.elements.map(el => el.id));
   const allExplored = Array.from(requiredElements).every(id => exploredElements.has(id));
+
+  // Preload all tutorial images when component mounts
+  useEffect(() => {
+    const imagesToPreload = [
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/2.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/4.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/6.png?raw=true',
+      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/8.png?raw=true',
+    ];
+
+    imagesToPreload.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   const handleElementClick = (element: TutorialElement) => {
     setActiveExplanation(element);
