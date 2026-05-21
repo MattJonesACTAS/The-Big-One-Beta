@@ -463,17 +463,22 @@ export default function App() {
     setState(prev => {
       // Toggle rhythm check pause, but keep elapsed timer running
       if (!prev.rhythmCheckPaused) {
-        // Pausing rhythm check
+        // Pausing rhythm check - freeze the countdown by capturing current value
+        const currentCountdown = Math.max(0, prev.rhythmCheckTarget - prev.elapsedSeconds);
         setShowPauseWarning(false);
         return {
           ...prev,
-          rhythmCheckPaused: true
+          rhythmCheckPaused: true,
+          frozenCountdown: currentCountdown  // Store the frozen countdown value
         };
       } else {
-        // Unpausing rhythm check
+        // Unpausing rhythm check - adjust target to maintain the frozen countdown
+        const newTarget = prev.elapsedSeconds + (prev.frozenCountdown || 0);
         return {
           ...prev,
-          rhythmCheckPaused: false
+          rhythmCheckPaused: false,
+          rhythmCheckTarget: newTarget,
+          frozenCountdown: undefined  // Clear frozen value
         };
       }
     });
@@ -2347,17 +2352,26 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   
   const handleCustomDoseAdd = () => {
     if (selectedMed && customDose && DOSE_CONFIG[selectedMed]) {
-      // Extract unit from dose options
-      const doses = DOSE_CONFIG[selectedMed].doses.map(d => d.dose);
-      const unitMatches = doses
-        .filter(d => d !== 'Other')
-        .map(d => {
-          const match = d.match(/(mg\/kg|mMol\/kg|mL\/kg|mcg\/kg|u\/kg|mg|mL|mMol|mcg|g|u|%)$/i);
-          return match ? match[1] : null;
-        })
-        .filter(Boolean);
+      // Use customUnit if specified, otherwise extract unit from dose options
+      const customUnit = DOSE_CONFIG[selectedMed].customUnit;
+      let unit = '';
       
-      const unit = unitMatches.length > 0 ? unitMatches[0] : '';
+      if (customUnit) {
+        unit = customUnit;
+      } else {
+        // Extract unit from dose options
+        const doses = DOSE_CONFIG[selectedMed].doses.map(d => d.dose);
+        const unitMatches = doses
+          .filter(d => d !== 'Other')
+          .map(d => {
+            const match = d.match(/(mg\/kg|mMol\/kg|mL\/kg|mcg\/kg|u\/kg|mg|mL|mMol|mcg|g|u|%)$/i);
+            return match ? match[1] : null;
+          })
+          .filter(Boolean);
+        
+        unit = unitMatches.length > 0 ? unitMatches[0] : '';
+      }
+      
       const doseWithUnit = unit ? `${customDose}${unit}` : customDose;
       
       addTreatment(`${selectedMed} ${doseWithUnit}`);
@@ -2486,7 +2500,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
               };
               
               const doses = filteredDoses.map(d => d.dose);
-              const unit = getUnitFromDoses(doses);
+              // Use customUnit if specified, otherwise extract from dose options
+              const unit = DOSE_CONFIG[selectedMed].customUnit || getUnitFromDoses(doses);
               const placeholder = unit ? `Custom dose (${unit})...` : 'Custom dose...';
               
               return (

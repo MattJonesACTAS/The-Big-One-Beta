@@ -18,6 +18,9 @@ export interface AppState {
   pausedTime: number;
   elapsedSeconds: number;
   rhythmCheckTarget: number;
+  rhythmCheckPaused: boolean;
+  rhythmCheckOvertime: number;
+  frozenCountdown?: number;
   cprRound: number;
   shocks: number;
   treatments: Treatment[];
