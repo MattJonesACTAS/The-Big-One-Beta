@@ -53,7 +53,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
       nextScreen: 'addTxMenu',
       elements: [
-        { id: 'addTxBtn', x: 75, y: 95.4, number: 1, title: 'Add Treatment Button', description: "Log treatments as they happen to keep your records accurate" },
+        { id: 'addTxBtn', x: 75, y: 95.4, number: 1, title: 'Add Treatment Button', description: "Let's look at the Add Tx button first" },
       ],
     },
     addTxMenu: {
@@ -69,7 +69,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/4.png?raw=true',
       nextScreen: 'home2',
       elements: [
-        { id: 'medications', x: 53.2, y: 44.2, number: 1, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added." },
+        { id: 'medications', x: 53.2, y: 44.2, number: 1, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone." },
       ],
     },
     home2: {
@@ -85,7 +85,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'summary',
       elements: [
-        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 1, title: 'Summary Button', description: "See the running case summary at a glance" },
+        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 1, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" },
       ],
     },
     summary: {
@@ -102,7 +102,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'caseSummary',
       elements: [
-        { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Close the case to go to the final summary page" },
+        { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've stopped resuscitative efforts or we're handed over our patient at hospital. We can now close the case." },
       ],
     },
     caseSummary: {
@@ -110,9 +110,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/8.png?raw=true',
       nextScreen: null,
       elements: [
-        { id: 'export', x: 27, y: 14, number: 1, title: 'Export PDF', description: "Export the case summary and Tx log to a pdf, which you can then email for later review." },
-        { id: 'delete', x: 73, y: 14, number: 2, title: 'Delete Case', description: "Permanently delete the case information from the app" },
-        { id: 'finalStats', x: 50, y: 61.64, number: 3, title: 'Final Case Data', description: "Now the case is over, the treatment log shows times to the second, not just to the minute" },
+        { id: 'finalStats', x: 50, y: 61.64, number: 1, title: 'Final Case Data', description: "Now the case is over, the treatment log shows times to the second, not just to the minute" },
+        { id: 'export', x: 27, y: 14, number: 2, title: 'Export PDF', description: "Export the case summary and Tx log to a pdf, which you can then email for later review." },
+        { id: 'delete', x: 73, y: 14, number: 3, title: 'Delete Case', description: "Permanently delete the case information from the app" },
       ],
     },
   };
@@ -147,16 +147,12 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     setActiveExplanation(null);
   };
 
-  // Auto-advance to next screen when all nodes explored (except final screen)
-  useEffect(() => {
-    if (allExplored && currentScreenData.nextScreen && currentScreen !== 'caseSummary') {
-      const timer = setTimeout(() => {
-        setCurrentScreen(currentScreenData.nextScreen);
-        setExploredElements(new Set()); // Reset for next screen
-      }, 800); // Small delay so user sees they completed the screen
-      return () => clearTimeout(timer);
+  const handleNext = () => {
+    if (currentScreenData.nextScreen) {
+      setCurrentScreen(currentScreenData.nextScreen);
+      setExploredElements(new Set()); // Reset for next screen
     }
-  }, [allExplored, currentScreenData.nextScreen, currentScreen]);
+  };
 
   return (
     <div style={{
@@ -284,6 +280,29 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
           }
         `}</style>
       </div>
+
+      {/* Next button - top-right corner */}
+      {allExplored && currentScreenData.nextScreen && (
+        <button
+          onClick={handleNext}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            padding: '12px 24px',
+            backgroundColor: '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+          }}
+        >
+          Next
+        </button>
+      )}
 
       {/* Finish button - appears on final screen in top-right */}
       {currentScreen === 'caseSummary' && allExplored && (
