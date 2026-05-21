@@ -1607,11 +1607,19 @@ export default function App() {
       )}
 
       {/* Treatment Logged Notification Banner */}
-      {showLoggedNotification && (
-        <div className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] animate-slide-down">
-          ✓ {loggedTreatmentRef.current} logged
-        </div>
-      )}
+      <AnimatePresence>
+        {showLoggedNotification && (
+          <motion.div 
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000]"
+          >
+            ✓ {loggedTreatmentRef.current} logged
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
