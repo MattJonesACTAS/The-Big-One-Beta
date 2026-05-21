@@ -154,18 +154,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     }
   };
 
-  // Auto-advance for same-screen transitions (home1→home1_addTx, home2→home2_summary)
-  useEffect(() => {
-    const autoAdvanceScreens = ['home1', 'home2'];
-    if (allExplored && currentScreenData.nextScreen && autoAdvanceScreens.includes(currentScreen)) {
-      const timer = setTimeout(() => {
-        setCurrentScreen(currentScreenData.nextScreen);
-        setExploredElements(new Set());
-      }, 800); // 0.8 second delay
-      return () => clearTimeout(timer);
-    }
-  }, [allExplored, currentScreenData.nextScreen, currentScreen]);
-
   return (
     <div style={{
       position: 'fixed',
