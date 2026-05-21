@@ -230,25 +230,25 @@ const cleanDoseForLog = (doseStr: string): string => {
 };
 
 const formatGlucose10Dose = (doseStr: string): string => {
-  // For Glucose 10%, format as (xxxmL/xxg) - 0.1g per mL
+  // For Glucose 10%, format as (xxxml/xxg) - 0.1g per mL
   // Extract mL amount: "200mls" -> 200, "2.5mL/kg (200mL)" -> 200
   const mlMatch = doseStr.match(/([\d.]+)mL?s?/i);
   if (mlMatch) {
     const mls = parseFloat(mlMatch[1]);
     const grams = Math.round(mls * 0.1 * 10) / 10; // 0.1g per mL, rounded to 1 decimal
-    return `(${mls}mL/${grams}g)`;
+    return `(${mls}ml/${grams}g)`;
   }
   return doseStr;
 };
 
 const formatSodiumBicarbonateDose = (doseStr: string): string => {
-  // For Sodium Bicarbonate 8.4%, format as (xxxmMol/xxxmL) - 1mMol/mL concentration
+  // For Sodium Bicarbonate 8.4%, format as (xxxmMol/xxxml) - 1mMol/mL concentration
   // Extract mMol amount: "80mMol" -> 80, "1mMol/kg (80mMol)" -> 80
   const mmolMatch = doseStr.match(/([\d.]+)mMol/i);
   if (mmolMatch) {
     const mmol = parseFloat(mmolMatch[1]);
     const mls = Math.round(mmol * 10) / 10; // 1mMol = 1mL, rounded to 1 decimal
-    return `(${mmol}mMol/${mls}mL)`;
+    return `(${mmol}mMol/${mls}ml)`;
   }
   return doseStr;
 };
@@ -2561,7 +2561,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                 
                 if (selectedMed === 'Sodium Bicarbonate') {
                   const mls = Math.round(value * 10) / 10;
-                  return `/ ${mls}mL`;
+                  return `/ ${mls}ml`;
                 }
                 
                 return null;
