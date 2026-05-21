@@ -38,7 +38,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     home1: {
       title: 'CPR Timer Home Screen',
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
-      nextScreen: 'addTxMenu',
+      nextScreen: 'home1_addTx',
       elements: [
         { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: "Total time the monitor has been turned on" },
         { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: "The current round of CPR" },
@@ -46,9 +46,14 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         { id: 'pause', x: 19.0, y: 4.2, number: 4, title: 'Pause Button', description: "Pause and resume the rhythm check timer" },
         { id: 'recalibrate', x: 51.0, y: 4.2, number: 5, title: 'Recalibrate Button', description: "The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer." },
         { id: 'tabs', x: 50, y: 10.75, number: 6, title: 'Checklists', description: "Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)" },
-        { id: 'addTxBtn', x: 75, y: 95.4, number: 7, title: 'Add Treatment Button', description: "Log treatments as they happen to keep your records accurate" },
-        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 8, title: 'Summary Button', description: "See the running case summary at a glance" },
-        { id: 'close', x: 82.2, y: 4.2, number: 9, title: 'Close Button', description: "Close the case to go to the final summary page" },
+      ],
+    },
+    home1_addTx: {
+      title: 'Add Treatment Navigation',
+      image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
+      nextScreen: 'addTxMenu',
+      elements: [
+        { id: 'addTxBtn', x: 75, y: 95.4, number: 1, title: 'Add Treatment Button', description: "Log treatments as they happen to keep your records accurate" },
       ],
     },
     addTxMenu: {
@@ -70,18 +75,34 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     home2: {
       title: 'Medication Alerts',
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
-      nextScreen: 'summary',
+      nextScreen: 'home2_summary',
       elements: [
         { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: "When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due." },
+      ],
+    },
+    home2_summary: {
+      title: 'Summary Navigation',
+      image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
+      nextScreen: 'summary',
+      elements: [
+        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 1, title: 'Summary Button', description: "See the running case summary at a glance" },
       ],
     },
     summary: {
       title: 'Active Case Summary',
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/6.png?raw=true',
-      nextScreen: 'caseSummary',
+      nextScreen: 'home2_close',
       elements: [
         { id: 'pharmaSummary', x: 50, y: 50, number: 1, title: 'Medication Summary', description: "All medications logged will appear here, with an accumulative tally of the total amount of each drug given." },
         { id: 'treatmentLog', x: 50, y: 70.9, number: 2, title: 'Treatment Log', description: "Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged." },
+      ],
+    },
+    home2_close: {
+      title: 'Close Case Navigation',
+      image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
+      nextScreen: 'caseSummary',
+      elements: [
+        { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Close the case to go to the final summary page" },
       ],
     },
     caseSummary: {
@@ -282,38 +303,27 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </button>
       )}
 
+      {/* Finish button - appears on final screen in top-right */}
       {currentScreen === 'caseSummary' && allExplored && (
-        <div style={{
-          marginTop: '20px',
-          padding: '16px',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderRadius: '12px',
-          border: '2px solid #10b981',
-          textAlign: 'center',
-        }}>
-          <div style={{ color: '#10b981', fontSize: '18px', fontWeight: '600' }}>
-            ✓ Tutorial Complete
-          </div>
-          <div style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
-            You have explored all features!
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              marginTop: '12px',
-              padding: '8px 24px',
-              backgroundColor: '#10b981',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            Close Tutorial
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            padding: '12px 24px',
+            backgroundColor: '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+          }}
+        >
+          Finish
+        </button>
       )}
 
       {activeExplanation && (
