@@ -232,24 +232,34 @@ const cleanDoseForLog = (doseStr: string): string => {
 const formatGlucose10Dose = (doseStr: string): string => {
   // For Glucose 10%, format as (xxxml/xxg) - 0.1g per mL
   // Extract mL amount from various formats: "200mls", "200mL", "200ml", "2.5mL/kg (200mL)"
+  console.log('formatGlucose10Dose input:', doseStr);
   const mlMatch = doseStr.match(/([\d.]+)\s*(?:ml|mls|mL|mLs)/i);
+  console.log('formatGlucose10Dose match:', mlMatch);
   if (mlMatch) {
     const mls = parseFloat(mlMatch[1]);
     const grams = Math.round(mls * 0.1 * 10) / 10; // 0.1g per mL, rounded to 1 decimal
-    return `(${mls}ml/${grams}g)`;
+    const result = `(${mls}ml/${grams}g)`;
+    console.log('formatGlucose10Dose output:', result);
+    return result;
   }
+  console.log('formatGlucose10Dose no match, returning:', doseStr);
   return doseStr;
 };
 
 const formatSodiumBicarbonateDose = (doseStr: string): string => {
   // For Sodium Bicarbonate 8.4%, format as (xxxmMol/xxxml) - 1mMol/mL concentration
   // Extract mMol amount from various formats: "80mMol", "1mMol/kg (80mMol)"
+  console.log('formatSodiumBicarbonateDose input:', doseStr);
   const mmolMatch = doseStr.match(/([\d.]+)\s*(?:mmol|mMol|MMOL)/i);
+  console.log('formatSodiumBicarbonateDose match:', mmolMatch);
   if (mmolMatch) {
     const mmol = parseFloat(mmolMatch[1]);
     const mls = Math.round(mmol * 10) / 10; // 1mMol = 1mL, rounded to 1 decimal
-    return `(${mmol}mMol/${mls}ml)`;
+    const result = `(${mmol}mMol/${mls}ml)`;
+    console.log('formatSodiumBicarbonateDose output:', result);
+    return result;
   }
+  console.log('formatSodiumBicarbonateDose no match, returning:', doseStr);
   return doseStr;
 };
 
@@ -2366,20 +2376,29 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   
   const handleDoseSelect = (dose: string) => {
     if (selectedMed) {
+      console.log('handleDoseSelect - selectedMed:', selectedMed);
+      console.log('handleDoseSelect - dose:', dose);
       const displayDose = calculateDose(dose, state.patientWeight);
+      console.log('handleDoseSelect - displayDose:', displayDose);
       let cleanDose = cleanDoseForLog(displayDose);
+      console.log('handleDoseSelect - cleanDose:', cleanDose);
       
       // For Glucose 10%, add gram calculation
       if (selectedMed === 'Glucose 10%') {
+        console.log('handleDoseSelect - formatting Glucose 10%');
         cleanDose = formatGlucose10Dose(cleanDose);
       }
       
       // For Sodium Bicarbonate, add mls calculation
       if (selectedMed === 'Sodium Bicarbonate') {
+        console.log('handleDoseSelect - formatting Sodium Bicarbonate');
         cleanDose = formatSodiumBicarbonateDose(cleanDose);
       }
       
-      addTreatment(`${selectedMed} ${cleanDose}`);
+      console.log('handleDoseSelect - final cleanDose:', cleanDose);
+      const finalTreatment = `${selectedMed} ${cleanDose}`;
+      console.log('handleDoseSelect - adding treatment:', finalTreatment);
+      addTreatment(finalTreatment);
       setSelectedMed(null);
       setCustomDose('');
     }
