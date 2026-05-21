@@ -30,11 +30,23 @@ interface InteractiveTutorialProps {
 }
 
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
-  const [currentScreen, setCurrentScreen] = useState('home1');
+  const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
 
   const screens: TutorialScreens = {
+    intro1: {
+      title: 'Welcome to The Big One',
+      image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
+      nextScreen: 'intro2',
+      elements: [],
+    },
+    intro2: {
+      title: 'Getting Started',
+      image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
+      nextScreen: 'home1',
+      elements: [],
+    },
     home1: {
       title: 'CPR Timer Home Screen',
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/1.png?raw=true',
@@ -189,6 +201,37 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             display: 'block',
           }}
         />
+
+        {/* Intro message boxes for intro1 and intro2 screens */}
+        {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '320px',
+            width: '85%',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            zIndex: 20,
+          }}>
+            <div style={{
+              color: '#1a1a1a',
+              fontSize: '16px',
+              lineHeight: '1.6',
+              textAlign: 'center',
+            }}>
+              {currentScreen === 'intro1' && 
+                "The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything."
+              }
+              {currentScreen === 'intro2' && 
+                "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
+              }
+            </div>
+          </div>
+        )}
 
         {currentScreenData.elements.map((element) => {
           const isExplored = exploredElements.has(element.id);
