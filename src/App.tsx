@@ -304,10 +304,6 @@ export default function App() {
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(1);
-  const [tutorialDemo, setTutorialDemo] = useState<string | null>(null); // Track which demo is showing
-  const [tutorialDemoStep, setTutorialDemoStep] = useState(1); // Track which screenshot (1 or 2)
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -342,23 +338,6 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [disregardAmiodarone]);
-
-  // Preload tutorial screenshot images for faster loading
-  useEffect(() => {
-    const imagesToPreload = [
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Home%20screen.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Alerts.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20log.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20headings.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20adrenaline.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Reversibles.png?raw=true'
-    ];
-
-    imagesToPreload.forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
 
   // Force scroll reset and layout recalculation on mount
   useEffect(() => {
@@ -1220,23 +1199,16 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-3 sm:mt-4 flex-shrink-0">
-        <button 
-          onClick={() => setState(p => ({ ...p, currentOverlay: 'tutorial' }))}
-          className="p-2 sm:p-3 rounded-2xl text-sm sm:text-base font-bold flex items-center justify-center gap-1 sm:gap-2 btn-base transition-colors bg-purple-100 text-purple-700"
-        >
-          <FileText size={16} className="sm:w-5 sm:h-5" />
-          Tutorial
-        </button>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'summary' ? null : 'summary' }))
           }}
           disabled={isShockForced}
-          className={`p-2 sm:p-3 rounded-2xl text-sm sm:text-base font-bold flex items-center justify-center gap-1 sm:gap-2 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
         >
-          {state.currentOverlay === 'summary' ? <XCircle size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
+          {state.currentOverlay === 'summary' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
           {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
         </button>
         <button 
@@ -1245,9 +1217,9 @@ export default function App() {
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'treatment' ? null : 'treatment' }))
           }}
           disabled={isShockForced}
-          className={`p-2 sm:p-3 rounded-2xl text-sm sm:text-base font-bold flex items-center justify-center gap-1 sm:gap-2 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
         >
-          {state.currentOverlay === 'treatment' ? <XCircle size={16} className="sm:w-5 sm:h-5" /> : <Plus size={16} className="sm:w-5 sm:h-5" />}
+          {state.currentOverlay === 'treatment' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <Plus size={18} className="sm:w-6 sm:h-6" />}
           {state.currentOverlay === 'treatment' ? 'Close' : 'Add Tx'}
         </button>
       </div>
@@ -1291,8 +1263,7 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => {
-                        setShowTutorial(true);
-                        setTutorialStep(1);
+                        setState(p => ({ ...p, currentOverlay: 'tutorial' }));
                       }} 
                       className="w-full bg-blue-600 text-white p-4 rounded-2xl text-base font-bold btn-base"
                     >
@@ -1557,400 +1528,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Tutorial Modal */}
-      {showTutorial && (
-        <div className="fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            
-            {/* Tutorial Step 1: What is The Big One? */}
-            {tutorialStep === 1 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">What is The Big One?</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  The Big One is a tool used by the team leader during cardiac arrest cases to help stay on top of everything.
-                </p>
-                <p className="text-neutral-700 leading-relaxed">As examples, it can help to keep track of:</p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>Time to next rhythm check</li>
-                  <li>Time to next medication re-dose</li>
-                  <li>Total volumes of any medications given</li>
-                </ul>
-              </div>
-            )}
-
-            {/* Tutorial Step 2: Calibration */}
-            {tutorialStep === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Calibration</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  Before accessing the home screen, you'll need to input some information so that the app is synchronised to the monitor and the case in general:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li><strong>Current elapsed time</strong> - Timer going up in the top right corner of the monitor</li>
-                  <li><strong>Current CPR timer</strong> - The 2:00 countdown that sits above the compression diamond</li>
-                  <li><strong>Treatments already given</strong> - Log treatments you gave before starting the app</li>
-                  <li><strong>Patient weight</strong> - Listing the patient's weight allows the app to pre-determine the correct dosages of weight based medications for you</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: The elapsed timer and CPR countdown times you enter will continue updating in the background while you complete the later pages
-                </p>
-              </div>
-            )}
-
-            {/* Tutorial Step 3: The Home Screen */}
-            {tutorialStep === 3 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">The Home Screen</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  The home screen shows:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li><strong>Elapsed case time</strong></li>
-                  <li><strong>Rhythm check countdown</strong></li>
-                  <li><strong>CPR round counter</strong></li>
-                </ul>
-                
-                {/* Show me button */}
-                {!tutorialDemo && (
-                  <button
-                    onClick={() => setTutorialDemo('homeScreen')}
-                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
-                  >
-                    Show me
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Tutorial Step 4: Rhythm Checks */}
-            {tutorialStep === 4 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Rhythm Checks</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  When the rhythm check countdown reaches 0:00 on the home screen:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>The timer counts for 6 seconds, which is the desired time to perform a rhythm check</li>
-                  <li>The countdown will then restart from 2:00</li>
-                  <li>A popup will prompt you to log what the rhythm was</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Use the recalibrate button on the home screen to quickly bring the app back in line with reality if your rhythm checks are longer than 6 seconds
-                </p>
-              </div>
-            )}
-
-            {/* Tutorial Step 5: Logging Treatments */}
-            {tutorialStep === 5 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Logging Treatments</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  When a treatment is administered, tap the <strong className="text-emerald-600">'Add Tx'</strong> button on the home screen. You will be given a list of treatments which you can choose from, or you can add a custom treatment.
-                </p>
-                <p className="text-neutral-700 leading-relaxed">The subheadings are:</p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>Rhythm check (shocks and disarms)</li>
-                  <li>Medications</li>
-                  <li>Airway interventions</li>
-                  <li>Other</li>
-                  <li>Custom</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: The more disciplined you are, the easier your case sheet and handovers will be
-                </p>
-                
-                {/* Show me button for Add Tx demo */}
-                {!tutorialDemo && (
-                  <button
-                    onClick={() => setTutorialDemo('addTx')}
-                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
-                  >
-                    Show me
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Tutorial Step 6: Medication Reminders */}
-            {tutorialStep === 6 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Medication Reminders</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  The app will automatically alert you when adrenaline and amiodarone need to be repeated:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>When push dose adrenaline is logged, an alert will pop up that tracks when two CPR rounds have passed since the last dose</li>
-                  <li>When amiodarone is logged, a 5 minute timer will pop up counting down until the repeat dose</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Tap 'Disregard' on either alert to mute them
-                </p>
-                
-                {/* Show me button */}
-                {!tutorialDemo && (
-                  <button
-                    onClick={() => setTutorialDemo('medicationAlerts')}
-                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
-                  >
-                    Show me
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Tutorial Step 7: Case Summary */}
-            {tutorialStep === 7 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Case Summary</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  Tapping the <strong className="text-blue-600">'Summary'</strong> button on the home screen will take you to the running case summary which lists:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>The number of CPR rounds you have performed</li>
-                  <li>The number of shocks and disarms</li>
-                  <li>The accumulated doses of all medications logged</li>
-                  <li>The full treatment log</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: All treatments are time stamped with the time of day, the elapsed case time, and how long ago it was logged to the minute
-                </p>
-                
-                {/* Show me button */}
-                {!tutorialDemo && (
-                  <button
-                    onClick={() => setTutorialDemo('caseSummary')}
-                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
-                  >
-                    Show me
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Tutorial Step 8: Checklists */}
-            {tutorialStep === 8 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Checklists</h2>
-                <p className="text-neutral-700 leading-relaxed">
-                  From the home screen, three essential checklists are accessible:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>Reversibles (4 H's & 4 T's)</li>
-                  <li>ROSC checklist</li>
-                  <li>PHEA (Pre-hospital emergency anaesthesia) checklist</li>
-                </ul>
-                <p className="text-neutral-600 text-sm italic mt-4">
-                  Tip: Tick off the checklists one by one in real time
-                </p>
-                
-                {/* Show me button */}
-                {!tutorialDemo && (
-                  <button
-                    onClick={() => setTutorialDemo('reversibles')}
-                    className="w-full bg-yellow-500 text-white p-3 rounded-xl font-bold mt-4"
-                  >
-                    Show me
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Tutorial Step 9: Exporting the Case */}
-            {tutorialStep === 9 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Exporting the Case</h2>
-                <ul className="list-disc list-inside space-y-2 text-neutral-700 ml-2">
-                  <li>When the case has finished, you can close the case and view the full case summary to assist you in writing your case sheet</li>
-                  <li>The case summary can be exported as a PDF and emailed if needed for later review</li>
-                </ul>
-              </div>
-            )}
-
-            {/* Navigation */}
-            <div className="flex gap-3 mt-8">
-              {tutorialStep === 1 && (
-                <button
-                  onClick={() => {
-                    setShowTutorial(false);
-                    setTutorialStep(1);
-                  }}
-                  className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
-                >
-                  Back
-                </button>
-              )}
-              {tutorialStep > 1 && (
-                <button
-                  onClick={() => setTutorialStep(tutorialStep - 1)}
-                  className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
-                >
-                  Back
-                </button>
-              )}
-              {tutorialStep < 9 ? (
-                <button
-                  onClick={() => setTutorialStep(tutorialStep + 1)}
-                  className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold btn-base"
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setShowTutorial(false);
-                    setTutorialStep(1);
-                  }}
-                  className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
-                >
-                  Got it!
-                </button>
-              )}
-            </div>
-            
-            {/* Step indicator */}
-            <div className="flex justify-center gap-2 mt-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(step => (
-                <div
-                  key={step}
-                  className={`h-2 w-2 rounded-full transition-colors ${
-                    step === tutorialStep ? 'bg-blue-600' : 'bg-neutral-300'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tutorial Interactive Demo - Screenshots */}
-      {showTutorial && tutorialDemo && (
-        <div 
-          className="fixed inset-0 bg-black/70 z-[2100] flex items-center justify-center p-6"
-          onClick={() => {
-            setTutorialDemo(null);
-            setTutorialDemoStep(1);
-          }}
-        >
-          <div 
-            className="relative max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button - top right */}
-            <button
-              onClick={() => {
-                setTutorialDemo(null);
-                setTutorialDemoStep(1);
-              }}
-              className="absolute -top-12 right-0 text-white hover:text-neutral-300 text-3xl font-bold z-10"
-            >
-              ×
-            </button>
-
-            {/* Screenshot */}
-            <div className="space-y-4">
-              {/* Home Screen */}
-              {tutorialDemo === 'homeScreen' && (
-                <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Home%20screen.png?raw=true" 
-                  alt="Home Screen"
-                  className="w-full shadow-2xl"
-                />
-              )}
-
-              {/* Medication Alerts */}
-              {tutorialDemo === 'medicationAlerts' && (
-                <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Alerts.png?raw=true" 
-                  alt="Medication Alerts"
-                  className="w-full shadow-2xl"
-                />
-              )}
-
-              {/* Case Summary */}
-              {tutorialDemo === 'caseSummary' && (
-                <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20log.png?raw=true" 
-                  alt="Case Summary"
-                  className="w-full shadow-2xl"
-                />
-              )}
-
-              {/* Reversibles Checklist */}
-              {tutorialDemo === 'reversibles' && (
-                <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Reversibles.png?raw=true" 
-                  alt="Reversibles Checklist"
-                  className="w-full shadow-2xl"
-                />
-              )}
-
-              {/* Add Tx - Screenshot 1 */}
-              {tutorialDemo === 'addTx' && tutorialDemoStep === 1 && (
-                <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20headings.png?raw=true" 
-                  alt="Add Treatment Menu"
-                  className="w-full shadow-2xl"
-                />
-              )}
-
-              {/* Add Tx - Screenshot 2 */}
-              {tutorialDemo === 'addTx' && tutorialDemoStep === 2 && (
-                <img 
-                  src="https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/Screenshot%20Tx%20adrenaline.png?raw=true" 
-                  alt="Adrenaline Medication Example"
-                  className="w-full shadow-2xl"
-                />
-              )}
-
-              {/* Navigation for Add Tx (2 screenshots) */}
-              {tutorialDemo === 'addTx' && (
-                <>
-                  <div className="flex gap-3">
-                    {tutorialDemoStep === 2 && (
-                      <button
-                        onClick={() => setTutorialDemoStep(1)}
-                        className="flex-1 bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold shadow-lg"
-                      >
-                        Back
-                      </button>
-                    )}
-                    {tutorialDemoStep === 1 ? (
-                      <button
-                        onClick={() => setTutorialDemoStep(2)}
-                        className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold shadow-lg"
-                      >
-                        Next
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setTutorialDemo(null);
-                          setTutorialDemoStep(1);
-                        }}
-                        className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold shadow-lg"
-                      >
-                        Close
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Progress dots */}
-                  <div className="flex justify-center gap-2">
-                    {[1, 2].map(step => (
-                      <div
-                        key={step}
-                        className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                          step === tutorialDemoStep ? 'bg-white' : 'bg-white/40'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Warning Modals */}
       {showCloseWarning && (
