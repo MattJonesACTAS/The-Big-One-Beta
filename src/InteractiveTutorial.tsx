@@ -114,7 +114,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One-Beta/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'caseSummary',
       elements: [
-        { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've stopped resuscitative efforts or we're handed over our patient at hospital. We can now close the case." },
+        { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." },
       ],
     },
     caseSummary: {
