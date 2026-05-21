@@ -241,6 +241,18 @@ const formatGlucose10Dose = (doseStr: string): string => {
   return doseStr;
 };
 
+const formatSodiumBicarbonateDose = (doseStr: string): string => {
+  // For Sodium Bicarbonate 8.4%, add mls (1mMol/ml concentration)
+  // Extract mMol amount: "80mMol" -> 80, "1mMol/kg (80mMol)" -> 80
+  const mmolMatch = doseStr.match(/([\d.]+)mMol/i);
+  if (mmolMatch) {
+    const mmol = parseFloat(mmolMatch[1]);
+    const mls = Math.round(mmol * 10) / 10; // 1mMol = 1ml, rounded to 1 decimal
+    return `${mmol}mMol (${mls}mls)`;
+  }
+  return doseStr;
+};
+
 export default function App() {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('theBigOneState');
@@ -2362,6 +2374,11 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         cleanDose = formatGlucose10Dose(cleanDose);
       }
       
+      // For Sodium Bicarbonate, add mls calculation
+      if (selectedMed === 'Sodium Bicarbonate') {
+        cleanDose = formatSodiumBicarbonateDose(cleanDose);
+      }
+      
       addTreatment(`${selectedMed} ${cleanDose}`);
       setSelectedMed(null);
       setCustomDose('');
@@ -2395,6 +2412,11 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       // For Glucose 10%, add gram calculation
       if (selectedMed === 'Glucose 10%') {
         doseWithUnit = formatGlucose10Dose(doseWithUnit);
+      }
+      
+      // For Sodium Bicarbonate, add mls calculation
+      if (selectedMed === 'Sodium Bicarbonate') {
+        doseWithUnit = formatSodiumBicarbonateDose(doseWithUnit);
       }
       
       addTreatment(`${selectedMed} ${doseWithUnit}`);
