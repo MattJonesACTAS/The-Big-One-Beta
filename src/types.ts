@@ -31,4 +31,4 @@ export interface AppState {
   patientType: 'adult' | 'paed' | null;
 }
 
-export type OverlayType = 'reversibles' | 'rosc' | 'phea' | 'summary' | 'treatment' | 'caseSummary';
+export type OverlayType = 'reversibles' | 'rosc' | 'phea' | 'summary' | 'treatment' | 'caseSummary' | 'tutorial';

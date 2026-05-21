@@ -25,6 +25,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
+import InteractiveTutorial from './InteractiveTutorial';
 
 // --- Constants ---
 const INITIAL_STATE: AppState = {
@@ -1105,7 +1106,7 @@ export default function App() {
           </div>
 
           <AnimatePresence>
-            {state.currentOverlay && (
+            {state.currentOverlay && state.currentOverlay !== 'tutorial' && (
               <Overlay 
                 key={state.currentOverlay}
                 type={state.currentOverlay as OverlayType} 
@@ -1117,6 +1118,11 @@ export default function App() {
               />
             )}
           </AnimatePresence>
+
+          {/* Tutorial Overlay */}
+          {state.currentOverlay === 'tutorial' && (
+            <InteractiveTutorial onClose={() => setState(p => ({ ...p, currentOverlay: null }))} />
+          )}
 
           {/* Adrenaline & Amiodarone Status - Always rendered, visibility controlled */}
           <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-0">
@@ -1214,16 +1220,23 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-3 sm:mt-4 flex-shrink-0">
+        <button 
+          onClick={() => setState(p => ({ ...p, currentOverlay: 'tutorial' }))}
+          className="p-2 sm:p-3 rounded-2xl text-sm sm:text-base font-bold flex items-center justify-center gap-1 sm:gap-2 btn-base transition-colors bg-purple-100 text-purple-700"
+        >
+          <FileText size={16} className="sm:w-5 sm:h-5" />
+          Tutorial
+        </button>
         <button 
           onClick={() => {
             if (isShockForced) return;
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'summary' ? null : 'summary' }))
           }}
           disabled={isShockForced}
-          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          className={`p-2 sm:p-3 rounded-2xl text-sm sm:text-base font-bold flex items-center justify-center gap-1 sm:gap-2 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
         >
-          {state.currentOverlay === 'summary' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
+          {state.currentOverlay === 'summary' ? <XCircle size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
           {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
         </button>
         <button 
@@ -1232,9 +1245,9 @@ export default function App() {
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'treatment' ? null : 'treatment' }))
           }}
           disabled={isShockForced}
-          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          className={`p-2 sm:p-3 rounded-2xl text-sm sm:text-base font-bold flex items-center justify-center gap-1 sm:gap-2 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
         >
-          {state.currentOverlay === 'treatment' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <Plus size={18} className="sm:w-6 sm:h-6" />}
+          {state.currentOverlay === 'treatment' ? <XCircle size={16} className="sm:w-5 sm:h-5" /> : <Plus size={16} className="sm:w-5 sm:h-5" />}
           {state.currentOverlay === 'treatment' ? 'Close' : 'Add Tx'}
         </button>
       </div>
