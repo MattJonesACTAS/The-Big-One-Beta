@@ -155,7 +155,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         style={{
           position: 'absolute',
           top: '20px',
-          right: '20px',
+          left: '20px',
           backgroundColor: '#ef4444',
           color: '#fff',
           border: 'none',
@@ -201,8 +201,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
                 position: 'absolute',
                 left: `${element.x}%`,
                 top: `${element.y}%`,
-                width: '37px',
-                height: '37px',
+                width: '43px',
+                height: '43px',
                 transform: 'translate(-50%, -50%)',
                 cursor: 'pointer',
                 zIndex: 10,
@@ -225,8 +225,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
-                width: '23px',
-                height: '23px',
+                width: '26px',
+                height: '26px',
                 transform: 'translate(-50%, -50%)',
                 borderRadius: '50%',
                 backgroundColor: '#fff',
@@ -235,7 +235,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '13px',
+                fontSize: '15px',
                 fontWeight: '700',
                 color: '#10b981',
               }}>
@@ -259,15 +259,14 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         `}</style>
       </div>
 
-      {/* Next button - centered, 15% from bottom */}
+      {/* Next button - top-right corner */}
       {allExplored && currentScreenData.nextScreen && (
         <button
           onClick={handleNext}
           style={{
             position: 'absolute',
-            bottom: '15%',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            top: '20px',
+            right: '20px',
             padding: '12px 24px',
             backgroundColor: '#10b981',
             color: '#fff',
