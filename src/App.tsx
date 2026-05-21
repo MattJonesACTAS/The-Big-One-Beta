@@ -229,6 +229,18 @@ const cleanDoseForLog = (doseStr: string): string => {
   return doseStr;
 };
 
+const formatGlucose10Dose = (doseStr: string): string => {
+  // For Glucose 10%, add grams calculation (0.1g per mL)
+  // Extract mL amount: "200mls" -> 200, "2.5mL/kg (200mL)" -> 200
+  const mlMatch = doseStr.match(/([\d.]+)mL?s?/i);
+  if (mlMatch) {
+    const mls = parseFloat(mlMatch[1]);
+    const grams = Math.round(mls * 0.1 * 10) / 10; // 0.1g per mL, rounded to 1 decimal
+    return `${mls}mls (${grams}g)`;
+  }
+  return doseStr;
+};
+
 export default function App() {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('theBigOneState');
@@ -2343,7 +2355,13 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   const handleDoseSelect = (dose: string) => {
     if (selectedMed) {
       const displayDose = calculateDose(dose, state.patientWeight);
-      const cleanDose = cleanDoseForLog(displayDose);
+      let cleanDose = cleanDoseForLog(displayDose);
+      
+      // For Glucose 10%, add gram calculation
+      if (selectedMed === 'Glucose 10%') {
+        cleanDose = formatGlucose10Dose(cleanDose);
+      }
+      
       addTreatment(`${selectedMed} ${cleanDose}`);
       setSelectedMed(null);
       setCustomDose('');
@@ -2372,7 +2390,12 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         unit = unitMatches.length > 0 ? unitMatches[0] : '';
       }
       
-      const doseWithUnit = unit ? `${customDose}${unit}` : customDose;
+      let doseWithUnit = unit ? `${customDose}${unit}` : customDose;
+      
+      // For Glucose 10%, add gram calculation
+      if (selectedMed === 'Glucose 10%') {
+        doseWithUnit = formatGlucose10Dose(doseWithUnit);
+      }
       
       addTreatment(`${selectedMed} ${doseWithUnit}`);
       setSelectedMed(null);
