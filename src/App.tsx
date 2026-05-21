@@ -1267,7 +1267,7 @@ export default function App() {
                 </div>
               )}
 
-              {catchupStep === 5 && (
+              {catchupStep === 2 && (
                 <div className="space-y-4 px-4">
                   <div className="text-center space-y-2 mb-6">
                     <h2 className="text-xl font-bold text-neutral-900">Select patient type and weight</h2>
@@ -1331,7 +1331,7 @@ export default function App() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            weightInput && handleCatchupStart();
+                            weightInput && setCatchupStep(3);
                           }}
                           disabled={!weightInput}
                           className={`w-full py-3 rounded-xl font-bold transition-all ${
@@ -1423,7 +1423,7 @@ export default function App() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            weightInput && handleCatchupStart();
+                            weightInput && setCatchupStep(3);
                           }}
                           disabled={!weightInput}
                           className={`w-full py-3 rounded-xl font-bold transition-all ${
@@ -1438,11 +1438,11 @@ export default function App() {
                     )}
                   </div>
                   
-                  <button onClick={() => setCatchupStep(4)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base mt-2">Back</button>
+                  <button onClick={() => setCatchupStep(1)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base mt-2">Back</button>
                 </div>
               )}
 
-              {catchupStep === 2 && (
+              {catchupStep === 4 && (
                 <div className="text-center space-y-6">
                   {/* Manual entry UI */}
                   <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
@@ -1453,7 +1453,7 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => {
-                        setCatchupStep(1);
+                        setCatchupStep(3);
                         setUseManualEntry(false);
                       }} 
                       className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
@@ -1465,7 +1465,7 @@ export default function App() {
                           // Set timestamp for elapsed time entry
                           setElapsedTimestamp(Date.now());
                           setCatchupRhythm({ mins: 0, secs: 0 }); 
-                          setCatchupStep(3);
+                          setCatchupStep(5);
                         }} 
                         className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
                       >
@@ -1475,7 +1475,7 @@ export default function App() {
                   </div>
                 )}
 
-              {catchupStep === 3 && (
+              {catchupStep === 5 && (
                 <div className="text-center space-y-6">
                   <h2 className="text-xl font-bold text-neutral-900 px-4">Enter current CPR timer</h2>
                   <p className="text-neutral-600 text-sm px-4">This is the countdown above the diamond on the monitor</p>
@@ -1485,22 +1485,22 @@ export default function App() {
                     maxSeconds={120}
                   />
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                    <button onClick={() => setCatchupStep(4)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                     <button 
                       onClick={() => {
                         // Set timestamp for CPR timer entry
                         setCprTimestamp(Date.now());
-                        setCatchupStep(4);
+                        handleCatchupStart();
                       }}
                       className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
                     >
-                      Next
+                      Start Case
                     </button>
                   </div>
                 </div>
               )}
 
-              {catchupStep === 4 && (
+              {catchupStep === 3 && (
                 <div className="text-center space-y-5">
                   <h2 className="text-xl font-bold text-neutral-900">What treatments have you already applied?</h2>
                   <div className="space-y-2 py-3 px-2">
@@ -1520,8 +1520,8 @@ export default function App() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => setCatchupStep(5)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
+                    <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                    <button onClick={() => setCatchupStep(4)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
                   </div>
                 </div>
               )}
