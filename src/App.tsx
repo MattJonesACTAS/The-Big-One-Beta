@@ -444,7 +444,7 @@ export default function App() {
                 nextTarget = newElapsed + 120;
                 nextRound += 1;
                 nextOvertime = 0;
-                hasAutoClosedAt15.current = false;
+                hasAutoClosedAt10.current = false;
                 setHasShownForcedShock(false); // Reset for next cycle
               }
             } else {
@@ -1235,23 +1235,39 @@ export default function App() {
             >
               {catchupStep === 1 && (
                 <div className="text-center space-y-6">
-                  <div className="space-y-3">
-                    <h1 className="text-4xl font-extrabold text-neutral-900">
+                  {/* Header with gradient accent */}
+                  <div className="space-y-4">
+                    <div className="inline-block">
+                      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <h1 className="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                       It's The Big One!
                     </h1>
-                    <p className="text-xl font-semibold text-neutral-600">
-                      Your cardiac arrest management tool.
+                    <p className="text-lg font-medium text-neutral-600">
+                      Your cardiac arrest management tool
                     </p>
                   </div>
-                  <p className="text-neutral-500 text-base leading-relaxed">Before we start, the app needs to be calibrated to the current case</p>
-                  <div className="space-y-3">
+                  
+                  {/* Description with subtle background */}
+                  <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+                    <p className="text-neutral-600 text-sm leading-relaxed">
+                      Before we start, the app needs to be calibrated to the current case
+                    </p>
+                  </div>
+                  
+                  {/* Buttons with improved styling */}
+                  <div className="space-y-3 pt-2">
                     <button 
                       onClick={() => {
                         setCatchupStep(2);
                         setUseManualEntry(true);
                         setCatchupRhythm({ mins: 0, secs: 0 });
                       }} 
-                      className="w-full bg-emerald-600 text-white p-5 rounded-2xl text-lg font-bold btn-base"
+                      className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white p-5 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
                     >
                       Calibrate
                     </button>
@@ -1259,7 +1275,7 @@ export default function App() {
                       onClick={() => {
                         setState(p => ({ ...p, currentOverlay: 'tutorial' }));
                       }} 
-                      className="w-full bg-purple-600 text-white p-4 rounded-2xl text-base font-bold btn-base"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                     >
                       Tutorial
                     </button>
