@@ -4,293 +4,86 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Pause, RefreshCw, XCircle, FileText, Plus } from 'lucide-react';
 
-// Static Home Screen Component - Exact replica of actual app home screen
+// Static Home Screen Component - Exact replica using real app code
 function StaticHomeScreen() {
   return (
-    <div style={{ 
-      height: '100%',
-      width: '100%',
-      background: 'linear-gradient(to bottom, #10b981 0%, #10b981 115px, #f5f5f5 115px)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '16px',
-      maxWidth: '672px',
-      margin: '0 auto',
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
       {/* Top Controls */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr 1fr', 
-        gap: '12px',
-        marginBottom: '16px',
-        flexShrink: 0
-      }}>
-        <button style={{
-          backgroundColor: '#e5e5e5',
-          padding: '10px 16px',
-          borderRadius: '12px',
-          fontSize: '14px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          border: 'none',
-          cursor: 'default'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="6" y="4" width="4" height="16"></rect>
-            <rect x="14" y="4" width="4" height="16"></rect>
-          </svg>
-          Pause
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+          <Pause size={14} className="sm:w-4 sm:h-4" /> Pause
         </button>
-        <button style={{
-          backgroundColor: '#e5e5e5',
-          padding: '10px 16px',
-          borderRadius: '12px',
-          fontSize: '14px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          border: 'none',
-          cursor: 'default'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-          </svg>
-          Recalibrate
+        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
-        <button style={{
-          backgroundColor: '#e5e5e5',
-          padding: '10px 16px',
-          borderRadius: '12px',
-          fontSize: '14px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          border: 'none',
-          cursor: 'default'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="15" y1="9" x2="9" y2="15"></line>
-            <line x1="9" y1="9" x2="15" y2="15"></line>
-          </svg>
-          Close
+        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+          <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
         </button>
       </div>
 
       {/* Top Quick Tools */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: '12px',
-        marginBottom: '16px',
-        flexShrink: 0
-      }}>
-        <button style={{
-          padding: '24px',
-          borderRadius: '12px',
-          fontSize: '20px',
-          fontWeight: '700',
-          backgroundColor: '#dbeafe',
-          color: '#1d4ed8',
-          border: 'none',
-          cursor: 'default'
-        }}>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-blue-100 text-blue-700">
           Reversibles
         </button>
-        <button style={{
-          padding: '24px',
-          borderRadius: '12px',
-          fontSize: '20px',
-          fontWeight: '700',
-          backgroundColor: '#fed7aa',
-          color: '#c2410c',
-          border: 'none',
-          cursor: 'default'
-        }}>
+        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-orange-100 text-orange-700">
           ROSC
         </button>
-        <button style={{
-          padding: '24px',
-          borderRadius: '12px',
-          fontSize: '20px',
-          fontWeight: '700',
-          backgroundColor: '#e9d5ff',
-          color: '#7e22ce',
-          border: 'none',
-          cursor: 'default'
-        }}>
+        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-purple-100 text-purple-700">
           PHEA
         </button>
       </div>
 
       {/* Main Center Display */}
-      <div style={{
-        flex: 1,
-        backgroundColor: '#ffffff',
-        border: '4px solid #10b981',
-        borderRadius: '24px',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: 0
-      }}>
-        <div style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '16px 12px',
-          paddingTop: '16px',
-          paddingBottom: '12px',
-          position: 'relative'
-        }}>
+      <div className="flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 border-emerald-500">
+        <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
-          <div style={{
-            position: 'absolute',
-            top: '16px',
-            left: '16px',
-            right: '16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '16px'
-          }}>
-            <div style={{
-              backgroundColor: '#f5f5f5',
-              border: '1px solid #f5f5f5',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              borderRadius: '16px',
-              padding: '16px 28px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              minWidth: '140px'
-            }}>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                color: '#171717',
-                letterSpacing: '0.05em',
-                marginBottom: '6px',
-                textTransform: 'uppercase'
-              }}>Total time</span>
-              <span style={{
-                fontSize: '43px',
-                fontWeight: '700',
-                color: '#a3a3a3',
-                fontVariantNumeric: 'tabular-nums',
-                lineHeight: 1
-              }}>1:28</span>
+          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
+            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
+              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">1:28</span>
             </div>
-            <div style={{
-              backgroundColor: '#f5f5f5',
-              border: '1px solid #f5f5f5',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              borderRadius: '16px',
-              padding: '16px 28px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              minWidth: '140px'
-            }}>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                color: '#171717',
-                letterSpacing: '0.05em',
-                marginBottom: '6px',
-                textTransform: 'uppercase'
-              }}>CPR round</span>
-              <span style={{
-                fontSize: '43px',
-                fontWeight: '700',
-                color: '#a3a3a3',
-                fontVariantNumeric: 'tabular-nums',
-                lineHeight: 1
-              }}>1</span>
+            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
+              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">1</span>
             </div>
           </div>
 
-          {/* Rhythm Check Timer */}
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            paddingTop: '64px'
-          }}>
-            <div style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '320px',
-              height: '320px'
-            }}>
-              <svg style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                transform: 'rotate(-90deg)'
-              }} viewBox="0 0 300 300">
+          {/* Rhythm Check - Centered vertically and responsive size */}
+          <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
+            <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                 <circle
                   cx="150"
                   cy="150"
                   r="140"
                   fill="none"
-                  stroke="#fafafa"
+                  stroke="currentColor"
                   strokeWidth="6"
+                  className="text-neutral-50"
                 />
                 <circle
                   cx="150"
                   cy="150"
                   r="140"
                   fill="none"
-                  stroke="#10b981"
+                  stroke="currentColor"
                   strokeWidth="6"
                   strokeLinecap="round"
+                  className="text-emerald-500"
                   strokeDasharray="879.64"
                   strokeDashoffset="454.77"
+                  style={{ pathLength: 1 }}
                 />
               </svg>
               
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                zIndex: 10,
-                transform: 'translateY(16px)'
-              }}>
-                <div style={{
-                  fontSize: '120px',
-                  fontWeight: '700',
-                  fontVariantNumeric: 'tabular-nums',
-                  letterSpacing: '-0.05em',
-                  lineHeight: 1,
-                  color: '#171717'
-                }}>
+              <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
+                <div className="text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none text-neutral-900">
                   0:58
                 </div>
-                <div style={{
-                  fontSize: '18px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  fontWeight: '700',
-                  marginTop: '32px',
-                  color: '#a3a3a3'
-                }}>
+                <div className="text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 text-neutral-400">
                   Rhythm Check
                 </div>
               </div>
@@ -300,54 +93,13 @@ function StaticHomeScreen() {
       </div>
 
       {/* Bottom Main Controls */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '16px',
-        marginTop: '16px',
-        flexShrink: 0
-      }}>
-        <button style={{
-          padding: '20px',
-          borderRadius: '16px',
-          fontSize: '20px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          backgroundColor: '#10b981',
-          color: '#ffffff',
-          border: 'none',
-          cursor: 'default'
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
+        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
+          <FileText size={18} className="sm:w-6 sm:h-6" />
           Summary
         </button>
-        <button style={{
-          padding: '20px',
-          borderRadius: '16px',
-          fontSize: '20px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          backgroundColor: '#10b981',
-          color: '#ffffff',
-          border: 'none',
-          cursor: 'default'
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
+          <Plus size={18} className="sm:w-6 sm:h-6" />
           Add Tx
         </button>
       </div>
