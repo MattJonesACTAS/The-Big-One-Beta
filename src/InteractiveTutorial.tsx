@@ -278,46 +278,70 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       zIndex: 9999,
       overflowY: 'auto',
     }}>
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '400px',
-        backgroundColor: '#000',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-      }}>
-        {/* Exit button for testing */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            zIndex: 10001,
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            color: '#fff',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '20px',
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          ×
-        </button>
+      {/* Render static component for home1 at full height, otherwise show screenshot in container */}
+      {currentScreen === 'home1' ? (
+        <>
+          <StaticHomeScreen />
+          {/* Exit button overlay for static screens */}
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              zIndex: 10001,
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              color: '#fff',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ×
+          </button>
+        </>
+      ) : (
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '400px',
+          backgroundColor: '#000',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        }}>
+          {/* Exit button for testing */}
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              zIndex: 10001,
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              color: '#fff',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ×
+          </button>
 
-        {/* Render static component for home1, otherwise show screenshot */}
-        {currentScreen === 'home1' ? (
-          <div style={{ aspectRatio: '9 / 19.5', width: '100%' }}>
-            <StaticHomeScreen />
-          </div>
-        ) : (
           <img
             src={currentScreenData.image}
             alt={currentScreenData.title}
@@ -327,7 +351,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
               display: 'block',
             }}
           />
-        )}
+        </div>
+      )}
 
         {/* Intro message boxes for intro1 and intro2 screens */}
         {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
