@@ -5,13 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 
-// Static Home Screen Component - Replica of actual app home screen
+// Static Home Screen Component - Exact replica of actual app home screen
 function StaticHomeScreen() {
   return (
     <div style={{ 
       height: '100%',
       width: '100%',
-      backgroundColor: '#f5f5f5',
+      background: 'linear-gradient(to bottom, #10b981 0%, #10b981 115px, #f5f5f5 115px)',
       display: 'flex',
       flexDirection: 'column',
       padding: '16px',
@@ -30,47 +30,60 @@ function StaticHomeScreen() {
       }}>
         <button style={{
           backgroundColor: '#e5e5e5',
-          padding: '16px',
+          padding: '10px 16px',
           borderRadius: '12px',
           fontSize: '14px',
           fontWeight: '700',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px',
+          gap: '6px',
           border: 'none',
           cursor: 'default'
         }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
           Pause
         </button>
         <button style={{
           backgroundColor: '#e5e5e5',
-          padding: '16px',
+          padding: '10px 16px',
           borderRadius: '12px',
           fontSize: '14px',
           fontWeight: '700',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px',
+          gap: '6px',
           border: 'none',
           cursor: 'default'
         }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
           Recalibrate
         </button>
         <button style={{
           backgroundColor: '#e5e5e5',
-          padding: '16px',
+          padding: '10px 16px',
           borderRadius: '12px',
           fontSize: '14px',
           fontWeight: '700',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px',
+          gap: '6px',
           border: 'none',
           cursor: 'default'
         }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
           Close
         </button>
       </div>
@@ -156,7 +169,7 @@ function StaticHomeScreen() {
               border: '1px solid #f5f5f5',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               borderRadius: '16px',
-              padding: '28px 32px',
+              padding: '16px 28px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -166,8 +179,8 @@ function StaticHomeScreen() {
                 fontSize: '12px',
                 fontWeight: '700',
                 color: '#171717',
-                letterSpacing: '0.1em',
-                marginBottom: '12px',
+                letterSpacing: '0.05em',
+                marginBottom: '6px',
                 textTransform: 'uppercase'
               }}>Total time</span>
               <span style={{
@@ -183,7 +196,7 @@ function StaticHomeScreen() {
               border: '1px solid #f5f5f5',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               borderRadius: '16px',
-              padding: '28px 32px',
+              padding: '16px 28px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -193,8 +206,8 @@ function StaticHomeScreen() {
                 fontSize: '12px',
                 fontWeight: '700',
                 color: '#171717',
-                letterSpacing: '0.1em',
-                marginBottom: '12px',
+                letterSpacing: '0.05em',
+                marginBottom: '6px',
                 textTransform: 'uppercase'
               }}>CPR round</span>
               <span style={{
@@ -308,6 +321,13 @@ function StaticHomeScreen() {
           border: 'none',
           cursor: 'default'
         }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
           Summary
         </button>
         <button style={{
@@ -324,7 +344,11 @@ function StaticHomeScreen() {
           border: 'none',
           cursor: 'default'
         }}>
-          + Add Tx
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Tx
         </button>
       </div>
     </div>
