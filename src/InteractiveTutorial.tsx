@@ -413,95 +413,95 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </div>
       )}
 
-        {currentScreenData.elements.map((element) => {
-          const isExplored = exploredElements.has(element.id);
-          if (isExplored) return null;
-          
-          // Progressive reveal: only show the next node in sequence
-          const exploredNumbers = currentScreenData.elements
-            .filter(el => exploredElements.has(el.id))
-            .map(el => el.number);
-          const nextNumber = exploredNumbers.length > 0 
-            ? Math.max(...exploredNumbers) + 1 
-            : 1;
-          
-          // Only render this node if it's the next in sequence
-          if (element.number !== nextNumber) return null;
-          
-          return (
-            <div
-              key={element.id}
-              onClick={() => handleElementClick(element)}
-              style={{
-                position: 'absolute',
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: '43px',
-                height: '43px',
-                transform: 'translate(-50%, -50%)',
-                cursor: 'pointer',
-                zIndex: 10,
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '100%',
-                height: '100%',
-                transform: 'translate(-50%, -50%)',
-                borderRadius: '50%',
-                border: '2px solid #10b981',
-                animation: 'ripple 2s infinite',
-                opacity: 0.6,
-              }} />
-              
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '26px',
-                height: '26px',
-                transform: 'translate(-50%, -50%)',
-                borderRadius: '50%',
-                backgroundColor: '#fff',
-                border: '3px solid #10b981',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '15px',
-                fontWeight: '700',
-                color: '#10b981',
-              }}>
-                {element.number}
-              </div>
+      {currentScreenData.elements.map((element) => {
+        const isExplored = exploredElements.has(element.id);
+        if (isExplored) return null;
+        
+        // Progressive reveal: only show the next node in sequence
+        const exploredNumbers = currentScreenData.elements
+          .filter(el => exploredElements.has(el.id))
+          .map(el => el.number);
+        const nextNumber = exploredNumbers.length > 0 
+          ? Math.max(...exploredNumbers) + 1 
+          : 1;
+        
+        // Only render this node if it's the next in sequence
+        if (element.number !== nextNumber) return null;
+        
+        return (
+          <div
+            key={element.id}
+            onClick={() => handleElementClick(element)}
+            style={{
+              position: 'absolute',
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              width: '43px',
+              height: '43px',
+              transform: 'translate(-50%, -50%)',
+              cursor: 'pointer',
+              zIndex: 10,
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '100%',
+              height: '100%',
+              transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              border: '2px solid #10b981',
+              animation: 'ripple 2s infinite',
+              opacity: 0.6,
+            }} />
+            
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '26px',
+              height: '26px',
+              transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              backgroundColor: '#fff',
+              border: '3px solid #10b981',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '15px',
+              fontWeight: '700',
+              color: '#10b981',
+            }}>
+              {element.number}
             </div>
-          );
-        })}
+          </div>
+        );
+      })}
 
-        <style>{`
-          @keyframes ripple {
-            0% {
-              transform: translate(-50%, -50%) scale(1);
-              opacity: 0.6;
-            }
-            100% {
-              transform: translate(-50%, -50%) scale(1.8);
-              opacity: 0;
-            }
+      <style>{`
+        @keyframes ripple {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0.6;
           }
-          @keyframes buttonPulse {
-            0%, 100% {
-              transform: translateX(-50%) scale(1);
-              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-            }
-            50% {
-              transform: translateX(-50%) scale(1.05);
-              box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-            }
+          100% {
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0;
           }
-        `}</style>
+        }
+        @keyframes buttonPulse {
+          0%, 100% {
+            transform: translateX(-50%) scale(1);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          }
+          50% {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+          }
+        }
+      `}</style>
       </div>
 
       {/* Next button - centered bottom with pulsing animation (for non-intro screens) */}
