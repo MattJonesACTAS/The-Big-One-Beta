@@ -353,65 +353,65 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </div>
       )}
 
-        {/* Intro message boxes for intro1 and intro2 screens */}
-        {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
+      {/* Intro message boxes for intro1 and intro2 screens */}
+      {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          zIndex: 10000,
+        }}>
           <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            zIndex: 10000,
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '320px',
+            width: '85%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
             <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '16px',
-              padding: '24px',
-              maxWidth: '320px',
-              width: '85%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              color: '#1a1a1a',
+              fontSize: '16px',
+              lineHeight: '1.6',
+              textAlign: 'center',
+              marginBottom: '20px',
             }}>
-              <div style={{
-                color: '#1a1a1a',
-                fontSize: '16px',
-                lineHeight: '1.6',
-                textAlign: 'center',
-                marginBottom: '20px',
-              }}>
-                {currentScreen === 'intro1' && 
-                  "The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything."
-                }
-                {currentScreen === 'intro2' && 
-                  "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
-                }
-              </div>
-              
-              {/* Next button at bottom of box */}
-              <button
-                onClick={handleNext}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#10b981',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                }}
-              >
-                Next
-              </button>
+              {currentScreen === 'intro1' && 
+                "The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything."
+              }
+              {currentScreen === 'intro2' && 
+                "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
+              }
             </div>
+            
+            {/* Next button at bottom of box */}
+            <button
+              onClick={handleNext}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#10b981',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              Next
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
         {currentScreenData.elements.map((element) => {
           const isExplored = exploredElements.has(element.id);
