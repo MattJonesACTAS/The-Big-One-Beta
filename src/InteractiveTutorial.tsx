@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Pause, RefreshCw, XCircle, FileText, Plus } from 'lucide-react';
+import { Pause, RefreshCw, XCircle, FileText, Plus, Trash2, ChevronDown } from 'lucide-react';
 
 // Static Home Screen Component - Exact replica using real app code
 function StaticHomeScreen() {
@@ -107,72 +107,128 @@ function StaticHomeScreen() {
   );
 }
 
-// Static Add Tx Menu Component
+// Static Add Tx Menu Component - Extracted from App.tsx TreatmentSelection
 function StaticAddTxMenu() {
-  const categories = [
-    { name: 'Rhythm Check', items: ['Defib', 'Rhythm'], color: 'bg-red-50' },
-    { name: 'Medications', items: ['Adrenaline', 'Amiodarone', 'Atropine', 'Calcium', 'Glucose 10%', 'Magnesium', 'Midazolam', 'Morphine', 'Sodium Bicarbonate', 'TXA'], color: 'bg-emerald-50' },
-    { name: 'Airway', items: ['Airway', 'Intubation', 'SGA'], color: 'bg-blue-50' },
-    { name: 'Access', items: ['IV', 'IO', 'Art line'], color: 'bg-purple-50' },
-    { name: 'Other', items: ['Custom'], color: 'bg-neutral-50' },
-  ];
-
   return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white flex flex-col overflow-y-auto">
-      {categories.map((category) => (
-        <div key={category.name}>
-          <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-neutral-100 text-neutral-800 border-neutral-200">
-            {category.name}
-          </div>
-          <div className={`grid grid-cols-2 gap-3 p-4 ${category.color}`}>
-            {category.items.map((item) => (
-              <button
-                key={item}
-                className="p-4 rounded-xl font-bold text-lg bg-white shadow-sm border border-neutral-200 text-neutral-700"
-              >
-                {item}
-              </button>
-            ))}
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto pb-4">
+      {/* Rhythm Check Section */}
+      <div>
+        <div className="flex items-center justify-between p-4 font-bold bg-rose-50 text-rose-800 border-rose-100">
+          <span>Rhythm Check</span>
+          <ChevronDown className="transition-transform duration-300" />
+        </div>
+        <div className="overflow-hidden bg-white">
+          <div className="p-3 grid grid-cols-2 gap-2">
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-red-600">Defib</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Rhythm</button>
           </div>
         </div>
-      ))}
+      </div>
+
+      {/* Medications Section */}
+      <div>
+        <div className="flex items-center justify-between p-4 font-bold bg-emerald-50 text-emerald-800 border-emerald-100">
+          <span>Medications</span>
+          <ChevronDown className="transition-transform duration-300" />
+        </div>
+        <div className="overflow-hidden bg-white">
+          <div className="p-3 grid grid-cols-2 gap-2">
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Adrenaline</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Amiodarone</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Atropine</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Calcium</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Glucose 10%</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Magnesium</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Midazolam</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Morphine</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Sodium Bicarbonate</button>
+            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">TXA</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Airway Section */}
+      <div>
+        <div className="flex items-center justify-between p-4 font-bold bg-blue-50 text-blue-800 border-blue-100">
+          <span>Airway</span>
+          <ChevronDown className="transition-transform duration-300 -rotate-90" />
+        </div>
+      </div>
+
+      {/* Other Tx Section */}
+      <div>
+        <div className="flex items-center justify-between p-4 font-bold bg-neutral-100 text-neutral-800 border-neutral-200">
+          <span>Other Tx</span>
+          <ChevronDown className="transition-transform duration-300 -rotate-90" />
+        </div>
+      </div>
+
+      {/* Custom Treatment Input */}
+      <div className="p-6 border-t border-neutral-100 bg-neutral-50 px-2 sm:px-6 mb-4">
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            placeholder="Custom treatment..."
+            className="flex-1 bg-white border border-neutral-200 rounded-xl p-4 text-base"
+            disabled
+          />
+          <button className="bg-emerald-600 text-white px-6 rounded-xl font-bold">
+            Add
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-// Static Adrenaline Dosing Component
+// Static Adrenaline Dosing Component - Extracted from App.tsx medication dose selection
 function StaticAdrenalineDose() {
-  const doses = [
-    { label: '1mg (Adult cardiac arrest)', value: '1mg' },
-    { label: '10mcg/kg (Paediatric cardiac arrest)', value: '10mcg/kg' },
-    { label: '0.01mg/kg (Anaphylaxis)', value: '0.01mg/kg' },
-    { label: 'Other', value: 'Other' },
-  ];
-
   return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-        <div className="text-2xl font-bold text-neutral-900">Adrenaline</div>
-        <div className="text-sm text-neutral-600 mt-1">Select dose</div>
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto pb-4">
+      <div className="p-6 mb-4">
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2">Adrenaline push</h2>
+        <p className="text-neutral-500 text-sm mb-2">Patient weight: 100kg</p>
+        <p className="text-neutral-500 text-sm mb-6">Patient type: adult</p>
+        
+        <div className="space-y-3">
+          <button className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold flex flex-col items-start gap-1">
+            <span className="text-[10px] font-normal uppercase tracking-wide">CARDIAC ARREST</span>
+            <span className="text-lg">1mg</span>
+          </button>
+          
+          <div className="w-full flex gap-2 items-center">
+            <div className="flex-1 relative flex items-center bg-white border border-neutral-200 rounded-xl min-w-0">
+              <input
+                type="text"
+                placeholder="Custom dose (mg)..."
+                className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
+                disabled
+              />
+              <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">mg</span>
+            </div>
+            <button className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       
-      {/* Dose options */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {doses.map((dose) => (
-          <button
-            key={dose.value}
-            className="w-full p-5 rounded-xl font-semibold text-lg bg-emerald-50 border-2 border-emerald-200 text-emerald-900 text-left"
-          >
-            {dose.label}
-          </button>
-        ))}
+      <div className="p-6 pt-0">
+        <button className="text-emerald-600 font-bold flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          Back
+        </button>
       </div>
     </div>
   );
 }
 
-// Static Home With Alerts Component
+// Static Home With Alerts Component - matches tutorial requirements
 function StaticHomeWithAlerts() {
   return (
     <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative">
@@ -231,11 +287,11 @@ function StaticHomeWithAlerts() {
             </div>
           </div>
 
-          {/* Alert Banners at bottom */}
+          {/* Alert Banners at bottom - NEW FORMAT */}
           <div className="absolute bottom-3 left-3 right-3 space-y-2">
-            <div className="bg-amber-100 border-2 border-amber-500 rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-amber-100 border-2 border-amber-400 rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                 <span className="font-bold text-amber-900 text-sm">Adrenaline due</span>
               </div>
               <span className="text-amber-700 text-xs font-semibold">Next: 4:14</span>
@@ -259,109 +315,169 @@ function StaticHomeWithAlerts() {
   );
 }
 
-// Static Summary Component
+// Static Summary Component - Extracted from SummaryOverlay in App.tsx
 function StaticSummary() {
   return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white flex flex-col overflow-y-auto">
-      {/* Medication Summary */}
-      <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-emerald-50 text-emerald-800 border-emerald-200">
-        Medication Summary
-      </div>
-      <div className="p-4 bg-emerald-50 space-y-3">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-200">
-          <div className="font-bold text-lg text-emerald-900">Adrenaline</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">2mg total</div>
-          <div className="text-sm text-neutral-600 mt-1">2 doses given</div>
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto pb-20">
+      {/* Arrest Summary */}
+      <div className="mb-6">
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">ARREST SUMMARY</div>
+        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">CPR Rounds</span>
+            <span className="text-[16px] font-black tabular-nums text-neutral-900">1</span>
+          </div>
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Shocks given</span>
+            <span className="text-[16px] font-black tabular-nums text-red-600">0</span>
+          </div>
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Disarmed</span>
+            <span className="text-[16px] font-black tabular-nums text-blue-600">0</span>
+          </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-200">
-          <div className="font-bold text-lg text-emerald-900">Amiodarone</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">300mg total</div>
-          <div className="text-sm text-neutral-600 mt-1">1 dose given</div>
+      </div>
+
+      {/* Pharma Summary */}
+      <div className="mb-6">
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">PHARMA SUMMARY</div>
+        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Adrenaline push</span>
+            <span className="text-[16px] font-black tabular-nums text-neutral-900">0.1mg (1)</span>
+          </div>
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Amiodarone</span>
+            <span className="text-[16px] font-black tabular-nums text-neutral-900">50mg (1)</span>
+          </div>
         </div>
       </div>
 
       {/* Treatment Log */}
-      <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-neutral-100 text-neutral-800 border-neutral-200">
-        Treatment Log
-      </div>
-      <div className="p-4 space-y-2">
-        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
-          <div className="flex justify-between items-start">
-            <div className="font-semibold text-neutral-900">Adrenaline 1mg</div>
-            <div className="text-xs text-neutral-500">2 min ago</div>
+      <div>
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
+        <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
+          <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] bg-neutral-100 border-b border-neutral-200 px-4 py-3">
+            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
+            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
+            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>
+            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>
           </div>
-          <div className="text-sm text-neutral-600 mt-1">14:42 (3:14 elapsed)</div>
-        </div>
-        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
-          <div className="flex justify-between items-start">
-            <div className="font-semibold text-neutral-900">Amiodarone 300mg</div>
-            <div className="text-xs text-neutral-500">3 min ago</div>
+          
+          <div className="divide-y divide-neutral-100">
+            <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] px-4 py-4 items-center gap-1">
+              <div className="pr-1">
+                <div className="text-[15px] font-bold text-neutral-900">Adrenaline 1mg</div>
+              </div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">14:42</div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(3:14 elapsed)</div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">2 min ago</div>
+            </div>
+            <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] px-4 py-4 items-center gap-1">
+              <div className="pr-1">
+                <div className="text-[15px] font-bold text-neutral-900">Amiodarone 300mg</div>
+              </div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">14:41</div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(3:13 elapsed)</div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">3 min ago</div>
+            </div>
+            <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] px-4 py-4 items-center gap-1">
+              <div className="pr-1">
+                <div className="text-[15px] font-bold text-neutral-900">Adrenaline 1mg</div>
+              </div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">14:40</div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(3:12 elapsed)</div>
+              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">4 min ago</div>
+            </div>
           </div>
-          <div className="text-sm text-neutral-600 mt-1">14:41 (3:13 elapsed)</div>
-        </div>
-        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
-          <div className="flex justify-between items-start">
-            <div className="font-semibold text-neutral-900">Adrenaline 1mg</div>
-            <div className="text-xs text-neutral-500">4 min ago</div>
-          </div>
-          <div className="text-sm text-neutral-600 mt-1">14:40 (3:12 elapsed)</div>
         </div>
       </div>
     </div>
   );
 }
 
-// Static Case Summary Component  
+// Static Case Summary Component - Extracted from closed case view in App.tsx  
 function StaticCaseSummary() {
   return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white flex flex-col overflow-y-auto">
-      {/* Header with action buttons */}
-      <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-        <div className="text-2xl font-bold text-neutral-900 mb-4">Case Summary</div>
-        <div className="grid grid-cols-2 gap-3">
-          <button className="p-3 rounded-xl font-bold text-sm bg-blue-600 text-white flex items-center justify-center gap-2">
-            <FileText size={16} />
-            Export PDF
-          </button>
-          <button className="p-3 rounded-xl font-bold text-sm bg-red-600 text-white flex items-center justify-center gap-2">
-            <XCircle size={16} />
-            Delete Case
-          </button>
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto p-6 max-w-2xl mx-auto space-y-6 pb-24">
+      <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <button className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold border border-emerald-100">
+          <FileText size={20} /> Export PDF
+        </button>
+        <button className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold border border-red-100">
+          <Trash2 size={20} /> Delete Case
+        </button>
+      </div>
+
+      {/* Arrest Summary */}
+      <div>
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">ARREST SUMMARY</div>
+        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">CPR Rounds</span>
+            <span className="text-[16px] font-black tabular-nums text-neutral-900">1</span>
+          </div>
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Shocks given</span>
+            <span className="text-[16px] font-black tabular-nums text-red-600">0</span>
+          </div>
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Disarmed</span>
+            <span className="text-[16px] font-black tabular-nums text-blue-600">0</span>
+          </div>
         </div>
       </div>
 
-      {/* Case Stats */}
-      <div className="p-4 bg-neutral-50 space-y-3">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-neutral-600">Total Duration</div>
-          <div className="text-3xl font-bold text-neutral-900 mt-1">18:42</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-neutral-600">CPR Rounds</div>
-          <div className="text-3xl font-bold text-neutral-900 mt-1">9</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-neutral-600">Outcome</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">ROSC</div>
+      {/* Pharma Summary */}
+      <div>
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">PHARMA SUMMARY</div>
+        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Adrenaline push</span>
+            <span className="text-[16px] font-black tabular-nums text-neutral-900">0.1mg (1)</span>
+          </div>
+          <div className="flex justify-between items-center p-2 px-3">
+            <span className="text-neutral-500 text-[16px] font-medium">Amiodarone</span>
+            <span className="text-[16px] font-black tabular-nums text-neutral-900">50mg (1)</span>
+          </div>
         </div>
       </div>
 
       {/* Final Treatment Log */}
-      <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-neutral-100 text-neutral-800 border-neutral-200">
-        Final Treatment Log
-      </div>
-      <div className="p-4 space-y-2">
-        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
-          <div className="font-semibold text-neutral-900">ROSC</div>
-          <div className="text-sm text-neutral-600 mt-1">14:18:42 (18:42 elapsed)</div>
+      <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">FINAL TREATMENT LOG</div>
+      <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
+        <div className="grid grid-cols-[2fr_1fr_1fr] bg-neutral-100 border-b border-neutral-200 px-4 py-3">
+          <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
+          <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
+          <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>
         </div>
-        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
-          <div className="font-semibold text-neutral-900">Adrenaline 1mg</div>
-          <div className="text-sm text-neutral-600 mt-1">14:16:14 (16:14 elapsed)</div>
-        </div>
-        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
-          <div className="font-semibold text-neutral-900">Amiodarone 300mg</div>
-          <div className="text-sm text-neutral-600 mt-1">14:08:41 (08:41 elapsed)</div>
+        
+        <div className="divide-y divide-neutral-100">
+          <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-4 items-center gap-1">
+            <div className="pr-1">
+              <div className="text-[15px] font-bold text-neutral-900">Close case</div>
+            </div>
+            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">08:09:01</div>
+            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(00:00:29 elapsed)</div>
+          </div>
+          <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-4 items-center gap-1">
+            <div className="pr-1">
+              <div className="text-[15px] font-bold text-neutral-900">Amiodarone</div>
+              <div className="text-[13px] text-neutral-500 font-medium mt-0.5">50mg</div>
+            </div>
+            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">08:08:42</div>
+            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(00:00:10 elapsed)</div>
+          </div>
+          <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-4 items-center gap-1">
+            <div className="pr-1">
+              <div className="text-[15px] font-bold text-neutral-900">Adrenaline push</div>
+              <div className="text-[13px] text-neutral-500 font-medium mt-0.5">0.1mg</div>
+            </div>
+            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">08:08:37</div>
+            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(00:00:05 elapsed)</div>
+          </div>
         </div>
       </div>
     </div>
