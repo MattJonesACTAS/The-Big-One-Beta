@@ -504,37 +504,24 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       `}</style>
 
       {/* Next button - centered bottom with pulsing animation (for non-intro screens) */}
-      {/* Special case for home1: show exact replica of Add Tx button */}
+      {/* Special case for home1: transparent overlay on Add Tx button */}
       {allExplored && currentScreenData.nextScreen && currentScreen === 'home1' && (
         <button
           onClick={handleNext}
           style={{
             position: 'absolute',
-            bottom: 'calc(3.5% + 5px)',
-            right: 'calc(5% + 15px)',
-            width: '41.8%',
-            padding: '14.4px 20px',
-            backgroundColor: '#10b981',
-            color: '#fff',
-            border: 'none',
+            bottom: '16px',
+            right: '16px',
+            width: 'calc((100% - 32px - 16px) / 2)',
+            height: '60px',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            border: '2px solid #10b981',
             borderRadius: '16px',
-            fontSize: '18px',
-            fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
-            animation: 'buttonPulse 2s infinite',
+            zIndex: 10001,
           }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Add Tx
-        </button>
+          aria-label="Continue to Add Treatment screen"
+        />
       )}
       
       {/* Special case for home2_summary: show exact replica of Summary button */}
