@@ -504,7 +504,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       `}</style>
 
       {/* Next button - centered bottom with pulsing animation (for non-intro screens) */}
-      {/* Special case for home1: transparent overlay on Add Tx button */}
+      {/* Special case for home1: visible pulsing Add Tx button */}
       {allExplored && currentScreenData.nextScreen && currentScreen === 'home1' && (
         <button
           onClick={handleNext}
@@ -515,14 +515,29 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             right: '16px',
             width: 'calc((100% - 32px - 12px) / 2)',
             height: '52px',
-            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-            border: '2px solid #10b981',
+            backgroundColor: '#10b981',
+            color: '#ffffff',
+            border: 'none',
             borderRadius: '16px',
+            fontSize: '18px',
+            fontWeight: '700',
             cursor: 'pointer',
             zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            animation: 'buttonPulse 2s infinite',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
           }}
           aria-label="Continue to Add Treatment screen"
-        />
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Tx
+        </button>
       )}
       {allExplored && currentScreenData.nextScreen && currentScreen === 'home1' && (
         <button
@@ -534,14 +549,29 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             right: '16px',
             width: 'calc((100% - 32px - 16px) / 2)',
             height: '68px',
-            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-            border: '2px solid #10b981',
+            backgroundColor: '#10b981',
+            color: '#ffffff',
+            border: 'none',
             borderRadius: '16px',
+            fontSize: '20px',
+            fontWeight: '700',
             cursor: 'pointer',
             zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            animation: 'buttonPulse 2s infinite',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
           }}
           aria-label="Continue to Add Treatment screen"
-        />
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Tx
+        </button>
       )}
       
       {/* Special case for home2_summary: show exact replica of Summary button */}
