@@ -508,13 +508,33 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       {allExplored && currentScreenData.nextScreen && currentScreen === 'home1' && (
         <button
           onClick={handleNext}
+          className="sm:hidden"
           style={{
             position: 'absolute',
-            bottom: '16px',
+            bottom: '14px',
+            right: '16px',
+            width: 'calc((100% - 32px - 12px) / 2)',
+            height: '52px',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            border: '2px solid #10b981',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            zIndex: 10001,
+          }}
+          aria-label="Continue to Add Treatment screen"
+        />
+      )}
+      {allExplored && currentScreenData.nextScreen && currentScreen === 'home1' && (
+        <button
+          onClick={handleNext}
+          className="hidden sm:block"
+          style={{
+            position: 'absolute',
+            bottom: '14px',
             right: '16px',
             width: 'calc((100% - 32px - 16px) / 2)',
-            height: '60px',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            height: '68px',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
             border: '2px solid #10b981',
             borderRadius: '16px',
             cursor: 'pointer',
