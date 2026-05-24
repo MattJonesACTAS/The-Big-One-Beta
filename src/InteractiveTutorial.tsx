@@ -502,7 +502,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
           }
         }
       `}</style>
-      </div>
 
       {/* Next button - centered bottom with pulsing animation (for non-intro screens) */}
       {/* Special case for home1: show exact replica of Add Tx button */}
