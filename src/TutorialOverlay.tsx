@@ -27,64 +27,64 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state) => state.running && !state.currentOverlay,
     initialMessage: {
       title: 'Welcome to The Big One',
-      description: 'This tutorial will walk you through the key features. Click each numbered circle as it appears.'
+      description: 'This tutorial will guide you through the key features of the cardiac arrest timer. Click each numbered circle as it appears to learn more.'
     },
     nodes: [
       {
         id: 'total_time',
-        x: 20,
-        y: 15,
+        x: 15,
+        y: 12,
         number: 1,
-        title: 'Total Time',
-        description: 'This shows the total elapsed time since the arrest started.'
+        title: 'Total Elapsed Time',
+        description: 'Shows the total time elapsed since the cardiac arrest began. This helps you track overall case duration.'
       },
       {
         id: 'cpr_round',
-        x: 80,
-        y: 15,
+        x: 85,
+        y: 12,
         number: 2,
-        title: 'CPR Round',
-        description: 'This displays which round of CPR you\'re currently in. It increments each time you shock or disarm.'
+        title: 'CPR Round Counter',
+        description: 'Displays which round of CPR you\'re currently in. This increments each time you deliver a shock or disarm the defibrillator.'
       },
       {
         id: 'rhythm_check',
         x: 50,
-        y: 40,
+        y: 45,
         number: 3,
-        title: 'Rhythm Check Timer',
-        description: 'This is your rhythm check countdown. It counts down from 2 minutes and reminds you when to pause CPR and check for a shockable rhythm.'
+        title: 'Rhythm Check Countdown',
+        description: 'The central timer counts down from 2 minutes to remind you when to pause CPR and check the rhythm. It turns red in the final 10 seconds and beeps to alert you.'
       },
       {
         id: 'reversibles',
-        x: 16,
-        y: 65,
+        x: 17,
+        y: 70,
         number: 4,
-        title: 'Reversibles',
-        description: 'Quick access to the reversible causes checklist (4Hs and 4Ts).'
+        title: 'Reversibles Checklist',
+        description: 'Quick access to the reversible causes of cardiac arrest - the 4 Hs and 4 Ts. Use this to systematically consider and treat reversible causes.'
       },
       {
         id: 'rosc',
         x: 50,
-        y: 65,
+        y: 70,
         number: 5,
-        title: 'ROSC',
-        description: 'Return of Spontaneous Circulation checklist - use this when you get ROSC.'
+        title: 'ROSC Checklist',
+        description: 'Return of Spontaneous Circulation checklist. Use this when you achieve ROSC to ensure proper post-resuscitation care.'
       },
       {
         id: 'phea',
-        x: 84,
-        y: 65,
+        x: 83,
+        y: 70,
         number: 6,
-        title: 'PHEA',
-        description: 'Pulseless Electrical Activity checklist for managing PEA arrests.'
+        title: 'PHEA Checklist',
+        description: 'Pulseless Electrical Activity checklist. Use this for managing PEA arrests with specific considerations for this rhythm.'
       },
       {
         id: 'add_tx',
         x: 75,
-        y: 90,
+        y: 92,
         number: 7,
-        title: 'Add Treatment',
-        description: 'Tap this button to log treatments and interventions during the arrest.'
+        title: 'Add Treatment Button',
+        description: 'Tap this button to log treatments, medications, and interventions during the arrest. Try tapping it now to continue the tutorial.'
       }
     ]
   },
@@ -92,12 +92,12 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state) => state.currentOverlay === 'treatment',
     nodes: [
       {
-        id: 'medications',
+        id: 'treatment_menu',
         x: 50,
-        y: 35,
+        y: 30,
         number: 1,
-        title: 'Medications',
-        description: 'Tap "Medications" then select "Adrenaline push" to see how medication logging works.'
+        title: 'Treatment Categories',
+        description: 'The treatment menu organizes interventions into categories. Tap "Medications" to expand it, then select "Adrenaline push" to see how medication logging works.'
       }
     ]
   }
@@ -125,7 +125,7 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
     if (matchedScreenIndex !== currentScreenId) {
       setCurrentScreenId(matchedScreenIndex);
       setActiveNode(null);
-      setCurrentNodeIndex(0); // Reset to first node on screen change
+      setCurrentNodeIndex(0);
       
       const screen = TUTORIAL_SCREENS[matchedScreenIndex];
       if (screen?.initialMessage) {
@@ -138,7 +138,6 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
   useEffect(() => {
     const currentOverlay = appState.currentOverlay;
     
-    // If overlay changed to reversibles, rosc, or phea - restart tutorial
     if (currentOverlay !== previousOverlay) {
       if (currentOverlay === 'reversibles' || currentOverlay === 'rosc' || currentOverlay === 'phea') {
         onRestart();
@@ -160,7 +159,6 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
 
   const handleDismissNode = () => {
     setActiveNode(null);
-    // Move to next node
     if (currentNodeIndex < currentScreen.nodes.length - 1) {
       setCurrentNodeIndex(prev => prev + 1);
     }
