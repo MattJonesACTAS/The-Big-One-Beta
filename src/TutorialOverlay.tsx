@@ -31,60 +31,60 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     },
     nodes: [
       {
-        id: 'total_time',
-        x: 15,
-        y: 12,
+        id: 'totalTime',
+        x: 19.8,
+        y: 22,
         number: 1,
-        title: 'Total Elapsed Time',
-        description: 'Shows the total time elapsed since the cardiac arrest began. This helps you track overall case duration.'
+        title: 'Total Time',
+        description: 'Total time the monitor has been turned on'
       },
       {
-        id: 'cpr_round',
-        x: 85,
-        y: 12,
+        id: 'cprRound',
+        x: 80.2,
+        y: 22,
         number: 2,
-        title: 'CPR Round Counter',
-        description: 'Displays which round of CPR you\'re currently in. This increments each time you deliver a shock or disarm the defibrillator.'
+        title: 'CPR Round',
+        description: 'The current round of CPR'
       },
       {
-        id: 'rhythm_check',
+        id: 'timer',
         x: 50,
-        y: 45,
+        y: 52,
         number: 3,
-        title: 'Rhythm Check Countdown',
-        description: 'The central timer counts down from 2 minutes to remind you when to pause CPR and check the rhythm. It turns red in the final 10 seconds and beeps to alert you.'
+        title: 'Rhythm Check Timer',
+        description: 'The countdown to the next rhythm check. When the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00.'
       },
       {
-        id: 'reversibles',
-        x: 17,
-        y: 70,
+        id: 'pause',
+        x: 19.0,
+        y: 4.2,
         number: 4,
-        title: 'Reversibles Checklist',
-        description: 'Quick access to the reversible causes of cardiac arrest - the 4 Hs and 4 Ts. Use this to systematically consider and treat reversible causes.'
+        title: 'Pause Button',
+        description: 'Pause and resume the rhythm check timer'
       },
       {
-        id: 'rosc',
-        x: 50,
-        y: 70,
+        id: 'recalibrate',
+        x: 51.0,
+        y: 4.2,
         number: 5,
-        title: 'ROSC Checklist',
-        description: 'Return of Spontaneous Circulation checklist. Use this when you achieve ROSC to ensure proper post-resuscitation care.'
+        title: 'Recalibrate Button',
+        description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.'
       },
       {
-        id: 'phea',
-        x: 83,
-        y: 70,
+        id: 'tabs',
+        x: 50,
+        y: 10.75,
         number: 6,
-        title: 'PHEA Checklist',
-        description: 'Pulseless Electrical Activity checklist. Use this for managing PEA arrests with specific considerations for this rhythm.'
+        title: 'Checklists',
+        description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)'
       },
       {
-        id: 'add_tx',
+        id: 'addTxBtn',
         x: 75,
-        y: 92,
+        y: 95.4,
         number: 7,
         title: 'Add Treatment Button',
-        description: 'Tap this button to log treatments, medications, and interventions during the arrest. Try tapping it now to continue the tutorial.'
+        description: 'Tap here to log treatments and interventions during the arrest'
       }
     ]
   },
@@ -92,12 +92,12 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state) => state.currentOverlay === 'treatment',
     nodes: [
       {
-        id: 'treatment_menu',
+        id: 'addTxSubmenu',
         x: 50,
-        y: 30,
+        y: 45.9,
         number: 1,
-        title: 'Treatment Categories',
-        description: 'The treatment menu organizes interventions into categories. Tap "Medications" to expand it, then select "Adrenaline push" to see how medication logging works.'
+        title: 'Add Tx submenu',
+        description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log'
       }
     ]
   }
