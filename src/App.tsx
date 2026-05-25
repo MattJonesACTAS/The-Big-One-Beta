@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
 import InteractiveTutorial from './InteractiveTutorial';
+import TutorialOverlay from './TutorialOverlay';
 
 // --- Constants ---
 const INITIAL_STATE: AppState = {
@@ -316,6 +317,9 @@ export default function App() {
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt10 = useRef<boolean>(false);
   const previousCountdown = useRef<number | null>(null);
+  
+  // Tutorial mode state
+  const [tutorialMode, setTutorialMode] = useState(false);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -1092,9 +1096,17 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* Tutorial Overlay */}
-          {state.currentOverlay === 'tutorial' && (
-            <InteractiveTutorial onClose={() => setState(p => ({ ...p, currentOverlay: null }))} />
+          {/* Tutorial Overlay - renders on top of real app */}
+          {tutorialMode && (
+            <TutorialOverlay
+              appState={state}
+              onExit={() => {
+                // Exit tutorial mode
+                setTutorialMode(false);
+                setState(INITIAL_STATE);
+                setShowCatchup(true);
+              }}
+            />
           )}
 
           {/* Adrenaline & Amiodarone Status - Always rendered, visibility controlled */}
@@ -1266,7 +1278,25 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => {
-                        setState(p => ({ ...p, currentOverlay: 'tutorial' }));
+                        // Enter tutorial mode - start app with preset values
+                        const now = Date.now();
+                        setState({
+                          ...INITIAL_STATE,
+                          running: true,
+                          startTime: now,
+                          pausedTime: 0,
+                          elapsedSeconds: 0,
+                          rhythmCheckTarget: 120,
+                          cprRound: 1,
+                          shocks: 0,
+                          treatments: [],
+                          catchupElapsed: 0,
+                          startClockTime: now,
+                          patientWeight: 100,
+                          patientType: 'adult'
+                        });
+                        setShowCatchup(false);
+                        setTutorialMode(true);
                       }} 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                     >
