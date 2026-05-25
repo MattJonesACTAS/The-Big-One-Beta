@@ -107,75 +107,108 @@ function StaticHomeScreen() {
   );
 }
 
-// Static Add Tx Menu Component - Extracted from App.tsx TreatmentSelection
+// Static Add Tx Menu Component - Rendered inside the central box like in the real app
 function StaticAddTxMenu() {
   return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto pb-4">
-      {/* Rhythm Check Section */}
-      <div>
-        <div className="flex items-center justify-between p-4 font-bold bg-rose-50 text-rose-800 border-rose-100">
-          <span>Rhythm Check</span>
-          <ChevronDown className="transition-transform duration-300" />
-        </div>
-        <div className="overflow-hidden bg-white">
-          <div className="p-3 grid grid-cols-2 gap-2">
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-red-600">Defib</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Rhythm</button>
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative">
+      {/* Top Controls */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+          <Pause size={14} className="sm:w-4 sm:h-4" /> Pause
+        </button>
+        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
+        </button>
+        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+          <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
+        </button>
+      </div>
+
+      {/* Top Quick Tools */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-blue-100 text-blue-700">
+          Reversibles
+        </button>
+        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-orange-100 text-orange-700">
+          ROSC
+        </button>
+        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-purple-100 text-purple-700">
+          PHEA
+        </button>
+      </div>
+
+      {/* Main Center Display with Add Tx Menu Inside */}
+      <div className="flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 border-emerald-500">
+        {/* Add Tx Menu Content - STATIC, not scrollable */}
+        <div className="h-full overflow-hidden">
+          {/* Rhythm Check Section - COLLAPSED */}
+          <div>
+            <div className="flex items-center justify-between p-4 font-bold bg-rose-50 text-rose-800 border-b border-rose-100">
+              <span>Rhythm Check</span>
+              <ChevronDown className="transition-transform duration-300 -rotate-90" size={20} />
+            </div>
+          </div>
+
+          {/* Medications Section - Expanded with SINGLE COLUMN, showing only first 5 medications */}
+          <div>
+            <div className="flex items-center justify-between p-4 font-bold bg-emerald-50 text-emerald-800 border-b border-emerald-100">
+              <span>Medications</span>
+              <ChevronDown className="transition-transform duration-300" size={20} />
+            </div>
+            <div className="bg-white p-3">
+              <div className="grid grid-cols-1 gap-2">
+                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Adrenaline push</button>
+                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Adrenaline infusion</button>
+                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Amiodarone</button>
+                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Atropine</button>
+                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Calcium</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Airway Section - Collapsed */}
+          <div>
+            <div className="flex items-center justify-between p-4 font-bold bg-blue-50 text-blue-800 border-b border-blue-100">
+              <span>Airway</span>
+              <ChevronDown className="transition-transform duration-300 -rotate-90" size={20} />
+            </div>
+          </div>
+
+          {/* Other Tx Section - Collapsed */}
+          <div>
+            <div className="flex items-center justify-between p-4 font-bold bg-neutral-100 text-neutral-800 border-b border-neutral-200">
+              <span>Other Tx</span>
+              <ChevronDown className="transition-transform duration-300 -rotate-90" size={20} />
+            </div>
+          </div>
+
+          {/* Custom Treatment Input */}
+          <div className="p-3 border-t border-neutral-100 bg-white">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Custom treatment..."
+                className="flex-1 bg-white border border-neutral-200 rounded-xl p-3 text-sm"
+                disabled
+              />
+              <button className="bg-emerald-600 text-white px-5 rounded-xl font-bold text-sm">
+                Add
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Medications Section */}
-      <div>
-        <div className="flex items-center justify-between p-4 font-bold bg-emerald-50 text-emerald-800 border-emerald-100">
-          <span>Medications</span>
-          <ChevronDown className="transition-transform duration-300" />
-        </div>
-        <div className="overflow-hidden bg-white">
-          <div className="p-3 grid grid-cols-2 gap-2">
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Adrenaline</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Amiodarone</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Atropine</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Calcium</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Glucose 10%</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Magnesium</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Midazolam</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Morphine</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Sodium Bicarbonate</button>
-            <button className="w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">TXA</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Airway Section */}
-      <div>
-        <div className="flex items-center justify-between p-4 font-bold bg-blue-50 text-blue-800 border-blue-100">
-          <span>Airway</span>
-          <ChevronDown className="transition-transform duration-300 -rotate-90" />
-        </div>
-      </div>
-
-      {/* Other Tx Section */}
-      <div>
-        <div className="flex items-center justify-between p-4 font-bold bg-neutral-100 text-neutral-800 border-neutral-200">
-          <span>Other Tx</span>
-          <ChevronDown className="transition-transform duration-300 -rotate-90" />
-        </div>
-      </div>
-
-      {/* Custom Treatment Input */}
-      <div className="p-6 border-t border-neutral-100 bg-neutral-50 px-2 sm:px-6 mb-4">
-        <div className="flex gap-2">
-          <input 
-            type="text" 
-            placeholder="Custom treatment..."
-            className="flex-1 bg-white border border-neutral-200 rounded-xl p-4 text-base"
-            disabled
-          />
-          <button className="bg-emerald-600 text-white px-6 rounded-xl font-bold">
-            Add
-          </button>
-        </div>
+      {/* Bottom Main Controls - VISIBLE */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
+        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
+          <FileText size={18} className="sm:w-6 sm:h-6" />
+          Summary
+        </button>
+        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
+          <Plus size={18} className="sm:w-6 sm:h-6" />
+          Add Tx
+        </button>
       </div>
     </div>
   );
@@ -511,6 +544,7 @@ interface InteractiveTutorialProps {
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
+  const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
 
   const screens: TutorialScreens = {
@@ -625,10 +659,12 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
   const handleElementClick = (element: TutorialElement) => {
     setActiveExplanation(element);
     setExploredElements(prev => new Set([...prev, element.id]));
+    setShowingInfoBox(true);
   };
 
   const handleCloseExplanation = () => {
     setActiveExplanation(null);
+    setShowingInfoBox(false);
   };
 
   const handleNext = () => {
@@ -890,7 +926,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
 
       {/* Next button - centered bottom with pulsing animation (for non-intro screens) */}
       {/* Special case for home1: Add Tx button with flashing text */}
-      {allExplored && currentScreenData.nextScreen && currentScreen === 'home1' && (
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home1' && (
         <button
           onClick={handleNext}
           className="text-base sm:text-xl"
@@ -939,7 +975,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       `}</style>
       
       {/* Special case for home2_summary: show exact replica of Summary button */}
-      {allExplored && currentScreenData.nextScreen && currentScreen === 'home2_summary' && (
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home2_summary' && (
         <button
           onClick={handleNext}
           style={{
@@ -974,42 +1010,42 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </button>
       )}
       
-      {/* Special case for addTxMenu: clickable medication button */}
-      {allExplored && currentScreenData.nextScreen && currentScreen === 'addTxMenu' && (
+      {/* Special case for addTxMenu: clickable Adrenaline push button matching the list item */}
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'addTxMenu' && (
         <button
           onClick={handleNext}
           style={{
             position: 'absolute',
-            top: '25%',
-            left: '16px',
-            right: '16px',
-            height: '60px',
-            backgroundColor: '#059669',
-            color: '#ffffff',
+            top: 'calc(30.5% - 2px)',
+            left: '29px',
+            right: '29px',
+            height: '50px',
+            backgroundColor: '#f5f5f5',
+            color: '#000',
             border: 'none',
             outline: 'none',
             borderRadius: '12px',
-            fontSize: '18px',
+            fontSize: '14px',
             fontWeight: '700',
             cursor: 'pointer',
             zIndex: 10001,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'flex-start',
+            paddingLeft: '14px',
+            textAlign: 'left',
           }}
         >
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
             animation: 'textFlash 2s infinite',
           }}>
-            Adrenaline
+            Adrenaline push
           </div>
         </button>
       )}
       
       {/* Special case for adrenalineDose: clickable dose button */}
-      {allExplored && currentScreenData.nextScreen && currentScreen === 'adrenalineDose' && (
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'adrenalineDose' && (
         <button
           onClick={handleNext}
           style={{
@@ -1042,7 +1078,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       )}
       
       {/* Special case for home2_summary: Summary button overlay */}
-      {allExplored && currentScreenData.nextScreen && currentScreen === 'home2_summary' && (
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home2_summary' && (
         <button
           onClick={handleNext}
           className="text-base sm:text-xl"
@@ -1079,7 +1115,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       )}
       
       {/* Special case for home2_close: Close button overlay */}
-      {allExplored && currentScreenData.nextScreen && currentScreen === 'home2_close' && (
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home2_close' && (
         <button
           onClick={handleNext}
           className="text-xs sm:text-sm"
@@ -1116,7 +1152,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       )}
       
       {/* For summary and caseSummary screens: use regular Next button */}
-      {allExplored && currentScreenData.nextScreen && (currentScreen === 'summary' || currentScreen === 'home2') && (
+      {allExplored && !showingInfoBox && currentScreenData.nextScreen && (currentScreen === 'summary' || currentScreen === 'home2') && (
         <button
           onClick={handleNext}
           style={{
