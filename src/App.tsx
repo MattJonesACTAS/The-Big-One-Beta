@@ -1100,6 +1100,25 @@ export default function App() {
           {tutorialMode && (
             <TutorialOverlay
               appState={state}
+              onRestart={() => {
+                // Restart tutorial - reset to home screen with initial values
+                const now = Date.now();
+                setState({
+                  ...INITIAL_STATE,
+                  running: true,
+                  startTime: now,
+                  pausedTime: 0,
+                  elapsedSeconds: 0,
+                  rhythmCheckTarget: 120,
+                  cprRound: 1,
+                  shocks: 0,
+                  treatments: [],
+                  catchupElapsed: 0,
+                  startClockTime: now,
+                  patientWeight: 100,
+                  patientType: 'adult'
+                });
+              }}
               onExit={() => {
                 // Exit tutorial mode
                 setTutorialMode(false);

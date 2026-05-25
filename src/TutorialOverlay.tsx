@@ -1,86 +1,122 @@
 /**
- * TutorialOverlay - Adds tutorial guidance on top of the REAL app
- * Reacts to app state changes - no "Next" buttons needed!
+ * TutorialOverlay - Sequential tutorial nodes that appear one at a time
  */
 
 import React, { useState, useEffect } from 'react';
 
 interface TutorialNode {
   id: string;
-  x: number; // Percentage from left
-  y: number; // Percentage from top
+  x: number;
+  y: number;
   number: number;
   title: string;
   description: string;
 }
 
 interface TutorialScreen {
-  // Condition to match this screen
   condition: (appState: any) => boolean;
   nodes: TutorialNode[];
-  // Optional: message to show when entering this screen
   initialMessage?: {
     title: string;
     description: string;
   };
 }
 
-// Define tutorial screens based on app state
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
-    // Home screen - timer running, no overlay
     condition: (state) => state.running && !state.currentOverlay,
     initialMessage: {
       title: 'Welcome to The Big One',
-      description: 'This tutorial will walk you through the key features. Click the numbered circles to learn about each feature.'
+      description: 'This tutorial will walk you through the key features. Click each numbered circle as it appears.'
     },
     nodes: [
       {
-        id: 'timer',
+        id: 'total_time',
+        x: 20,
+        y: 15,
+        number: 1,
+        title: 'Total Time',
+        description: 'This shows the total elapsed time since the arrest started.'
+      },
+      {
+        id: 'cpr_round',
+        x: 80,
+        y: 15,
+        number: 2,
+        title: 'CPR Round',
+        description: 'This displays which round of CPR you\'re currently in. It increments each time you shock or disarm.'
+      },
+      {
+        id: 'rhythm_check',
         x: 50,
         y: 40,
-        number: 1,
-        title: 'Central Timer',
+        number: 3,
+        title: 'Rhythm Check Timer',
         description: 'This is your rhythm check countdown. It counts down from 2 minutes and reminds you when to pause CPR and check for a shockable rhythm.'
+      },
+      {
+        id: 'reversibles',
+        x: 16,
+        y: 65,
+        number: 4,
+        title: 'Reversibles',
+        description: 'Quick access to the reversible causes checklist (4Hs and 4Ts).'
+      },
+      {
+        id: 'rosc',
+        x: 50,
+        y: 65,
+        number: 5,
+        title: 'ROSC',
+        description: 'Return of Spontaneous Circulation checklist - use this when you get ROSC.'
+      },
+      {
+        id: 'phea',
+        x: 84,
+        y: 65,
+        number: 6,
+        title: 'PHEA',
+        description: 'Pulseless Electrical Activity checklist for managing PEA arrests.'
       },
       {
         id: 'add_tx',
         x: 75,
         y: 90,
-        number: 2,
-        title: 'Add Treatment Button',
-        description: 'Tap the actual Add Tx button below to open the treatment menu and continue the tutorial.'
+        number: 7,
+        title: 'Add Treatment',
+        description: 'Tap this button to log treatments and interventions during the arrest.'
       }
     ]
   },
   {
-    // Treatment menu opened
     condition: (state) => state.currentOverlay === 'treatment',
     nodes: [
       {
         id: 'medications',
         x: 50,
-        y: 45,
+        y: 35,
         number: 1,
-        title: 'Treatment Menu',
-        description: 'Here you can log all treatments and interventions. Tap on "Adrenaline push" to see how medication logging works.'
+        title: 'Medications',
+        description: 'Tap "Medications" then select "Adrenaline push" to see how medication logging works.'
       }
     ]
   }
 ];
 
 interface Props {
-  appState: any; // The actual app state
+  appState: any;
   onExit: () => void;
+  onRestart: () => void;
 }
 
-export default function TutorialOverlay({ appState, onExit }: Props) {
-  const [exploredNodes, setExploredNodes] = useState<Set<string>>(new Set());
+export default function TutorialOverlay({ appState, onExit, onRestart }: Props) {
+  const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const [activeNode, setActiveNode] = useState<TutorialNode | null>(null);
   const [showInitialMessage, setShowInitialMessage] = useState<string | null>(null);
   const [currentScreenId, setCurrentScreenId] = useState<number>(-1);
+  const [previousOverlay, setPreviousOverlay] = useState<string | null>(null);
 
-  // Detect which tutorial screen we're on based on app state
+  // Detect screen changes
   useEffect(() => {
     const matchedScreenIndex = TUTORIAL_SCREENS.findIndex(screen => 
       screen.condition(appState)
@@ -88,9 +124,9 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
     
     if (matchedScreenIndex !== currentScreenId) {
       setCurrentScreenId(matchedScreenIndex);
-      setActiveNode(null); // Close any open node info
+      setActiveNode(null);
+      setCurrentNodeIndex(0); // Reset to first node on screen change
       
-      // Show initial message if this screen has one
       const screen = TUTORIAL_SCREENS[matchedScreenIndex];
       if (screen?.initialMessage) {
         setShowInitialMessage(`screen-${matchedScreenIndex}`);
@@ -98,16 +134,37 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
     }
   }, [appState, currentScreenId]);
 
+  // Detect if Reversibles/ROSC/PHEA buttons were clicked - restart tutorial
+  useEffect(() => {
+    const currentOverlay = appState.currentOverlay;
+    
+    // If overlay changed to reversibles, rosc, or phea - restart tutorial
+    if (currentOverlay !== previousOverlay) {
+      if (currentOverlay === 'reversibles' || currentOverlay === 'rosc' || currentOverlay === 'phea') {
+        onRestart();
+      }
+      setPreviousOverlay(currentOverlay);
+    }
+  }, [appState.currentOverlay, previousOverlay, onRestart]);
+
   const currentScreen = currentScreenId >= 0 ? TUTORIAL_SCREENS[currentScreenId] : null;
   if (!currentScreen) return null;
 
-  const handleNodeClick = (node: TutorialNode) => {
-    setActiveNode(node);
-    setExploredNodes(prev => new Set([...prev, node.id]));
-  };
-
+  const currentNode = currentScreen.nodes[currentNodeIndex];
   const currentMessageKey = `screen-${currentScreenId}`;
   const showingInitialMessage = showInitialMessage === currentMessageKey;
+
+  const handleNodeClick = (node: TutorialNode) => {
+    setActiveNode(node);
+  };
+
+  const handleDismissNode = () => {
+    setActiveNode(null);
+    // Move to next node
+    if (currentNodeIndex < currentScreen.nodes.length - 1) {
+      setCurrentNodeIndex(prev => prev + 1);
+    }
+  };
 
   return (
     <div style={{
@@ -183,38 +240,33 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
         </div>
       )}
 
-      {/* Numbered nodes */}
-      {(!currentScreen.initialMessage || !showingInitialMessage) && currentScreen.nodes.map(node => {
-        const isExplored = exploredNodes.has(node.id);
-        
-        return (
-          <button
-            key={node.id}
-            onClick={() => handleNodeClick(node)}
-            style={{
-              position: 'absolute',
-              left: `${node.x}%`,
-              top: `${node.y}%`,
-              transform: 'translate(-50%, -50%)',
-              width: '50px',
-              height: '50px',
-              borderRadius: '50%',
-              backgroundColor: isExplored ? '#10b981' : '#3b82f6',
-              color: 'white',
-              border: '4px solid white',
-              fontSize: '24px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              zIndex: 9999,
-              pointerEvents: 'auto',
-              animation: isExplored ? 'none' : 'pulse 2s infinite'
-            }}
-          >
-            {node.number}
-          </button>
-        );
-      })}
+      {/* Current node (only show one at a time) */}
+      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && (
+        <button
+          onClick={() => handleNodeClick(currentNode)}
+          style={{
+            position: 'absolute',
+            left: `${currentNode.x}%`,
+            top: `${currentNode.y}%`,
+            transform: 'translate(-50%, -50%)',
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: '4px solid white',
+            fontSize: '24px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            zIndex: 9999,
+            pointerEvents: 'auto',
+            animation: 'pulse 2s infinite'
+          }}
+        >
+          {currentNode.number}
+        </button>
+      )}
 
       {/* Node info box */}
       {activeNode && (
@@ -239,7 +291,7 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
             {activeNode.description}
           </p>
           <button
-            onClick={() => setActiveNode(null)}
+            onClick={handleDismissNode}
             style={{
               width: '100%',
               backgroundColor: '#10b981',
