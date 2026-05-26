@@ -24,8 +24,8 @@ interface TutorialScreen {
 
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
-    // Intro screen 1
-    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds < 3,
+    // Intro screen 1 - shown first
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds < 1,
     initialMessage: {
       title: 'Welcome to The Big One',
       description: 'The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything.'
@@ -33,17 +33,12 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     nodes: []
   },
   {
-    // Intro screen 2
-    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds >= 3 && state.elapsedSeconds < 6,
+    // Intro screen 2 - shown after first popup dismissed
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds >= 1 && state.elapsedSeconds < 100,
     initialMessage: {
       title: 'Getting Started',
       description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
     },
-    nodes: []
-  },
-  {
-    // Home screen with nodes
-    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds >= 6,
     nodes: [
       { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'Total time the monitor has been turned on' },
       { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR' },
@@ -93,8 +88,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     ]
   },
   {
-    // Case summary (after case is closed)
-    condition: (state) => !state.running && state.treatments.length > 0,
+    // Case summary (after case is closed) - use completedCases check
+    condition: (state) => !state.running && state.currentOverlay === 'caseSummary',
     nodes: [
       { id: 'finalStats', x: 50, y: 61.64, number: 1, title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute' },
       { id: 'export', x: 27, y: 14, number: 2, title: 'Export PDF', description: 'Export the case summary and Tx log to a pdf, which you can then email for later review.' },

@@ -322,25 +322,41 @@ export default function App() {
   const [tutorialMode, setTutorialMode] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false });
 
-  // Add CSS class to body when on treatment screen with tutorial complete
+  // Add CSS classes to body for tutorial button flashing
   useEffect(() => {
-    // Treatment menu - flash Adrenaline push
-    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
+    // Home screen with 7 nodes (screen 1) - flash Add Tx after node 7
+    if (tutorialMode && tutorialScreen.index === 1 && tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-add-tx');
+    } else {
+      document.body.classList.remove('tutorial-flash-add-tx');
+    }
+    
+    // Treatment menu (screen 2) - flash Adrenaline push after complete
+    if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-adrenaline');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline');
     }
     
-    // Medication dose screen - flash Cardiac arrest dose
-    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
+    // Medication dose screen (screen 3) - flash Cardiac arrest dose after complete
+    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-dose');
     } else {
       document.body.classList.remove('tutorial-flash-dose');
     }
     
+    // Home with alerts (screen 4) - flash Summary button after complete
+    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-summary');
+    } else {
+      document.body.classList.remove('tutorial-flash-summary');
+    }
+    
     return () => {
+      document.body.classList.remove('tutorial-flash-add-tx');
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
+      document.body.classList.remove('tutorial-flash-summary');
     };
   }, [tutorialMode, tutorialScreen]);
 
@@ -1239,6 +1255,7 @@ export default function App() {
           }}
           disabled={isShockForced}
           className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          data-button="summary"
         >
           {state.currentOverlay === 'summary' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
           {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
@@ -1250,6 +1267,7 @@ export default function App() {
           }}
           disabled={isShockForced}
           className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          data-button="add-tx"
         >
           {state.currentOverlay === 'treatment' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <Plus size={18} className="sm:w-6 sm:h-6" />}
           {state.currentOverlay === 'treatment' ? 'Close' : 'Add Tx'}
