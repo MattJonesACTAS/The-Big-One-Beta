@@ -324,6 +324,7 @@ export default function App() {
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
+  const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
 
   // Add CSS classes to body for tutorial button flashing
   useEffect(() => {
@@ -1016,11 +1017,14 @@ export default function App() {
             appState={state}
             isShockForced={isShockForced}
             isCaseClosed={isCaseClosed}
+            globalNodeIndex={tutorialNodeIndex}
             onNodeChange={(nodeIndex, done) => {
+              setTutorialNodeIndex(nodeIndex);
               setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
             }}
             onExit={() => {
               setTutorialMode(false);
+              setTutorialNodeIndex(0);
               setState(INITIAL_STATE);
               setShowCatchup(true);
             }}
@@ -1199,11 +1203,14 @@ export default function App() {
               appState={state}
               isShockForced={isShockForced}
               isCaseClosed={isCaseClosed}
+              globalNodeIndex={tutorialNodeIndex}
               onNodeChange={(nodeIndex, done) => {
+                setTutorialNodeIndex(nodeIndex);
                 setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
               }}
               onExit={() => {
                 setTutorialMode(false);
+                setTutorialNodeIndex(0);
                 setState(INITIAL_STATE);
                 setShowCatchup(true);
               }}

@@ -158,20 +158,20 @@ interface Props {
   onExit: () => void;
   onNodeChange?: (globalNodeIndex: number, tutorialDone: boolean) => void;
   isCaseClosed?: boolean;
+  globalNodeIndex?: number;
 }
 
-export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed }: Props) {
-  const [globalNodeIndex, setGlobalNodeIndex] = useState(0);
+export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0 }: Props) {
+  const [internalNodeIndex, setInternalNodeIndex] = useState(externalNodeIndex);
+  const globalNodeIndex = externalNodeIndex;
+  const setGlobalNodeIndex = (updater: number | ((prev: number) => number)) => {
+    const newVal = typeof updater === 'function' ? updater(internalNodeIndex) : updater;
+    setInternalNodeIndex(newVal);
+    if (onNodeChange) onNodeChange(newVal, newVal >= ALL_NODES.length);
+  };
   const [activePopup, setActivePopup] = useState<GlobalNode | null>(null);
   const [activePositioned, setActivePositioned] = useState<GlobalNode | null>(null);
   const tutorialDone = globalNodeIndex >= ALL_NODES.length;
-
-  // Notify App.tsx when global node index changes
-  useEffect(() => {
-    if (onNodeChange) {
-      onNodeChange(globalNodeIndex, tutorialDone);
-    }
-  }, [globalNodeIndex, tutorialDone, onNodeChange]);
 
   // Get current node
   const currentNode = tutorialDone ? null : ALL_NODES[globalNodeIndex];
