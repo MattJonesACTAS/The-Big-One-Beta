@@ -43,8 +43,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     nodes: []
   },
   {
-    // Home screen - only show after intro2 dismissed
-    condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && intro2Dismissed,
+    // Home screen - only show after intro2 dismissed, before treatment screen is visited
+    condition: (state, summaryViewed, intro2Dismissed, treatmentScreenCompleted) => state.running && state.currentOverlay === null && !!intro2Dismissed && !treatmentScreenCompleted,
     nodes: [
       { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'The total time since the monitor was turned on (top right timer)' },
       { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR. This will update every time the rhythm check counter reaches 0:00.' },
@@ -129,6 +129,13 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
       setTreatmentScreenCompleted(true);
     }
   }, [currentScreenId, tutorialComplete, treatmentScreenCompleted]);
+
+  // Dismiss any active node popup when rhythm check fires
+  useEffect(() => {
+    if (appState.rhythmCheckOvertime > 0 && activeNode) {
+      setActiveNode(null);
+    }
+  }, [appState.rhythmCheckOvertime, activeNode]);
 
   // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
@@ -289,7 +296,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
         </div>
       )}
 
-      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && (
+      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && appState.rhythmCheckOvertime === 0 && (
         <button
           onClick={() => handleNodeClick(currentNode)}
           style={{
