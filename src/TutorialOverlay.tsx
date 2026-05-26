@@ -20,31 +20,30 @@ interface TutorialScreen {
     title: string;
     description: string;
   };
-  // Position of text to flash
-  flashText?: {
-    x: number;
-    y: number;
-    text: string;
-  };
 }
 
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
     // Intro screen 1
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds < 5,
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds < 3,
     initialMessage: {
       title: 'Welcome to The Big One',
-      description: 'This tutorial will guide you through the key features of the cardiac arrest timer.'
+      description: 'The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything.'
     },
     nodes: []
   },
   {
     // Intro screen 2
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds >= 5,
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds >= 3 && state.elapsedSeconds < 6,
     initialMessage: {
       title: 'Getting Started',
-      description: 'Click each numbered circle as it appears to learn more about each feature.'
+      description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
     },
+    nodes: []
+  },
+  {
+    // Home screen with nodes
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds >= 6,
     nodes: [
       {
         id: 'totalTime',
@@ -115,13 +114,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
         title: 'Add Tx submenu',
         description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log'
       }
-    ],
-    // Flash just the text "Adrenaline push"
-    flashText: {
-      x: 50,
-      y: 30.5,
-      text: 'Adrenaline push'
-    }
+    ]
   },
   {
     condition: (state) => state.currentOverlay === 'medicationDose',
@@ -137,7 +130,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     ]
   },
   {
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length > 0 && !state.hasViewedSummary,
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length > 0,
     nodes: [
       {
         id: 'adrenalineAlert',
@@ -156,15 +149,38 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
         description: "Next, let's have a look at the running case summary page"
       }
     ]
+  },
+  {
+    condition: (state) => state.currentOverlay === 'summary',
+    nodes: [
+      {
+        id: 'pharmaSummary',
+        x: 50,
+        y: 50,
+        number: 1,
+        title: 'Medication Summary',
+        description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.'
+      },
+      {
+        id: 'treatmentLog',
+        x: 50,
+        y: 70.9,
+        number: 2,
+        title: 'Treatment Log',
+        description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.'
+      }
+    ]
   }
 ];
 
 interface Props {
   appState: any;
   onExit: () => void;
+  // Callback to tell app which screen we're on (so app can flash button text)
+  onScreenChange?: (screenIndex: number, isComplete: boolean) => void;
 }
 
-export default function TutorialOverlay({ appState, onExit }: Props) {
+export default function TutorialOverlay({ appState, onExit, onScreenChange }: Props) {
   const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const [activeNode, setActiveNode] = useState<TutorialNode | null>(null);
   const [showInitialMessage, setShowInitialMessage] = useState<string | null>(null);
@@ -187,8 +203,20 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
       if (screen?.initialMessage) {
         setShowInitialMessage(`screen-${matchedScreenIndex}`);
       }
+      
+      // Notify app of screen change
+      if (onScreenChange) {
+        onScreenChange(matchedScreenIndex, false);
+      }
     }
-  }, [appState, currentScreenId]);
+  }, [appState, currentScreenId, onScreenChange]);
+
+  // Notify when tutorial completes on a screen
+  useEffect(() => {
+    if (onScreenChange && tutorialComplete) {
+      onScreenChange(currentScreenId, true);
+    }
+  }, [tutorialComplete, currentScreenId, onScreenChange]);
 
   const currentScreen = currentScreenId >= 0 ? TUTORIAL_SCREENS[currentScreenId] : null;
   if (!currentScreen) return null;
@@ -298,24 +326,6 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
         </div>
       )}
 
-      {/* Flashing text (e.g., "Adrenaline push") */}
-      {currentScreen.flashText && !showingInitialMessage && tutorialComplete && (
-        <div style={{
-          position: 'absolute',
-          left: `${currentScreen.flashText.x}%`,
-          top: `${currentScreen.flashText.y}%`,
-          transform: 'translate(-50%, -50%)',
-          color: '#000',
-          fontSize: '14px',
-          fontWeight: '700',
-          zIndex: 9999,
-          pointerEvents: 'none',
-          animation: 'textFlash 1.5s infinite'
-        }}>
-          {currentScreen.flashText.text}
-        </div>
-      )}
-
       {/* Current node (only show one at a time, and not if tutorial is complete) */}
       {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && (
         <button
@@ -393,14 +403,6 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
           }
           50% {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 10px rgba(59, 130, 246, 0);
-          }
-        }
-        @keyframes textFlash {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.3;
           }
         }
       `}</style>
