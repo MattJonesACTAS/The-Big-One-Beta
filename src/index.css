@@ -120,3 +120,7 @@ body.tutorial-flash-add-tx [data-button="add-tx"] {
 body.tutorial-flash-summary [data-button="summary"] {
   animation: adrenalineFlash 1.5s infinite;
 }
+
+body.tutorial-flash-close [data-button="close-case"] {
+  animation: adrenalineFlash 1.5s infinite;
+}

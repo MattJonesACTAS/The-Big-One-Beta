@@ -352,11 +352,19 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-summary');
     }
     
+    // Home after summary (screen 6) - flash Close button after complete
+    if (tutorialMode && tutorialScreen.index === 6 && tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-close');
+    } else {
+      document.body.classList.remove('tutorial-flash-close');
+    }
+    
     return () => {
       document.body.classList.remove('tutorial-flash-add-tx');
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
       document.body.classList.remove('tutorial-flash-summary');
+      document.body.classList.remove('tutorial-flash-close');
     };
   }, [tutorialMode, tutorialScreen]);
 
@@ -993,7 +1001,7 @@ export default function App() {
         >
           <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
-        <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+        <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="close-case">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
         </button>
       </div>
