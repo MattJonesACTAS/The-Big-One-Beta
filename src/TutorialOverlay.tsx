@@ -141,8 +141,8 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
 
   // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
-    // Don't change screens during forced shock/disarm - prevents jumping to treatment screen
-    if (isShockForced) return;
+    // Don't change screens during forced shock/disarm or rhythm check overtime
+    if (isShockForced || appState.rhythmCheckOvertime > 0) return;
 
     // If we're on ROSC/Reversibles/PHEA overlay, don't change screens
     if (appState.currentOverlay === 'rosc' || 
@@ -189,7 +189,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
         onScreenChange(actualScreenIndex, savedState ? true : false, savedState?.nodeIndex ?? 0);
       }
     }
-  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, isShockForced, onScreenChange]);
+  }, [appState.running, appState.currentOverlay, appState.treatments.length, appState.rhythmCheckOvertime, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, isShockForced, onScreenChange]);
 
   // Notify when tutorial completes on a screen or node changes
   useEffect(() => {
