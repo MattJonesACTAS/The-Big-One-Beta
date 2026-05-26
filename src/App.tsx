@@ -325,9 +325,11 @@ export default function App() {
   // Add CSS classes to body for tutorial button flashing
   useEffect(() => {
     console.log('Tutorial screen tracking:', tutorialScreen);
+    console.log('Current overlay:', state.currentOverlay);
+    console.log('Treatments length:', state.treatments.length);
     
-    // Home screen with 7 nodes (screen 1) - flash Add Tx after node 7, but ONLY if no treatments yet
-    if (tutorialMode && tutorialScreen.index === 1 && tutorialScreen.complete && state.treatments.length === 0) {
+    // Home screen with 7 nodes (screen 1) - flash Add Tx after node 7, but ONLY if no treatments yet AND overlay not open
+    if (tutorialMode && tutorialScreen.index === 1 && tutorialScreen.complete && state.treatments.length === 0 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
@@ -336,6 +338,7 @@ export default function App() {
     // Treatment menu (screen 2) - flash Adrenaline push after complete
     if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-adrenaline');
+      console.log('FLASHING ADRENALINE PUSH');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline');
     }
@@ -343,6 +346,7 @@ export default function App() {
     // Medication dose screen (screen 3) - flash Cardiac arrest dose after complete
     if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-dose');
+      console.log('FLASHING DOSE BUTTON');
     } else {
       document.body.classList.remove('tutorial-flash-dose');
     }
