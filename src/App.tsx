@@ -331,8 +331,8 @@ export default function App() {
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
     
-    // Home screen with 7 nodes (screen 2) - flash Add Tx after node 7, but ONLY if no treatments yet AND overlay not open
-    if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete && state.treatments.length === 0 && state.currentOverlay === null) {
+    // Home screen with 7 nodes (screen 2) - flash Add Tx after complete
+    if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
