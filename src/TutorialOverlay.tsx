@@ -63,8 +63,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     ]
   },
   {
-    // Home with medication alerts - only show if summary NOT viewed yet
-    condition: (state, summaryViewed) => state.running && state.currentOverlay === null && state.treatments.length > 0 && !summaryViewed,
+    // Home with medication alerts - only show if summary NOT viewed yet, and NOT during rhythm check
+    condition: (state, summaryViewed) => state.running && state.currentOverlay === null && state.treatments.length > 0 && !summaryViewed && state.rhythmCheckOvertime === 0,
     nodes: [
       { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' },
       { id: 'summaryBtn', x: 26.6, y: 95.4, number: 2, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" }

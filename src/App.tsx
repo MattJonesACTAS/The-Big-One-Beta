@@ -1,4 +1,3 @@
-// Build: 20260526-110611
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -332,20 +331,19 @@ export default function App() {
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
     
-    // Home screen with 7 nodes (screen 1) - flash Add Tx after node 7, but ONLY if no treatments yet AND overlay not open
-    if (tutorialMode && tutorialScreen.index === 1 && tutorialScreen.complete && state.treatments.length === 0 && state.currentOverlay === null) {
+    // Home screen with 7 nodes (screen 2) - flash Add Tx after node 7, but ONLY if no treatments yet AND overlay not open
+    if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete && state.treatments.length === 0 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
     
-    // Treatment menu (screen 2) - flash Adrenaline push after complete, AND flash dose button when still on treatment screen
-    if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete) {
+    // Treatment menu (screen 3) - flash Adrenaline push after complete, AND flash dose button when still on treatment screen
+    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-adrenaline');
       // Also flash dose button when treatment screen is complete (means they clicked Adrenaline push)
       if (state.currentOverlay === 'treatment') {
         document.body.classList.add('tutorial-flash-dose');
-        console.log('FLASHING DOSE BUTTON');
       } else {
         document.body.classList.remove('tutorial-flash-dose');
       }
@@ -354,22 +352,22 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
     
-    // Home with alerts (screen 3) - flash Summary button after complete
-    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
+    // Home with alerts (screen 4) - flash Summary button after complete
+    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
     
-    // Summary overlay (screen 4) - flash close button after all 3 nodes complete
-    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
+    // Summary overlay (screen 5) - flash close button after all 3 nodes complete
+    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
     
-    // Home after summary (screen 5) - flash Close case button after complete
-    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.complete) {
+    // Home after summary (screen 6) - flash Close case button after complete
+    if (tutorialMode && tutorialScreen.index === 6 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
