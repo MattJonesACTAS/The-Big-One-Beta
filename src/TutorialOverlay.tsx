@@ -23,13 +23,13 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'intro1', type: 'popup',
     title: 'Welcome to The Big One',
-    description: 'The Big One is a cognitive aid for use during cardiac arrests.\nHaving times and medications kept track of for you, situational awareness and leadership can be your main focus.',
+    description: 'The Big One is a cognitive aid for use during cardiac arrests.\n\nHaving times and medications kept track of for you, situational awareness and leadership can be your main focus.',
     condition: (s) => s.running && s.currentOverlay === null
   },
   {
     id: 'intro2', type: 'popup',
     title: 'Getting Started',
-    description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n• The time to next rhythm check\n• Select adult or paediatric patient\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first.\nClick on the blue numbers and follow any instructions to advance through the tutorial.",
+    description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n\n• The time to next rhythm check\n\n• Select adult or paediatric patient\n\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first.\n\nClick on the blue numbers and follow any instructions to advance through the tutorial.",
     condition: (s) => s.running && s.currentOverlay === null
   },
   // --- Home screen nodes ---
@@ -42,13 +42,13 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 2,
     title: 'CPR Round',
-    description: 'The current round of CPR.\nThis will update every time the rhythm check counter reaches 0:00.',
+    description: 'The current round of CPR.\n\nThis will update every time the rhythm check counter reaches 0:00.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'timer', type: 'positioned', x: 50, y: 52, displayNumber: 3,
     title: 'Rhythm Check Timer',
-    description: "The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n• You will then be forced to record whether you shocked or disarmed.",
+    description: "The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\n• You will then be forced to record whether you shocked or disarmed.",
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -60,7 +60,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 5,
     title: 'Recalibrate Button',
-    description: 'The app estimates a rhythm check of 6 seconds.\nRecalibrate the timer to match reality if your rhythm checks are longer.',
+    description: 'The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer to match reality if your rhythm checks are longer.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -72,14 +72,14 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 7,
     title: 'Add Treatment Button',
-    description: 'This takes you to the treatments (Tx) list for you to log in real time during the case.\nPress the button so we can log our first Tx.',
+    description: 'This takes you to the treatments (Tx) list for you to log in real time during the case.\n\nPress the button so we can log our first Tx.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   // --- Treatment screen ---
   {
     id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 1,
     title: 'Add Tx Submenu',
-    description: "The Add Tx submenu has four categories of Tx's that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
+    description: "The Add Tx submenu has four categories of Tx's that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
   },
   // --- Home with medication alerts ---
@@ -105,7 +105,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'treatmentLog', type: 'positioned', x: 50, y: 70.9, displayNumber: 2,
     title: 'Treatment Log',
-    description: 'Chronological record of all logged interventions.\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.',
+    description: 'Chronological record of all logged interventions.\n\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.',
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
