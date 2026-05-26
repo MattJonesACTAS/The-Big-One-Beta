@@ -1202,6 +1202,7 @@ export default function App() {
           {tutorialMode && (
             <TutorialOverlay
               appState={state}
+              isShockForced={isShockForced}
               isCaseClosed={isCaseClosed}
               onScreenChange={(index, complete, nodeIndex = 0) => {
                 setTutorialScreen({ index, complete, nodeIndex });

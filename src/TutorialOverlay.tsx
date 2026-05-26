@@ -99,12 +99,13 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
 
 interface Props {
   appState: any;
+  isShockForced?: boolean;
   onExit: () => void;
   onScreenChange?: (screenIndex: number, isComplete: boolean, currentNodeIndex?: number) => void;
   isCaseClosed?: boolean;
 }
 
-export default function TutorialOverlay({ appState, onExit, onScreenChange, isCaseClosed }: Props) {
+export default function TutorialOverlay({ appState, isShockForced, onExit, onScreenChange, isCaseClosed }: Props) {
   const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const [activeNode, setActiveNode] = useState<TutorialNode | null>(null);
   const [showInitialMessage, setShowInitialMessage] = useState<string | null>(null);
@@ -125,20 +126,23 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
 
   // Track when treatment screen (screen 3) node is dismissed - gate medication alerts screen
   useEffect(() => {
-    if (currentScreenId === 3 && tutorialComplete && !treatmentScreenCompleted) {
+    if (currentScreenId === 3 && tutorialComplete && !treatmentScreenCompleted && !isShockForced) {
       setTreatmentScreenCompleted(true);
     }
-  }, [currentScreenId, tutorialComplete, treatmentScreenCompleted]);
+  }, [currentScreenId, tutorialComplete, treatmentScreenCompleted, isShockForced]);
 
   // Dismiss any active node popup when rhythm check fires
   useEffect(() => {
-    if (appState.rhythmCheckOvertime > 0 && activeNode) {
+    if ((appState.rhythmCheckOvertime > 0 || isShockForced) && activeNode) {
       setActiveNode(null);
     }
-  }, [appState.rhythmCheckOvertime, activeNode]);
+  }, [appState.rhythmCheckOvertime, isShockForced, activeNode]);
 
   // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
+    // Don't change screens during forced shock/disarm - prevents jumping to treatment screen
+    if (isShockForced) return;
+
     // If we're on ROSC/Reversibles/PHEA overlay, don't change screens
     if (appState.currentOverlay === 'rosc' || 
         appState.currentOverlay === 'reversibles' || 
@@ -171,7 +175,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
         onScreenChange(actualScreenIndex, false, 0);
       }
     }
-  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, onScreenChange]);
+  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, isShockForced, onScreenChange]);
 
   // Notify when tutorial completes on a screen or node changes
   useEffect(() => {
@@ -296,7 +300,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
         </div>
       )}
 
-      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && appState.rhythmCheckOvertime === 0 && (
+      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && !isShockForced && appState.rhythmCheckOvertime === 0 && (
         <button
           onClick={() => handleNodeClick(currentNode)}
           style={{
