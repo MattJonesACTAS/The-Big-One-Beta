@@ -23,26 +23,26 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'intro1', type: 'popup',
     title: 'Welcome to The Big One',
-    description: 'The Big One is a cognitive aid for use during cardiac arrests. Having times and medications kept track of for you, situational awareness and leadership can be your main focus.',
+    description: 'The Big One is a cognitive aid for use during cardiac arrests.\nHaving times and medications kept track of for you, situational awareness and leadership can be your main focus.',
     condition: (s) => s.running && s.currentOverlay === null
   },
   {
     id: 'intro2', type: 'popup',
     title: 'Getting Started',
-    description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n• The time to next rhythm check\n• Select adult or paediatric patient\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first. Click on the blue numbers and follow any instructions to advance through the tutorial.",
+    description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n• The time to next rhythm check\n• Select adult or paediatric patient\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first.\nClick on the blue numbers and follow any instructions to advance through the tutorial.",
     condition: (s) => s.running && s.currentOverlay === null
   },
   // --- Home screen nodes ---
   {
     id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 1,
     title: 'Total Time',
-    description: 'The total time since the monitor was turned on (top right timer)',
+    description: 'The total time since the monitor was turned on (top right timer).',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 2,
     title: 'CPR Round',
-    description: 'The current round of CPR. This will update every time the rhythm check counter reaches 0:00.',
+    description: 'The current round of CPR.\nThis will update every time the rhythm check counter reaches 0:00.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -54,25 +54,25 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'pause', type: 'positioned', x: 19.0, y: 4.2, displayNumber: 4,
     title: 'Pause Button',
-    description: 'Pause and resume the rhythm check timer',
+    description: 'Pause and resume the rhythm check timer.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 5,
     title: 'Recalibrate Button',
-    description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.',
+    description: 'The app estimates a rhythm check of 6 seconds.\nRecalibrate the timer to match reality if your rhythm checks are longer.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'tabs', type: 'positioned', x: 50, y: 10.75, displayNumber: 6,
     title: 'Checklists',
-    description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)',
+    description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA).',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 7,
     title: 'Add Treatment Button',
-    description: 'This takes you to the treatments (Tx) list for you to log in real time during the case. Press the button so we can log our first Tx.',
+    description: 'This takes you to the treatments (Tx) list for you to log in real time during the case.\nPress the button so we can log our first Tx.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   // --- Treatment screen ---
@@ -92,7 +92,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 2,
     title: 'Summary Button',
-    description: "Next, let's have a look at the running case summary page",
+    description: "Next, let's have a look at the running case summary page.",
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && s.rhythmCheckOvertime === 0 && !sf
   },
   // --- Summary overlay ---
@@ -105,13 +105,13 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'treatmentLog', type: 'positioned', x: 50, y: 70.9, displayNumber: 2,
     title: 'Treatment Log',
-    description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.',
+    description: 'Chronological record of all logged interventions.\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.',
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
     id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 3,
     title: 'Return to Home',
-    description: 'Press the close button to return to the home page',
+    description: 'Press the close button to return to the home page.',
     condition: (s) => s.currentOverlay === 'summary'
   },
   // --- Home after summary ---
@@ -125,7 +125,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'finalStats', type: 'positioned', x: 50, y: 61.64, displayNumber: 1,
     title: 'Final Case Data',
-    description: 'Now the case is over, the treatment log shows times to the second, not just to the minute',
+    description: 'Now the case is over, the treatment log shows times to the second, not just to the minute.',
     condition: (s) => !s.running
   },
   {
