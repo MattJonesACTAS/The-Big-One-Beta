@@ -78,14 +78,20 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 7,
     title: 'Add Treatment Button',
-    description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the button so we can log our first Tx.',
+    description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the + Add Tx button so we can log our first Tx.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   // --- Treatment screen ---
   {
     id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 1,
     title: 'Add Tx Submenu',
-    description: "The Add Tx submenu has four categories of treatments you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
+    description: "The Add Tx submenu has four categories of treatments you can log: Rhythm Check (shocks and disarms), medications, Airway and Other Tx.\n\nYou can also free type custom interventions.",
+    condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
+  },
+  {
+    id: 'medications', type: 'positioned', x: 50, y: 40, displayNumber: 2,
+    title: 'Medications',
+    description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
   },
   // --- Home with medication alerts ---
