@@ -15,7 +15,7 @@ interface TutorialNode {
 }
 
 interface TutorialScreen {
-  condition: (appState: any, summaryViewed: boolean, intro2Dismissed?: boolean) => boolean;
+  condition: (appState: any, summaryViewed: boolean, intro2Dismissed?: boolean, treatmentScreenCompleted?: boolean) => boolean;
   nodes: TutorialNode[];
   initialMessage?: {
     title: string;
@@ -63,8 +63,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     ]
   },
   {
-    // Home with medication alerts - only show if summary NOT viewed yet, and NOT during rhythm check
-    condition: (state, summaryViewed) => state.running && state.currentOverlay === null && state.treatments.length > 0 && !summaryViewed && state.rhythmCheckOvertime === 0,
+    // Home with medication alerts - only show after treatment screen completed
+    condition: (state, summaryViewed, intro2Dismissed, treatmentScreenCompleted) => state.running && state.currentOverlay === null && state.treatments.length > 0 && !summaryViewed && !!treatmentScreenCompleted,
     nodes: [
       { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' },
       { id: 'summaryBtn', x: 26.6, y: 95.4, number: 2, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" }
@@ -113,6 +113,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
   const [intro1Dismissed, setIntro1Dismissed] = useState(false);
   const [summaryViewed, setSummaryViewed] = useState(false);
   const [intro2Dismissed, setIntro2Dismissed] = useState(false);
+  const [treatmentScreenCompleted, setTreatmentScreenCompleted] = useState(false);
 
   // Track when summary overlay is closed
   useEffect(() => {
@@ -121,6 +122,13 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
       setSummaryViewed(true);
     }
   }, [appState.currentOverlay, currentScreenId, summaryViewed]);
+
+  // Track when treatment screen (screen 3) node is dismissed - gate medication alerts screen
+  useEffect(() => {
+    if (currentScreenId === 3 && tutorialComplete && !treatmentScreenCompleted) {
+      setTreatmentScreenCompleted(true);
+    }
+  }, [currentScreenId, tutorialComplete, treatmentScreenCompleted]);
 
   // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
@@ -136,7 +144,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
     const offset = intro1Dismissed ? 1 : 0;
     
     const matchedScreenIndex = screensToCheck.findIndex(screen => 
-      screen.condition(appState, summaryViewed, intro2Dismissed)
+      screen.condition(appState, summaryViewed, intro2Dismissed, treatmentScreenCompleted)
     );
     
     const actualScreenIndex = matchedScreenIndex >= 0 ? matchedScreenIndex + offset : -1;
@@ -156,7 +164,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
         onScreenChange(actualScreenIndex, false, 0);
       }
     }
-  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, onScreenChange]);
+  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, onScreenChange]);
 
   // Notify when tutorial completes on a screen or node changes
   useEffect(() => {
@@ -266,7 +274,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
             onClick={handleDismissInitialMessage}
             style={{
               width: '100%',
-              backgroundColor: '#10b981',
+              backgroundColor: '#059669',
               color: 'white',
               padding: '16px',
               borderRadius: '12px',
@@ -333,7 +341,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
             onClick={handleDismissNode}
             style={{
               width: '100%',
-              backgroundColor: '#10b981',
+              backgroundColor: '#059669',
               color: 'white',
               padding: '16px',
               borderRadius: '12px',

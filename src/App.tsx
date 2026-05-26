@@ -372,6 +372,13 @@ export default function App() {
     } else {
       document.body.classList.remove('tutorial-flash-close');
     }
+
+    // Case summary (screen 7) - flash Delete Case button after 3rd node complete
+    if (tutorialMode && tutorialScreen.index === 7 && tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-delete');
+    } else {
+      document.body.classList.remove('tutorial-flash-delete');
+    }
     
     return () => {
       document.body.classList.remove('tutorial-flash-add-tx');
@@ -380,6 +387,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-summary');
       document.body.classList.remove('tutorial-flash-summary-close');
       document.body.classList.remove('tutorial-flash-close');
+      document.body.classList.remove('tutorial-flash-delete');
     };
   }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay]);
 
@@ -982,6 +990,7 @@ export default function App() {
           <button 
             onClick={() => setShowDeleteWarning(true)}
             className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold btn-base border border-red-100"
+            data-button="delete-case"
           >
             <Trash2 size={20} /> Delete Case
           </button>

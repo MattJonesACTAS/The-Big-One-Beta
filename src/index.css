@@ -128,3 +128,7 @@ body.tutorial-flash-summary-close [data-button="summary"] {
 body.tutorial-flash-close [data-button="close-case"] {
   animation: adrenalineFlash 1.5s infinite;
 }
+
+body.tutorial-flash-delete [data-button="delete-case"] {
+  animation: adrenalineFlash 1.5s infinite;
+}
