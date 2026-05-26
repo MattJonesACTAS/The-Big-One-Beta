@@ -46,7 +46,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && intro2Dismissed,
     nodes: [
       { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'The total time since the monitor was turned on (top right timer)' },
-      { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR' },
+      { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR. This will update every time the rhythm check counter reaches 0:00.' },
       { id: 'timer', x: 50, y: 52, number: 3, title: 'Rhythm Check Timer', description: 'The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don\'t miss the rhythm check.\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n• You will then be forced to record whether you shocked or disarmed.' },
       { id: 'pause', x: 19.0, y: 4.2, number: 4, title: 'Pause Button', description: 'Pause and resume the rhythm check timer' },
       { id: 'recalibrate', x: 51.0, y: 4.2, number: 5, title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.' },
