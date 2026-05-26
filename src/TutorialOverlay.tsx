@@ -155,7 +155,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
         onScreenChange(actualScreenIndex, false, 0);
       }
     }
-  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, summaryViewed, onScreenChange]);
+  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, onScreenChange]);
 
   // Notify when tutorial completes on a screen or node changes
   useEffect(() => {
@@ -188,11 +188,14 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
   const handleDismissInitialMessage = () => {
     if (currentScreenId === 0) {
       setIntro1Dismissed(true);
-    }
-    if (currentScreenId === 1) {
+      // Don't clear showInitialMessage here - let the screen change effect handle it
+      // This prevents the flash between intro messages
+    } else if (currentScreenId === 1) {
       setIntro2Dismissed(true);
+      setShowInitialMessage(null);
+    } else {
+      setShowInitialMessage(null);
     }
-    setShowInitialMessage(null);
   };
 
   return (
