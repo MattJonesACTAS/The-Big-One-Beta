@@ -53,14 +53,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     // Treatment menu
     condition: (state) => state.currentOverlay === 'treatment',
     nodes: [
-      { id: 'addTxSubmenu', x: 50, y: 30, number: 1, title: 'Add Tx submenu', description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log' }
-    ]
-  },
-  {
-    // Medication dose selection
-    condition: (state) => state.currentOverlay === 'medicationDose',
-    nodes: [
-      { id: 'medications', x: 53.2, y: 44.2, number: 1, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone." }
+      { id: 'addTxSubmenu', x: 50, y: 30, number: 1, title: 'Add Tx submenu', description: "After pressing the Add Tx button, you'll see this menu. Click 'Adrenaline push' to see dosage options." }
     ]
   },
   {

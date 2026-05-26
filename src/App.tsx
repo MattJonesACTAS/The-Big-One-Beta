@@ -335,38 +335,37 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
     
-    // Treatment menu (screen 2) - flash Adrenaline push after complete
+    // Treatment menu (screen 2) - flash Adrenaline push after complete, AND flash dose button when still on treatment screen
     if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-adrenaline');
-      console.log('FLASHING ADRENALINE PUSH');
+      // Also flash dose button when treatment screen is complete (means they clicked Adrenaline push)
+      if (state.currentOverlay === 'treatment') {
+        document.body.classList.add('tutorial-flash-dose');
+        console.log('FLASHING DOSE BUTTON');
+      } else {
+        document.body.classList.remove('tutorial-flash-dose');
+      }
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline');
-    }
-    
-    // Medication dose screen (screen 3) - flash Cardiac arrest dose after complete
-    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
-      document.body.classList.add('tutorial-flash-dose');
-      console.log('FLASHING DOSE BUTTON');
-    } else {
       document.body.classList.remove('tutorial-flash-dose');
     }
     
-    // Home with alerts (screen 4) - flash Summary button after complete
-    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
+    // Home with alerts (screen 3) - flash Summary button after complete
+    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
     
-    // Summary overlay (screen 5) - flash close button after all 3 nodes complete
-    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.complete) {
+    // Summary overlay (screen 4) - flash close button after all 3 nodes complete
+    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
     
-    // Home after summary (screen 6) - flash Close case button after complete
-    if (tutorialMode && tutorialScreen.index === 6 && tutorialScreen.complete) {
+    // Home after summary (screen 5) - flash Close case button after complete
+    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
