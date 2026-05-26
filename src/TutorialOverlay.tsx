@@ -25,7 +25,7 @@ interface TutorialScreen {
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
     // Intro screen 1 - stays until dismissed
-    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0,
+    condition: (state) => state.running && state.treatments.length === 0,
     initialMessage: {
       title: 'Welcome to The Big One',
       description: 'The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything.'
@@ -33,13 +33,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     nodes: []
   },
   {
-    // Intro screen 2 - shown after first is dismissed, has tutorial nodes
-    condition: (state) => state.running && 
-                         state.currentOverlay !== 'reversibles' && 
-                         state.currentOverlay !== 'rosc' && 
-                         state.currentOverlay !== 'phea' &&
-                         (state.currentOverlay === null || state.currentOverlay === 'treatment' || state.currentOverlay === 'medicationDose') &&
-                         state.treatments.length === 0,
+    // Intro screen 2 with home screen nodes - shown after first is dismissed
+    condition: (state) => state.running && state.treatments.length === 0,
     initialMessage: {
       title: 'Getting Started',
       description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
@@ -70,13 +65,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
   },
   {
     // Home with medication alerts
-    condition: (state) => state.running && 
-                         state.currentOverlay !== 'reversibles' && 
-                         state.currentOverlay !== 'rosc' && 
-                         state.currentOverlay !== 'phea' &&
-                         state.currentOverlay === null && 
-                         state.treatments.length > 0 && 
-                         state.treatments.length < 2,
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length > 0 && state.treatments.length < 2,
     nodes: [
       { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' },
       { id: 'summaryBtn', x: 26.6, y: 95.4, number: 2, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" }
@@ -93,12 +82,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
   },
   {
     // Home after viewing summary - show close case button
-    condition: (state) => state.running && 
-                         state.currentOverlay !== 'reversibles' && 
-                         state.currentOverlay !== 'rosc' && 
-                         state.currentOverlay !== 'phea' &&
-                         state.currentOverlay === null && 
-                         state.treatments.length >= 2,
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length >= 2,
     nodes: [
       { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." }
     ]
@@ -117,7 +101,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
 interface Props {
   appState: any;
   onExit: () => void;
-  onScreenChange?: (screenIndex: number, isComplete: boolean) => void;
+  onScreenChange?: (screenIndex: number, isComplete: boolean, currentNodeIndex?: number) => void;
 }
 
 export default function TutorialOverlay({ appState, onExit, onScreenChange }: Props) {
@@ -128,8 +112,15 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
   const [tutorialComplete, setTutorialComplete] = useState(false);
   const [intro1Dismissed, setIntro1Dismissed] = useState(false);
 
-  // Detect screen changes
+  // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
+    // If we're on ROSC/Reversibles/PHEA overlay, don't change screens
+    if (appState.currentOverlay === 'rosc' || 
+        appState.currentOverlay === 'reversibles' || 
+        appState.currentOverlay === 'phea') {
+      return; // Keep current screen
+    }
+
     // Skip intro 1 if already dismissed
     const screensToCheck = intro1Dismissed ? TUTORIAL_SCREENS.slice(1) : TUTORIAL_SCREENS;
     const offset = intro1Dismissed ? 1 : 0;
@@ -152,17 +143,17 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
       }
       
       if (onScreenChange) {
-        onScreenChange(actualScreenIndex, false);
+        onScreenChange(actualScreenIndex, false, 0);
       }
     }
-  }, [appState, currentScreenId, intro1Dismissed, onScreenChange]);
+  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, onScreenChange]);
 
-  // Notify when tutorial completes on a screen
+  // Notify when tutorial completes on a screen or node changes
   useEffect(() => {
-    if (onScreenChange && tutorialComplete) {
-      onScreenChange(currentScreenId, true);
+    if (onScreenChange) {
+      onScreenChange(currentScreenId, tutorialComplete, currentNodeIndex);
     }
-  }, [tutorialComplete, currentScreenId, onScreenChange]);
+  }, [tutorialComplete, currentScreenId, currentNodeIndex, onScreenChange]);
 
   const currentScreen = currentScreenId >= 0 ? TUTORIAL_SCREENS[currentScreenId] : null;
   if (!currentScreen) return null;

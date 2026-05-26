@@ -320,12 +320,14 @@ export default function App() {
   
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
-  const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false });
+  const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
 
   // Add CSS classes to body for tutorial button flashing
   useEffect(() => {
-    // Home screen with 7 nodes (screen 1) - flash Add Tx after node 7
-    if (tutorialMode && tutorialScreen.index === 1 && tutorialScreen.complete) {
+    console.log('Tutorial screen tracking:', tutorialScreen);
+    
+    // Home screen with 7 nodes (screen 1) - flash Add Tx after node 7, but ONLY if no treatments yet
+    if (tutorialMode && tutorialScreen.index === 1 && tutorialScreen.complete && state.treatments.length === 0) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
@@ -352,7 +354,14 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-summary');
     }
     
-    // Home after summary (screen 6) - flash Close button after complete
+    // Summary overlay (screen 5) - flash close button after node 2 is dismissed (nodeIndex >= 2)
+    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.nodeIndex >= 2 && !tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-summary-close');
+    } else {
+      document.body.classList.remove('tutorial-flash-summary-close');
+    }
+    
+    // Home after summary (screen 6) - flash Close case button after complete
     if (tutorialMode && tutorialScreen.index === 6 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-close');
     } else {
@@ -364,9 +373,10 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
       document.body.classList.remove('tutorial-flash-summary');
+      document.body.classList.remove('tutorial-flash-summary-close');
       document.body.classList.remove('tutorial-flash-close');
     };
-  }, [tutorialMode, tutorialScreen]);
+  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -1147,8 +1157,8 @@ export default function App() {
           {tutorialMode && (
             <TutorialOverlay
               appState={state}
-              onScreenChange={(index, complete) => {
-                setTutorialScreen({ index, complete });
+              onScreenChange={(index, complete, nodeIndex = 0) => {
+                setTutorialScreen({ index, complete, nodeIndex });
               }}
               onExit={() => {
                 // Exit tutorial mode
