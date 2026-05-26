@@ -332,15 +332,15 @@ export default function App() {
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
     
-    // Node 9 (addTxBtn) complete - flash Add Tx button (index 10 = waiting for treatment screen)
-    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === null) {
+    // Node 7 (addTxBtn) complete - flash Add Tx button (index 8 = waiting for treatment screen)
+    if (tutorialMode && tutorialScreen.index === 8 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
-    // Node 11 (medications) complete - flash Adrenaline and dose buttons (index 12 = waiting for home with treatments)
-    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === 'treatment') {
+    // Node 8 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 9)
+    if (tutorialMode && tutorialScreen.index === 9) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -348,22 +348,22 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
 
-    // Node 13 (summaryBtn) complete - flash Summary button (index 14 = waiting for summary overlay)
-    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === null) {
+    // Node 10 (summaryBtn) complete - flash Summary button (index 11 = waiting for summary overlay)
+    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 16 (closeOverlay) complete - flash summary close button (index 17 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 17 && state.currentOverlay === 'summary') {
+    // Node 13 (closeOverlay) complete - flash summary close button (index 14 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 17 (closeCase) complete - flash Close Case button (index 18 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 18 && state.currentOverlay === null) {
+    // Node 14 (closeCase) complete - flash Close Case button (index 15 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 15 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
