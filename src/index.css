@@ -98,3 +98,17 @@
     }
   }
 }
+
+/* Tutorial mode: flash Adrenaline push button text */
+@keyframes adrenalineFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+body.tutorial-flash-adrenaline [data-medication="Adrenaline push"] {
+  animation: adrenalineFlash 1.5s infinite;
+}
+
+body.tutorial-flash-dose [data-dose="Cardiac arrest"] {
+  animation: adrenalineFlash 1.5s infinite;
+}

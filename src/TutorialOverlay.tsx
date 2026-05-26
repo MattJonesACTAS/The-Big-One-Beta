@@ -1,5 +1,5 @@
 /**
- * TutorialOverlay - Sequential tutorial nodes that appear one at a time
+ * TutorialOverlay - Sequential tutorial nodes
  */
 
 import React, { useState, useEffect } from 'react';
@@ -25,7 +25,7 @@ interface TutorialScreen {
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
     // Intro screen 1
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds < 3,
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds < 3,
     initialMessage: {
       title: 'Welcome to The Big One',
       description: 'The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything.'
@@ -34,7 +34,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
   },
   {
     // Intro screen 2
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds >= 3 && state.elapsedSeconds < 6,
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds >= 3 && state.elapsedSeconds < 6,
     initialMessage: {
       title: 'Getting Started',
       description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
@@ -43,132 +43,62 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
   },
   {
     // Home screen with nodes
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds >= 6,
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length === 0 && state.elapsedSeconds >= 6,
     nodes: [
-      {
-        id: 'totalTime',
-        x: 19.8,
-        y: 22,
-        number: 1,
-        title: 'Total Time',
-        description: 'Total time the monitor has been turned on'
-      },
-      {
-        id: 'cprRound',
-        x: 80.2,
-        y: 22,
-        number: 2,
-        title: 'CPR Round',
-        description: 'The current round of CPR'
-      },
-      {
-        id: 'timer',
-        x: 50,
-        y: 52,
-        number: 3,
-        title: 'Rhythm Check Timer',
-        description: 'The countdown to the next rhythm check. When the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00.'
-      },
-      {
-        id: 'pause',
-        x: 19.0,
-        y: 4.2,
-        number: 4,
-        title: 'Pause Button',
-        description: 'Pause and resume the rhythm check timer'
-      },
-      {
-        id: 'recalibrate',
-        x: 51.0,
-        y: 4.2,
-        number: 5,
-        title: 'Recalibrate Button',
-        description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.'
-      },
-      {
-        id: 'tabs',
-        x: 50,
-        y: 10.75,
-        number: 6,
-        title: 'Checklists',
-        description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)'
-      },
-      {
-        id: 'addTxBtn',
-        x: 75,
-        y: 95.4,
-        number: 7,
-        title: 'Add Treatment Button',
-        description: 'Tap here to log treatments and interventions during the arrest'
-      }
+      { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'Total time the monitor has been turned on' },
+      { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR' },
+      { id: 'timer', x: 50, y: 52, number: 3, title: 'Rhythm Check Timer', description: 'The countdown to the next rhythm check. When the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00.' },
+      { id: 'pause', x: 19.0, y: 4.2, number: 4, title: 'Pause Button', description: 'Pause and resume the rhythm check timer' },
+      { id: 'recalibrate', x: 51.0, y: 4.2, number: 5, title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.' },
+      { id: 'tabs', x: 50, y: 10.75, number: 6, title: 'Checklists', description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)' },
+      { id: 'addTxBtn', x: 75, y: 95.4, number: 7, title: 'Add Treatment Button', description: 'Tap here to log treatments and interventions during the arrest' }
     ]
   },
   {
+    // Treatment menu
     condition: (state) => state.currentOverlay === 'treatment',
     nodes: [
-      {
-        id: 'addTxSubmenu',
-        x: 50,
-        y: 30,
-        number: 1,
-        title: 'Add Tx submenu',
-        description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log'
-      }
+      { id: 'addTxSubmenu', x: 50, y: 30, number: 1, title: 'Add Tx submenu', description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log' }
     ]
   },
   {
+    // Medication dose selection
     condition: (state) => state.currentOverlay === 'medicationDose',
     nodes: [
-      {
-        id: 'medications',
-        x: 53.2,
-        y: 44.2,
-        number: 1,
-        title: 'Medications',
-        description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone."
-      }
+      { id: 'medications', x: 53.2, y: 44.2, number: 1, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone." }
     ]
   },
   {
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length > 0,
+    // Home with medication alerts
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length > 0 && state.treatments.length < 2,
     nodes: [
-      {
-        id: 'adrenalineAlert',
-        x: 28.4,
-        y: 82.82,
-        number: 1,
-        title: 'Medication alerts',
-        description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.'
-      },
-      {
-        id: 'summaryBtn',
-        x: 26.6,
-        y: 95.4,
-        number: 2,
-        title: 'Summary Button',
-        description: "Next, let's have a look at the running case summary page"
-      }
+      { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' },
+      { id: 'summaryBtn', x: 26.6, y: 95.4, number: 2, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" }
     ]
   },
   {
+    // Summary overlay
     condition: (state) => state.currentOverlay === 'summary',
     nodes: [
-      {
-        id: 'pharmaSummary',
-        x: 50,
-        y: 50,
-        number: 1,
-        title: 'Medication Summary',
-        description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.'
-      },
-      {
-        id: 'treatmentLog',
-        x: 50,
-        y: 70.9,
-        number: 2,
-        title: 'Treatment Log',
-        description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.'
-      }
+      { id: 'pharmaSummary', x: 50, y: 50, number: 1, title: 'Medication Summary', description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.' },
+      { id: 'treatmentLog', x: 50, y: 70.9, number: 2, title: 'Treatment Log', description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.' },
+      { id: 'closeOverlay', x: 50, y: 8, number: 3, title: 'Return to Home', description: 'Press the close button to return to the home page' }
+    ]
+  },
+  {
+    // Home after viewing summary - show close case button
+    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length >= 2,
+    nodes: [
+      { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." }
+    ]
+  },
+  {
+    // Case summary (after case is closed)
+    condition: (state) => !state.running && state.treatments.length > 0,
+    nodes: [
+      { id: 'finalStats', x: 50, y: 61.64, number: 1, title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute' },
+      { id: 'export', x: 27, y: 14, number: 2, title: 'Export PDF', description: 'Export the case summary and Tx log to a pdf, which you can then email for later review.' },
+      { id: 'delete', x: 73, y: 14, number: 3, title: 'Delete Case', description: 'Permanently delete the case information from the app' }
     ]
   }
 ];
@@ -176,7 +106,6 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
 interface Props {
   appState: any;
   onExit: () => void;
-  // Callback to tell app which screen we're on (so app can flash button text)
   onScreenChange?: (screenIndex: number, isComplete: boolean) => void;
 }
 
@@ -204,7 +133,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
         setShowInitialMessage(`screen-${matchedScreenIndex}`);
       }
       
-      // Notify app of screen change
       if (onScreenChange) {
         onScreenChange(matchedScreenIndex, false);
       }
@@ -232,7 +160,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
 
   const handleDismissNode = () => {
     setActiveNode(null);
-    // Check if this was the last node
     if (currentNodeIndex >= currentScreen.nodes.length - 1) {
       setTutorialComplete(true);
     } else {
@@ -247,7 +174,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
       zIndex: 9998,
       pointerEvents: 'none'
     }}>
-      {/* Dark overlay backdrop */}
       {showDarkOverlay && (
         <div style={{
           position: 'fixed',
@@ -258,7 +184,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
         }} />
       )}
 
-      {/* Exit button */}
       <button
         onClick={onExit}
         style={{
@@ -284,7 +209,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
         ×
       </button>
 
-      {/* Initial message */}
       {currentScreen.initialMessage && showingInitialMessage && (
         <div style={{
           position: 'absolute',
@@ -326,7 +250,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
         </div>
       )}
 
-      {/* Current node (only show one at a time, and not if tutorial is complete) */}
       {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && (
         <button
           onClick={() => handleNodeClick(currentNode)}
@@ -354,7 +277,6 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
         </button>
       )}
 
-      {/* Node info box */}
       {activeNode && (
         <div style={{
           position: 'absolute',

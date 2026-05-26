@@ -324,13 +324,23 @@ export default function App() {
 
   // Add CSS class to body when on treatment screen with tutorial complete
   useEffect(() => {
+    // Treatment menu - flash Adrenaline push
     if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-adrenaline');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline');
     }
+    
+    // Medication dose screen - flash Cardiac arrest dose
+    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-dose');
+    } else {
+      document.body.classList.remove('tutorial-flash-dose');
+    }
+    
     return () => {
       document.body.classList.remove('tutorial-flash-adrenaline');
+      document.body.classList.remove('tutorial-flash-dose');
     };
   }, [tutorialMode, tutorialScreen]);
 
@@ -2161,6 +2171,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                 key={doseOpt.dose}
                 onClick={() => handleDoseSelect(doseOpt.dose)}
                 className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1"
+                data-dose={doseOpt.indication || calculateDose(doseOpt.dose, state.patientWeight)}
               >
                 {doseOpt.indication && (
                   <span className="text-[10px] font-normal uppercase tracking-wide">{doseOpt.indication}</span>
@@ -2448,6 +2459,7 @@ function TxSection({
                 key={itemName} 
                 onClick={() => onSelect(itemName)} 
                 className={`w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm hover:bg-neutral-100 btn-base ${textColorClass}`}
+                data-medication={itemName}
               >
                 {itemName}
               </button>
