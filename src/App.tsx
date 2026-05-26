@@ -354,8 +354,8 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-summary');
     }
     
-    // Summary overlay (screen 5) - flash close button after node 2 is dismissed (nodeIndex >= 2)
-    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.nodeIndex >= 2 && !tutorialScreen.complete) {
+    // Summary overlay (screen 5) - flash close button after all 3 nodes complete
+    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
@@ -987,6 +987,23 @@ export default function App() {
            </div>
          </div>
         )}
+
+        {/* Tutorial Overlay - also show on case summary */}
+        {tutorialMode && (
+          <TutorialOverlay
+            appState={state}
+            isCaseClosed={isCaseClosed}
+            onScreenChange={(index, complete, nodeIndex = 0) => {
+              setTutorialScreen({ index, complete, nodeIndex });
+            }}
+            onExit={() => {
+              // Exit tutorial mode
+              setTutorialMode(false);
+              setState(INITIAL_STATE);
+              setShowCatchup(true);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -1157,6 +1174,7 @@ export default function App() {
           {tutorialMode && (
             <TutorialOverlay
               appState={state}
+              isCaseClosed={isCaseClosed}
               onScreenChange={(index, complete, nodeIndex = 0) => {
                 setTutorialScreen({ index, complete, nodeIndex });
               }}

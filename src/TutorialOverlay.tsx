@@ -14,7 +14,7 @@ interface TutorialNode {
 }
 
 interface TutorialScreen {
-  condition: (appState: any) => boolean;
+  condition: (appState: any, summaryViewed: boolean) => boolean;
   nodes: TutorialNode[];
   initialMessage?: {
     title: string;
@@ -64,8 +64,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     ]
   },
   {
-    // Home with medication alerts
-    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length > 0 && state.treatments.length < 2,
+    // Home with medication alerts - only show if summary NOT viewed yet
+    condition: (state, summaryViewed) => state.running && state.currentOverlay === null && state.treatments.length > 0 && !summaryViewed,
     nodes: [
       { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' },
       { id: 'summaryBtn', x: 26.6, y: 95.4, number: 2, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" }
@@ -82,7 +82,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
   },
   {
     // Home after viewing summary - show close case button
-    condition: (state) => state.running && state.currentOverlay === null && state.treatments.length >= 2,
+    condition: (state, summaryViewed) => state.running && state.currentOverlay === null && summaryViewed,
     nodes: [
       { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." }
     ]
@@ -102,15 +102,24 @@ interface Props {
   appState: any;
   onExit: () => void;
   onScreenChange?: (screenIndex: number, isComplete: boolean, currentNodeIndex?: number) => void;
+  isCaseClosed?: boolean;
 }
 
-export default function TutorialOverlay({ appState, onExit, onScreenChange }: Props) {
+export default function TutorialOverlay({ appState, onExit, onScreenChange, isCaseClosed }: Props) {
   const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const [activeNode, setActiveNode] = useState<TutorialNode | null>(null);
   const [showInitialMessage, setShowInitialMessage] = useState<string | null>(null);
   const [currentScreenId, setCurrentScreenId] = useState<number>(-1);
   const [tutorialComplete, setTutorialComplete] = useState(false);
   const [intro1Dismissed, setIntro1Dismissed] = useState(false);
+  const [summaryViewed, setSummaryViewed] = useState(false);
+
+  // Track when summary overlay is closed
+  useEffect(() => {
+    if (currentScreenId === 5 && appState.currentOverlay !== 'summary' && !summaryViewed) {
+      setSummaryViewed(true);
+    }
+  }, [appState.currentOverlay, currentScreenId, summaryViewed]);
 
   // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
@@ -126,7 +135,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
     const offset = intro1Dismissed ? 1 : 0;
     
     const matchedScreenIndex = screensToCheck.findIndex(screen => 
-      screen.condition(appState)
+      screen.condition(appState, summaryViewed)
     );
     
     const actualScreenIndex = matchedScreenIndex >= 0 ? matchedScreenIndex + offset : -1;
@@ -146,7 +155,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange }: Pr
         onScreenChange(actualScreenIndex, false, 0);
       }
     }
-  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, onScreenChange]);
+  }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, summaryViewed, onScreenChange]);
 
   // Notify when tutorial completes on a screen or node changes
   useEffect(() => {
