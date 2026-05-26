@@ -28,7 +28,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state) => state.running && state.treatments.length === 0 && state.currentOverlay === null,
     initialMessage: {
       title: 'Welcome to The Big One',
-      description: 'The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything.'
+      description: 'The Big One is a cognitive aid for use during cardiac arrests. Having times and medications kept track of for you, situational awareness and leadership can be your main focus.'
     },
     nodes: []
   },
@@ -37,7 +37,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && !intro2Dismissed,
     initialMessage: {
       title: 'Getting Started',
-      description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
+      description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n• The time to next rhythm check\n• Select adult or paediatric patient\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first. Click on the blue numbers and follow any instructions to advance through the tutorial."
     },
     nodes: []
   },
@@ -45,20 +45,20 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     // Home screen - only show after intro2 dismissed
     condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && intro2Dismissed,
     nodes: [
-      { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'Total time the monitor has been turned on' },
+      { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'The total time since the monitor was turned on (top right timer)' },
       { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR' },
-      { id: 'timer', x: 50, y: 52, number: 3, title: 'Rhythm Check Timer', description: 'The countdown to the next rhythm check. When the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00.' },
+      { id: 'timer', x: 50, y: 52, number: 3, title: 'Rhythm Check Timer', description: 'The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don\'t miss the rhythm check.\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n• You will then be forced to record whether you shocked or disarmed.' },
       { id: 'pause', x: 19.0, y: 4.2, number: 4, title: 'Pause Button', description: 'Pause and resume the rhythm check timer' },
       { id: 'recalibrate', x: 51.0, y: 4.2, number: 5, title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.' },
       { id: 'tabs', x: 50, y: 10.75, number: 6, title: 'Checklists', description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)' },
-      { id: 'addTxBtn', x: 75, y: 95.4, number: 7, title: 'Add Treatment Button', description: 'Tap here to log treatments and interventions during the arrest' }
+      { id: 'addTxBtn', x: 75, y: 95.4, number: 7, title: 'Add Treatment Button', description: 'This takes you to the treatments (Tx) list for you to log in real time during the case. Press the button so we can log our first Tx.' }
     ]
   },
   {
     // Treatment menu (one comprehensive node)
     condition: (state) => state.currentOverlay === 'treatment',
     nodes: [
-      { id: 'addTxSubmenu', x: 50, y: 40, number: 1, title: 'Add Tx submenu', description: 'The Add Tx submenu has many treatments you can log. All medications will have one or more dosage options to choose for different indications. These dosages are pre-calculated if they are weight based. Add the only adrenaline push dose available, 1mg to progress.' }
+      { id: 'addTxSubmenu', x: 50, y: 40, number: 1, title: 'Add Tx Submenu', description: 'The Add Tx submenu has four categories of Tx\'s that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.' }
     ]
   },
   {
@@ -82,7 +82,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     // Home after viewing summary - show close case button
     condition: (state, summaryViewed) => state.running && state.currentOverlay === null && summaryViewed,
     nodes: [
-      { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." }
+      { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case." }
     ]
   },
   {
@@ -90,8 +90,8 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     condition: (state) => !state.running,
     nodes: [
       { id: 'finalStats', x: 50, y: 61.64, number: 1, title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute' },
-      { id: 'export', x: 27, y: 14, number: 2, title: 'Export PDF', description: 'Export the case summary and Tx log to a pdf, which you can then email for later review.' },
-      { id: 'delete', x: 73, y: 14, number: 3, title: 'Delete Case', description: 'Permanently delete the case information from the app' }
+      { id: 'export', x: 27, y: 14, number: 2, title: 'Export PDF', description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.' },
+      { id: 'delete', x: 73, y: 14, number: 3, title: 'Delete Case', description: 'Once you\'ve finished your case sheet and exported to PDF (if you wanted to) you can then delete all case data.' }
     ]
   }
 ];
@@ -321,13 +321,12 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
           width: '90%',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           zIndex: 10000,
-          pointerEvents: 'auto',
-          textAlign: 'center'
+          pointerEvents: 'auto'
         }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
             {activeNode.title}
           </h2>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5' }}>
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left' }}>
             {activeNode.description}
           </p>
           <button
