@@ -14,7 +14,7 @@ interface TutorialNode {
 }
 
 interface TutorialScreen {
-  condition: (appState: any, summaryViewed: boolean) => boolean;
+  condition: (appState: any, summaryViewed: boolean, intro2Dismissed?: boolean) => boolean;
   nodes: TutorialNode[];
   initialMessage?: {
     title: string;
@@ -24,7 +24,7 @@ interface TutorialScreen {
 
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
-    // Intro screen 1 - stays until dismissed
+    // Intro screen 1 - initial welcome popup
     condition: (state) => state.running && state.treatments.length === 0 && state.currentOverlay === null,
     initialMessage: {
       title: 'Welcome to The Big One',
@@ -33,12 +33,17 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     nodes: []
   },
   {
-    // Intro screen 2 with home screen nodes - shown after first is dismissed
-    condition: (state) => state.running && state.treatments.length === 0 && state.currentOverlay === null,
+    // Intro screen 2 - getting started popup (separate to prevent flash)
+    condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && !intro2Dismissed,
     initialMessage: {
       title: 'Getting Started',
       description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
     },
+    nodes: []
+  },
+  {
+    // Home screen - only show after intro2 dismissed
+    condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && intro2Dismissed,
     nodes: [
       { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'Total time the monitor has been turned on' },
       { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR' },
@@ -106,11 +111,12 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
   const [tutorialComplete, setTutorialComplete] = useState(false);
   const [intro1Dismissed, setIntro1Dismissed] = useState(false);
   const [summaryViewed, setSummaryViewed] = useState(false);
+  const [intro2Dismissed, setIntro2Dismissed] = useState(false);
 
   // Track when summary overlay is closed
   useEffect(() => {
-    // Summary overlay is screen 4, so when it closes (overlay no longer 'summary'), mark as viewed
-    if (currentScreenId === 4 && appState.currentOverlay !== 'summary' && !summaryViewed) {
+    // Summary overlay is screen 5, so when it closes (overlay no longer 'summary'), mark as viewed
+    if (currentScreenId === 5 && appState.currentOverlay !== 'summary' && !summaryViewed) {
       setSummaryViewed(true);
     }
   }, [appState.currentOverlay, currentScreenId, summaryViewed]);
@@ -129,7 +135,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
     const offset = intro1Dismissed ? 1 : 0;
     
     const matchedScreenIndex = screensToCheck.findIndex(screen => 
-      screen.condition(appState, summaryViewed)
+      screen.condition(appState, summaryViewed, intro2Dismissed)
     );
     
     const actualScreenIndex = matchedScreenIndex >= 0 ? matchedScreenIndex + offset : -1;
@@ -182,6 +188,9 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
   const handleDismissInitialMessage = () => {
     if (currentScreenId === 0) {
       setIntro1Dismissed(true);
+    }
+    if (currentScreenId === 1) {
+      setIntro2Dismissed(true);
     }
     setShowInitialMessage(null);
   };
