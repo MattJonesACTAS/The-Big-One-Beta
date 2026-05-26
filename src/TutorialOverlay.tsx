@@ -80,7 +80,7 @@ const ALL_NODES: GlobalNode[] = [
     id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 1,
     title: 'Add Tx Submenu',
     description: "The Add Tx submenu has four categories of Tx's that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
-    condition: (s) => s.currentOverlay === 'treatment'
+    condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
   },
   // --- Home with medication alerts ---
   {
