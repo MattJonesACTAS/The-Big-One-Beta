@@ -29,7 +29,13 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'intro2', type: 'popup',
     title: 'Getting Started',
-    description: "On opening The Big One, you'll need to calibrate it by entering:\n\n• The elapsed case time on the monitor\n\n• The time to next rhythm check\n\n• Select adult or paediatric patient\n\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first.\n\nClick on the blue numbers and follow any instructions to advance through the tutorial.",
+    description: "On opening The Big One, you'll need to calibrate the app by entering:\n\n• Adult or paediatric patient\n\n• Estimated patient weight\n\n• The interventions that have already been applied\n\n• The elapsed case time on the monitor\n\n• The time shown on the monitor's CPR count down\n\nYou'll then be brought to the home screen which we'll look at first.",
+    condition: (s) => s.running && s.currentOverlay === null
+  },
+  {
+    id: 'intro3', type: 'popup',
+    title: 'How It Works',
+    description: "In this tutorial you'll see blue numbered info nodes over different elements of the app.\n\nClick on these and follow any instructions to progress through the tutorial.",
     condition: (s) => s.running && s.currentOverlay === null
   },
   // --- Home screen nodes ---
