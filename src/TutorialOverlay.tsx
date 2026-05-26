@@ -132,12 +132,12 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
     }
   }, [currentScreenId, tutorialComplete, treatmentScreenCompleted, isShockForced]);
 
-  // Dismiss any active node popup when rhythm check fires
+  // Dismiss any active node popup when forced shock popup appears
   useEffect(() => {
-    if ((appState.rhythmCheckOvertime > 0 || isShockForced) && activeNode) {
+    if (isShockForced && activeNode) {
       setActiveNode(null);
     }
-  }, [appState.rhythmCheckOvertime, isShockForced, activeNode]);
+  }, [isShockForced, activeNode]);
 
   // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
   useEffect(() => {
