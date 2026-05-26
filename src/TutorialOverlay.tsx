@@ -176,12 +176,10 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   // Get current node
   const currentNode = tutorialDone ? null : ALL_NODES[globalNodeIndex];
 
-  // Freeze tutorial during entire rhythm check window (only when case is running)
-  const countdown = appState.rhythmCheckTarget - appState.elapsedSeconds;
+  // Freeze tutorial only during the actual rhythm check (overtime period and forced shock popup)
   const inRhythmCheckWindow = appState.running && (
     isShockForced ||
-    appState.rhythmCheckOvertime > 0 ||
-    (!appState.rhythmCheckPaused && countdown >= 0 && countdown <= 10)
+    appState.rhythmCheckOvertime > 0
   );
 
   // Check if current node's condition is met (and not frozen)
