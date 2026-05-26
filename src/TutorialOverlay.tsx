@@ -109,7 +109,7 @@ const ALL_NODES: GlobalNode[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'closeOverlay', type: 'positioned', x: 15, y: 93, displayNumber: 3,
+    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 3,
     title: 'Return to Home',
     description: 'Press the close button to return to the home page',
     condition: (s) => s.currentOverlay === 'summary'
