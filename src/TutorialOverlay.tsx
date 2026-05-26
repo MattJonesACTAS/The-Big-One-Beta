@@ -109,7 +109,8 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
 
   // Track when summary overlay is closed
   useEffect(() => {
-    if (currentScreenId === 5 && appState.currentOverlay !== 'summary' && !summaryViewed) {
+    // Summary overlay is screen 4, so when it closes (overlay no longer 'summary'), mark as viewed
+    if (currentScreenId === 4 && appState.currentOverlay !== 'summary' && !summaryViewed) {
       setSummaryViewed(true);
     }
   }, [appState.currentOverlay, currentScreenId, summaryViewed]);
