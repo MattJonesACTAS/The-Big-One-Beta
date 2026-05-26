@@ -320,6 +320,19 @@ export default function App() {
   
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
+  const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false });
+
+  // Add CSS class to body when on treatment screen with tutorial complete
+  useEffect(() => {
+    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
+      document.body.classList.add('tutorial-flash-adrenaline');
+    } else {
+      document.body.classList.remove('tutorial-flash-adrenaline');
+    }
+    return () => {
+      document.body.classList.remove('tutorial-flash-adrenaline');
+    };
+  }, [tutorialMode, tutorialScreen]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -1100,6 +1113,9 @@ export default function App() {
           {tutorialMode && (
             <TutorialOverlay
               appState={state}
+              onScreenChange={(index, complete) => {
+                setTutorialScreen({ index, complete });
+              }}
               onExit={() => {
                 // Exit tutorial mode
                 setTutorialMode(false);
