@@ -253,13 +253,12 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
           width: '90%',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           zIndex: 10000,
-          pointerEvents: 'auto',
-          textAlign: 'center'
+          pointerEvents: 'auto'
         }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
             {currentScreen.initialMessage.title}
           </h2>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5' }}>
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {currentScreen.initialMessage.description}
           </p>
           <button
@@ -326,7 +325,7 @@ export default function TutorialOverlay({ appState, onExit, onScreenChange, isCa
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
             {activeNode.title}
           </h2>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left' }}>
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {activeNode.description}
           </p>
           <button
