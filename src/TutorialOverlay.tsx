@@ -25,7 +25,7 @@ interface TutorialScreen {
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
     // Intro screen 1 - stays until dismissed
-    condition: (state) => state.running && state.treatments.length === 0,
+    condition: (state) => state.running && state.treatments.length === 0 && state.currentOverlay === null,
     initialMessage: {
       title: 'Welcome to The Big One',
       description: 'The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything.'
@@ -34,7 +34,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
   },
   {
     // Intro screen 2 with home screen nodes - shown after first is dismissed
-    condition: (state) => state.running && state.treatments.length === 0,
+    condition: (state) => state.running && state.treatments.length === 0 && state.currentOverlay === null,
     initialMessage: {
       title: 'Getting Started',
       description: "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
