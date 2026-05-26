@@ -70,7 +70,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     nodes: [
       { id: 'pharmaSummary', x: 50, y: 50, number: 1, title: 'Medication Summary', description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.' },
       { id: 'treatmentLog', x: 50, y: 70.9, number: 2, title: 'Treatment Log', description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.' },
-      { id: 'closeOverlay', x: 50, y: 8, number: 3, title: 'Return to Home', description: 'Press the close button to return to the home page' }
+      { id: 'closeOverlay', x: 15, y: 93, number: 3, title: 'Return to Home', description: 'Press the close button to return to the home page' }
     ]
   },
   {
