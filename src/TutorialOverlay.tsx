@@ -222,6 +222,20 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
 
   const showDarkOverlay = activePopup !== null || activePositioned !== null;
 
+  // Render description with reduced spacing between paragraphs (40% less than a full line)
+  const renderDescription = (text: string) => {
+    const segments = text.split('\n\n');
+    return (
+      <div style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left' }}>
+        {segments.map((segment, i) => (
+          <p key={i} style={{ margin: 0, marginBottom: i < segments.length - 1 ? '0.9em' : 0, whiteSpace: 'pre-line' }}>
+            {segment}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none' }}>
 
@@ -278,9 +292,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
             {activePopup.title}
           </h2>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            {activePopup.description}
-          </p>
+          {renderDescription(activePopup.description)}
           <button onClick={handleDismissPopup} style={{
             width: '100%', backgroundColor: '#059669', color: 'white',
             padding: '16px', borderRadius: '12px', border: 'none',
@@ -304,9 +316,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
             {activePositioned.title}
           </h2>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            {activePositioned.description}
-          </p>
+          {renderDescription(activePositioned.description)}
           <button onClick={handleDismissPositioned} style={{
             width: '100%', backgroundColor: '#059669', color: 'white',
             padding: '16px', borderRadius: '12px', border: 'none',
