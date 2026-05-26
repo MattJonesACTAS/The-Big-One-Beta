@@ -176,8 +176,17 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   // Get current node
   const currentNode = tutorialDone ? null : ALL_NODES[globalNodeIndex];
 
-  // Check if current node's condition is met
-  const conditionMet = currentNode
+  // Freeze tutorial during entire rhythm check window:
+  // - last 10 seconds of countdown (when overlay force-closes at 0:10)
+  // - during 6-second overtime
+  // - during forced shock popup
+  const countdown = appState.rhythmCheckTarget - appState.elapsedSeconds;
+  const inRhythmCheckWindow = isShockForced ||
+    appState.rhythmCheckOvertime > 0 ||
+    (!appState.rhythmCheckPaused && countdown >= 0 && countdown <= 10);
+
+  // Check if current node's condition is met (and not frozen)
+  const conditionMet = !inRhythmCheckWindow && currentNode
     ? (currentNode.condition ? currentNode.condition(appState, isShockForced) : true)
     : false;
 
@@ -205,12 +214,12 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     setGlobalNodeIndex(prev => prev + 1);
   };
 
-  // Dismiss positioned popup when forced shock appears
+  // Dismiss active node popup during the full rhythm check window
   useEffect(() => {
-    if (isShockForced && activePositioned) {
+    if (inRhythmCheckWindow && activePositioned) {
       setActivePositioned(null);
     }
-  }, [isShockForced, activePositioned]);
+  }, [inRhythmCheckWindow, activePositioned]);
 
   const showDarkOverlay = activePopup !== null || activePositioned !== null;
 
