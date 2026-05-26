@@ -3,7 +3,7 @@
  * TutorialOverlay - Sequential tutorial nodes
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface TutorialNode {
   id: string;
@@ -115,6 +115,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
   const [summaryViewed, setSummaryViewed] = useState(false);
   const [intro2Dismissed, setIntro2Dismissed] = useState(false);
   const [treatmentScreenCompleted, setTreatmentScreenCompleted] = useState(false);
+  const completedScreens = useRef<Map<number, { nodeIndex: number }>>(new Map());
 
   // Track when summary overlay is closed
   useEffect(() => {
@@ -161,10 +162,23 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
     const actualScreenIndex = matchedScreenIndex >= 0 ? matchedScreenIndex + offset : -1;
     
     if (actualScreenIndex !== currentScreenId) {
+      // Save current screen's completion state before leaving
+      if (currentScreenId >= 0 && tutorialComplete) {
+        completedScreens.current.set(currentScreenId, { nodeIndex: currentNodeIndex });
+      }
+
       setCurrentScreenId(actualScreenIndex);
       setActiveNode(null);
-      setCurrentNodeIndex(0);
       setTutorialComplete(false);
+
+      // Restore completion state if this screen was previously completed
+      const savedState = completedScreens.current.get(actualScreenIndex);
+      if (savedState) {
+        setCurrentNodeIndex(savedState.nodeIndex);
+        setTutorialComplete(true);
+      } else {
+        setCurrentNodeIndex(0);
+      }
       
       const screen = TUTORIAL_SCREENS[actualScreenIndex];
       if (screen?.initialMessage) {
@@ -172,7 +186,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
       }
       
       if (onScreenChange) {
-        onScreenChange(actualScreenIndex, false, 0);
+        onScreenChange(actualScreenIndex, savedState ? true : false, savedState?.nodeIndex ?? 0);
       }
     }
   }, [appState.running, appState.currentOverlay, appState.treatments.length, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, isShockForced, onScreenChange]);
@@ -200,6 +214,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
     setActiveNode(null);
     if (currentNodeIndex >= currentScreen.nodes.length - 1) {
       setTutorialComplete(true);
+      completedScreens.current.set(currentScreenId, { nodeIndex: currentNodeIndex });
     } else {
       setCurrentNodeIndex(prev => prev + 1);
     }
@@ -300,7 +315,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
         </div>
       )}
 
-      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && !isShockForced && appState.rhythmCheckOvertime === 0 && (
+      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && !isShockForced && (
         <button
           onClick={() => handleNodeClick(currentNode)}
           style={{
