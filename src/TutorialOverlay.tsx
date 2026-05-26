@@ -23,13 +23,13 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'intro1', type: 'popup',
     title: 'Welcome to The Big One',
-    description: 'The Big One is a cognitive aid for use during cardiac arrests.\n\nHaving times and medications kept track of for you, situational awareness and leadership can be your main focus.',
+    description: 'The Big One is a cognitive aid for use during cardiac arrests.\n\nWith times and medications tracked automatically, you can focus on situational awareness and team leadership.',
     condition: (s) => s.running && s.currentOverlay === null
   },
   {
     id: 'intro2', type: 'popup',
     title: 'Getting Started',
-    description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n\n• The time to next rhythm check\n\n• Select adult or paediatric patient\n\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first.\n\nClick on the blue numbers and follow any instructions to advance through the tutorial.",
+    description: "On opening The Big One, you'll need to calibrate it by entering:\n\n• The elapsed case time on the monitor\n\n• The time to next rhythm check\n\n• Select adult or paediatric patient\n\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first.\n\nClick on the blue numbers and follow any instructions to advance through the tutorial.",
     condition: (s) => s.running && s.currentOverlay === null
   },
   // --- Home screen nodes ---
@@ -60,7 +60,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 5,
     title: 'Recalibrate Button',
-    description: 'The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer to match reality if your rhythm checks are longer.',
+    description: 'The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer if your last rhythm check was longer.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -72,14 +72,14 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 7,
     title: 'Add Treatment Button',
-    description: 'This takes you to the treatments (Tx) list for you to log in real time during the case.\n\nPress the button so we can log our first Tx.',
+    description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the button so we can log our first Tx.',
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   // --- Treatment screen ---
   {
     id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 1,
     title: 'Add Tx Submenu',
-    description: "The Add Tx submenu has four categories of Tx's that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
+    description: "The Add Tx submenu has four categories of treatments you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
   },
   // --- Home with medication alerts ---
@@ -99,7 +99,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'pharmaSummary', type: 'positioned', x: 50, y: 50, displayNumber: 1,
     title: 'Medication Summary',
-    description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.',
+    description: 'All logged medications appear here, with a cumulative tally of the total dose given for each drug.',
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
@@ -137,7 +137,7 @@ const ALL_NODES: GlobalNode[] = [
   {
     id: 'delete', type: 'positioned', x: 73, y: 14, displayNumber: 3,
     title: 'Delete Case',
-    description: "Once you've finished your case sheet and exported to PDF (if you wanted to) you can then delete all case data.",
+    description: "Once you've finished with the case and exported to PDF if needed, you can delete all case data.",
     condition: (s) => !s.running
   }
 ];
