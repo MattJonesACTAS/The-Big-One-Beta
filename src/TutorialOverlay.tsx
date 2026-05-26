@@ -1,323 +1,236 @@
-// Build: 20260526-110611
 /**
- * TutorialOverlay - Sequential tutorial nodes
+ * TutorialOverlay - Global sequential tutorial nodes
+ * Each node waits for its screen condition before showing.
+ * Nodes only advance when explicitly dismissed - no jumping ahead.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
-interface TutorialNode {
+interface GlobalNode {
   id: string;
-  x: number;
-  y: number;
-  number: number;
+  type: 'popup' | 'positioned';
+  x?: number;
+  y?: number;
+  displayNumber?: number;
   title: string;
   description: string;
+  condition?: (appState: any, isShockForced?: boolean) => boolean;
 }
 
-interface TutorialScreen {
-  condition: (appState: any, summaryViewed: boolean, intro2Dismissed?: boolean, treatmentScreenCompleted?: boolean) => boolean;
-  nodes: TutorialNode[];
-  initialMessage?: {
-    title: string;
-    description: string;
-  };
-}
-
-const TUTORIAL_SCREENS: TutorialScreen[] = [
+// Single flat sequence - each node waits for its condition before appearing
+const ALL_NODES: GlobalNode[] = [
+  // --- Intro popups ---
   {
-    // Intro screen 1 - initial welcome popup
-    condition: (state) => state.running && state.treatments.length === 0 && state.currentOverlay === null,
-    initialMessage: {
-      title: 'Welcome to The Big One',
-      description: 'The Big One is a cognitive aid for use during cardiac arrests. Having times and medications kept track of for you, situational awareness and leadership can be your main focus.'
-    },
-    nodes: []
+    id: 'intro1', type: 'popup',
+    title: 'Welcome to The Big One',
+    description: 'The Big One is a cognitive aid for use during cardiac arrests. Having times and medications kept track of for you, situational awareness and leadership can be your main focus.',
+    condition: (s) => s.running && s.currentOverlay === null
   },
   {
-    // Intro screen 2 - getting started popup (separate to prevent flash)
-    condition: (state, summaryViewed, intro2Dismissed) => state.running && state.treatments.length === 0 && state.currentOverlay === null && !intro2Dismissed,
-    initialMessage: {
-      title: 'Getting Started',
-      description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n• The time to next rhythm check\n• Select adult or paediatric patient\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first. Click on the blue numbers and follow any instructions to advance through the tutorial."
-    },
-    nodes: []
+    id: 'intro2', type: 'popup',
+    title: 'Getting Started',
+    description: "On opening the app, you'll need to calibrate the app by entering:\n\n• The elapsed case time on the monitor\n• The time to next rhythm check\n• Select adult or paediatric patient\n• The patient's estimated weight\n\nYou'll then be brought to the home screen which we'll look at first. Click on the blue numbers and follow any instructions to advance through the tutorial.",
+    condition: (s) => s.running && s.currentOverlay === null
+  },
+  // --- Home screen nodes ---
+  {
+    id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 1,
+    title: 'Total Time',
+    description: 'The total time since the monitor was turned on (top right timer)',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
-    // Home screen - only show after intro2 dismissed, before treatment screen is visited
-    condition: (state, summaryViewed, intro2Dismissed, treatmentScreenCompleted) => state.running && state.currentOverlay === null && !!intro2Dismissed && !treatmentScreenCompleted,
-    nodes: [
-      { id: 'totalTime', x: 19.8, y: 22, number: 1, title: 'Total Time', description: 'The total time since the monitor was turned on (top right timer)' },
-      { id: 'cprRound', x: 80.2, y: 22, number: 2, title: 'CPR Round', description: 'The current round of CPR. This will update every time the rhythm check counter reaches 0:00.' },
-      { id: 'timer', x: 50, y: 52, number: 3, title: 'Rhythm Check Timer', description: 'The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don\'t miss the rhythm check.\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n• You will then be forced to record whether you shocked or disarmed.' },
-      { id: 'pause', x: 19.0, y: 4.2, number: 4, title: 'Pause Button', description: 'Pause and resume the rhythm check timer' },
-      { id: 'recalibrate', x: 51.0, y: 4.2, number: 5, title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.' },
-      { id: 'tabs', x: 50, y: 10.75, number: 6, title: 'Checklists', description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)' },
-      { id: 'addTxBtn', x: 75, y: 95.4, number: 7, title: 'Add Treatment Button', description: 'This takes you to the treatments (Tx) list for you to log in real time during the case. Press the button so we can log our first Tx.' }
-    ]
+    id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 2,
+    title: 'CPR Round',
+    description: 'The current round of CPR. This will update every time the rhythm check counter reaches 0:00.',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
-    // Treatment menu (one comprehensive node)
-    condition: (state) => state.currentOverlay === 'treatment',
-    nodes: [
-      { id: 'addTxSubmenu', x: 50, y: 40, number: 1, title: 'Add Tx Submenu', description: 'The Add Tx submenu has four categories of Tx\'s that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.' }
-    ]
+    id: 'timer', type: 'positioned', x: 50, y: 52, displayNumber: 3,
+    title: 'Rhythm Check Timer',
+    description: "The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n• You will then be forced to record whether you shocked or disarmed.",
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
-    // Home with medication alerts - only show after treatment screen completed
-    condition: (state, summaryViewed, intro2Dismissed, treatmentScreenCompleted) => state.running && state.currentOverlay === null && state.treatments.length > 0 && !summaryViewed && !!treatmentScreenCompleted,
-    nodes: [
-      { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 1, title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' },
-      { id: 'summaryBtn', x: 26.6, y: 95.4, number: 2, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" }
-    ]
+    id: 'pause', type: 'positioned', x: 19.0, y: 4.2, displayNumber: 4,
+    title: 'Pause Button',
+    description: 'Pause and resume the rhythm check timer',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
-    // Summary overlay
-    condition: (state) => state.currentOverlay === 'summary',
-    nodes: [
-      { id: 'pharmaSummary', x: 50, y: 50, number: 1, title: 'Medication Summary', description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.' },
-      { id: 'treatmentLog', x: 50, y: 70.9, number: 2, title: 'Treatment Log', description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.' },
-      { id: 'closeOverlay', x: 15, y: 93, number: 3, title: 'Return to Home', description: 'Press the close button to return to the home page' }
-    ]
+    id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 5,
+    title: 'Recalibrate Button',
+    description: 'The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer.',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
-    // Home after viewing summary - show close case button
-    condition: (state, summaryViewed) => state.running && state.currentOverlay === null && summaryViewed,
-    nodes: [
-      { id: 'close', x: 82.2, y: 4.2, number: 1, title: 'Close Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case." }
-    ]
+    id: 'tabs', type: 'positioned', x: 50, y: 10.75, displayNumber: 6,
+    title: 'Checklists',
+    description: 'Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
-    // Case summary (after case is closed)
-    condition: (state) => !state.running,
-    nodes: [
-      { id: 'finalStats', x: 50, y: 61.64, number: 1, title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute' },
-      { id: 'export', x: 27, y: 14, number: 2, title: 'Export PDF', description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.' },
-      { id: 'delete', x: 73, y: 14, number: 3, title: 'Delete Case', description: 'Once you\'ve finished your case sheet and exported to PDF (if you wanted to) you can then delete all case data.' }
-    ]
+    id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 7,
+    title: 'Add Treatment Button',
+    description: 'This takes you to the treatments (Tx) list for you to log in real time during the case. Press the button so we can log our first Tx.',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
+  },
+  // --- Treatment screen ---
+  {
+    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 1,
+    title: 'Add Tx Submenu',
+    description: "The Add Tx submenu has four categories of Tx's that you can log.\n\n• All medications will have one or more dosage options to choose from for different indications.\n• These dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress.",
+    condition: (s) => s.currentOverlay === 'treatment'
+  },
+  // --- Home with medication alerts ---
+  {
+    id: 'adrenalineAlert', type: 'positioned', x: 28.4, y: 82.82, displayNumber: 1,
+    title: 'Medication alerts',
+    description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.',
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && s.rhythmCheckOvertime === 0 && !sf
+  },
+  {
+    id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 2,
+    title: 'Summary Button',
+    description: "Next, let's have a look at the running case summary page",
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && s.rhythmCheckOvertime === 0 && !sf
+  },
+  // --- Summary overlay ---
+  {
+    id: 'pharmaSummary', type: 'positioned', x: 50, y: 50, displayNumber: 1,
+    title: 'Medication Summary',
+    description: 'All medications logged will appear here, with an accumulative tally of the total amount of each drug given.',
+    condition: (s) => s.currentOverlay === 'summary'
+  },
+  {
+    id: 'treatmentLog', type: 'positioned', x: 50, y: 70.9, displayNumber: 2,
+    title: 'Treatment Log',
+    description: 'Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.',
+    condition: (s) => s.currentOverlay === 'summary'
+  },
+  {
+    id: 'closeOverlay', type: 'positioned', x: 15, y: 93, displayNumber: 3,
+    title: 'Return to Home',
+    description: 'Press the close button to return to the home page',
+    condition: (s) => s.currentOverlay === 'summary'
+  },
+  // --- Home after summary ---
+  {
+    id: 'closeCase', type: 'positioned', x: 82.2, y: 4.2, displayNumber: 1,
+    title: 'Close Case Button',
+    description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case.",
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
+  },
+  // --- Case summary ---
+  {
+    id: 'finalStats', type: 'positioned', x: 50, y: 61.64, displayNumber: 1,
+    title: 'Final Case Data',
+    description: 'Now the case is over, the treatment log shows times to the second, not just to the minute',
+    condition: (s) => !s.running
+  },
+  {
+    id: 'export', type: 'positioned', x: 27, y: 14, displayNumber: 2,
+    title: 'Export PDF',
+    description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.',
+    condition: (s) => !s.running
+  },
+  {
+    id: 'delete', type: 'positioned', x: 73, y: 14, displayNumber: 3,
+    title: 'Delete Case',
+    description: "Once you've finished your case sheet and exported to PDF (if you wanted to) you can then delete all case data.",
+    condition: (s) => !s.running
   }
 ];
+
+// Global node indices for flash logic
+export const TUTORIAL_NODE = {
+  ADD_TX_BTN: 8,       // After dismiss: flash Add Tx button
+  ADD_TX_SUBMENU: 9,   // After dismiss: flash adrenaline button
+  SUMMARY_BTN: 11,     // After dismiss: flash Summary button
+  CLOSE_OVERLAY: 14,   // After dismiss: flash summary close button
+  CLOSE_CASE: 15,      // After dismiss: flash Close Case button
+  DELETE: 18           // After dismiss: flash Delete button
+};
 
 interface Props {
   appState: any;
   isShockForced?: boolean;
   onExit: () => void;
-  onScreenChange?: (screenIndex: number, isComplete: boolean, currentNodeIndex?: number) => void;
+  onNodeChange?: (globalNodeIndex: number, tutorialDone: boolean) => void;
   isCaseClosed?: boolean;
 }
 
-export default function TutorialOverlay({ appState, isShockForced, onExit, onScreenChange, isCaseClosed }: Props) {
-  const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
-  const [activeNode, setActiveNode] = useState<TutorialNode | null>(null);
-  const [showInitialMessage, setShowInitialMessage] = useState<string | null>(null);
-  const [currentScreenId, setCurrentScreenId] = useState<number>(-1);
-  const [tutorialComplete, setTutorialComplete] = useState(false);
-  const [intro1Dismissed, setIntro1Dismissed] = useState(false);
-  const [summaryViewed, setSummaryViewed] = useState(false);
-  const [intro2Dismissed, setIntro2Dismissed] = useState(false);
-  const [treatmentScreenCompleted, setTreatmentScreenCompleted] = useState(false);
-  const completedScreens = useRef<Map<number, { nodeIndex: number }>>(new Map());
+export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed }: Props) {
+  const [globalNodeIndex, setGlobalNodeIndex] = useState(0);
+  const [activePopup, setActivePopup] = useState<GlobalNode | null>(null);
+  const [activePositioned, setActivePositioned] = useState<GlobalNode | null>(null);
+  const tutorialDone = globalNodeIndex >= ALL_NODES.length;
 
-  // Track when summary overlay is closed
+  // Notify App.tsx when global node index changes
   useEffect(() => {
-    // Summary overlay is screen 5, so when it closes (overlay no longer 'summary'), mark as viewed
-    if (currentScreenId === 5 && appState.currentOverlay !== 'summary' && !summaryViewed) {
-      setSummaryViewed(true);
+    if (onNodeChange) {
+      onNodeChange(globalNodeIndex, tutorialDone);
     }
-  }, [appState.currentOverlay, currentScreenId, summaryViewed]);
+  }, [globalNodeIndex, tutorialDone, onNodeChange]);
 
-  // Track when treatment screen (screen 3) node is dismissed - gate medication alerts screen
+  // Get current node
+  const currentNode = tutorialDone ? null : ALL_NODES[globalNodeIndex];
+
+  // Check if current node's condition is met
+  const conditionMet = currentNode
+    ? (currentNode.condition ? currentNode.condition(appState, isShockForced) : true)
+    : false;
+
+  // Auto-show popup when condition is met
   useEffect(() => {
-    if (currentScreenId === 3 && tutorialComplete && !treatmentScreenCompleted && !isShockForced) {
-      setTreatmentScreenCompleted(true);
+    if (currentNode?.type === 'popup' && conditionMet && !activePopup) {
+      setActivePopup(currentNode);
     }
-  }, [currentScreenId, tutorialComplete, treatmentScreenCompleted, isShockForced]);
+  }, [currentNode?.id, conditionMet]);
 
-  // Dismiss any active node popup when forced shock popup appears
-  useEffect(() => {
-    if (isShockForced && activeNode) {
-      setActiveNode(null);
-    }
-  }, [isShockForced, activeNode]);
-
-  // Detect screen changes - ignore ROSC/Reversibles/PHEA overlay changes
-  useEffect(() => {
-    // Don't change screens during forced shock/disarm or rhythm check overtime
-    if (isShockForced || appState.rhythmCheckOvertime > 0) return;
-
-    // If we're on ROSC/Reversibles/PHEA overlay, don't change screens
-    if (appState.currentOverlay === 'rosc' || 
-        appState.currentOverlay === 'reversibles' || 
-        appState.currentOverlay === 'phea') {
-      return; // Keep current screen
-    }
-
-    // Skip intro 1 if already dismissed
-    const screensToCheck = intro1Dismissed ? TUTORIAL_SCREENS.slice(1) : TUTORIAL_SCREENS;
-    const offset = intro1Dismissed ? 1 : 0;
-    
-    const matchedScreenIndex = screensToCheck.findIndex(screen => 
-      screen.condition(appState, summaryViewed, intro2Dismissed, treatmentScreenCompleted)
-    );
-    
-    const actualScreenIndex = matchedScreenIndex >= 0 ? matchedScreenIndex + offset : -1;
-    
-    if (actualScreenIndex !== currentScreenId) {
-      // Save current screen's completion state before leaving
-      if (currentScreenId >= 0 && tutorialComplete) {
-        completedScreens.current.set(currentScreenId, { nodeIndex: currentNodeIndex });
-      }
-
-      setCurrentScreenId(actualScreenIndex);
-      setActiveNode(null);
-      setTutorialComplete(false);
-
-      // Restore completion state if this screen was previously completed
-      const savedState = completedScreens.current.get(actualScreenIndex);
-      if (savedState) {
-        setCurrentNodeIndex(savedState.nodeIndex);
-        setTutorialComplete(true);
-      } else {
-        setCurrentNodeIndex(0);
-      }
-      
-      const screen = TUTORIAL_SCREENS[actualScreenIndex];
-      if (screen?.initialMessage) {
-        setShowInitialMessage(`screen-${actualScreenIndex}`);
-      }
-      
-      if (onScreenChange) {
-        onScreenChange(actualScreenIndex, savedState ? true : false, savedState?.nodeIndex ?? 0);
-      }
-    }
-  }, [appState.running, appState.currentOverlay, appState.treatments.length, appState.rhythmCheckOvertime, currentScreenId, intro1Dismissed, intro2Dismissed, summaryViewed, treatmentScreenCompleted, isShockForced, onScreenChange]);
-
-  // Notify when tutorial completes on a screen or node changes
-  useEffect(() => {
-    if (onScreenChange) {
-      onScreenChange(currentScreenId, tutorialComplete, currentNodeIndex);
-    }
-  }, [tutorialComplete, currentScreenId, currentNodeIndex, onScreenChange]);
-
-  const currentScreen = currentScreenId >= 0 ? TUTORIAL_SCREENS[currentScreenId] : null;
-  if (!currentScreen) return null;
-
-  const currentNode = currentScreen.nodes[currentNodeIndex];
-  const currentMessageKey = `screen-${currentScreenId}`;
-  const showingInitialMessage = showInitialMessage === currentMessageKey;
-  const showDarkOverlay = showingInitialMessage || activeNode !== null;
-
-  const handleNodeClick = (node: TutorialNode) => {
-    setActiveNode(node);
+  // Dismiss popup or positioned node popup
+  const handleDismissPopup = () => {
+    setActivePopup(null);
+    setGlobalNodeIndex(prev => prev + 1);
   };
 
-  const handleDismissNode = () => {
-    setActiveNode(null);
-    if (currentNodeIndex >= currentScreen.nodes.length - 1) {
-      setTutorialComplete(true);
-      completedScreens.current.set(currentScreenId, { nodeIndex: currentNodeIndex });
-    } else {
-      setCurrentNodeIndex(prev => prev + 1);
+  const handleNodeClick = () => {
+    if (currentNode?.type === 'positioned' && conditionMet) {
+      setActivePositioned(currentNode);
     }
   };
 
-  const handleDismissInitialMessage = () => {
-    if (currentScreenId === 0) {
-      setIntro1Dismissed(true);
-      // Don't clear showInitialMessage here - let the screen change effect handle it
-      // This prevents the flash between intro messages
-    } else if (currentScreenId === 1) {
-      setIntro2Dismissed(true);
-      setShowInitialMessage(null);
-    } else {
-      setShowInitialMessage(null);
-    }
+  const handleDismissPositioned = () => {
+    setActivePositioned(null);
+    setGlobalNodeIndex(prev => prev + 1);
   };
+
+  // Dismiss positioned popup when forced shock appears
+  useEffect(() => {
+    if (isShockForced && activePositioned) {
+      setActivePositioned(null);
+    }
+  }, [isShockForced, activePositioned]);
+
+  const showDarkOverlay = activePopup !== null || activePositioned !== null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9998,
-      pointerEvents: 'none'
-    }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none' }}>
+
+      {/* Dark backdrop */}
       {showDarkOverlay && (
         <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          position: 'absolute', inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
           zIndex: 9999,
           pointerEvents: 'auto'
         }} />
       )}
 
-      <button
-        onClick={onExit}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          zIndex: 10001,
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          color: '#fff',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '24px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'auto'
-        }}
-      >
-        ×
-      </button>
-
-      {currentScreen.initialMessage && showingInitialMessage && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: 'white',
-          borderRadius: '20px',
-          padding: '32px',
-          maxWidth: '400px',
-          width: '90%',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          zIndex: 10000,
-          pointerEvents: 'auto'
-        }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
-            {currentScreen.initialMessage.title}
-          </h2>
-          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            {currentScreen.initialMessage.description}
-          </p>
-          <button
-            onClick={handleDismissInitialMessage}
-            style={{
-              width: '100%',
-              backgroundColor: '#059669',
-              color: 'white',
-              padding: '16px',
-              borderRadius: '12px',
-              border: 'none',
-              fontSize: '16px',
-              fontWeight: '700',
-              cursor: 'pointer'
-            }}
-          >
-            Got it
-          </button>
-        </div>
-      )}
-
-      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && !isShockForced && (
+      {/* Positioned node circle - only show when condition met, not during forced shock */}
+      {currentNode?.type === 'positioned' && conditionMet && !activePositioned && !tutorialDone && (
         <button
-          onClick={() => handleNodeClick(currentNode)}
+          onClick={handleNodeClick}
           style={{
             position: 'absolute',
             left: `${currentNode.x}%`,
@@ -328,68 +241,92 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onScr
             borderRadius: '50%',
             backgroundColor: '#3b82f6',
             color: 'white',
-            border: '4px solid white',
-            fontSize: '24px',
+            fontSize: '20px',
             fontWeight: '700',
+            border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            zIndex: 9999,
+            zIndex: 10001,
             pointerEvents: 'auto',
-            animation: 'pulse 2s infinite'
+            animation: 'tutorialPulse 2s infinite',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          {currentNode.number}
+          {currentNode.displayNumber}
         </button>
       )}
 
-      {activeNode && (
+      {/* Popup modal (intro screens) */}
+      {activePopup && (
         <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
+          position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          backgroundColor: 'white',
-          borderRadius: '20px',
-          padding: '32px',
-          maxWidth: '400px',
-          width: '90%',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          zIndex: 10000,
-          pointerEvents: 'auto'
+          backgroundColor: 'white', borderRadius: '20px',
+          padding: '32px', maxWidth: '400px', width: '90%',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          zIndex: 10000, pointerEvents: 'auto'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
-            {activeNode.title}
+            {activePopup.title}
           </h2>
           <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            {activeNode.description}
+            {activePopup.description}
           </p>
-          <button
-            onClick={handleDismissNode}
-            style={{
-              width: '100%',
-              backgroundColor: '#059669',
-              color: 'white',
-              padding: '16px',
-              borderRadius: '12px',
-              border: 'none',
-              fontSize: '16px',
-              fontWeight: '700',
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={handleDismissPopup} style={{
+            width: '100%', backgroundColor: '#059669', color: 'white',
+            padding: '16px', borderRadius: '12px', border: 'none',
+            fontSize: '16px', fontWeight: '700', cursor: 'pointer'
+          }}>
             Got it
           </button>
         </div>
       )}
 
+      {/* Positioned node popup */}
+      {activePositioned && (
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'white', borderRadius: '20px',
+          padding: '32px', maxWidth: '400px', width: '90%',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          zIndex: 10000, pointerEvents: 'auto'
+        }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000', textAlign: 'center' }}>
+            {activePositioned.title}
+          </h2>
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', whiteSpace: 'pre-line' }}>
+            {activePositioned.description}
+          </p>
+          <button onClick={handleDismissPositioned} style={{
+            width: '100%', backgroundColor: '#059669', color: 'white',
+            padding: '16px', borderRadius: '12px', border: 'none',
+            fontSize: '16px', fontWeight: '700', cursor: 'pointer'
+          }}>
+            Got it
+          </button>
+        </div>
+      )}
+
+      {/* Exit button */}
+      <button
+        onClick={onExit}
+        style={{
+          position: 'absolute', top: '16px', left: '16px',
+          backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+          padding: '8px 16px', borderRadius: '8px', border: 'none',
+          fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+          zIndex: 10002, pointerEvents: 'auto'
+        }}
+      >
+        Exit Tutorial
+      </button>
+
       <style>{`
-        @keyframes pulse {
-          0%, 100% {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(59, 130, 246, 0.7);
-          }
-          50% {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 10px rgba(59, 130, 246, 0);
-          }
+        @keyframes tutorialPulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
         }
       `}</style>
     </div>

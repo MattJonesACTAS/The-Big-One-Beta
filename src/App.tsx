@@ -331,50 +331,45 @@ export default function App() {
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
     
-    // Home screen with 7 nodes (screen 2) - flash Add Tx after complete
-    if (tutorialMode && tutorialScreen.index === 2 && tutorialScreen.complete && state.currentOverlay === null) {
+    // Node 8 (addTxBtn) complete - flash Add Tx button (index 9 = waiting for treatment screen)
+    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
-    
-    // Treatment menu (screen 3) - flash Adrenaline push after complete, AND flash dose button when still on treatment screen
-    if (tutorialMode && tutorialScreen.index === 3 && tutorialScreen.complete) {
+
+    // Node 9 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 10 = waiting for home with treatments)
+    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === 'treatment') {
       document.body.classList.add('tutorial-flash-adrenaline');
-      // Also flash dose button when treatment screen is complete (means they clicked Adrenaline push)
-      if (state.currentOverlay === 'treatment') {
-        document.body.classList.add('tutorial-flash-dose');
-      } else {
-        document.body.classList.remove('tutorial-flash-dose');
-      }
+      document.body.classList.add('tutorial-flash-dose');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
     }
-    
-    // Home with alerts (screen 4) - flash Summary button after complete
-    if (tutorialMode && tutorialScreen.index === 4 && tutorialScreen.complete) {
+
+    // Node 11 (summaryBtn) complete - flash Summary button (index 12 = waiting for summary overlay)
+    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
-    
-    // Summary overlay (screen 5) - flash close button after all 3 nodes complete
-    if (tutorialMode && tutorialScreen.index === 5 && tutorialScreen.complete) {
+
+    // Node 14 (closeOverlay) complete - flash summary close button (index 15 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 15 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
-    
-    // Home after summary (screen 6) - flash Close case button after complete
-    if (tutorialMode && tutorialScreen.index === 6 && tutorialScreen.complete) {
+
+    // Node 15 (closeCase) complete - flash Close Case button (index 16 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 16 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
     }
 
-    // Case summary (screen 7) - flash Delete Case button after 3rd node complete
-    if (tutorialMode && tutorialScreen.index === 7 && tutorialScreen.complete) {
+    // Tutorial done - flash Delete Case button
+    if (tutorialMode && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-delete');
     } else {
       document.body.classList.remove('tutorial-flash-delete');
@@ -1204,11 +1199,10 @@ export default function App() {
               appState={state}
               isShockForced={isShockForced}
               isCaseClosed={isCaseClosed}
-              onScreenChange={(index, complete, nodeIndex = 0) => {
-                setTutorialScreen({ index, complete, nodeIndex });
+              onNodeChange={(nodeIndex, done) => {
+                setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
               }}
               onExit={() => {
-                // Exit tutorial mode
                 setTutorialMode(false);
                 setState(INITIAL_STATE);
                 setShowCatchup(true);
