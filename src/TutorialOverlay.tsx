@@ -20,21 +20,30 @@ interface TutorialScreen {
     title: string;
     description: string;
   };
-  // Position of element to highlight with flashing effect
-  flashElement?: {
+  // Position of text to flash
+  flashText?: {
     x: number;
     y: number;
-    width: string;
-    height: string;
+    text: string;
   };
 }
 
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0,
+    // Intro screen 1
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds < 5,
     initialMessage: {
       title: 'Welcome to The Big One',
-      description: 'This tutorial will guide you through the key features of the cardiac arrest timer. Click each numbered circle as it appears to learn more.'
+      description: 'This tutorial will guide you through the key features of the cardiac arrest timer.'
+    },
+    nodes: []
+  },
+  {
+    // Intro screen 2
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0 && state.elapsedSeconds >= 5,
+    initialMessage: {
+      title: 'Getting Started',
+      description: 'Click each numbered circle as it appears to learn more about each feature.'
     },
     nodes: [
       {
@@ -107,12 +116,11 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
         description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log'
       }
     ],
-    // Flash the Adrenaline push button
-    flashElement: {
+    // Flash just the text "Adrenaline push"
+    flashText: {
       x: 50,
       y: 30.5,
-      width: 'calc(100% - 58px)',
-      height: '50px'
+      text: 'Adrenaline push'
     }
   },
   {
@@ -129,7 +137,7 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
     ]
   },
   {
-    condition: (state) => state.running && !state.currentOverlay && state.treatments.length > 0,
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length > 0 && !state.hasViewedSummary,
     nodes: [
       {
         id: 'adrenalineAlert',
@@ -138,6 +146,14 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
         number: 1,
         title: 'Medication alerts',
         description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.'
+      },
+      {
+        id: 'summaryBtn',
+        x: 26.6,
+        y: 95.4,
+        number: 2,
+        title: 'Summary Button',
+        description: "Next, let's have a look at the running case summary page"
       }
     ]
   }
@@ -282,21 +298,22 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
         </div>
       )}
 
-      {/* Flashing element highlight (e.g., Adrenaline push button) */}
-      {currentScreen.flashElement && !showingInitialMessage && tutorialComplete && (
+      {/* Flashing text (e.g., "Adrenaline push") */}
+      {currentScreen.flashText && !showingInitialMessage && tutorialComplete && (
         <div style={{
           position: 'absolute',
-          left: `${currentScreen.flashElement.x}%`,
-          top: `${currentScreen.flashElement.y}%`,
+          left: `${currentScreen.flashText.x}%`,
+          top: `${currentScreen.flashText.y}%`,
           transform: 'translate(-50%, -50%)',
-          width: currentScreen.flashElement.width,
-          height: currentScreen.flashElement.height,
-          border: '3px solid #10b981',
-          borderRadius: '12px',
+          color: '#000',
+          fontSize: '14px',
+          fontWeight: '700',
           zIndex: 9999,
           pointerEvents: 'none',
-          animation: 'flashBorder 1.5s infinite'
-        }} />
+          animation: 'textFlash 1.5s infinite'
+        }}>
+          {currentScreen.flashText.text}
+        </div>
       )}
 
       {/* Current node (only show one at a time, and not if tutorial is complete) */}
@@ -378,14 +395,12 @@ export default function TutorialOverlay({ appState, onExit }: Props) {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 10px rgba(59, 130, 246, 0);
           }
         }
-        @keyframes flashBorder {
+        @keyframes textFlash {
           0%, 100% {
             opacity: 1;
-            border-color: #10b981;
           }
           50% {
             opacity: 0.3;
-            border-color: #34d399;
           }
         }
       `}</style>
