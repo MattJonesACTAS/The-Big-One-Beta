@@ -1,4 +1,4 @@
-// Updated: 2026-05-26 10:50 - Tutorial text, bullet formatting, alignment
+// Build: 20260526-110611
 /**
  * TutorialOverlay - Sequential tutorial nodes
  */

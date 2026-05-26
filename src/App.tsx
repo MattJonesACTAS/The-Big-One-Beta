@@ -1,4 +1,4 @@
-// Updated: 2026-05-26 10:50 - Close Case button, ROSC timer, checklist persistence
+// Build: 20260526-110611
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
