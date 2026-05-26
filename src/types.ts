@@ -29,6 +29,9 @@ export interface AppState {
   startClockTime: number | null;
   patientWeight: number | null;
   patientType: 'adult' | 'paed' | null;
+  reversiblesChecked: string[];
+  roscChecked: string[];
+  pheaChecked: string[];
 }
 
 export type OverlayType = 'reversibles' | 'rosc' | 'phea' | 'summary' | 'treatment' | 'caseSummary' | 'tutorial';
