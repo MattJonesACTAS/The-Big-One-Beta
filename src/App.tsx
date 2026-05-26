@@ -1014,12 +1014,12 @@ export default function App() {
         {tutorialMode && (
           <TutorialOverlay
             appState={state}
+            isShockForced={isShockForced}
             isCaseClosed={isCaseClosed}
-            onScreenChange={(index, complete, nodeIndex = 0) => {
-              setTutorialScreen({ index, complete, nodeIndex });
+            onNodeChange={(nodeIndex, done) => {
+              setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
             }}
             onExit={() => {
-              // Exit tutorial mode
               setTutorialMode(false);
               setState(INITIAL_STATE);
               setShowCatchup(true);
