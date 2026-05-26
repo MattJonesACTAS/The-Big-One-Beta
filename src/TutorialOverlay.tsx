@@ -20,11 +20,18 @@ interface TutorialScreen {
     title: string;
     description: string;
   };
+  // Position of element to highlight with flashing effect
+  flashElement?: {
+    x: number;
+    y: number;
+    width: string;
+    height: string;
+  };
 }
 
 const TUTORIAL_SCREENS: TutorialScreen[] = [
   {
-    condition: (state) => state.running && !state.currentOverlay,
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length === 0,
     initialMessage: {
       title: 'Welcome to The Big One',
       description: 'This tutorial will guide you through the key features of the cardiac arrest timer. Click each numbered circle as it appears to learn more.'
@@ -94,10 +101,43 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
       {
         id: 'addTxSubmenu',
         x: 50,
-        y: 45.9,
+        y: 30,
         number: 1,
         title: 'Add Tx submenu',
         description: 'After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log'
+      }
+    ],
+    // Flash the Adrenaline push button
+    flashElement: {
+      x: 50,
+      y: 30.5,
+      width: 'calc(100% - 58px)',
+      height: '50px'
+    }
+  },
+  {
+    condition: (state) => state.currentOverlay === 'medicationDose',
+    nodes: [
+      {
+        id: 'medications',
+        x: 53.2,
+        y: 44.2,
+        number: 1,
+        title: 'Medications',
+        description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone."
+      }
+    ]
+  },
+  {
+    condition: (state) => state.running && !state.currentOverlay && state.treatments.length > 0,
+    nodes: [
+      {
+        id: 'adrenalineAlert',
+        x: 28.4,
+        y: 82.82,
+        number: 1,
+        title: 'Medication alerts',
+        description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.'
       }
     ]
   }
@@ -106,15 +146,14 @@ const TUTORIAL_SCREENS: TutorialScreen[] = [
 interface Props {
   appState: any;
   onExit: () => void;
-  onRestart: () => void;
 }
 
-export default function TutorialOverlay({ appState, onExit, onRestart }: Props) {
+export default function TutorialOverlay({ appState, onExit }: Props) {
   const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const [activeNode, setActiveNode] = useState<TutorialNode | null>(null);
   const [showInitialMessage, setShowInitialMessage] = useState<string | null>(null);
   const [currentScreenId, setCurrentScreenId] = useState<number>(-1);
-  const [previousOverlay, setPreviousOverlay] = useState<string | null>(null);
+  const [tutorialComplete, setTutorialComplete] = useState(false);
 
   // Detect screen changes
   useEffect(() => {
@@ -126,6 +165,7 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
       setCurrentScreenId(matchedScreenIndex);
       setActiveNode(null);
       setCurrentNodeIndex(0);
+      setTutorialComplete(false);
       
       const screen = TUTORIAL_SCREENS[matchedScreenIndex];
       if (screen?.initialMessage) {
@@ -134,24 +174,13 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
     }
   }, [appState, currentScreenId]);
 
-  // Detect if Reversibles/ROSC/PHEA buttons were clicked - restart tutorial
-  useEffect(() => {
-    const currentOverlay = appState.currentOverlay;
-    
-    if (currentOverlay !== previousOverlay) {
-      if (currentOverlay === 'reversibles' || currentOverlay === 'rosc' || currentOverlay === 'phea') {
-        onRestart();
-      }
-      setPreviousOverlay(currentOverlay);
-    }
-  }, [appState.currentOverlay, previousOverlay, onRestart]);
-
   const currentScreen = currentScreenId >= 0 ? TUTORIAL_SCREENS[currentScreenId] : null;
   if (!currentScreen) return null;
 
   const currentNode = currentScreen.nodes[currentNodeIndex];
   const currentMessageKey = `screen-${currentScreenId}`;
   const showingInitialMessage = showInitialMessage === currentMessageKey;
+  const showDarkOverlay = showingInitialMessage || activeNode !== null;
 
   const handleNodeClick = (node: TutorialNode) => {
     setActiveNode(node);
@@ -159,7 +188,10 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
 
   const handleDismissNode = () => {
     setActiveNode(null);
-    if (currentNodeIndex < currentScreen.nodes.length - 1) {
+    // Check if this was the last node
+    if (currentNodeIndex >= currentScreen.nodes.length - 1) {
+      setTutorialComplete(true);
+    } else {
       setCurrentNodeIndex(prev => prev + 1);
     }
   };
@@ -171,6 +203,17 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
       zIndex: 9998,
       pointerEvents: 'none'
     }}>
+      {/* Dark overlay backdrop */}
+      {showDarkOverlay && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 9999,
+          pointerEvents: 'auto'
+        }} />
+      )}
+
       {/* Exit button */}
       <button
         onClick={onExit}
@@ -211,7 +254,8 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
           width: '90%',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           zIndex: 10000,
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          textAlign: 'center'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000' }}>
             {currentScreen.initialMessage.title}
@@ -238,8 +282,25 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
         </div>
       )}
 
-      {/* Current node (only show one at a time) */}
-      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && (
+      {/* Flashing element highlight (e.g., Adrenaline push button) */}
+      {currentScreen.flashElement && !showingInitialMessage && tutorialComplete && (
+        <div style={{
+          position: 'absolute',
+          left: `${currentScreen.flashElement.x}%`,
+          top: `${currentScreen.flashElement.y}%`,
+          transform: 'translate(-50%, -50%)',
+          width: currentScreen.flashElement.width,
+          height: currentScreen.flashElement.height,
+          border: '3px solid #10b981',
+          borderRadius: '12px',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          animation: 'flashBorder 1.5s infinite'
+        }} />
+      )}
+
+      {/* Current node (only show one at a time, and not if tutorial is complete) */}
+      {(!currentScreen.initialMessage || !showingInitialMessage) && currentNode && !activeNode && !tutorialComplete && (
         <button
           onClick={() => handleNodeClick(currentNode)}
           style={{
@@ -280,7 +341,8 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
           width: '90%',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           zIndex: 10000,
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          textAlign: 'center'
         }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#000' }}>
             {activeNode.title}
@@ -314,6 +376,16 @@ export default function TutorialOverlay({ appState, onExit, onRestart }: Props) 
           }
           50% {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 10px rgba(59, 130, 246, 0);
+          }
+        }
+        @keyframes flashBorder {
+          0%, 100% {
+            opacity: 1;
+            border-color: #10b981;
+          }
+          50% {
+            opacity: 0.3;
+            border-color: #34d399;
           }
         }
       `}</style>
