@@ -1163,7 +1163,7 @@ export default function App() {
                     />
                   </svg>
                   <span className="z-10 text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-emerald-600 text-center">PRESS IF REARREST</span>
-                  <span className="z-10 absolute bottom-10 sm:bottom-14 text-[13px] sm:text-[16px] font-bold tracking-widest uppercase text-neutral-400">ROSC</span>
+                  <span className="z-10 absolute bottom-[35px] sm:bottom-[51px] text-[13px] sm:text-[16px] font-bold tracking-widest uppercase text-neutral-400">ROSC</span>
                 </button>
               ) : (
                 <>
