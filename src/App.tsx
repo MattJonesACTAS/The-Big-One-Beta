@@ -1256,6 +1256,7 @@ export default function App() {
                 pharmaSummary={pharmaSummary}
                 isShockForced={isShockForced}
                 toggleChecklistItem={toggleChecklistItem}
+                onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
               />
             )}
           </AnimatePresence>
@@ -1912,7 +1913,7 @@ function CounterItem({ label, value, onChange }: { label: string, value: number,
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem, onVitalsChange }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -1920,7 +1921,8 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   isShockForced: boolean,
-  toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void
+  toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
+  onVitalsChange: (v: AppState['vitals']) => void
 }) {
   const isTop = ['reversibles', 'rosc', 'phea'].includes(type);
   
@@ -1936,7 +1938,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
-        {type === 'vitals' && <VitalsOverlay vitals={state.vitals} onChange={(v) => setState(p => ({ ...p, vitals: v }))} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
@@ -1946,16 +1948,16 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
 
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
   const update = (key: keyof AppState['vitals'], val: string) => onChange({ ...vitals, [key]: val });
-  const fields: { key: keyof AppState['vitals'], label: string, unit: string, placeholder: string }[] = [
-    { key: 'hr',   label: 'Heart Rate',       unit: 'bpm',   placeholder: '60' },
-    { key: 'rr',   label: 'Resp Rate',        unit: 'br/min', placeholder: '16' },
-    { key: 'spo2', label: 'SpO₂',             unit: '%',     placeholder: '98' },
-    { key: 'etco2',label: 'EtCO₂',            unit: 'mmHg',  placeholder: '35' },
-    { key: 'bpSys',label: 'BP Systolic',      unit: 'mmHg',  placeholder: '120' },
-    { key: 'bpDia',label: 'BP Diastolic',     unit: 'mmHg',  placeholder: '80' },
-    { key: 'gcs',  label: 'GCS',              unit: '/15',   placeholder: '15' },
-    { key: 'bgl',  label: 'BGL',              unit: 'mmol/L', placeholder: '5.5' },
-    { key: 'temp', label: 'Temperature',      unit: '°C',    placeholder: '37.0' },
+  const fields: { key: keyof AppState['vitals'], label: string, unit: string }[] = [
+    { key: 'hr',   label: 'Heart Rate',       unit: 'bpm'    },
+    { key: 'rr',   label: 'Resp Rate',        unit: 'br/min' },
+    { key: 'spo2', label: 'SpO₂',             unit: '%'      },
+    { key: 'etco2',label: 'EtCO₂',            unit: 'mmHg'   },
+    { key: 'bpSys',label: 'BP Systolic',      unit: 'mmHg'   },
+    { key: 'bpDia',label: 'BP Diastolic',     unit: 'mmHg'   },
+    { key: 'gcs',  label: 'GCS',              unit: '/15'    },
+    { key: 'bgl',  label: 'BGL',              unit: 'mmol/L' },
+    { key: 'temp', label: 'Temperature',      unit: '°C'     },
   ];
   return (
     <div className="h-full overflow-y-auto">
@@ -1972,7 +1974,6 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
               inputMode="decimal"
               value={vitals[key]}
               onChange={e => update(key, e.target.value)}
-              placeholder={placeholder}
               className="w-24 text-right text-[18px] font-bold text-teal-700 bg-transparent border-b-2 border-teal-200 focus:border-teal-500 outline-none py-1 tabular-nums"
             />
           </div>
