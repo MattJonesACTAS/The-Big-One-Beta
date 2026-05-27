@@ -135,13 +135,13 @@ body.tutorial-flash-delete [data-button="delete-case"] {
 
 @keyframes roscHeartbeat {
   0%, 100% { transform: scale(1); }
-  10% { transform: scale(1.07); }
+  10% { transform: scale(1.063); }
   20% { transform: scale(1); }
-  30% { transform: scale(1.04); }
+  30% { transform: scale(1.036); }
   45% { transform: scale(1); }
 }
 
 .rosc-pulse {
-  animation: roscHeartbeat 1.6s ease-in-out infinite;
+  animation: roscHeartbeat 1.76s ease-in-out infinite;
   transform-origin: center center;
 }
