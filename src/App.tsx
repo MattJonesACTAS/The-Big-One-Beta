@@ -1131,21 +1131,8 @@ export default function App() {
           <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
 
-              {/* ROSC Mode - Rearrest Button inside green circle */}
+              {/* ROSC Mode - full circle is tap target */}
               {state.isROSCMode ? (
-                <>
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
-                  <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-neutral-50" />
-                  <motion.circle
-                    cx="150" cy="150" r="140"
-                    fill="none" stroke="currentColor" strokeWidth="6"
-                    strokeLinecap="round" pathLength="1"
-                    className="text-emerald-500"
-                    animate={{ strokeDashoffset: 1 - (120 / 120) }}
-                    style={{ strokeDasharray: 1 }}
-                    transition={{ duration: 0.5, ease: "linear" }}
-                  />
-                </svg>
                 <button
                   onClick={() => {
                     setState(prev => ({
@@ -1160,11 +1147,23 @@ export default function App() {
                     setRearrested(true);
                     setIsShockForced(true);
                   }}
-                  className="z-10 w-[160px] h-[160px] sm:w-[220px] sm:h-[220px] rounded-full bg-red-100 hover:bg-red-200 active:bg-red-300 btn-base flex items-center justify-center shadow-sm transition-colors"
+                  className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center gap-2 sm:gap-3"
                 >
-                  <span className="text-red-600 font-bold text-3xl sm:text-4xl tracking-tight">Rearrest</span>
+                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
+                    <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-neutral-50" />
+                    <motion.circle
+                      cx="150" cy="150" r="140"
+                      fill="none" stroke="currentColor" strokeWidth="6"
+                      strokeLinecap="round" pathLength="1"
+                      className="text-emerald-500"
+                      animate={{ strokeDashoffset: 0 }}
+                      style={{ strokeDasharray: 1 }}
+                      transition={{ duration: 0.5, ease: "linear" }}
+                    />
+                  </svg>
+                  <span className="z-10 text-7xl sm:text-[120px] font-bold tracking-tighter leading-none text-emerald-600">ROSC</span>
+                  <span className="z-10 text-[13px] sm:text-[16px] uppercase tracking-widest font-bold text-neutral-400">Tap to rearrest</span>
                 </button>
-                </>
               ) : (
                 <>
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
