@@ -1498,14 +1498,7 @@ export default function App() {
                       It's The Big One!
                     </h1>
                     <p className="text-lg font-medium text-neutral-600">
-                      Your cardiac arrest management tool
-                    </p>
-                  </div>
-                  
-                  {/* Description with subtle background */}
-                  <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100">
-                    <p className="text-neutral-600 text-sm leading-relaxed">
-                      Before we start, the app needs to be calibrated to the current case
+                      Your cardiac arrest<br />management tool
                     </p>
                   </div>
                   
@@ -1549,9 +1542,11 @@ export default function App() {
                     </button>
                   </div>
 
-                  <p className="text-[11px] text-neutral-400 text-center pt-2">
-                    The Big One v1.0 · ACTAS CMG v1.0.5.4 · Last reviewed May 2026
-                  </p>
+                  <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
+                    <p>The Big One v1.0</p>
+                    <p>ACTAS CMG v1.0.5.4</p>
+                    <p>Last reviewed May 2026</p>
+                  </div>
                 </div>
               )}
 
