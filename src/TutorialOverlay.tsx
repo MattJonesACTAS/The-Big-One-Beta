@@ -153,7 +153,7 @@ const ALL_NODES: GlobalNode[] = [
   },
   {
     id: 'delete', type: 'positioned', x: 73, y: 14, displayNumber: 3,
-    pages: [{ title: 'Delete Case', description: "Once you've finished with the case and exported to PDF if needed, you can delete all case data." }],
+    pages: [{ title: 'Delete Case', description: "Once you've finished with the case and exported to PDF if needed, you can delete all case data.\n\nDelete the case to finish the tutorial." }],
     condition: (s) => !s.running
   }
 ];
