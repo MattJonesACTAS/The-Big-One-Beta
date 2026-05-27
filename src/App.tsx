@@ -269,6 +269,16 @@ const formatSodiumBicarbonateDose = (doseStr: string): string => {
 };
 
 export default function App() {
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => {
+    return localStorage.getItem('disclaimerAccepted') === 'true';
+  });
+  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
+
+  const handleAcceptDisclaimer = () => {
+    localStorage.setItem('disclaimerAccepted', 'true');
+    setDisclaimerAccepted(true);
+  };
+
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('theBigOneState');
     if (saved) {
@@ -1044,6 +1054,43 @@ export default function App() {
             }}
           />
         )}
+      </div>
+    );
+  }
+
+  if (!disclaimerAccepted) {
+    return (
+      <div style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-50 flex flex-col items-center justify-center p-6 max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
+          <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One</h1>
+          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before using</p>
+
+          <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
+            <p><strong className="text-neutral-900">Supplementary tool only.</strong> This app is designed to assist clinicians during cardiac arrest events. It does not replace clinical judgement, professional training, or the application of your service's approved clinical protocols.</p>
+            <p><strong className="text-neutral-900">No liability accepted.</strong> The developer accepts no responsibility for clinical outcomes, errors, omissions, or any harm arising from the use or misuse of this application. All clinical decisions remain entirely the responsibility of the treating clinician.</p>
+            <p><strong className="text-neutral-900">Not officially endorsed.</strong> This application is not affiliated with, endorsed by, or approved by any ambulance service, health authority, or regulatory body.</p>
+            <p><strong className="text-neutral-900">Verify all information.</strong> While this app is designed with accuracy in mind, you are responsible for verifying all dose calculations, timings, and clinical information against your service's current guidelines.</p>
+            <p><strong className="text-neutral-900">Your responsibility.</strong> By using this application you acknowledge that you are a trained clinician and that your professional and legal responsibility for patient care is not diminished in any way by its use.</p>
+          </div>
+
+          <label className="flex items-start gap-3 mb-6 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={disclaimerChecked}
+              onChange={e => setDisclaimerChecked(e.target.checked)}
+              className="mt-0.5 w-5 h-5 rounded accent-emerald-600 flex-shrink-0 cursor-pointer"
+            />
+            <span className="text-[14px] text-neutral-700 font-medium">I have read and understood the above. I accept that full clinical and professional responsibility remains with me as the treating clinician.</span>
+          </label>
+
+          <button
+            onClick={handleAcceptDisclaimer}
+            disabled={!disclaimerChecked}
+            className={`w-full py-4 rounded-xl font-bold text-[16px] transition-colors ${disclaimerChecked ? 'bg-emerald-600 text-white' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
+          >
+            Continue to The Big One
+          </button>
+        </div>
       </div>
     );
   }
