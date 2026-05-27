@@ -1149,7 +1149,7 @@ export default function App() {
                   }}
                   className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center"
                 >
-                  <svg className="absolute inset-0 w-full h-full -rotate-90 rosc-pulse" viewBox="0 0 300 300">
+                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                     <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-neutral-50" />
                     <motion.circle
                       cx="150" cy="150" r="140"
@@ -1161,8 +1161,8 @@ export default function App() {
                       transition={{ duration: 0.5, ease: "linear" }}
                     />
                   </svg>
-                  <span className="z-10 text-[61px] sm:text-[102px] font-bold tracking-tighter leading-none text-emerald-600 translate-y-3 sm:translate-y-4">ROSC</span>
-                  <span className="z-10 text-[13px] sm:text-[16px] uppercase tracking-widest font-bold text-neutral-400 translate-y-3 sm:translate-y-4" style={{ marginTop: '10px' }}>Tap if rearrests</span>
+                  <span className="z-10 text-[13px] sm:text-[16px] uppercase tracking-widest font-bold text-neutral-400 translate-y-3 sm:translate-y-4">ROSC</span>
+                  <span className="z-10 text-5xl sm:text-7xl font-bold tracking-tight leading-none text-neutral-900 translate-y-3 sm:translate-y-4" style={{ marginTop: '10px' }}>Tap if rearrests</span>
                 </button>
               ) : (
                 <>
