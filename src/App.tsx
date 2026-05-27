@@ -1118,7 +1118,7 @@ export default function App() {
           disabled={isShockForced}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'vitals' ? 'bg-red-100 text-red-800' : 'bg-teal-100 text-teal-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
-          {state.currentOverlay === 'vitals' ? 'Close' : 'Vitals'}
+          {state.currentOverlay === 'vitals' ? 'Close' : 'VSS'}
         </button>
       </div>
 
