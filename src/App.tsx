@@ -2211,19 +2211,19 @@ function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSumma
   return (
     <div className="space-y-6 pb-20">
       <SummaryStats state={state} pharmaSummary={pharmaSummary} />
-      {hasVitals && (
-        <div className="rounded-xl overflow-hidden border border-neutral-100">
+      <div className="rounded-xl overflow-hidden border border-neutral-100">
           <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
-          {vitalRows.map(({ label, value, unit }, i) => (
+          {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
             <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
               <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
               <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
                 {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
               </span>
             </div>
-          ))}
+          )) : (
+            <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded yet.</div>
+          )}
         </div>
-      )}
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} />
