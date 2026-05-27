@@ -314,20 +314,6 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
         </div>
       )}
 
-      {/* Exit button */}
-      <button
-        onClick={onExit}
-        style={{
-          position: 'absolute', top: '16px', left: '16px',
-          backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
-          padding: '8px 16px', borderRadius: '8px', border: 'none',
-          fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-          zIndex: 10002, pointerEvents: 'auto'
-        }}
-      >
-        Exit Tutorial
-      </button>
-
       <style>{`
         @keyframes tutorialPulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
