@@ -49,7 +49,8 @@ const INITIAL_STATE: AppState = {
   reversiblesChecked: [],
   roscChecked: [],
   pheaChecked: [],
-  isROSCMode: false
+  isROSCMode: false,
+  vitals: { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }
 };
 
 const MEDICATIONS = [
@@ -1073,7 +1074,7 @@ export default function App() {
       </div>
 
       {/* Top Quick Tools */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
@@ -1087,7 +1088,7 @@ export default function App() {
         <button 
           onClick={() => {
             if (isShockForced) return;
-            setRoscButtonFlashing(false); // Clear flash when opened
+            setRoscButtonFlashing(false);
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'rosc' ? null : 'rosc' }))
           }}
           disabled={isShockForced}
@@ -1109,13 +1110,24 @@ export default function App() {
         >
           {state.currentOverlay === 'phea' ? 'Close' : 'PHEA'}
         </button>
+        <button 
+          onClick={() => {
+            if (isShockForced) return;
+            setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'vitals' ? null : 'vitals' }))
+          }}
+          disabled={isShockForced}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'vitals' ? 'bg-red-100 text-red-800' : 'bg-teal-100 text-teal-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+        >
+          {state.currentOverlay === 'vitals' ? 'Close' : 'Vitals'}
+        </button>
       </div>
 
       {/* Main Center Display */}
       <div data-green-box className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
-        state.currentOverlay === 'phea' ? 'border-purple-400' : 'border-emerald-500'
+        state.currentOverlay === 'phea' ? 'border-purple-400' :
+        state.currentOverlay === 'vitals' ? 'border-teal-400' : 'border-emerald-500'
       }`}>
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
@@ -1924,10 +1936,49 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals} onChange={(v) => setState(p => ({ ...p, vitals: v }))} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
     </motion.div>
+  );
+}
+
+function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
+  const update = (key: keyof AppState['vitals'], val: string) => onChange({ ...vitals, [key]: val });
+  const fields: { key: keyof AppState['vitals'], label: string, unit: string, placeholder: string }[] = [
+    { key: 'hr',   label: 'Heart Rate',       unit: 'bpm',   placeholder: '60' },
+    { key: 'rr',   label: 'Resp Rate',        unit: 'br/min', placeholder: '16' },
+    { key: 'spo2', label: 'SpO₂',             unit: '%',     placeholder: '98' },
+    { key: 'etco2',label: 'EtCO₂',            unit: 'mmHg',  placeholder: '35' },
+    { key: 'bpSys',label: 'BP Systolic',      unit: 'mmHg',  placeholder: '120' },
+    { key: 'bpDia',label: 'BP Diastolic',     unit: 'mmHg',  placeholder: '80' },
+    { key: 'gcs',  label: 'GCS',              unit: '/15',   placeholder: '15' },
+    { key: 'bgl',  label: 'BGL',              unit: 'mmol/L', placeholder: '5.5' },
+    { key: 'temp', label: 'Temperature',      unit: '°C',    placeholder: '37.0' },
+  ];
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-teal-50 text-teal-800 border-teal-200">Vital Signs</div>
+      <div className="p-3 space-y-2">
+        {fields.map(({ key, label, unit, placeholder }) => (
+          <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
+            <div className="flex-1">
+              <span className="text-[15px] font-bold text-neutral-800">{label}</span>
+              <span className="text-[12px] text-neutral-400 ml-2">{unit}</span>
+            </div>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={vitals[key]}
+              onChange={e => update(key, e.target.value)}
+              placeholder={placeholder}
+              className="w-24 text-right text-[18px] font-bold text-teal-700 bg-transparent border-b-2 border-teal-200 focus:border-teal-500 outline-none py-1 tabular-nums"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -2146,9 +2197,35 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
 }
 
 function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
+  const v = state.vitals;
+  const hasVitals = Object.values(v).some(val => val !== '');
+  const vitalPairs = [
+    { label: 'HR', value: v.hr, unit: 'bpm' },
+    { label: 'RR', value: v.rr, unit: 'br/min' },
+    { label: 'SpO₂', value: v.spo2, unit: '%' },
+    { label: 'EtCO₂', value: v.etco2, unit: 'mmHg' },
+    { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
+    { label: 'GCS', value: v.gcs, unit: '/15' },
+    { label: 'BGL', value: v.bgl, unit: 'mmol/L' },
+    { label: 'Temp', value: v.temp, unit: '°C' },
+  ].filter(item => item.value !== '');
+
   return (
     <div className="space-y-6 pb-20">
       <SummaryStats state={state} pharmaSummary={pharmaSummary} />
+      {hasVitals && (
+        <div>
+          <div className="bg-teal-50 text-teal-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">VITAL SIGNS</div>
+          <div className="grid grid-cols-2 gap-0 border border-t-0 border-neutral-100 rounded-b-lg overflow-hidden">
+            {vitalPairs.map(({ label, value, unit }) => (
+              <div key={label} className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100 last:border-b-0">
+                <span className="text-[13px] font-bold text-neutral-500 uppercase tracking-wide">{label}</span>
+                <span className="text-[15px] font-bold text-neutral-900 tabular-nums">{value} <span className="text-[11px] text-neutral-400 font-medium">{unit}</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} />
