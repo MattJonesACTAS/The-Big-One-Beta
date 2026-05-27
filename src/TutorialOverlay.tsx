@@ -25,7 +25,7 @@ const ALL_NODES: GlobalNode[] = [
     id: 'intro', type: 'popup',
     pages: [
       {
-        title: 'Welcome to The Big One',
+        title: 'Welcome!',
         description: 'The Big One is a cognitive aid for use during cardiac arrests.\n\nWith times and medications tracked automatically, you can focus on situational awareness and team leadership.'
       },
       {
@@ -42,12 +42,12 @@ const ALL_NODES: GlobalNode[] = [
   // --- Home screen nodes ---
   {
     id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 1,
-    pages: [{ title: 'Total Time', description: "The total time indicates how long ago the monitor was turned on.\n\nWhen you start the app and enter this time, you'll find it in the top right corner of the monitor screen." }],
+    pages: [{ title: 'Total Time', description: "The total time indicates how long ago the monitor was turned on.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time in the top right corner of the monitor screen." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 2,
-    pages: [{ title: 'CPR Round', description: 'The current round of CPR.\n\nThis will update every time the rhythm check counter reaches 0:00.' }],
+    pages: [{ title: 'CPR Round', description: "The current round of CPR.\n\nWhen you start the app and enter this time, you'll find it in its own banner on the monitor's CPR screen, counting down from 2:00.\n\nThe CPR round counter will update every time the rhythm check counter reaches 0:00." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -101,19 +101,27 @@ const ALL_NODES: GlobalNode[] = [
     pages: [{ title: 'Summary Button', description: "Next, let's have a look at the running case summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && s.rhythmCheckOvertime === 0 && !sf
   },
-  // --- Summary overlay ---
+  // --- Summary overlay (3-page node + close) ---
   {
-    id: 'pharmaSummary', type: 'positioned', x: 50, y: 50, displayNumber: 1,
-    pages: [{ title: 'Medication Summary', description: 'All logged medications appear here, with a cumulative tally of the total dose given for each drug.' }],
+    id: 'summaryInfo', type: 'positioned', x: 50, y: 50, displayNumber: 1,
+    pages: [
+      {
+        title: 'Arrest Summary',
+        description: 'The top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms.'
+      },
+      {
+        title: 'Pharma Summary',
+        description: 'In the middle, the pharma summary lists all logged medications, with a cumulative tally of the total dose given of each drug.'
+      },
+      {
+        title: 'Treatment Log',
+        description: 'Chronological record of all logged interventions.\n\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.'
+      }
+    ],
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'treatmentLog', type: 'positioned', x: 50, y: 70.9, displayNumber: 2,
-    pages: [{ title: 'Treatment Log', description: 'Chronological record of all logged interventions.\n\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.' }],
-    condition: (s) => s.currentOverlay === 'summary'
-  },
-  {
-    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 3,
+    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 2,
     pages: [{ title: 'Return to Home', description: 'Press the close button to return to the home page.' }],
     condition: (s) => s.currentOverlay === 'summary'
   },
@@ -334,7 +342,7 @@ function renderDescription(text: string) {
         const isBullet = segment.startsWith('•');
         // Tighter gap after a bullet if next is also a bullet (40% of 0.9em)
         const mb = i < segments.length - 1
-          ? (isBullet && isNextBullet ? '0.54em' : '0.9em')
+          ? (isBullet && isNextBullet ? '0.46em' : '0.9em')
           : 0;
         return (
           <p key={i} style={{ margin: 0, marginBottom: mb, whiteSpace: 'pre-line' }}>
