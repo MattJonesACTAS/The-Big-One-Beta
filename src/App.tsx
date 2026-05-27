@@ -1924,7 +1924,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
   onVitalsChange: (v: AppState['vitals']) => void
 }) {
-  const isTop = ['reversibles', 'rosc', 'phea'].includes(type);
+  const isTop = ['reversibles', 'rosc', 'phea', 'vitals'].includes(type);
   
   return (
     <motion.div 
@@ -1948,29 +1948,26 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
 
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
   const update = (key: keyof AppState['vitals'], val: string) => onChange({ ...vitals, [key]: val });
-  const fields: { key: keyof AppState['vitals'], label: string, unit: string }[] = [
-    { key: 'hr',   label: 'Heart Rate',       unit: 'bpm'    },
-    { key: 'rr',   label: 'Resp Rate',        unit: 'br/min' },
-    { key: 'spo2', label: 'SpO₂',             unit: '%'      },
-    { key: 'etco2',label: 'EtCO₂',            unit: 'mmHg'   },
-    { key: 'bpSys',label: 'BP Systolic',      unit: 'mmHg'   },
-    { key: 'bpDia',label: 'BP Diastolic',     unit: 'mmHg'   },
-    { key: 'gcs',  label: 'GCS',              unit: '/15'    },
-    { key: 'bgl',  label: 'BGL',              unit: 'mmol/L' },
-    { key: 'temp', label: 'Temperature',      unit: '°C'     },
+  const fields: { key: keyof AppState['vitals'], label: string }[] = [
+    { key: 'hr',   label: 'Heart Rate'    },
+    { key: 'rr',   label: 'Resp Rate'     },
+    { key: 'spo2', label: 'SpO₂'          },
+    { key: 'etco2',label: 'EtCO₂'         },
+    { key: 'bpSys',label: 'BP Systolic'   },
+    { key: 'bpDia',label: 'BP Diastolic'  },
+    { key: 'gcs',  label: 'GCS'           },
+    { key: 'bgl',  label: 'BGL'           },
+    { key: 'temp', label: 'Temperature'   },
   ];
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-teal-50 text-teal-800 border-teal-200">Vital Signs</div>
       <div className="p-3 space-y-2">
-        {fields.map(({ key, label, unit, placeholder }) => (
+        {fields.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
-            <div className="flex-1">
-              <span className="text-[15px] font-bold text-neutral-800">{label}</span>
-              <span className="text-[12px] text-neutral-400 ml-2">{unit}</span>
-            </div>
+            <span className="text-[15px] font-bold text-neutral-800">{label}</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               value={vitals[key]}
               onChange={e => update(key, e.target.value)}
@@ -2200,31 +2197,29 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
 function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
   const v = state.vitals;
   const hasVitals = Object.values(v).some(val => val !== '');
-  const vitalPairs = [
-    { label: 'HR', value: v.hr, unit: 'bpm' },
-    { label: 'RR', value: v.rr, unit: 'br/min' },
-    { label: 'SpO₂', value: v.spo2, unit: '%' },
-    { label: 'EtCO₂', value: v.etco2, unit: 'mmHg' },
-    { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
-    { label: 'GCS', value: v.gcs, unit: '/15' },
-    { label: 'BGL', value: v.bgl, unit: 'mmol/L' },
-    { label: 'Temp', value: v.temp, unit: '°C' },
-  ].filter(item => item.value !== '');
+  const vitalRows = [
+    { label: 'Heart Rate',     value: v.hr   },
+    { label: 'Resp Rate',      value: v.rr   },
+    { label: 'SpO₂',           value: v.spo2 },
+    { label: 'EtCO₂',          value: v.etco2},
+    { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '' },
+    { label: 'GCS',            value: v.gcs  },
+    { label: 'BGL',            value: v.bgl  },
+    { label: 'Temperature',    value: v.temp },
+  ].filter(r => r.value !== '');
 
   return (
     <div className="space-y-6 pb-20">
       <SummaryStats state={state} pharmaSummary={pharmaSummary} />
       {hasVitals && (
-        <div>
-          <div className="bg-teal-50 text-teal-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">VITAL SIGNS</div>
-          <div className="grid grid-cols-2 gap-0 border border-t-0 border-neutral-100 rounded-b-lg overflow-hidden">
-            {vitalPairs.map(({ label, value, unit }) => (
-              <div key={label} className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100 last:border-b-0">
-                <span className="text-[13px] font-bold text-neutral-500 uppercase tracking-wide">{label}</span>
-                <span className="text-[15px] font-bold text-neutral-900 tabular-nums">{value} <span className="text-[11px] text-neutral-400 font-medium">{unit}</span></span>
-              </div>
-            ))}
-          </div>
+        <div className="rounded-xl overflow-hidden border border-neutral-100">
+          <div className="bg-teal-50 text-teal-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
+          {vitalRows.map(({ label, value }, i) => (
+            <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
+              <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
+              <span className="text-[17px] font-bold text-neutral-900 tabular-nums">{value}</span>
+            </div>
+          ))}
         </div>
       )}
       <div>
