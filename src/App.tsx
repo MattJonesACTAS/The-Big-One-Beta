@@ -1161,7 +1161,7 @@ export default function App() {
                       transition={{ duration: 0.5, ease: "linear" }}
                     />
                   </svg>
-                  <span className="z-10 text-[61px] sm:text-[102px] font-bold tracking-tighter leading-none text-emerald-600 translate-y-3 sm:translate-y-4">Rearrest</span>
+                  <span className="z-10 text-[49px] sm:text-[82px] font-bold tracking-tighter leading-none text-emerald-600">Rearrest</span>
                 </button>
               ) : (
                 <>
