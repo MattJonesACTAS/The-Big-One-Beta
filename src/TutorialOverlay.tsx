@@ -58,8 +58,8 @@ const ALL_NODES: GlobalNode[] = [
         description: "The countdown to the next rhythm check.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time counting down from 2:00 in its own central banner on the monitor screen."
       },
       {
-        title: 'Rhythm Check Timer',
-        description: "• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\n• You will then be forced to record whether you shocked or disarmed."
+        title: 'Timer Behaviour',
+        description: "When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\nWhen the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\nYou will then be forced to record whether you shocked or disarmed."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
@@ -124,7 +124,7 @@ const ALL_NODES: GlobalNode[] = [
       },
       {
         title: 'Treatment Log',
-        description: 'Chronological record of all logged interventions.\n\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged.'
+        description: 'At the bottom we have a chronological record of all logged interventions.\n\nTimestamps show the time of day, the elapsed time on the monitor, and how long ago each Tx was logged.'
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -309,7 +309,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
               fontSize: '16px', fontWeight: '700', cursor: 'pointer'
             }}
           >
-            {isLastPage ? 'Got it' : 'Next →'}
+            {isLastPage ? 'Got it' : 'Next'}
           </button>
         </div>
       )}
