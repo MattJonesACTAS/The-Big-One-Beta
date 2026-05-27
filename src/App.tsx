@@ -1149,7 +1149,7 @@ export default function App() {
                   }}
                   className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center"
                 >
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
+                  <svg className="absolute inset-0 w-full h-full -rotate-90 rosc-pulse" viewBox="0 0 300 300">
                     <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-neutral-50" />
                     <motion.circle
                       cx="150" cy="150" r="140"
