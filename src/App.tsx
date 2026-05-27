@@ -1160,7 +1160,7 @@ export default function App() {
                     setRearrested(true);
                     setIsShockForced(true);
                   }}
-                  className="z-10 w-[160px] h-[160px] sm:w-[220px] sm:h-[220px] rounded-full bg-red-100 hover:bg-red-200 active:bg-red-300 btn-base flex items-center justify-center shadow-sm transition-colors border-2 border-red-200"
+                  className="z-10 w-[160px] h-[160px] sm:w-[220px] sm:h-[220px] rounded-full bg-red-100 hover:bg-red-200 active:bg-red-300 btn-base flex items-center justify-center shadow-sm transition-colors"
                 >
                   <span className="text-red-600 font-bold text-3xl sm:text-4xl tracking-tight">Rearrest</span>
                 </button>
