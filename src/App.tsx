@@ -1162,7 +1162,7 @@ export default function App() {
                       transition={{ duration: 0.5, ease: "linear" }}
                     />
                   </svg>
-                  <span className="z-10 text-[42px] sm:text-[70px] font-bold tracking-tighter leading-none text-emerald-600 text-center">PRESS IF REARREST</span>
+                  <span className="z-10 text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-emerald-600 text-center">PRESS IF REARREST</span>
                 </button>
               ) : (
                 <>
