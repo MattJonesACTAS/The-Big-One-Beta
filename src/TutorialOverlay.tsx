@@ -52,7 +52,16 @@ const ALL_NODES: GlobalNode[] = [
   },
   {
     id: 'timer', type: 'positioned', x: 50, y: 52, displayNumber: 3,
-    pages: [{ title: 'Rhythm Check Timer', description: "The countdown to the next rhythm check.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time counting down from 2:00 in its own central banner on the monitor screen.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\n• You will then be forced to record whether you shocked or disarmed." }],
+    pages: [
+      {
+        title: 'Rhythm Check Timer',
+        description: "The countdown to the next rhythm check.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time counting down from 2:00 in its own central banner on the monitor screen."
+      },
+      {
+        title: 'Rhythm Check Timer',
+        description: "• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\n• You will then be forced to record whether you shocked or disarmed."
+      }
+    ],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -335,18 +344,54 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
 
 function renderDescription(text: string) {
   const segments = text.split('\n\n');
+
+  // Group consecutive bullets into arrays, non-bullets stay as single items
+  const groups: Array<{ type: 'text' | 'bullets'; items: string[] }> = [];
+  for (const seg of segments) {
+    if (seg.startsWith('•')) {
+      const last = groups[groups.length - 1];
+      if (last?.type === 'bullets') {
+        last.items.push(seg);
+      } else {
+        groups.push({ type: 'bullets', items: [seg] });
+      }
+    } else {
+      groups.push({ type: 'text', items: [seg] });
+    }
+  }
+
   return (
     <div style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left' }}>
-      {segments.map((segment, i) => {
-        const isNextBullet = i < segments.length - 1 && segments[i + 1].startsWith('•');
-        const isBullet = segment.startsWith('•');
-        // Tighter gap after a bullet if next is also a bullet (40% of 0.9em)
-        const mb = i < segments.length - 1
-          ? (isBullet && isNextBullet ? '0.46em' : '0.9em')
-          : 0;
+      {groups.map((group, gi) => {
+        const isLast = gi === groups.length - 1;
+        if (group.type === 'bullets') {
+          return (
+            <div key={gi} style={{
+              backgroundColor: '#f3f4f6',
+              border: '1px solid #e5e7eb',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              marginBottom: isLast ? 0 : '0.9em'
+            }}>
+              {group.items.map((bullet, bi) => (
+                <p key={bi} style={{
+                  margin: 0,
+                  marginBottom: bi < group.items.length - 1 ? '0.46em' : 0,
+                  whiteSpace: 'pre-line'
+                }}>
+                  {bullet}
+                </p>
+              ))}
+            </div>
+          );
+        }
         return (
-          <p key={i} style={{ margin: 0, marginBottom: mb, whiteSpace: 'pre-line' }}>
-            {segment}
+          <p key={gi} style={{
+            margin: 0,
+            marginBottom: isLast ? 0 : '0.9em',
+            whiteSpace: 'pre-line'
+          }}>
+            {group.items[0]}
           </p>
         );
       })}
