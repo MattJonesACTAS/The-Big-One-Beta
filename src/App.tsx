@@ -1155,7 +1155,7 @@ export default function App() {
                       cx="150" cy="150" r="140"
                       fill="none" stroke="currentColor" strokeWidth="6"
                       strokeLinecap="round" pathLength="1"
-                      className="text-emerald-500"
+                      className="text-amber-400"
                       animate={{ strokeDashoffset: 0 }}
                       style={{ strokeDasharray: 1 }}
                       transition={{ duration: 0.5, ease: "linear" }}
