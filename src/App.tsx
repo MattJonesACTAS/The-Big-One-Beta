@@ -1131,8 +1131,21 @@ export default function App() {
           <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
 
-              {/* ROSC Mode - Rearrest Button */}
+              {/* ROSC Mode - Rearrest Button inside green circle */}
               {state.isROSCMode ? (
+                <>
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
+                  <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-neutral-50" />
+                  <motion.circle
+                    cx="150" cy="150" r="140"
+                    fill="none" stroke="currentColor" strokeWidth="6"
+                    strokeLinecap="round" pathLength="1"
+                    className="text-emerald-500"
+                    animate={{ strokeDashoffset: 1 - (120 / 120) }}
+                    style={{ strokeDasharray: 1 }}
+                    transition={{ duration: 0.5, ease: "linear" }}
+                  />
+                </svg>
                 <button
                   onClick={() => {
                     setState(prev => ({
@@ -1147,10 +1160,11 @@ export default function App() {
                     setRearrested(true);
                     setIsShockForced(true);
                   }}
-                  className="w-full h-full rounded-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 btn-base flex items-center justify-center shadow-lg transition-colors"
+                  className="z-10 w-[160px] h-[160px] sm:w-[220px] sm:h-[220px] rounded-full bg-red-100 hover:bg-red-200 active:bg-red-300 btn-base flex items-center justify-center shadow-sm transition-colors border-2 border-red-200"
                 >
-                  <span className="text-white font-bold text-4xl sm:text-5xl tracking-tight">Rearrest</span>
+                  <span className="text-red-600 font-bold text-3xl sm:text-4xl tracking-tight">Rearrest</span>
                 </button>
+                </>
               ) : (
                 <>
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
