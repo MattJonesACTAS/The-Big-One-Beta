@@ -1766,7 +1766,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Adjust Rhythm Check Timer</h2>
-            <p className="text-neutral-500 mb-6">Set the countdown time for the next rhythm check</p>
+            <p className="text-neutral-500 mb-6">Match the app's rhythm check counter to the monitor's CPR timer</p>
             
             <div className="mb-8">
               <TimePicker 
