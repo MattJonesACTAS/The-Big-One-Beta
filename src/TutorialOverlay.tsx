@@ -128,7 +128,7 @@ const ALL_NODES: GlobalNode[] = [
   // --- Home after summary ---
   {
     id: 'closeCase', type: 'positioned', x: 82.2, y: 4.2, displayNumber: 1,
-    pages: [{ title: 'Close Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case." }],
+    pages: [{ title: 'Close Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case.\n\nLet's close the case and see the final summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   // --- Case summary ---
