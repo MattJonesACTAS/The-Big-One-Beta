@@ -355,15 +355,15 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 13 (closeOverlay) complete - flash summary close button (index 14 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === 'summary') {
+    // Node 13 (closeOverlay) complete - flash summary close button (index 13 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 14 (closeCase) complete - flash Close Case button (index 15 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 15 && state.currentOverlay === null) {
+    // Node 13 (closeCase) complete - flash Close Case button (index 14 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
