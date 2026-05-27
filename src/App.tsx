@@ -1497,7 +1497,7 @@ export default function App() {
                     <h1 className="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                       It's The Big One!
                     </h1>
-                    <p className="text-sm font-medium text-neutral-600 whitespace-nowrap">
+                    <p className="text-lg font-medium text-neutral-600 whitespace-nowrap">
                       Your cardiac arrest management tool
                     </p>
                   </div>
@@ -1542,7 +1542,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
+                  <div className="flex justify-between text-[11px] text-neutral-400 pt-2">
                     <p>The Big One v1.0</p>
                     <p>ACTAS CMG v1.0.5.4</p>
                     <p>Last reviewed May 2026</p>
