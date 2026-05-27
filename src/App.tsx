@@ -1497,8 +1497,8 @@ export default function App() {
                     <h1 className="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                       It's The Big One!
                     </h1>
-                    <p className="text-lg font-medium text-neutral-600">
-                      Your cardiac arrest<br />management tool
+                    <p className="text-sm font-medium text-neutral-600 whitespace-nowrap">
+                      Your cardiac arrest management tool
                     </p>
                   </div>
                   
