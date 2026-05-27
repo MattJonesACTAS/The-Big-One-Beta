@@ -1083,7 +1083,7 @@ export default function App() {
           disabled={isShockForced}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
-          {state.currentOverlay === 'reversibles' ? 'Close' : 'Reversible'}
+          {state.currentOverlay === 'reversibles' ? 'Close' : '4H 4T'}
         </button>
         <button 
           onClick={() => {
