@@ -1548,6 +1548,10 @@ export default function App() {
                       Tutorial
                     </button>
                   </div>
+
+                  <p className="text-[11px] text-neutral-400 text-center pt-2">
+                    The Big One v1.0 · ACTAS CMG v1.0.5.4 · Last reviewed May 2026
+                  </p>
                 </div>
               )}
 
