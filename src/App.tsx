@@ -22,7 +22,8 @@ import {
   Stethoscope,
   ArrowRight,
   Sliders,
-  RefreshCw
+  RefreshCw,
+  Hand
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
 import InteractiveTutorial from './InteractiveTutorial';
@@ -1155,12 +1156,13 @@ export default function App() {
                       cx="150" cy="150" r="140"
                       fill="none" stroke="currentColor" strokeWidth="6"
                       strokeLinecap="round" pathLength="1"
-                      className="text-amber-400"
+                      className="text-emerald-500"
                       animate={{ strokeDashoffset: 0 }}
                       style={{ strokeDasharray: 1 }}
                       transition={{ duration: 0.5, ease: "linear" }}
                     />
                   </svg>
+                  <Hand size={28} className="z-10 text-emerald-400 mb-1" strokeWidth={1.5} />
                   <span className="z-10 text-[49px] sm:text-[82px] font-bold tracking-tighter leading-none text-emerald-600">Rearrest</span>
                 </button>
               ) : (
