@@ -2198,14 +2198,14 @@ function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSumma
   const v = state.vitals;
   const hasVitals = Object.values(v).some(val => val !== '');
   const vitalRows = [
-    { label: 'Heart Rate',     value: v.hr   },
-    { label: 'Resp Rate',      value: v.rr   },
-    { label: 'SpO₂',           value: v.spo2 },
-    { label: 'EtCO₂',          value: v.etco2},
-    { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '' },
-    { label: 'GCS',            value: v.gcs  },
-    { label: 'BGL',            value: v.bgl  },
-    { label: 'Temperature',    value: v.temp },
+    { label: 'Heart Rate',     value: v.hr,   unit: 'bpm'    },
+    { label: 'Resp Rate',      value: v.rr,   unit: 'br/min' },
+    { label: 'SpO₂',           value: v.spo2, unit: '%'      },
+    { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
+    { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
+    { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
+    { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
+    { label: 'Temperature',    value: v.temp, unit: '°C'     },
   ].filter(r => r.value !== '');
 
   return (
@@ -2214,10 +2214,12 @@ function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSumma
       {hasVitals && (
         <div className="rounded-xl overflow-hidden border border-neutral-100">
           <div className="bg-teal-50 text-teal-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
-          {vitalRows.map(({ label, value }, i) => (
+          {vitalRows.map(({ label, value, unit }, i) => (
             <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
               <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
-              <span className="text-[17px] font-bold text-neutral-900 tabular-nums">{value}</span>
+              <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
+                {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
+              </span>
             </div>
           ))}
         </div>
