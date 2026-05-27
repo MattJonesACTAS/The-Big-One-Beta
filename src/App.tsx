@@ -1116,7 +1116,7 @@ export default function App() {
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'vitals' ? null : 'vitals' }))
           }}
           disabled={isShockForced}
-          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'vitals' ? 'bg-red-100 text-red-800' : 'bg-teal-100 text-teal-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${state.currentOverlay === 'vitals' ? 'bg-red-100 text-red-800' : 'bg-sky-100 text-sky-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'vitals' ? 'Close' : 'VSS'}
         </button>
@@ -1127,7 +1127,7 @@ export default function App() {
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' :
-        state.currentOverlay === 'vitals' ? 'border-teal-400' : 'border-emerald-500'
+        state.currentOverlay === 'vitals' ? 'border-sky-400' : 'border-emerald-500'
       }`}>
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
@@ -1961,7 +1961,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
   ];
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-teal-50 text-teal-800 border-teal-200">Vital Signs</div>
+      <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-sky-50 text-sky-800 border-sky-200">Vital Signs</div>
       <div className="p-3 space-y-2">
         {fields.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
@@ -1971,7 +1971,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
               inputMode="decimal"
               value={vitals[key]}
               onChange={e => update(key, e.target.value)}
-              className="w-24 text-right text-[18px] font-bold text-teal-700 bg-transparent border-b-2 border-teal-200 focus:border-teal-500 outline-none py-1 tabular-nums"
+              className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
             />
           </div>
         ))}
@@ -2213,7 +2213,7 @@ function SummaryOverlay({ state, pharmaSummary }: { state: AppState, pharmaSumma
       <SummaryStats state={state} pharmaSummary={pharmaSummary} />
       {hasVitals && (
         <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-teal-50 text-teal-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
+          <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
           {vitalRows.map(({ label, value, unit }, i) => (
             <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
               <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
