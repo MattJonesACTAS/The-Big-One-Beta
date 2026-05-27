@@ -1156,13 +1156,13 @@ export default function App() {
                       cx="150" cy="150" r="140"
                       fill="none" stroke="currentColor" strokeWidth="6"
                       strokeLinecap="round" pathLength="1"
-                      className="text-orange-400"
+                      className="text-emerald-500"
                       animate={{ strokeDashoffset: 0 }}
                       style={{ strokeDasharray: 1 }}
                       transition={{ duration: 0.5, ease: "linear" }}
                     />
                   </svg>
-                  <span className="z-10 text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-orange-700 text-center">PRESS IF REARREST</span>
+                  <span className="z-10 text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-emerald-600 text-center">PRESS IF REARREST</span>
                   <span className="z-10 absolute bottom-[35px] sm:bottom-[51px] text-[13px] sm:text-[16px] font-bold tracking-widest uppercase text-neutral-400">ROSC</span>
                 </button>
               ) : (
