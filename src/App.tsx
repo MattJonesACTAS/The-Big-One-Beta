@@ -1162,8 +1162,7 @@ export default function App() {
                       transition={{ duration: 0.5, ease: "linear" }}
                     />
                   </svg>
-                  <Hand size={28} className="z-10 text-emerald-400 mb-1" strokeWidth={1.5} />
-                  <span className="z-10 text-[49px] sm:text-[82px] font-bold tracking-tighter leading-none text-emerald-600">Rearrest</span>
+                  <span className="z-10 text-[42px] sm:text-[70px] font-bold tracking-tighter leading-none text-emerald-600 text-center">PRESS IF REARREST</span>
                 </button>
               ) : (
                 <>
