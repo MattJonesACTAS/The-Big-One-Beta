@@ -42,7 +42,7 @@ const ALL_NODES: GlobalNode[] = [
   // --- Home screen nodes ---
   {
     id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 1,
-    pages: [{ title: 'Total Time', description: 'The total time since the monitor was turned on (top right timer).' }],
+    pages: [{ title: 'Total Time', description: "The total time indicates how long ago the monitor was turned on.\n\nWhen you start the app and enter this time, you'll find it in the top right corner of the monitor screen." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -329,11 +329,19 @@ function renderDescription(text: string) {
   const segments = text.split('\n\n');
   return (
     <div style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left' }}>
-      {segments.map((segment, i) => (
-        <p key={i} style={{ margin: 0, marginBottom: i < segments.length - 1 ? '0.9em' : 0, whiteSpace: 'pre-line' }}>
-          {segment}
-        </p>
-      ))}
+      {segments.map((segment, i) => {
+        const isNextBullet = i < segments.length - 1 && segments[i + 1].startsWith('•');
+        const isBullet = segment.startsWith('•');
+        // Tighter gap after a bullet if next is also a bullet (40% of 0.9em)
+        const mb = i < segments.length - 1
+          ? (isBullet && isNextBullet ? '0.54em' : '0.9em')
+          : 0;
+        return (
+          <p key={i} style={{ margin: 0, marginBottom: mb, whiteSpace: 'pre-line' }}>
+            {segment}
+          </p>
+        );
+      })}
     </div>
   );
 }
