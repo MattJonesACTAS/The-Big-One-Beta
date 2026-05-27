@@ -47,12 +47,12 @@ const ALL_NODES: GlobalNode[] = [
   },
   {
     id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 2,
-    pages: [{ title: 'CPR Round', description: "The current round of CPR.\n\nWhen you start the app and enter this time, you'll find it in its own banner on the monitor's CPR screen, counting down from 2:00.\n\nThe CPR round counter will update every time the rhythm check counter reaches 0:00." }],
+    pages: [{ title: 'CPR Round', description: "The current round of CPR.\n\nThe CPR round counter will update every time the rhythm check counter reaches 0:00." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
     id: 'timer', type: 'positioned', x: 50, y: 52, displayNumber: 3,
-    pages: [{ title: 'Rhythm Check Timer', description: "The countdown to the next rhythm check.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\n• You will then be forced to record whether you shocked or disarmed." }],
+    pages: [{ title: 'Rhythm Check Timer', description: "The countdown to the next rhythm check.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time counting down from 2:00 in its own central banner on the monitor screen.\n\n• When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\n• When the timer reaches 0:00, it allows 6 seconds for the rhythm check, then restarts from 2:00.\n\n• You will then be forced to record whether you shocked or disarmed." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
