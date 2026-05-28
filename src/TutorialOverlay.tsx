@@ -30,7 +30,7 @@ const ALL_NODES: GlobalNode[] = [
       },
       {
         title: 'Getting Started',
-        description: "On opening The Big One, you'll need to calibrate the app by entering:\n\n• Adult or paediatric patient\n\n• Estimated patient weight\n\n• The interventions that have already been applied\n\n• The elapsed case time on the monitor\n\n• The time shown on the monitor's CPR count down\n\nYou'll then be brought to the home screen which we'll look at first."
+        description: "On opening The Big One, you'll need to calibrate the app by entering:\n\n• Adult or paediatric patient\n\n• Estimated patient weight\n\n• The interventions that have already been performed\n\n• The elapsed case time on the monitor\n\n• The time shown on the monitor's CPR count down\n\nYou'll then be brought to the home screen which we'll look at first."
       },
       {
         title: 'Navigating the Tutorial',
@@ -42,7 +42,7 @@ const ALL_NODES: GlobalNode[] = [
   // --- Home screen nodes ---
   {
     id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 1,
-    pages: [{ title: 'Total Time', description: "The total time indicates how long ago the monitor was turned on.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time in the top right corner of the monitor screen." }],
+    pages: [{ title: 'Total Time', description: "The total time indicates how long ago the monitor was turned on.\n\nDuring configuration, you will be prompted to copy this time from the monitor and enter it into the app.\n\nYou'll find this time in the top right corner of the monitor screen." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.rhythmCheckOvertime === 0 && !sf
   },
   {
@@ -55,7 +55,7 @@ const ALL_NODES: GlobalNode[] = [
     pages: [
       {
         title: 'Rhythm Check Timer',
-        description: "The countdown to the next rhythm check.\n\nDuring opening configuration, you will be prompted to extract this time from the monitor and enter it into the app.\n\nYou'll find this time counting down from 2:00 in its own central banner on the monitor screen."
+        description: "The countdown to the next rhythm check.\n\nDuring configuration, you will be prompted to copy this time from the monitor and enter it into the app.\n\nYou'll find this time counting down from 2:00 in its own central banner on the monitor screen."
       },
       {
         title: 'Timer Behaviour',
@@ -120,7 +120,7 @@ const ALL_NODES: GlobalNode[] = [
       },
       {
         title: 'Pharma Summary',
-        description: 'Next, we have the pharma summary, which lists all logged medications with a cumulative tally of the total dose given of each drug.'
+        description: 'Next, we have the pharmacological summary, which lists all logged medications with a cumulative tally of the total dose given of each drug.'
       },
       {
         title: 'Vital Signs Survey',
