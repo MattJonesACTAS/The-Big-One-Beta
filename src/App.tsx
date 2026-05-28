@@ -519,7 +519,7 @@ export default function App() {
               // When overtime reaches 6 seconds, force shock entry and reset immediately
               if (nextOvertime >= 6) {
                 // Force shock overlay (don't wait for user to complete it)
-                if (!showCatchup) {
+                if (!showCatchup && !tutorialMode) {
                   nextOverlay = 'treatment';
                   setIsShockForced(true);
                 }
