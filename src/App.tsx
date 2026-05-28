@@ -330,6 +330,7 @@ export default function App() {
   const loggedTreatmentRef = useRef<string>('');
   const [isShockForced, setIsShockForced] = useState(false);
   const [rearrested, setRearrested] = useState(false);
+  const [rhythmCheckOverdue, setRhythmCheckOverdue] = useState(false);
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt10 = useRef<boolean>(false);
@@ -523,6 +524,7 @@ export default function App() {
                   nextOverlay = 'treatment';
                   setIsShockForced(true);
                 }
+                setRhythmCheckOverdue(true);
                 
                 // Reset immediately regardless of shock entry
                 nextTarget = newElapsed + 120;
@@ -663,6 +665,7 @@ export default function App() {
     }
     
     setIsShockForced(false);
+    setRhythmCheckOverdue(false);
 
     // If this treatment was logged from a rearrest, show timer adjustment popup
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
@@ -1273,7 +1276,7 @@ export default function App() {
                   pathLength="1"
                   className={
                     state.rhythmCheckPaused ? 'text-emerald-500' :
-                    state.rhythmCheckOvertime > 0 ? 'text-red-500' :
+                    state.rhythmCheckOvertime > 0 || rhythmCheckOverdue ? 'text-red-500' :
                     (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && 
                     (state.rhythmCheckTarget - state.elapsedSeconds) > 5 ? 'text-red-500' : 'text-emerald-500'
                   }
@@ -1293,9 +1296,8 @@ export default function App() {
                 <div 
                   className={`text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none ${
                     state.rhythmCheckPaused ? 'text-neutral-900' :
-                    state.rhythmCheckOvertime > 0 ? 'text-red-600' :
-                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && 
-                    (state.rhythmCheckTarget - state.elapsedSeconds) > 5 ? 'text-red-600' : 'text-neutral-900'
+                    state.rhythmCheckOvertime > 0 || rhythmCheckOverdue ? 'text-red-600' :
+                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
                   {state.rhythmCheckPaused 
