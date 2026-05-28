@@ -1542,7 +1542,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="flex justify-between text-[11px] text-neutral-400 pt-2">
+                  <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
                     <p>The Big One v1.0</p>
                     <p>ACTAS CMG v1.0.5.4</p>
                     <p>Last reviewed May 2026</p>
