@@ -554,6 +554,19 @@ export default function App() {
     return () => clearInterval(interval);
   }, [state.running]);
 
+  // Live countdown in the timer adjust popup
+  useEffect(() => {
+    if (!showTimerAdjust) return;
+    const interval = setInterval(() => {
+      setTimerAdjustValue(prev => {
+        const totalSecs = prev.mins * 60 + prev.secs - 1;
+        if (totalSecs <= 0) return { mins: 0, secs: 0 };
+        return { mins: Math.floor(totalSecs / 60), secs: totalSecs % 60 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showTimerAdjust]);
+
   const togglePause = () => {
     setState(prev => {
       // Toggle rhythm check pause, but keep elapsed timer running
@@ -621,6 +634,8 @@ export default function App() {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
       const isROSC = name === 'Disarm - ROSC';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
+      // Manual shock/disarm: not from forced popup and not Disarm-ROSC
+      const isManualShockOrDisarm = isShockOrDisarm && !isROSC && !isShockForced;
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -641,11 +656,13 @@ export default function App() {
         treatments: newTreatments,
         shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
         currentOverlay: null,
-        // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
-        rhythmCheckTarget: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) 
-          ? prev.elapsedSeconds + 120 
+        // Reset rhythm check to 2:00 for ROSC, manual shock/disarm, or when unpausing
+        rhythmCheckTarget: (isROSC || isManualShockOrDisarm || (isShockOrDisarm && wasRhythmCheckPaused))
+          ? prev.elapsedSeconds + 120
           : prev.rhythmCheckTarget,
-        rhythmCheckOvertime: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
+        rhythmCheckOvertime: (isROSC || isManualShockOrDisarm || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
+        // Increment CPR round on manual shock/disarm
+        cprRound: isManualShockOrDisarm ? prev.cprRound + 1 : prev.cprRound,
         // Pause for ROSC, unpause for other shock/disarm
         rhythmCheckPaused: isShockOrDisarm ? isROSC : prev.rhythmCheckPaused,
         // For ROSC, freeze the countdown at 2:00
@@ -667,6 +684,8 @@ export default function App() {
     // If this treatment was logged from a rearrest, show timer adjustment popup
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
+      const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
+      setTimerAdjustValue({ mins: Math.floor(currentCountdown / 60), secs: currentCountdown % 60 });
       setShowTimerAdjust(true);
     }
     
