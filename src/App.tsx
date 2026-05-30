@@ -567,6 +567,31 @@ export default function App() {
     return () => clearInterval(interval);
   }, [showTimerAdjust]);
 
+  // Live count-up for elapsed time on catchup step 4
+  useEffect(() => {
+    if (!showCatchup || catchupStep !== 4) return;
+    const interval = setInterval(() => {
+      setCatchupElapsed(prev => {
+        const totalSecs = prev.mins * 60 + prev.secs + 1;
+        return { mins: Math.floor(totalSecs / 60), secs: totalSecs % 60 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showCatchup, catchupStep]);
+
+  // Live countdown for CPR timer on catchup step 5
+  useEffect(() => {
+    if (!showCatchup || catchupStep !== 5) return;
+    const interval = setInterval(() => {
+      setCatchupRhythm(prev => {
+        const totalSecs = prev.mins * 60 + prev.secs - 1;
+        if (totalSecs <= 0) return { mins: 0, secs: 0 };
+        return { mins: Math.floor(totalSecs / 60), secs: totalSecs % 60 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showCatchup, catchupStep]);
+
   const togglePause = () => {
     setState(prev => {
       // Toggle rhythm check pause, but keep elapsed timer running
