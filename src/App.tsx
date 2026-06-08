@@ -333,6 +333,8 @@ export default function App() {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
+  const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | null>(null);
+  const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(null);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -866,6 +868,20 @@ export default function App() {
     return summary;
   }, [state.treatments]);
 
+  // --- Elapsed time interval calculator ---
+  const calcNextIntervalTarget = (elapsedSecs: number, interval: 'evens' | 'odds' | 'half-evens' | 'half-odds'): number => {
+    const intervalMap = {
+      'evens':      { period: 120, offset: 0   }, // 2:00, 4:00, 6:00...
+      'odds':       { period: 120, offset: 60  }, // 1:00, 3:00, 5:00...
+      'half-evens': { period: 120, offset: 30  }, // 2:30, 4:30, 6:30...
+      'half-odds':  { period: 120, offset: 90  }, // 1:30, 3:30, 5:30...
+    };
+    const { period, offset } = intervalMap[interval];
+    const phase = ((elapsedSecs - offset) % period + period) % period;
+    const next = elapsedSecs + (period - phase);
+    return next;
+  };
+
   // --- Catchup Handlers ---
   const handleCatchupStart = (overrideWeight?: string) => {
     console.log('handleCatchupStart called', { overrideWeight, weightInput });
@@ -905,13 +921,22 @@ export default function App() {
       adjustedElapsed += timeSinceElapsed;
     }
     
-    if (cprTimestamp) {
+    // Only apply CPR timestamp adjustment in CPR timer mode
+    if (timingMode === 'cpr' && cprTimestamp) {
       const timeSinceCpr = Math.floor((Date.now() - cprTimestamp) / 1000);
       adjustedRhythm = Math.max(0, adjustedRhythm - timeSinceCpr);
     }
     
     const now = Date.now();
     const startClockTime = now - (adjustedElapsed * 1000);
+    
+    // Calculate rhythm check target based on timing mode
+    let rhythmCheckTarget: number;
+    if (timingMode === 'elapsed' && rhythmInterval) {
+      rhythmCheckTarget = calcNextIntervalTarget(adjustedElapsed, rhythmInterval);
+    } else {
+      rhythmCheckTarget = adjustedElapsed + adjustedRhythm;
+    }
 
     const initialTxs: Treatment[] = [];
     const baseClock = new Date(startClockTime);
@@ -967,8 +992,8 @@ export default function App() {
       startTime: now,
       pausedTime: adjustedElapsed * 1000,
       elapsedSeconds: adjustedElapsed,
-      rhythmCheckTarget: adjustedElapsed + adjustedRhythm, // Target time = current elapsed + countdown
-      cprRound: Math.max(1, priorCounts.shock + priorCounts.disarm), // Round = total shocks + disarms (min 1)
+      rhythmCheckTarget: rhythmCheckTarget,
+      cprRound: Math.max(1, priorCounts.shock + priorCounts.disarm),
       shocks: priorCounts.shock,
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
@@ -994,7 +1019,9 @@ export default function App() {
     // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
     setCprTimestamp(null);
-    previousCountdown.current = adjustedRhythm; // Initialize countdown to prevent immediate trigger
+    setTimingMode(null);
+    setRhythmInterval(null);
+    previousCountdown.current = adjustedRhythm;
   };
 
   const deleteCase = () => {
@@ -1759,36 +1786,37 @@ export default function App() {
 
               {catchupStep === 4 && (
                 <div className="text-center space-y-6">
-                  {/* Manual entry UI */}
                   <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
                   <p className="text-neutral-600 text-sm px-4">This is the time at the top right corner of the monitor</p>
                   <TimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
                   
-                  {/* Navigation buttons */}
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => {
-                        setCatchupStep(3);
+                        setCatchupStep(6);
                         setUseManualEntry(false);
                       }} 
                       className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
                     >
                       Back
                     </button>
-                      <button 
-                        onClick={() => { 
-                          // Set timestamp for elapsed time entry
-                          setElapsedTimestamp(Date.now());
-                          setCatchupRhythm({ mins: 0, secs: 0 }); 
+                    <button 
+                      onClick={() => { 
+                        setElapsedTimestamp(Date.now());
+                        if (timingMode === 'elapsed') {
+                          setCatchupStep(7);
+                        } else {
+                          setCatchupRhythm({ mins: 0, secs: 0 });
                           setCatchupStep(5);
-                        }} 
-                        className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
-                      >
-                        Next
-                      </button>
-                    </div>
+                        }
+                      }} 
+                      className={`p-3 rounded-xl font-bold btn-base text-white ${timingMode === 'elapsed' ? 'bg-blue-600' : 'bg-emerald-600'}`}
+                    >
+                      Next
+                    </button>
                   </div>
-                )}
+                </div>
+              )}
 
               {catchupStep === 5 && (
                 <div className="text-center space-y-6">
@@ -1803,11 +1831,56 @@ export default function App() {
                     <button onClick={() => setCatchupStep(4)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                     <button 
                       onClick={() => {
-                        // Set timestamp for CPR timer entry
                         setCprTimestamp(Date.now());
                         handleCatchupStart();
                       }}
                       className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                    >
+                      Start Case
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {catchupStep === 7 && (
+                <div className="space-y-6 px-4 max-w-md mx-auto">
+                  <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold text-neutral-900">Rhythm Check Timing</h2>
+                    <p className="text-neutral-500 text-sm">When are rhythm checks due?</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      { key: 'evens',      label: 'Evens',      example: '2:00, 4:00...' },
+                      { key: 'odds',       label: 'Odds',       example: '1:00, 3:00...' },
+                      { key: 'half-evens', label: 'Half evens', example: '2:30, 4:30...' },
+                      { key: 'half-odds',  label: 'Half odds',  example: '1:30, 3:30...' },
+                    ] as const).map(({ key, label, example }) => (
+                      <button
+                        key={key}
+                        onClick={() => setRhythmInterval(key)}
+                        className={`p-4 rounded-2xl transition-all duration-200 ${
+                          rhythmInterval === key
+                            ? 'bg-blue-500 text-white shadow-lg scale-105'
+                            : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="font-bold text-base">{label}</div>
+                        <div className={`text-xs mt-1 ${rhythmInterval === key ? 'text-blue-100' : 'text-neutral-400'}`}>{example}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button onClick={() => setCatchupStep(4)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button
+                      onClick={() => rhythmInterval && handleCatchupStart()}
+                      disabled={!rhythmInterval}
+                      className={`py-4 rounded-xl font-bold transition-all ${
+                        rhythmInterval
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                          : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                      }`}
                     >
                       Start Case
                     </button>
@@ -1836,7 +1909,73 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => setCatchupStep(4)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
+                    <button onClick={() => setCatchupStep(6)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
+                  </div>
+                </div>
+              )}
+
+              {catchupStep === 6 && (
+                <div className="space-y-6 px-4 max-w-md mx-auto">
+                  <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
+                    <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setTimingMode('cpr')}
+                      className={`p-6 rounded-2xl transition-all duration-200 ${
+                        timingMode === 'cpr'
+                          ? 'bg-emerald-500 text-white shadow-lg scale-105'
+                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="text-4xl">⏱️</div>
+                        <div className="text-center">
+                          <div className="font-bold text-base">CPR Timer</div>
+                          <div className={`text-xs mt-1 ${timingMode === 'cpr' ? 'text-emerald-100' : 'text-neutral-400'}`}>
+                            Countdown on monitor
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setTimingMode('elapsed')}
+                      className={`p-6 rounded-2xl transition-all duration-200 ${
+                        timingMode === 'elapsed'
+                          ? 'bg-blue-500 text-white shadow-lg scale-105'
+                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="text-4xl">🕐</div>
+                        <div className="text-center">
+                          <div className="font-bold text-base">Elapsed Time</div>
+                          <div className={`text-xs mt-1 ${timingMode === 'elapsed' ? 'text-blue-100' : 'text-neutral-400'}`}>
+                            Odds / evens
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button
+                      onClick={() => timingMode && setCatchupStep(4)}
+                      disabled={!timingMode}
+                      className={`py-4 rounded-xl font-bold transition-all ${
+                        timingMode
+                          ? timingMode === 'cpr'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                          : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Continue
+                    </button>
                   </div>
                 </div>
               )}
