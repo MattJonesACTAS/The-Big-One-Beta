@@ -1793,7 +1793,7 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => {
-                        setCatchupStep(6);
+                        setCatchupStep(timingMode === 'elapsed' ? 7 : 6);
                         setUseManualEntry(false);
                       }} 
                       className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
@@ -1804,7 +1804,7 @@ export default function App() {
                       onClick={() => { 
                         setElapsedTimestamp(Date.now());
                         if (timingMode === 'elapsed') {
-                          setCatchupStep(7);
+                          handleCatchupStart();
                         } else {
                           setCatchupRhythm({ mins: 0, secs: 0 });
                           setCatchupStep(5);
@@ -1812,7 +1812,7 @@ export default function App() {
                       }} 
                       className={`p-3 rounded-xl font-bold btn-base text-white ${timingMode === 'elapsed' ? 'bg-blue-600' : 'bg-emerald-600'}`}
                     >
-                      Next
+                      {timingMode === 'elapsed' ? 'Start Case' : 'Next'}
                     </button>
                   </div>
                 </div>
@@ -1872,9 +1872,9 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => setCatchupStep(4)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button onClick={() => setCatchupStep(6)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
                     <button
-                      onClick={() => rhythmInterval && handleCatchupStart()}
+                      onClick={() => rhythmInterval && setCatchupStep(4)}
                       disabled={!rhythmInterval}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         rhythmInterval
@@ -1882,7 +1882,7 @@ export default function App() {
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
                     >
-                      Start Case
+                      Next
                     </button>
                   </div>
                 </div>
@@ -1964,7 +1964,10 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
                     <button
-                      onClick={() => timingMode && setCatchupStep(4)}
+                      onClick={() => {
+                        if (timingMode === 'cpr') setCatchupStep(5);
+                        else if (timingMode === 'elapsed') setCatchupStep(7);
+                      }}
                       disabled={!timingMode}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         timingMode
