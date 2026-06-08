@@ -1828,7 +1828,7 @@ export default function App() {
                     maxSeconds={120}
                   />
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(4)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                    <button onClick={() => setCatchupStep(6)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                     <button 
                       onClick={() => {
                         setCprTimestamp(Date.now());
