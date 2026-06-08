@@ -76,16 +76,19 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Adrenaline infusion': { 
     doses: [
-      { dose: '1mg/500mL', population: 'both' },
-      { dose: '3mg/50mL', population: 'both' },
+      { dose: '1mg/500mL', population: 'both', indication: 'Gravity fed — adult & paed' },
+      { dose: '3mg/50mL', population: 'both', indication: 'Infusion pump — adult or large paed (≥21kg)' },
+      { dose: '300mcg/50mL', population: 'paed', indication: 'Infusion pump — small paed (≤20kg)' },
       { dose: 'Other', population: 'both' }
     ] 
   },
   'Amiodarone': { 
     doses: [
-      { dose: '300mg', population: 'adult', indication: 'VF/VT cardiac arrest' },
-      { dose: '150mg', population: 'adult', indication: 'VT with output' },
-      { dose: '5mg/kg', population: 'paed', indication: 'VF/VT cardiac arrest' },
+      { dose: '300mg', population: 'adult', indication: 'VF/pVT cardiac arrest' },
+      { dose: '150mg', population: 'adult', indication: 'VT/AF/A.flutter with output' },
+      { dose: '5mg/kg', population: 'paed', indication: 'VF/pVT cardiac arrest', calculated: true },
+      { dose: '2.5mg/kg', population: 'paed', indication: 'VF/pVT cardiac arrest (repeat)', calculated: true },
+      { dose: '5mg/kg', population: 'paed', indication: 'VT with output', calculated: true },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -97,35 +100,35 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Calcium': { 
     doses: [
-      { dose: '10mL 10%', population: 'both', indication: 'Cardiac arrest' },
+      { dose: '10mg/kg', population: 'both', indication: 'Cardiac arrest / With cardiac output', calculated: true },
       { dose: 'Other', population: 'both' }
     ] 
   },
   'Glucose 10%': { 
     doses: [
-      { dose: '2.5mL/kg', population: 'both', calculated: true },
+      { dose: '2.5mL/kg', population: 'both', calculated: true, indication: 'Hypoglycaemia' },
       { dose: 'Other', population: 'both' }
     ],
     customUnit: 'mls'
   },
   'Heparin': {
     doses: [
-      { dose: '5000u', population: 'adult' },
+      { dose: '5000u', population: 'adult', indication: 'STEMI' },
       { dose: 'Other', population: 'both' }
     ]
   },
   'Ketamine push': { 
     doses: [
       { dose: '0.5mg/kg', population: 'both', indication: 'CPR induced consciousness' },
-      { dose: '1mg/kg', population: 'adult', indication: 'Intubation induction with Suxamethonium' },
+      { dose: '1mg/kg', population: 'adult', indication: 'Intubation induction with Suxamethonium / Post intubation analgosedation' },
+      { dose: '1mg/kg', population: 'paed', indication: 'Post intubation analgosedation' },
       { dose: '2mg/kg', population: 'adult', indication: 'Intubation when suxamethonium is contraindicated' },
-      { dose: '1mg/kg', population: 'both', indication: 'Post intubation analgosedation' },
       { dose: 'Other', population: 'both' }
     ] 
   },
   'Ketamine infusion': {
     doses: [
-      { dose: 'mg/h', population: 'both' }
+      { dose: 'mg/h', population: 'both', indication: 'Post intubation analgosedation' }
     ]
   },
   'Lignocaine': { 
@@ -136,14 +139,14 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Magnesium': { 
     doses: [
-      { dose: '2.5g', population: 'adult', indication: 'Refractory VF' },
-      { dose: '50mg/kg', population: 'paed', indication: 'Cardiac arrest' },
+      { dose: '2.5g', population: 'adult', indication: 'pVT secondary to prolonged QT' },
+      { dose: '50mg/kg', population: 'paed', indication: 'pVT secondary to prolonged QT' },
       { dose: 'Other', population: 'both' }
     ] 
   },
   'Midazolam': { 
     doses: [
-      { dose: '0.05mg/kg', population: 'both', indication: 'Post intubation sedation with ketamine - push dose' },
+      { dose: '0.05mg/kg', population: 'both', indication: 'Post intubation sedation with ketamine' },
       { dose: 'mg/h', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
       { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with morphine - push dose' }
     ] 
@@ -158,13 +161,13 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
     doses: [
       { dose: '250mL', population: 'both' },
       { dose: '500mL', population: 'both' },
-      { dose: '1000mL', population: 'both' },
       { dose: 'Other', population: 'both' }
     ] 
   },
   'Sodium Bicarbonate': { 
     doses: [
-      { dose: '1mMol/kg', population: 'both', indication: 'Cardiac arrest: Hyperkalaemia/OD', calculated: true },
+      { dose: '1mMol/kg', population: 'both', indication: 'Cardiac arrest: Hyperkalaemia/OD / Cardioactive drug OD with output', calculated: true },
+      { dose: '0.5mMol/kg', population: 'both', indication: 'Hyperkalaemia with output', calculated: true },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -177,6 +180,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Oxygen': {
     doses: [
       { dose: 'Nasal cannulae', population: 'both' },
+      { dose: 'NRB', population: 'both' },
       { dose: 'BVM', population: 'both' }
     ]
   }
@@ -266,6 +270,19 @@ const formatSodiumBicarbonateDose = (doseStr: string): string => {
   }
   console.log('formatSodiumBicarbonateDose no match, returning:', doseStr);
   return doseStr;
+};
+
+const formatCalciumDose = (doseStr: string, weight: number | null): string => {
+  // Calcium chloride 10% = 100mg/mL
+  // 10mg/kg, max 1g (10mL)
+  if (!weight) return doseStr;
+  if (weight >= 100) {
+    return `10mg/kg — 1g max (10mL of 10%)`;
+  }
+  const calculatedMg = 10 * weight; // 10mg/kg
+  const mg = Math.min(Math.round(calculatedMg * 10) / 10, 1000);
+  const mL = Math.round(mg / 100 * 10) / 10; // 100mg/mL
+  return `10mg/kg (${mg}mg / ${mL}mL of 10%)`;
 };
 
 export default function App() {
@@ -554,44 +571,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [state.running]);
 
-  // Live countdown in the timer adjust popup
-  useEffect(() => {
-    if (!showTimerAdjust) return;
-    const interval = setInterval(() => {
-      setTimerAdjustValue(prev => {
-        const totalSecs = prev.mins * 60 + prev.secs - 1;
-        if (totalSecs <= 0) return { mins: 0, secs: 0 };
-        return { mins: Math.floor(totalSecs / 60), secs: totalSecs % 60 };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [showTimerAdjust]);
-
-  // Live count-up for elapsed time on catchup step 4
-  useEffect(() => {
-    if (!showCatchup || catchupStep !== 4) return;
-    const interval = setInterval(() => {
-      setCatchupElapsed(prev => {
-        const totalSecs = prev.mins * 60 + prev.secs + 1;
-        return { mins: Math.floor(totalSecs / 60), secs: totalSecs % 60 };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [showCatchup, catchupStep]);
-
-  // Live countdown for CPR timer on catchup step 5
-  useEffect(() => {
-    if (!showCatchup || catchupStep !== 5) return;
-    const interval = setInterval(() => {
-      setCatchupRhythm(prev => {
-        const totalSecs = prev.mins * 60 + prev.secs - 1;
-        if (totalSecs <= 0) return { mins: 0, secs: 0 };
-        return { mins: Math.floor(totalSecs / 60), secs: totalSecs % 60 };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [showCatchup, catchupStep]);
-
   const togglePause = () => {
     setState(prev => {
       // Toggle rhythm check pause, but keep elapsed timer running
@@ -659,8 +638,6 @@ export default function App() {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
       const isROSC = name === 'Disarm - ROSC';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
-      // Manual shock/disarm: not from forced popup and not Disarm-ROSC
-      const isManualShockOrDisarm = isShockOrDisarm && !isROSC && !isShockForced;
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -681,13 +658,11 @@ export default function App() {
         treatments: newTreatments,
         shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
         currentOverlay: null,
-        // Reset rhythm check to 2:00 for ROSC, manual shock/disarm, or when unpausing
-        rhythmCheckTarget: (isROSC || isManualShockOrDisarm || (isShockOrDisarm && wasRhythmCheckPaused))
-          ? prev.elapsedSeconds + 120
+        // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
+        rhythmCheckTarget: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) 
+          ? prev.elapsedSeconds + 120 
           : prev.rhythmCheckTarget,
-        rhythmCheckOvertime: (isROSC || isManualShockOrDisarm || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
-        // Increment CPR round on manual shock/disarm
-        cprRound: isManualShockOrDisarm ? prev.cprRound + 1 : prev.cprRound,
+        rhythmCheckOvertime: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
         // Pause for ROSC, unpause for other shock/disarm
         rhythmCheckPaused: isShockOrDisarm ? isROSC : prev.rhythmCheckPaused,
         // For ROSC, freeze the countdown at 2:00
@@ -709,8 +684,6 @@ export default function App() {
     // If this treatment was logged from a rearrest, show timer adjustment popup
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
-      const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
-      setTimerAdjustValue({ mins: Math.floor(currentCountdown / 60), secs: currentCountdown % 60 });
       setShowTimerAdjust(true);
     }
     
@@ -771,7 +744,17 @@ export default function App() {
   }, [state.treatments, state.cprRound]);
 
   const amiodaroneStatus = useMemo(() => {
-    const amioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
+    const allAmioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
+
+    // Protocol: first amiodarone dose starts the 5-min timer, second (final) dose clears it.
+    // We can't rely on dose string matching because cleanDoseForLog strips mg/kg to just
+    // the calculated value (e.g. "5mg/kg (42mg)" -> "Amiodarone 42mg").
+    // So we use count: 1 dose = show timer, 2+ doses = hide permanently.
+    if (allAmioTreatments.length >= 2) {
+      return { text: '', show: false, isDue: false, countdown: 0, flashRed: false };
+    }
+
+    const amioTreatments = allAmioTreatments;
     const lastAmio = amioTreatments[amioTreatments.length - 1];
     
     if (!lastAmio) {
@@ -1620,7 +1603,7 @@ export default function App() {
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
                           <div className={`text-xs mt-1 ${weightType === 'adult' ? 'text-emerald-100' : 'text-neutral-400'}`}>
-                            40-200 kg
+                            35-200 kg
                           </div>
                         </div>
                       </div>
@@ -1646,7 +1629,7 @@ export default function App() {
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
                           <div className={`text-xs mt-1 ${weightType === 'paed' ? 'text-pink-100' : 'text-neutral-400'}`}>
-                            Newborn-12 yrs
+                            Newborn-11 yrs
                           </div>
                         </div>
                       </div>
@@ -1668,6 +1651,7 @@ export default function App() {
                         className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                       >
                         <option value="">Select weight</option>
+                        <option value="35">35 kg</option>
                         <option value="40">40 kg</option>
                         <option value="50">50 kg</option>
                         <option value="60">60 kg</option>
@@ -1709,11 +1693,11 @@ export default function App() {
                         >
                           <option value="">Choose age</option>
                           {[
-                            ['Newborn', 3], ['1 month', 4], ['3 months', 6], ['6 months', 8],
-                            ['9 months', 9], ['1 year', 10], ['18 months', 11], ['2 years', 12],
+                            ['Newborn', 3], ['3 months', 5], ['6 months', 7],
+                            ['12 months', 11], ['2 years', 13],
                             ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
-                            ['7 years', 23], ['8 years', 26], ['9 years', 29], ['10 years', 32],
-                            ['11 years', 35], ['12 years', 38]
+                            ['7 years', 23], ['8 years', 25], ['9 years', 27], ['10 years', 30],
+                            ['11 years', 33]
                           ].map(([age, weight]) => (
                             <option key={age} value={weight}>{age} ({weight} kg)</option>
                           ))}
@@ -2048,7 +2032,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
     >
       <div className="flex-1 overflow-y-auto">
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
-        {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} />}
+        {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} />}
@@ -2101,13 +2085,65 @@ function ReversiblesOverlay({ checkedItems, onToggle }: { checkedItems: string[]
   );
 }
 
-function ROSCSelection({ checkedItems, onToggle }: { checkedItems: string[], onToggle: (label: string) => void }) {
+function ROSCSelection({ checkedItems, onToggle, patientType, patientWeight }: {
+  checkedItems: string[];
+  onToggle: (label: string) => void;
+  patientType: 'adult' | 'paed' | null;
+  patientWeight: number | string | null;
+}) {
+  const isPaed = patientType === 'paed';
+  const weight = typeof patientWeight === 'number' ? patientWeight : parseFloat(String(patientWeight));
+
+  // Ventilation rate by weight (paed)
+  const rrTarget = isPaed
+    ? weight <= 12 ? '30–45/min (once every 1–2 seconds)'
+    : weight <= 19 ? '20–40/min (once every 1.5–3 seconds)'
+    : '20–30/min (once every 2–3 seconds)'
+    : '8–10/min (once every 6–8 seconds)';
+
+  // SBP target by weight (paed) or adult
+  const sbpTarget = !isPaed
+    ? 'Maintain SBP ≥100mmHg'
+    : weight <= 3 ? 'Maintain SBP 60–100mmHg'
+    : weight <= 12 ? 'Maintain SBP 70–110mmHg'
+    : 'Maintain SBP 90–110mmHg';
+
+  const teamLeaderItems = isPaed
+    ? ['Confirm roles', 'Monitor ECG for rhythm changes', 'Review reversibles', 'Aggressively check and address correctable causes']
+    : ['Confirm roles', 'Monitor ECG for rhythm changes', 'Review reversibles'];
+
+  const airwayItems = isPaed
+    ? [
+        'Do not perform RSI (not authorised)',
+        'If ETT placed during arrest — maintain sedation, prevent dislodgement',
+        'Confirm spontaneous ventilations',
+        'Maintain SpO₂ 94–98%',
+        'Maintain EtCO₂ 35–40mmHg',
+        `Ventilate at ${rrTarget}`,
+      ]
+    : [
+        'Response — consider sedation',
+        'Confirm airway secured',
+        'Confirm spontaneous ventilations',
+        'Maintain SpO₂ 94–98%',
+        'Maintain EtCO₂ 35–40mmHg',
+        `Ventilate at ${rrTarget}`,
+      ];
+
+  const goferItems = isPaed
+    ? ['Confirm radial pulse', 'Set BP to automatic cycling', 'Attach SpO₂', 'Temp (32–37.5°C acceptable)', 'BGL', 'Prepare extrication']
+    : ['Confirm radial pulse', 'Set BP to automatic cycling', 'Attach SpO₂', '12-lead ECG', 'Temp (actively correct if <32°C or >39°C)', 'BGL', 'Prepare extrication'];
+
+  const drugsItems = isPaed
+    ? [sbpTarget, 'Confirm bilateral IV/IO access', 'Prepare sedation medications if required', 'Prepare adrenaline infusion if required']
+    : ['Confirm bilateral IV/IO access', 'Maintain SBP ≥100mmHg', 'Prepare sedation medications if required', 'Prepare adrenaline infusion if required'];
+
   return (
     <div className="h-full">
-      <SectionGroup title="TEAM LEADER" color="orange" items={['Confirm roles', 'Monitor ECG for rhythm changes', 'Review reversibles']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="AIRWAY" color="orange" items={['Response — consider sedation', 'Confirm airway secured', 'Confirm spontaneous ventilations', 'Maintain SpO2 94–98%', 'Maintain ETCO2 35–40mmHg']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="GOFER" color="orange" items={['Confirm radial pulse', 'Set BP to automatic cycling', 'Attach SpO2', '12-lead ECG', 'Temp', 'BGL', 'Prepare extrication']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="DRUGS & ACCESS" color="orange" items={['Confirm bilateral IV/IO access', 'Maintain SBP ≥100mmHg', 'Prepare sedation medications if required', 'Prepare adrenaline infusion if required']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="TEAM LEADER" color="orange" items={teamLeaderItems} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="AIRWAY" color="orange" items={airwayItems} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="GOFER" color="orange" items={goferItems} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="DRUGS & ACCESS" color="orange" items={drugsItems} checkedItems={checkedItems} onToggle={onToggle} />
     </div>
   );
 }
@@ -2278,9 +2314,22 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
 
 function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
-  
+  const patientLabel = state.patientType === 'adult'
+    ? `Adult · ${state.patientWeight === '>100' ? '>100' : state.patientWeight}kg`
+    : state.patientType === 'paed'
+    ? `Paediatric · ${state.patientWeight}kg`
+    : null;
+
   return (
     <div className="space-y-6">
+      {patientLabel && (
+        <div className="rounded-xl overflow-hidden border border-neutral-100">
+          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider">PATIENT</div>
+          <div className="bg-white px-4 py-3">
+            <span className="text-[17px] font-bold text-neutral-900">{patientLabel}</span>
+          </div>
+        </div>
+      )}
        <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">ARREST SUMMARY</div>
         <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
@@ -2406,6 +2455,28 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
         cleanDose = formatSodiumBicarbonateDose(cleanDose);
       }
       
+      // For Calcium, add mg and mL calculation with max cap
+      if (selectedMed === 'Calcium') {
+        cleanDose = formatCalciumDose(cleanDose, state.patientWeight);
+      }
+      
+      // For Amiodarone paed, apply max dose caps
+      if (selectedMed === 'Amiodarone' && state.patientType === 'paed') {
+        const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
+        const mgMatch = cleanDose.match(/([\d.]+)mg/);
+        if (mgMatch) {
+          const calculated = parseFloat(mgMatch[1]);
+          const doseOpt = DOSE_CONFIG['Amiodarone'].doses.find(d => d.dose === dose);
+          if (doseOpt?.indication?.includes('repeat')) {
+            const capped = Math.min(calculated, 150);
+            cleanDose = `${capped}mg`;
+          } else if (doseOpt?.dose?.includes('/kg')) {
+            const capped = Math.min(calculated, 300);
+            cleanDose = `${capped}mg`;
+          }
+        }
+      }
+      
       console.log('handleDoseSelect - final cleanDose:', cleanDose);
       const finalTreatment = `${selectedMed} ${cleanDose}`;
       console.log('handleDoseSelect - adding treatment:', finalTreatment);
@@ -2447,6 +2518,11 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       // For Sodium Bicarbonate, add mls calculation
       if (selectedMed === 'Sodium Bicarbonate') {
         doseWithUnit = formatSodiumBicarbonateDose(doseWithUnit);
+      }
+      
+      // For Calcium, add mg and mL calculation with max cap
+      if (selectedMed === 'Calcium') {
+        doseWithUnit = formatCalciumDose(doseWithUnit, state.patientWeight);
       }
       
       addTreatment(`${selectedMed} ${doseWithUnit}`);
@@ -2492,6 +2568,36 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       }
     };
     
+    // Display dose on button — applies max caps and special formatting
+    const getButtonDisplayDose = (doseOpt: { dose: string; indication?: string }) => {
+      const base = calculateDose(doseOpt.dose, state.patientWeight);
+      const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
+      // Calcium: show mg and mL with 1g max cap
+      if (selectedMed === 'Calcium' && doseOpt.dose.includes('/kg')) {
+        return formatCalciumDose(base, weight);
+      }
+      // Amiodarone paed: cap display at 300mg for arrest, 150mg for VT with output
+      if (selectedMed === 'Amiodarone' && doseOpt.dose.includes('/kg') && state.patientType === 'paed') {
+        const mgMatch = base.match(/\(([\d.]+)mg\)/);
+        if (mgMatch) {
+          const calculated = parseFloat(mgMatch[1]);
+          if (doseOpt.indication?.includes('cardiac arrest') && !doseOpt.indication?.includes('repeat')) {
+            const capped = Math.min(calculated, 300);
+            return `5mg/kg (${capped}mg${calculated > 300 ? ' — 300mg max' : ''})`;
+          }
+          if (doseOpt.indication?.includes('repeat')) {
+            const capped = Math.min(calculated, 150);
+            return `2.5mg/kg (${capped}mg${calculated > 150 ? ' — 150mg max' : ''})`;
+          }
+          if (doseOpt.indication?.includes('VT with output')) {
+            const capped = Math.min(calculated, 150);
+            return `5mg/kg (${capped}mg${calculated > 150 ? ' — 150mg max' : ''})`;
+          }
+        }
+      }
+      return base;
+    };
+
     return (
       <div className="h-full overflow-y-auto pb-4">
         <div className="p-6 mb-4">
@@ -2508,15 +2614,26 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           <div className="space-y-3">
             {regularDoses.map(doseOpt => (
               <button
-                key={doseOpt.dose}
+                key={`${doseOpt.dose}-${doseOpt.indication}`}
                 onClick={() => handleDoseSelect(doseOpt.dose)}
-                className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1"
-                data-dose={doseOpt.indication || calculateDose(doseOpt.dose, state.patientWeight)}
+                className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base flex flex-col items-start gap-1 text-left"
+                data-dose={doseOpt.indication || getButtonDisplayDose(doseOpt)}
               >
+                <span className="text-lg">{getButtonDisplayDose(doseOpt)}</span>
                 {doseOpt.indication && (
-                  <span className="text-[10px] font-normal uppercase tracking-wide">{doseOpt.indication}</span>
+                  <>
+                    <span className="w-full border-t border-white opacity-30 my-1" />
+                    {doseOpt.indication.split(' / ').map((ind, i) => (
+                      <span key={i} className="text-[11px] font-normal text-white opacity-90 leading-tight block">
+                        {"- "}{ind.split(/(pVT)/).map((part, j) =>
+                          part === 'pVT'
+                            ? <span key={j}>pVT</span>
+                            : part
+                        )}
+                      </span>
+                    ))}
+                  </>
                 )}
-                <span className="text-lg">{calculateDose(doseOpt.dose, state.patientWeight)}</span>
               </button>
             ))}
             
