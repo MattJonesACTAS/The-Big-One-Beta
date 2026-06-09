@@ -1955,13 +1955,10 @@ export default function App() {
                       {/* Zoll-style CPR timer display */}
                       <div className="bg-black px-4 py-3">
                         <div className="flex items-center justify-between">
-                          {/* Battery icon matching Zoll monitor */}
-                          <svg width="52" height="28" viewBox="0 0 52 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1" y="1" width="44" height="26" rx="3" fill="#22c55e" stroke="#22c55e" strokeWidth="1.5"/>
-                            <rect x="45" y="8" width="6" height="12" rx="2" fill="#22c55e"/>
-                            <text x="22" y="20" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold" fontFamily="Roboto, Arial, sans-serif">3:00+</text>
-                          </svg>
-                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.5rem', fontWeight: 700, color: 'white', letterSpacing: '0.05em' }}>
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: 'white', letterSpacing: '0.03em' }}>
+                            CPR Time
+                          </span>
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: 'white', letterSpacing: '0.05em' }}>
                             {(() => {
                               const secs = Math.max(0, 120 - (demoTick % 121));
                               return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
@@ -1982,9 +1979,20 @@ export default function App() {
                           : 'border-2 border-neutral-200 hover:border-blue-300'
                       }`}
                     >
-                      {/* Zoll-style elapsed timer display */}
+                      {/* Zoll-style elapsed timer display — battery left, time right */}
                       <div className="bg-black px-4 py-3">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-between">
+                          {/* Battery icon: green fill, white border, nub on right, + inside */}
+                          <svg width="58" height="30" viewBox="0 0 58 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            {/* Outer border */}
+                            <rect x="1" y="1" width="48" height="28" rx="4" fill="none" stroke="white" strokeWidth="2"/>
+                            {/* Green fill */}
+                            <rect x="3" y="3" width="44" height="24" rx="2.5" fill="#16a34a"/>
+                            {/* Battery nub */}
+                            <rect x="50" y="10" width="7" height="10" rx="2" fill="white"/>
+                            {/* 3:00+ text inside battery */}
+                            <text x="25" y="22" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="Roboto, Arial, sans-serif">3:00+</text>
+                          </svg>
                           <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.5rem', fontWeight: 700, color: 'white', letterSpacing: '0.08em' }}>
                             {(() => {
                               const total = 120 + (demoTick % 3600);
