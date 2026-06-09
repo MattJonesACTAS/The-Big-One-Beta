@@ -1836,7 +1836,7 @@ export default function App() {
                     maxSeconds={120}
                   />
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(6)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                     <button 
                       onClick={() => {
                         setCprTimestamp(Date.now());
@@ -1880,7 +1880,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => setCatchupStep(6)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
                     <button
                       onClick={() => rhythmInterval && setCatchupStep(4)}
                       disabled={!rhythmInterval}
@@ -1917,7 +1917,7 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => setCatchupStep(6)} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
+                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
                   </div>
                 </div>
               )}
@@ -1932,11 +1932,7 @@ export default function App() {
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={() => { setTimingMode('log'); handleCatchupStart(); }}
-                      className={`w-full rounded-2xl transition-all duration-200 overflow-hidden ${
-                        timingMode === 'log'
-                          ? 'ring-4 ring-emerald-500 shadow-lg scale-105'
-                          : 'border-2 border-neutral-200 hover:border-emerald-300'
-                      }`}
+                      className={'w-full rounded-2xl transition-all duration-200 overflow-hidden border-2 border-neutral-200 hover:border-emerald-300'}
                     >
                       <div style={{ backgroundImage: 'url(data:image/png;base64,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)', backgroundSize: 'cover', backgroundPosition: 'center', padding: '10px 16px', minHeight: '58px' }}>
                         <div className="flex items-center">
@@ -1952,11 +1948,7 @@ export default function App() {
 
                     <button
                       onClick={() => { setTimingMode('cpr'); setCatchupStep(5); }}
-                      className={`w-full rounded-2xl transition-all duration-200 overflow-hidden ${
-                        timingMode === 'cpr'
-                          ? 'ring-4 ring-emerald-500 shadow-lg scale-105'
-                          : 'border-2 border-neutral-200 hover:border-emerald-300'
-                      }`}
+                      className={'w-full rounded-2xl transition-all duration-200 overflow-hidden border-2 border-neutral-200 hover:border-emerald-300'}
                     >
                       {/* Zoll-style CPR timer display — purple bar flush fill, black text */}
                       <div style={{ background: '#9690cc', padding: '10px 16px', minHeight: '58px' }}>
@@ -1978,11 +1970,7 @@ export default function App() {
 
                     <button
                       onClick={() => { setTimingMode('elapsed'); setCatchupStep(7); }}
-                      className={`w-full rounded-2xl transition-all duration-200 overflow-hidden ${
-                        timingMode === 'elapsed'
-                          ? 'ring-4 ring-blue-500 shadow-lg scale-105'
-                          : 'border-2 border-neutral-200 hover:border-blue-300'
-                      }`}
+                      className={'w-full rounded-2xl transition-all duration-200 overflow-hidden border-2 border-neutral-200 hover:border-blue-300'}
                     >
                       {/* Zoll-style elapsed timer display — battery left, time right */}
                       <div className="bg-black px-4 py-3" style={{ minHeight: '58px' }}>
