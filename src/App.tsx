@@ -333,7 +333,7 @@ export default function App() {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
-  const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | null>(null);
+  const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | 'log' | null>(null);
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(null);
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
@@ -1961,23 +1961,45 @@ export default function App() {
                     </button>
                   </div>
 
+                  <button
+                    onClick={() => setTimingMode('log')}
+                    className={`w-full p-5 rounded-2xl transition-all duration-200 ${
+                      timingMode === 'log'
+                        ? 'bg-neutral-600 text-white shadow-lg scale-105'
+                        : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-neutral-400'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="text-4xl">📋</div>
+                      <div className="text-center">
+                        <div className="font-bold text-base">Tx Log Only</div>
+                        <div className={`text-xs mt-1 ${timingMode === 'log' ? 'text-neutral-300' : 'text-neutral-400'}`}>
+                          No timer — record keeping only
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
                     <button
                       onClick={() => {
                         if (timingMode === 'cpr') setCatchupStep(5);
                         else if (timingMode === 'elapsed') setCatchupStep(7);
+                        else if (timingMode === 'log') handleCatchupStart();
                       }}
                       disabled={!timingMode}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         timingMode
                           ? timingMode === 'cpr'
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                            : timingMode === 'elapsed'
+                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                            : 'bg-neutral-600 text-white hover:bg-neutral-700 shadow-md'
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
                     >
-                      Continue
+                      {timingMode === 'log' ? 'Start Case' : 'Continue'}
                     </button>
                   </div>
                 </div>
