@@ -1955,10 +1955,13 @@ export default function App() {
                       {/* Zoll-style CPR timer display */}
                       <div className="bg-black px-4 py-3">
                         <div className="flex items-center justify-between">
-                          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '1.4rem', color: 'white', letterSpacing: '0.03em' }}>
-                            CPR Time
-                          </span>
-                          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '1.4rem', color: 'white', letterSpacing: '0.03em' }}>
+                          {/* Battery icon matching Zoll monitor */}
+                          <svg width="52" height="28" viewBox="0 0 52 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="44" height="26" rx="3" fill="#22c55e" stroke="#22c55e" strokeWidth="1.5"/>
+                            <rect x="45" y="8" width="6" height="12" rx="2" fill="#22c55e"/>
+                            <text x="22" y="20" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold" fontFamily="Roboto, Arial, sans-serif">3:00+</text>
+                          </svg>
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.5rem', fontWeight: 700, color: 'white', letterSpacing: '0.05em' }}>
                             {(() => {
                               const secs = Math.max(0, 120 - (demoTick % 121));
                               return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
@@ -1982,7 +1985,7 @@ export default function App() {
                       {/* Zoll-style elapsed timer display */}
                       <div className="bg-black px-4 py-3">
                         <div className="flex items-center justify-end">
-                          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '1.4rem', color: 'white', letterSpacing: '0.08em' }}>
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.5rem', fontWeight: 700, color: 'white', letterSpacing: '0.08em' }}>
                             {(() => {
                               const total = 120 + (demoTick % 3600);
                               const h = Math.floor(total / 3600);
