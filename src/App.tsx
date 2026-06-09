@@ -1954,16 +1954,17 @@ export default function App() {
                     >
                       {/* Zoll-style CPR timer display */}
                       <div className="bg-black px-4 py-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-white text-xs font-mono">CPR Time</span>
-                          <span className="text-white font-mono font-bold text-2xl">
+                        <div className="flex items-center justify-between">
+                          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '1.4rem', color: 'white', letterSpacing: '0.03em' }}>
+                            CPR Time
+                          </span>
+                          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '1.4rem', color: 'white', letterSpacing: '0.03em' }}>
                             {(() => {
-                              const secs = Math.max(0, 120 - (demoTick % 120));
+                              const secs = Math.max(0, 120 - (demoTick % 121));
                               return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
                             })()}
                           </span>
                         </div>
-                        <div className="text-emerald-400 text-xs font-mono text-left">CPR Timer</div>
                       </div>
                       <div className={`py-2 text-sm font-bold ${timingMode === 'cpr' ? 'bg-emerald-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
                         CPR Timer
@@ -1981,7 +1982,7 @@ export default function App() {
                       {/* Zoll-style elapsed timer display */}
                       <div className="bg-black px-4 py-3">
                         <div className="flex items-center justify-end">
-                          <span className="text-white font-mono font-bold text-2xl tracking-widest">
+                          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '1.4rem', color: 'white', letterSpacing: '0.08em' }}>
                             {(() => {
                               const total = 120 + (demoTick % 3600);
                               const h = Math.floor(total / 3600);
@@ -1991,7 +1992,6 @@ export default function App() {
                             })()}
                           </span>
                         </div>
-                        <div className="text-blue-400 text-xs font-mono text-left mt-1">Elapsed time (top right)</div>
                       </div>
                       <div className={`py-2 text-sm font-bold ${timingMode === 'elapsed' ? 'bg-blue-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
                         Elapsed Time
