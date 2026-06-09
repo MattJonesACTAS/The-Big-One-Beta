@@ -1930,29 +1930,35 @@ export default function App() {
                   </div>
 
                   <div className="flex flex-col gap-3">
+                    {/* Tx log only */}
                     <button
                       onClick={() => { setTimingMode('log'); handleCatchupStart(); }}
-                      className={'w-full rounded-2xl transition-all duration-200 bg-white border-2 border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50'}
+                      className="w-full rounded-2xl bg-white border border-neutral-200 overflow-hidden flex items-stretch"
+                      style={{ minHeight: '72px' }}
                     >
-                      <div className="px-4 py-4 flex items-center justify-between gap-3" style={{ minHeight: '64px' }}>
+                      <div className="w-1 shrink-0 bg-neutral-300 rounded-l-2xl" />
+                      <div className="flex-1 px-4 py-4 flex items-center justify-between gap-3">
                         <div className="flex flex-col items-start gap-0.5">
-                          <span className="text-base font-bold text-neutral-900">Tx log only</span>
-                          <span className="text-xs text-neutral-500">No timer — record keeping only</span>
+                          <span className="text-base font-bold text-neutral-900 text-left">Tx log only</span>
+                          <span className="text-xs text-neutral-400 text-left">No timer — record keeping only</span>
                         </div>
-                        <span className="text-2xl font-bold text-neutral-200 shrink-0 tabular-nums">— —</span>
+                        <span className="text-2xl font-light text-neutral-300 shrink-0 tracking-widest">— —</span>
                       </div>
                     </button>
 
+                    {/* Inbuilt monitor CPR timer */}
                     <button
                       onClick={() => { setTimingMode('cpr'); setCatchupStep(5); }}
-                      className={'w-full rounded-2xl transition-all duration-200 bg-white border-2 border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50'}
+                      className="w-full rounded-2xl bg-white border border-neutral-200 overflow-hidden flex items-stretch"
+                      style={{ minHeight: '72px' }}
                     >
-                      <div className="px-4 py-4 flex items-center justify-between gap-3" style={{ minHeight: '64px' }}>
+                      <div className="w-1 shrink-0 bg-emerald-400 rounded-l-2xl" />
+                      <div className="flex-1 px-4 py-4 flex items-center justify-between gap-3">
                         <div className="flex flex-col items-start gap-0.5">
-                          <span className="text-base font-bold text-neutral-900">Inbuilt monitor CPR timer</span>
-                          <span className="text-xs text-neutral-500">Sync app timing to monitor CPR timer</span>
+                          <span className="text-base font-bold text-neutral-900 text-left">Inbuilt monitor CPR timer</span>
+                          <span className="text-xs text-neutral-400 text-left">Sync app timing to monitor</span>
                         </div>
-                        <span className="text-xl font-bold tabular-nums text-emerald-600 shrink-0">
+                        <span className="text-2xl font-bold tabular-nums text-emerald-500 shrink-0">
                           {(() => {
                             const secs = Math.max(0, 120 - (demoTick % 121));
                             return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
@@ -1961,16 +1967,19 @@ export default function App() {
                       </div>
                     </button>
 
+                    {/* Elapsed time */}
                     <button
                       onClick={() => { setTimingMode('elapsed'); setCatchupStep(7); }}
-                      className={'w-full rounded-2xl transition-all duration-200 bg-white border-2 border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50'}
+                      className="w-full rounded-2xl bg-white border border-neutral-200 overflow-hidden flex items-stretch"
+                      style={{ minHeight: '72px' }}
                     >
-                      <div className="px-4 py-4 flex items-center justify-between gap-3" style={{ minHeight: '64px' }}>
+                      <div className="w-1 shrink-0 bg-slate-400 rounded-l-2xl" />
+                      <div className="flex-1 px-4 py-4 flex items-center justify-between gap-3">
                         <div className="flex flex-col items-start gap-0.5">
-                          <span className="text-base font-bold text-neutral-900">Elapsed time</span>
-                          <span className="text-xs text-neutral-500">Elapsed time — odds/evens</span>
+                          <span className="text-base font-bold text-neutral-900 text-left">Elapsed time</span>
+                          <span className="text-xs text-neutral-400 text-left">Elapsed time — odds/evens</span>
                         </div>
-                        <span className="text-xl font-bold tabular-nums text-neutral-400 shrink-0">
+                        <span className="text-xl font-bold tabular-nums text-slate-400 shrink-0">
                           {(() => {
                             const total = 120 + (demoTick % 3600);
                             const h = Math.floor(total / 3600);
