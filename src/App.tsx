@@ -335,6 +335,7 @@ export default function App() {
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
   const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | 'log' | null>(null);
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(null);
+  const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
@@ -500,6 +501,13 @@ export default function App() {
   }, [state]);
 
   // Timer logic
+  // Demo tick for animated timers on timing mode selection screen
+  useEffect(() => {
+    if (catchupStep !== 6) return;
+    const interval = window.setInterval(() => setDemoTick(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [catchupStep]);
+
   useEffect(() => {
     let interval: number;
     if (state.running) {
@@ -1938,29 +1946,55 @@ export default function App() {
 
                     <button
                       onClick={() => setTimingMode('cpr')}
-                      className={`w-full p-5 rounded-2xl transition-all duration-200 ${
+                      className={`w-full rounded-2xl transition-all duration-200 overflow-hidden ${
                         timingMode === 'cpr'
-                          ? 'bg-emerald-500 text-white shadow-lg scale-105'
-                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
+                          ? 'ring-4 ring-emerald-500 shadow-lg scale-105'
+                          : 'border-2 border-neutral-200 hover:border-emerald-300'
                       }`}
                     >
-                      <div className="font-bold text-base">CPR Timer</div>
-                      <div className={`text-xs mt-1 ${timingMode === 'cpr' ? 'text-emerald-100' : 'text-neutral-400'}`}>
-                        Countdown on monitor
+                      {/* Zoll-style CPR timer display */}
+                      <div className="bg-black px-4 py-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white text-xs font-mono">CPR Time</span>
+                          <span className="text-white font-mono font-bold text-2xl">
+                            {(() => {
+                              const secs = Math.max(0, 120 - (demoTick % 120));
+                              return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-emerald-400 text-xs font-mono text-left">CPR Timer</div>
+                      </div>
+                      <div className={`py-2 text-sm font-bold ${timingMode === 'cpr' ? 'bg-emerald-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
+                        CPR Timer
                       </div>
                     </button>
 
                     <button
                       onClick={() => setTimingMode('elapsed')}
-                      className={`w-full p-5 rounded-2xl transition-all duration-200 ${
+                      className={`w-full rounded-2xl transition-all duration-200 overflow-hidden ${
                         timingMode === 'elapsed'
-                          ? 'bg-blue-500 text-white shadow-lg scale-105'
-                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-blue-300'
+                          ? 'ring-4 ring-blue-500 shadow-lg scale-105'
+                          : 'border-2 border-neutral-200 hover:border-blue-300'
                       }`}
                     >
-                      <div className="font-bold text-base">Elapsed Time</div>
-                      <div className={`text-xs mt-1 ${timingMode === 'elapsed' ? 'text-blue-100' : 'text-neutral-400'}`}>
-                        Odds / evens
+                      {/* Zoll-style elapsed timer display */}
+                      <div className="bg-black px-4 py-3">
+                        <div className="flex items-center justify-end">
+                          <span className="text-white font-mono font-bold text-2xl tracking-widest">
+                            {(() => {
+                              const total = 120 + (demoTick % 3600);
+                              const h = Math.floor(total / 3600);
+                              const m = Math.floor((total % 3600) / 60);
+                              const s = total % 60;
+                              return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-blue-400 text-xs font-mono text-left mt-1">Elapsed time (top right)</div>
+                      </div>
+                      <div className={`py-2 text-sm font-bold ${timingMode === 'elapsed' ? 'bg-blue-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
+                        Elapsed Time
                       </div>
                     </button>
                   </div>
