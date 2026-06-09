@@ -1938,9 +1938,9 @@ export default function App() {
                           : 'border-2 border-neutral-200 hover:border-emerald-300'
                       }`}
                     >
-                      <div style={{ background: '#f5e642', padding: '10px 16px 6px 16px', minHeight: '58px', borderBottom: '3px solid #e02020' }}>
+                      <div style={{ background: '#f2cc4a', padding: '10px 16px', minHeight: '58px' }}>
                         <div className="flex items-center">
-                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: '#1a1a1a', letterSpacing: '0.03em' }}>
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: '#1a1a1a', letterSpacing: '0.03em', textDecoration: 'underline', textDecorationColor: '#e02020', textDecorationThickness: '2.5px', textUnderlineOffset: '4px' }}>
                             Tx log only
                           </span>
                         </div>
