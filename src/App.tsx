@@ -1938,21 +1938,14 @@ export default function App() {
                           : 'border-2 border-neutral-200 hover:border-emerald-300'
                       }`}
                     >
-                      <div style={{ background: '#309959', padding: '10px 16px', minHeight: '58px' }}>
-                        <div className="flex items-center justify-between">
-                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: 'white', letterSpacing: '0.03em' }}>
-                            Tx Log Only
+                      <div style={{ background: '#f5e642', padding: '10px 16px 6px 16px', minHeight: '58px', borderBottom: '3px solid #e02020' }}>
+                        <div className="flex items-center">
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: '#1a1a1a', letterSpacing: '0.03em' }}>
+                            Tx log only
                           </span>
-                          <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginRight:'8px'}}>
-    <rect x="2" y="3" width="18" height="22" rx="2" stroke="white" strokeWidth="2" fill="none"/>
-    <line x1="6" y1="9" x2="16" y2="9" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-    <line x1="6" y1="13" x2="16" y2="13" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-    <line x1="6" y1="17" x2="12" y2="17" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-    <rect x="8" y="1" width="6" height="4" rx="1" fill="white"/>
-  </svg>
                         </div>
                       </div>
-                      <div className={`py-2 text-sm font-bold ${timingMode === 'log' ? 'bg-emerald-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
+                      <div className={`py-2 text-sm font-bold ${timingMode === 'log' ? 'bg-yellow-400 text-neutral-900' : 'bg-neutral-50 text-neutral-600'}`}>
                         No timer — record keeping only
                       </div>
                     </button>
@@ -2028,7 +2021,7 @@ export default function App() {
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                             : timingMode === 'elapsed'
                             ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
+                            : 'bg-yellow-400 text-neutral-900 hover:bg-yellow-500 shadow-md'
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
                     >
