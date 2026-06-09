@@ -1932,14 +1932,21 @@ export default function App() {
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={() => setTimingMode('log')}
-                      className={`w-full p-5 rounded-2xl transition-all duration-200 ${
+                      className={`w-full rounded-2xl transition-all duration-200 overflow-hidden ${
                         timingMode === 'log'
-                          ? 'bg-yellow-400 text-neutral-900 shadow-lg scale-105'
-                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-yellow-300'
+                          ? 'ring-4 ring-emerald-500 shadow-lg scale-105'
+                          : 'border-2 border-neutral-200 hover:border-emerald-300'
                       }`}
                     >
-                      <div className="font-bold text-base">Tx Log Only</div>
-                      <div className={`text-xs mt-1 ${timingMode === 'log' ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                      <div style={{ background: '#16a34a', padding: '10px 16px' }}>
+                        <div className="flex items-center justify-between">
+                          <span style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", fontSize: '1.4rem', fontWeight: 700, color: 'white', letterSpacing: '0.03em' }}>
+                            Tx Log Only
+                          </span>
+                          <span style={{ fontSize: '1.6rem' }}>📋</span>
+                        </div>
+                      </div>
+                      <div className={`py-2 text-sm font-bold ${timingMode === 'log' ? 'bg-emerald-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
                         No timer — record keeping only
                       </div>
                     </button>
@@ -2015,7 +2022,7 @@ export default function App() {
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                             : timingMode === 'elapsed'
                             ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                            : 'bg-yellow-400 text-neutral-900 hover:bg-yellow-500 shadow-md'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
                     >
