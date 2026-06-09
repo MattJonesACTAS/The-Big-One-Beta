@@ -1921,64 +1921,49 @@ export default function App() {
                     <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => setTimingMode('log')}
+                      className={`w-full p-5 rounded-2xl transition-all duration-200 ${
+                        timingMode === 'log'
+                          ? 'bg-yellow-400 text-neutral-900 shadow-lg scale-105'
+                          : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-yellow-300'
+                      }`}
+                    >
+                      <div className="font-bold text-base">Tx Log Only</div>
+                      <div className={`text-xs mt-1 ${timingMode === 'log' ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                        No timer — record keeping only
+                      </div>
+                    </button>
+
                     <button
                       onClick={() => setTimingMode('cpr')}
-                      className={`p-6 rounded-2xl transition-all duration-200 ${
+                      className={`w-full p-5 rounded-2xl transition-all duration-200 ${
                         timingMode === 'cpr'
                           ? 'bg-emerald-500 text-white shadow-lg scale-105'
                           : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
                       }`}
                     >
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="text-4xl">⏱️</div>
-                        <div className="text-center">
-                          <div className="font-bold text-base">CPR Timer</div>
-                          <div className={`text-xs mt-1 ${timingMode === 'cpr' ? 'text-emerald-100' : 'text-neutral-400'}`}>
-                            Countdown on monitor
-                          </div>
-                        </div>
+                      <div className="font-bold text-base">CPR Timer</div>
+                      <div className={`text-xs mt-1 ${timingMode === 'cpr' ? 'text-emerald-100' : 'text-neutral-400'}`}>
+                        Countdown on monitor
                       </div>
                     </button>
 
                     <button
                       onClick={() => setTimingMode('elapsed')}
-                      className={`p-6 rounded-2xl transition-all duration-200 ${
+                      className={`w-full p-5 rounded-2xl transition-all duration-200 ${
                         timingMode === 'elapsed'
                           ? 'bg-blue-500 text-white shadow-lg scale-105'
                           : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-blue-300'
                       }`}
                     >
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="text-4xl">🕐</div>
-                        <div className="text-center">
-                          <div className="font-bold text-base">Elapsed Time</div>
-                          <div className={`text-xs mt-1 ${timingMode === 'elapsed' ? 'text-blue-100' : 'text-neutral-400'}`}>
-                            Odds / evens
-                          </div>
-                        </div>
+                      <div className="font-bold text-base">Elapsed Time</div>
+                      <div className={`text-xs mt-1 ${timingMode === 'elapsed' ? 'text-blue-100' : 'text-neutral-400'}`}>
+                        Odds / evens
                       </div>
                     </button>
                   </div>
-
-                  <button
-                    onClick={() => setTimingMode('log')}
-                    className={`w-full p-5 rounded-2xl transition-all duration-200 ${
-                      timingMode === 'log'
-                        ? 'bg-neutral-600 text-white shadow-lg scale-105'
-                        : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-neutral-400'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="text-4xl">📋</div>
-                      <div className="text-center">
-                        <div className="font-bold text-base">Tx Log Only</div>
-                        <div className={`text-xs mt-1 ${timingMode === 'log' ? 'text-neutral-300' : 'text-neutral-400'}`}>
-                          No timer — record keeping only
-                        </div>
-                      </div>
-                    </div>
-                  </button>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
@@ -1995,7 +1980,7 @@ export default function App() {
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                             : timingMode === 'elapsed'
                             ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                            : 'bg-neutral-600 text-white hover:bg-neutral-700 shadow-md'
+                            : 'bg-yellow-400 text-neutral-900 hover:bg-yellow-500 shadow-md'
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
                     >
