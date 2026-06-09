@@ -1265,11 +1265,13 @@ export default function App() {
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
-            </div>
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+            {timingMode !== 'cpr' && (
+              <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+                <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
+                <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
+              </div>
+            )}
+            <div className={`bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ${timingMode === 'cpr' ? 'mx-auto' : ''}`}>
               <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
               <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
             </div>
@@ -2436,7 +2438,6 @@ function SectionGroup({
 
 // --- TREATMENT LOG (EVEN COLUMNS) ---
 function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = false, timingMode }: { treatments: Treatment[], elapsedSeconds: number, catchupElapsed: number, isSummary?: boolean, timingMode?: string | null }) {
-  const showElapsed = timingMode !== 'cpr';
   // Helper to split treatment name into medication and dose
   const splitTreatmentName = (name: string): { med: string, dose: string | null } => {
     // Match dose patterns at the end: numbers followed by units (mg, mcg, mL, mMol, g, kg, %)
@@ -2447,14 +2448,23 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
     return { med: name, dose: null };
   };
 
+  const isCpr = timingMode === 'cpr';
+  // Column visibility
+  const showElapsed = !isCpr;
+  const showAgo = !isSummary;  // Ago only shown in running log, not closed/PDF — same as before
+
+  // Grid templates
+  const gridCols = isSummary
+    ? (showElapsed ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2fr_1fr]')
+    : (showElapsed ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]' : 'grid-cols-[2.1fr_1fr_0.9fr]');
+
   return (
     <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
-      {/* Balanced columns: More space for name, even space for times */}
-      <div className={`grid ${isSummary ? (showElapsed ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2fr_1fr]') : (showElapsed ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]' : 'grid-cols-[2.1fr_1fr_0.9fr]')} bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
+      <div className={`grid ${gridCols} bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
         {showElapsed && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>}
-        {!isSummary && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>}
+        {showAgo && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>}
       </div>
       
       {/* Table Body */}
@@ -2471,7 +2481,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
             const { med, dose } = splitTreatmentName(tx.name);
             
             return (
-              <div key={i} className={`grid ${isSummary ? (showElapsed ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2fr_1fr]') : (showElapsed ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]' : 'grid-cols-[2.1fr_1fr_0.9fr]')} px-4 py-4 items-center gap-1`}>
+              <div key={i} className={`grid ${gridCols} px-4 py-4 items-center gap-1`}>
                 <div className="pr-1">
                   <div className={`text-[15px] font-bold ${
                     tx.name.toLowerCase().includes('shock') ? 'text-red-600' : 
@@ -2482,7 +2492,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
                 </div>
                 <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{timeDisplay}</div>
                 {showElapsed && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{elapsedDisplay}</div>}
-                {!isSummary && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">{ago}</div>}
+                {showAgo && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">{ago}</div>}
               </div>
             );
           })
