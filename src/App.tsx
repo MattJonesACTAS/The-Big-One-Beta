@@ -1818,7 +1818,7 @@ export default function App() {
                           setCatchupStep(5);
                         }
                       }} 
-                      className={`p-3 rounded-xl font-bold btn-base text-white ${timingMode === 'elapsed' ? 'bg-blue-600' : 'bg-emerald-600'}`}
+                      className={'p-3 rounded-xl font-bold btn-base text-white bg-emerald-600'}
                     >
                       {timingMode === 'elapsed' ? 'Start Case' : 'Next'}
                     </button>
@@ -1869,12 +1869,12 @@ export default function App() {
                         onClick={() => setRhythmInterval(key)}
                         className={`p-4 rounded-2xl transition-all duration-200 ${
                           rhythmInterval === key
-                            ? 'bg-blue-500 text-white shadow-lg scale-105'
-                            : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-blue-300'
+                            ? 'bg-emerald-500 text-white shadow-lg scale-105'
+                            : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
                         }`}
                       >
                         <div className="font-bold text-base">{label}</div>
-                        <div className={`text-xs mt-1 ${rhythmInterval === key ? 'text-blue-100' : 'text-neutral-400'}`}>{example}</div>
+                        <div className={`text-xs mt-1 ${rhythmInterval === key ? 'text-emerald-100' : 'text-neutral-400'}`}>{example}</div>
                       </button>
                     ))}
                   </div>
@@ -1886,7 +1886,7 @@ export default function App() {
                       disabled={!rhythmInterval}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         rhythmInterval
-                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
                     >
@@ -1987,7 +1987,7 @@ export default function App() {
                           </span>
                         </div>
                       </div>
-                      <div className={`py-2 text-sm font-bold ${timingMode === 'elapsed' ? 'bg-blue-500 text-white' : 'bg-neutral-50 text-neutral-600'}`}>
+                      <div className={'py-2 text-sm font-bold bg-neutral-50 text-neutral-600'}>
                         Elapsed time - odds/evens
                       </div>
                     </button>
@@ -2007,7 +2007,7 @@ export default function App() {
                           ? timingMode === 'cpr'
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                             : timingMode === 'elapsed'
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                             : 'bg-yellow-400 text-neutral-900 hover:bg-yellow-500 shadow-md'
                           : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                       }`}
