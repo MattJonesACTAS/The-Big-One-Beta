@@ -1027,7 +1027,6 @@ export default function App() {
     // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
     setCprTimestamp(null);
-    setTimingMode(null);
     setRhythmInterval(null);
     previousCountdown.current = adjustedRhythm;
   };
