@@ -2158,7 +2158,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    {!showInteractiveTutorial && <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>}
                     <button
                       onClick={() => {
                         if (timingMode === 'cpr') setCatchupStep(5);
