@@ -2041,7 +2041,7 @@ export default function App() {
 
                     {/* Record keeping only */}
                     <button
-                      onClick={() => { setTimingMode('log'); handleCatchupStart(); }}
+                      onClick={() => setTimingMode('log')}
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'log' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
@@ -2062,7 +2062,7 @@ export default function App() {
 
                     {/* CPR timer */}
                     <button
-                      onClick={() => { setTimingMode('cpr'); setCatchupStep(5); }}
+                      onClick={() => setTimingMode('cpr')}
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'cpr' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
@@ -2090,7 +2090,7 @@ export default function App() {
 
                     {/* Elapsed time */}
                     <button
-                      onClick={() => { setTimingMode('elapsed'); setCatchupStep(7); }}
+                      onClick={() => setTimingMode('elapsed')}
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'elapsed' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
