@@ -733,7 +733,7 @@ export default function App() {
     }
     
     // Reset disregard states when new doses given
-    if (name.includes('Adrenaline')) {
+    if (name.includes('Adrenaline push')) {
       setDisregardAdrenaline(null);
     }
     if (name.includes('Amiodarone')) {
@@ -753,7 +753,7 @@ export default function App() {
   };
 
   const adrenalineRoundStatus = useMemo(() => {
-    const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline'));
+    const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push'));
     const lastAdr = adrTreatments.pop();
     
     if (!lastAdr) {
@@ -1318,6 +1318,7 @@ export default function App() {
                       rhythmCheckOvertime: 0,
                       currentOverlay: 'treatment'
                     }));
+                    setRoscButtonFlashing(false);
                     setRearrested(true);
                     setIsShockForced(true);
                   }}
