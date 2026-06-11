@@ -1062,8 +1062,8 @@ export default function App() {
       treatments: initialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
-      patientWeight: parsedWeight,
-      patientType: weightType
+      patientWeight: parsedWeight || (tutorialMode ? 70 : null),
+      patientType: weightType || (tutorialMode ? 'adult' : null)
     });
     console.log('State set with weight:', parsedWeight, 'and type:', weightType);
     
