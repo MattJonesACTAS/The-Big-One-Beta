@@ -345,6 +345,7 @@ export default function App() {
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [showTimerAdjust, setShowTimerAdjust] = useState(false);
   const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
+  const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
@@ -1202,11 +1203,15 @@ export default function App() {
         </button>
         <button 
           onClick={() => {
-            const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
-            const mins = Math.floor(currentCountdown / 60);
-            const secs = currentCountdown % 60;
-            setTimerAdjustValue({ mins, secs });
-            setShowTimerAdjust(true);
+            if (timingMode === 'elapsed') {
+              setShowElapsedRecalibrate(true);
+            } else {
+              const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
+              const mins = Math.floor(currentCountdown / 60);
+              const secs = currentCountdown % 60;
+              setTimerAdjustValue({ mins, secs });
+              setShowTimerAdjust(true);
+            }
           }} 
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
@@ -1282,12 +1287,10 @@ export default function App() {
                 <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
               </div>
             )}
-            {timingMode !== 'elapsed' && (
-              <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
-                <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
-                <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
-              </div>
-            )}
+            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
+              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
+              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
+            </div>
           </div>
 
           {/* Rhythm Check - Centered vertically and responsive size */}
@@ -1381,7 +1384,7 @@ export default function App() {
               <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
                   className={`font-bold tabular-nums tracking-tighter leading-none ${
-                    timingMode === 'elapsed' ? 'text-[52px] sm:text-[80px]' : 'text-7xl sm:text-[120px]'
+                    timingMode === 'elapsed' ? 'text-[36px] sm:text-[56px]' : 'text-7xl sm:text-[120px]'
                   } ${
                     state.rhythmCheckPaused ? 'text-neutral-900' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-600' :
@@ -1397,7 +1400,9 @@ export default function App() {
                         : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
                   }
                 </div>
-                <div className={`text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
+                <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
+                  timingMode === 'elapsed' ? 'text-[10px] sm:text-[13px]' : 'text-[14px] sm:text-[18px]'
+                } ${
                   state.rhythmCheckOvertime > 0 ? 'text-red-600 flash-red' : 'text-neutral-400'
                 }`}>
                   {timingMode === 'elapsed' ? 'Elapsed Time' : 'Rhythm Check'}
@@ -2083,6 +2088,73 @@ export default function App() {
         </div>
       )}
 
+      {showElapsedRecalibrate && (
+        <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-neutral-900">Recalibrate Elapsed Time</h2>
+              <p className="text-neutral-500 text-sm">Adjust elapsed time and rhythm check interval</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 text-center">Elapsed Time</p>
+              <TimePicker
+                value={{ mins: Math.floor(state.elapsedSeconds / 60), secs: state.elapsedSeconds % 60 }}
+                onChange={(v) => {
+                  const newElapsed = v.mins * 60 + v.secs;
+                  const newTarget = calcNextIntervalTarget(newElapsed, rhythmInterval || 'evens');
+                  setState(prev => ({
+                    ...prev,
+                    elapsedSeconds: newElapsed,
+                    startTime: Date.now(),
+                    pausedTime: newElapsed * 1000,
+                    rhythmCheckTarget: newTarget,
+                    rhythmCheckOvertime: 0
+                  }));
+                }}
+                maxSeconds={5999}
+              />
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 text-center">Rhythm Check Interval</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: 'evens',      label: 'Evens',      example: '2:00, 4:00...' },
+                  { key: 'odds',       label: 'Odds',       example: '1:00, 3:00...' },
+                  { key: 'half-evens', label: 'Half evens', example: '2:30, 4:30...' },
+                  { key: 'half-odds',  label: 'Half odds',  example: '1:30, 3:30...' },
+                ] as const).map(({ key, label, example }) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setRhythmInterval(key);
+                      const newTarget = calcNextIntervalTarget(state.elapsedSeconds, key);
+                      setState(prev => ({ ...prev, rhythmCheckTarget: newTarget, rhythmCheckOvertime: 0 }));
+                    }}
+                    className={`p-3 rounded-xl transition-all duration-200 ${
+                      rhythmInterval === key
+                        ? 'bg-emerald-500 text-white shadow-md'
+                        : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className="font-bold text-sm">{label}</div>
+                    <div className={`text-xs mt-0.5 ${rhythmInterval === key ? 'text-emerald-100' : 'text-neutral-400'}`}>{example}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowElapsedRecalibrate(false)}
+              className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
       {showTimerAdjust && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
@@ -2479,8 +2551,9 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
   };
 
   const isCpr = timingMode === 'cpr';
+  const isElapsedMode = timingMode === 'elapsed';
   // Column visibility
-  const showElapsed = !isCpr;
+  const showElapsed = !isCpr && !isElapsedMode;
   const showAgo = !isSummary;  // Ago only shown in running log, not closed/PDF — same as before
 
   // Grid templates
