@@ -363,21 +363,43 @@ export default function App() {
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
 
-  // Add CSS classes to body for tutorial button flashing
+  // Inject tutorial CPR button flash CSS
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'tutorial-cpr-flash-style';
+    style.textContent = `
+      @keyframes tutorialCprPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); border-color: #d1d5db; }
+        50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); border-color: #10b981; }
+      }
+      body.tutorial-flash-cpr-btn [data-tutorial="cpr-btn"] {
+        animation: tutorialCprPulse 1.5s infinite;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.getElementById('tutorial-cpr-flash-style')?.remove(); };
+  }, []);
   useEffect(() => {
     console.log('Tutorial screen tracking:', tutorialScreen);
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
+
+    // Tutorial catchup step 6 - flash CPR Timer card
+    if (tutorialMode && showCatchup && catchupStep === 6) {
+      document.body.classList.add('tutorial-flash-cpr-btn');
+    } else {
+      document.body.classList.remove('tutorial-flash-cpr-btn');
+    }
     
-    // Node 6 (addTxBtn) complete - flash Add Tx button (index 7 = waiting for treatment screen)
-    if (tutorialMode && tutorialScreen.index === 7 && state.currentOverlay === null) {
+    // Node 5 (addTxBtn) complete - flash Add Tx button (index 6 = waiting for treatment screen)
+    if (tutorialMode && tutorialScreen.index === 6 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
-    // Node 7 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 8)
-    if (tutorialMode && tutorialScreen.index === 8) {
+    // Node 6 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 7)
+    if (tutorialMode && tutorialScreen.index === 7) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -385,22 +407,22 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
 
-    // Node 9 (summaryBtn) complete - flash Summary button (index 10 = waiting for summary overlay)
-    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === null) {
+    // Node 8 (summaryBtn) complete - flash Summary button (index 9 = waiting for summary overlay)
+    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 11 (closeOverlay) complete - flash summary close button (index 12 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === 'summary') {
+    // Node 10 (closeOverlay) complete - flash summary close button (index 11 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 12 (closeCase) complete - flash Close Case button (index 13 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === null) {
+    // Node 11 (closeCase) complete - flash Close Case button (index 12 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
@@ -414,6 +436,7 @@ export default function App() {
     }
     
     return () => {
+      document.body.classList.remove('tutorial-flash-cpr-btn');
       document.body.classList.remove('tutorial-flash-add-tx');
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
@@ -422,7 +445,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-close');
       document.body.classList.remove('tutorial-flash-delete');
     };
-  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay]);
+  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, showCatchup, catchupStep]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -529,8 +552,8 @@ export default function App() {
           if (!prev.rhythmCheckPaused) {
             const countdown = prev.rhythmCheckTarget - newElapsed;
 
-            // Auto-close overlay ONCE at 10s
-            if (countdown === 10 && !hasAutoClosedAt10.current) {
+            // Auto-close overlay ONCE at 10s (not in tutorial)
+            if (countdown === 10 && !hasAutoClosedAt10.current && !tutorialMode) {
               nextOverlay = null;
               hasAutoClosedAt10.current = true;
             }
@@ -1187,24 +1210,8 @@ export default function App() {
         <InteractiveTutorial
           onClose={() => {
             setShowInteractiveTutorial(false);
-            const now = Date.now();
-            setState({
-              ...INITIAL_STATE,
-              running: true,
-              startTime: now,
-              pausedTime: 0,
-              elapsedSeconds: 0,
-              rhythmCheckTarget: 120,
-              cprRound: 1,
-              shocks: 0,
-              treatments: [],
-              catchupElapsed: 0,
-              startClockTime: now,
-              patientWeight: 100,
-              patientType: 'adult'
-            });
-            setShowCatchup(false);
-            setTimingMode('cpr');
+            setShowCatchup(true);
+            setCatchupStep(6);
             setTutorialMode(true);
           }}
         />
@@ -2076,6 +2083,7 @@ export default function App() {
                     {/* CPR timer */}
                     <button
                       onClick={() => setTimingMode('cpr')}
+                      data-tutorial="cpr-btn"
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'cpr' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
