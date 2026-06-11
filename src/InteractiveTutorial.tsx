@@ -605,21 +605,33 @@ interface InteractiveTutorialProps {
 }
 
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
-  const [currentScreen, setCurrentScreen] = useState('timingMethod');
+  const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
 
   const screens: TutorialScreens = {
     intro1: {
-      title: 'Welcome to The Big One',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/1.png?raw=true',
+      title: 'Welcome',
+      image: '',
       nextScreen: 'intro2',
       elements: [],
     },
     intro2: {
+      title: 'Navigating the Tutorial',
+      image: '',
+      nextScreen: 'intro3',
+      elements: [],
+    },
+    intro3: {
       title: 'Getting Started',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/1.png?raw=true',
+      image: '',
+      nextScreen: 'intro4',
+      elements: [],
+    },
+    intro4: {
+      title: 'Time Keeping',
+      image: '',
       nextScreen: 'timingMethod',
       elements: [],
     },
@@ -754,12 +766,12 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
+      backgroundColor: ['intro1', 'intro2', 'intro3', 'intro4', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      justifyContent: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      padding: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
+      alignItems: ['intro1', 'intro2', 'intro3', 'intro4', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      justifyContent: ['intro1', 'intro2', 'intro3', 'intro4', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      padding: ['intro1', 'intro2', 'intro3', 'intro4', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       zIndex: 9999,
       overflowY: 'auto',
@@ -800,62 +812,16 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </button>
       )}
       
-      {/* Screenshot rendering for intro screens only */}
-      {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: '400px',
-          backgroundColor: '#000',
-          borderRadius: '20px',
-          overflow: 'hidden',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-        }}>
-          {/* Exit button for testing */}
-          <button
-            onClick={onClose}
-            style={{
-              position: 'absolute',
-              top: '10px',
-              right: '10px',
-              zIndex: 10001,
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '20px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            ×
-          </button>
-
-          <img
-            src={currentScreenData.image}
-            alt={currentScreenData.title}
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-            }}
-          />
-        </div>
+      {/* Timing method screen shown as background for all intro pages */}
+      {(currentScreen === 'intro1' || currentScreen === 'intro2' || currentScreen === 'intro3' || currentScreen === 'intro4') && (
+        <StaticTimingMethodScreen />
       )}
 
-      {/* Intro message boxes for intro1 and intro2 screens */}
-      {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
+      {/* Intro message boxes */}
+      {(currentScreen === 'intro1' || currentScreen === 'intro2' || currentScreen === 'intro3' || currentScreen === 'intro4') && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.85)',
           display: 'flex',
           alignItems: 'center',
@@ -871,22 +837,26 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             width: '85%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
-            <div style={{
-              color: '#1a1a1a',
-              fontSize: '16px',
-              lineHeight: '1.6',
-              textAlign: 'center',
-              marginBottom: '20px',
-            }}>
-              {currentScreen === 'intro1' && 
-                "The Big One is a tool that you can use when acting as the team leader during cardiac arrest cases to help you stay on top of everything."
+            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '12px' }}>
+              {currentScreen === 'intro1' && 'Welcome!'}
+              {currentScreen === 'intro2' && 'Navigating the Tutorial'}
+              {currentScreen === 'intro3' && 'Getting Started'}
+              {currentScreen === 'intro4' && 'Time Keeping'}
+            </h2>
+            <div style={{ color: '#555', fontSize: '15px', lineHeight: '1.6', textAlign: 'center', marginBottom: '20px' }}>
+              {currentScreen === 'intro1' &&
+                "The Big One is a cognitive aid for use during cardiac arrests.\n\nWith times and medications tracked automatically, you can focus on situational awareness and team leadership."
               }
-              {currentScreen === 'intro2' && 
-                "On opening the app, you'll need to enter some times from the monitor and details about the patient. You'll then be brought to the home screen."
+              {currentScreen === 'intro2' &&
+                "In this tutorial you'll see blue numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
+              }
+              {currentScreen === 'intro3' &&
+                "On opening The Big One, you'll need to set up the case by entering:\n\n• Adult or paediatric patient\n\n• Estimated patient weight\n\n• The interventions that have already been performed"
+              }
+              {currentScreen === 'intro4' &&
+                "After you've entered the patient information and Tx you've already performed, you'll need to choose one of three options for keeping track of rhythm check times."
               }
             </div>
-            
-            {/* Next button at bottom of box */}
             <button
               onClick={handleNext}
               style={{
