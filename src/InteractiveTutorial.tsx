@@ -108,7 +108,7 @@ function StaticHomeScreen() {
 }
 
 // Static Timing Method Screen - replica of catchup step 6
-function StaticTimingMethodScreen() {
+function StaticTimingMethodScreen({ cprFading = false }: { cprFading?: boolean }) {
   return (
     <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative justify-center">
       <div className="space-y-5 px-4 max-w-md mx-auto w-full">
@@ -133,7 +133,7 @@ function StaticTimingMethodScreen() {
             <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">No timer — record keeping only</div>
           </div>
           {/* CPR timer */}
-          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white">
+          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white" style={cprFading ? { animation: 'cprCardFade 2s ease-in-out infinite' } : {}}>
             <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
               <div className="relative w-[100px] h-[100px] flex items-center justify-center">
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -641,8 +641,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       nextScreen: 'home1',
       elements: [
         { id: 'timingLog',     x: 50, y: 28, number: 1, title: 'Tx log only',   description: "This option means the app will only help you record the times of interventions.\n\nIt will not assist you to keep track of times." },
-        { id: 'timingElapsed', x: 50, y: 58, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor.\n\nYou can then choose whether you are performing rhythm checks on even or odd minutes." },
-        { id: 'timingCPR',     x: 50, y: 83, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with.\n\nChoose 'CPR Timer' to progress in the tutorial." },
+        { id: 'timingCPR',     x: 50, y: 58, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with.\n\nChoose 'CPR Timer' to progress in the tutorial." },
+        { id: 'timingElapsed', x: 50, y: 83, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor.\n\nYou can then choose whether you are performing rhythm checks on even or odd minutes." },
       ],
     },
     home1: {
@@ -777,7 +777,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     }}>
       {/* Render static components for various screens */}
       {currentScreen === 'home1' && <StaticHomeScreen />}
-      {currentScreen === 'timingMethod' && <StaticTimingMethodScreen />}
+      {currentScreen === 'timingMethod' && <StaticTimingMethodScreen cprFading={allExplored && !showingInfoBox} />}
       {currentScreen === 'addTxMenu' && <StaticAddTxMenu />}
       {currentScreen === 'adrenalineDose' && <StaticAdrenalineDose />}
       {(currentScreen === 'home2' || currentScreen === 'home2_summary' || currentScreen === 'home2_close') && <StaticHomeWithAlerts />}
@@ -935,6 +935,10 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             transform: translateX(-50%) scale(1.05);
             box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
           }
+        }
+        @keyframes cprCardFade {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.45; }
         }
       `}</style>
 
@@ -1192,9 +1196,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </button>
       )}
       
-      {/* After all 3 timing nodes explored: flash CPR timer card so user must press it */}
+      {/* After all 3 timing nodes explored: CPR card fades via cprFading prop on StaticTimingMethodScreen */}
       {allExplored && !showingInfoBox && currentScreen === 'timingMethod' && (
-        <button
+        <div
           onClick={onClose}
           style={{
             position: 'absolute',
@@ -1203,18 +1207,17 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             right: '16px',
             height: '22%',
             backgroundColor: 'transparent',
-            border: '3px solid #10b981',
             borderRadius: '16px',
             cursor: 'pointer',
             zIndex: 10001,
-            animation: 'buttonPulse 2s infinite',
           }}
+          role="button"
           aria-label="Choose CPR Timer"
         />
       )}
 
       {/* Regular Next button for non-special screens */}
-      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'timingMethod' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
+      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'intro4' && currentScreen !== 'timingMethod' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
         <button
           onClick={handleNext}
           style={{
