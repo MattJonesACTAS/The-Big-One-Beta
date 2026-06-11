@@ -605,7 +605,7 @@ interface InteractiveTutorialProps {
 }
 
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
-  const [currentScreen, setCurrentScreen] = useState('timingMethod');
+  const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
@@ -784,32 +784,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       {currentScreen === 'summary' && <StaticSummary />}
       {currentScreen === 'caseSummary' && <StaticCaseSummary />}
       
-      {/* Exit button overlay for static screens */}
-      {['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) && (
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            zIndex: 10001,
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            color: '#fff',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '20px',
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          ×
-        </button>
-      )}
       
       {/* Timing method screen shown as background for all intro pages */}
       {(currentScreen === 'intro1' || currentScreen === 'intro2' || currentScreen === 'intro3' || currentScreen === 'intro4') && (
