@@ -360,6 +360,7 @@ export default function App() {
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
   const [showInteractiveTutorial, setShowInteractiveTutorial] = useState(false);
+  const [timingNodesComplete, setTimingNodesComplete] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
 
@@ -384,8 +385,8 @@ export default function App() {
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
 
-    // Tutorial catchup step 6 - flash CPR Timer card
-    if (tutorialMode && showCatchup && catchupStep === 6) {
+    // Tutorial: flash CPR button when all timing nodes explored
+    if (showInteractiveTutorial && timingNodesComplete) {
       document.body.classList.add('tutorial-flash-cpr-btn');
     } else {
       document.body.classList.remove('tutorial-flash-cpr-btn');
@@ -445,7 +446,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-close');
       document.body.classList.remove('tutorial-flash-delete');
     };
-  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, showCatchup, catchupStep]);
+  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -1210,8 +1211,10 @@ export default function App() {
         <InteractiveTutorial
           onClose={() => {
             setShowInteractiveTutorial(false);
+            setTimingNodesComplete(false);
             setTutorialMode(true);
           }}
+          onTimingNodesComplete={() => setTimingNodesComplete(true)}
         />
       )}
 
@@ -1721,6 +1724,7 @@ export default function App() {
                         setShowCatchup(true);
                         setCatchupStep(6);
                         setTimingMode(null);
+                        setTimingNodesComplete(false);
                         setShowInteractiveTutorial(true);
                       }} 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"

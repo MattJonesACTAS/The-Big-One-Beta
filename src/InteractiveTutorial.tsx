@@ -602,9 +602,10 @@ interface TutorialScreens {
 
 interface InteractiveTutorialProps {
   onClose: () => void;
+  onTimingNodesComplete?: () => void;
 }
 
-const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
+const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
@@ -723,6 +724,13 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
   const requiredElements = new Set(currentScreenData.elements.map(el => el.id));
   const allExplored = Array.from(requiredElements).every(id => exploredElements.has(id));
 
+  // Notify parent when all timing method nodes explored so it can flash the CPR button
+  useEffect(() => {
+    if (currentScreen === 'timingMethod' && allExplored && onTimingNodesComplete) {
+      onTimingNodesComplete();
+    }
+  }, [currentScreen, allExplored]);
+
   // Preload all tutorial images when component mounts
   useEffect(() => {
     const imagesToPreload = [
@@ -774,6 +782,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       fontFamily: 'system-ui, -apple-system, sans-serif',
       zIndex: 9999,
       overflowY: 'auto',
+      pointerEvents: currentScreen === 'timingMethod' ? 'none' : 'auto',
     }}>
       {/* Render static components for non-catchup screens only */}
       {currentScreen === 'home1' && <StaticHomeScreen />}
@@ -869,6 +878,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
               transform: 'translate(-50%, -50%)',
               cursor: 'pointer',
               zIndex: 10,
+              pointerEvents: 'auto',
             }}
           >
             <div style={{
@@ -1252,6 +1262,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             justifyContent: 'center',
             padding: '20px',
             zIndex: 10000,
+            pointerEvents: 'auto',
           }}
         >
           <div
