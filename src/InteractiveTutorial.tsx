@@ -605,7 +605,7 @@ interface InteractiveTutorialProps {
 }
 
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
-  const [currentScreen, setCurrentScreen] = useState('intro1');
+  const [currentScreen, setCurrentScreen] = useState('timingMethod');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
