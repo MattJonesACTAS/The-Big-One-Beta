@@ -107,6 +107,69 @@ function StaticHomeScreen() {
   );
 }
 
+// Static Timing Method Screen - replica of catchup step 6
+function StaticTimingMethodScreen() {
+  return (
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative justify-center">
+      <div className="space-y-5 px-4 max-w-md mx-auto w-full">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
+          <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          {/* Record keeping only */}
+          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white">
+            <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
+              <div className="w-full max-w-[220px] rounded-xl border border-neutral-200 overflow-hidden text-left bg-white shadow-sm">
+                <div className="bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 tracking-widest uppercase">Treatment Log</div>
+                <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1 border-b border-neutral-100">
+                  <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">Treatment</span>
+                  <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</span>
+                  <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</span>
+                </div>
+                <div className="px-3 py-2"><span className="text-[11px] text-neutral-400 italic">No entries yet</span></div>
+              </div>
+            </div>
+            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">No timer — record keeping only</div>
+          </div>
+          {/* CPR timer */}
+          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white">
+            <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
+              <div className="relative w-[100px] h-[100px] flex items-center justify-center">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5" strokeLinecap="round" strokeDasharray="276.5" strokeDashoffset="138"/>
+                </svg>
+                <div className="flex flex-col items-center z-10">
+                  <span className="text-[22px] font-bold tabular-nums leading-none text-neutral-900">1:00</span>
+                  <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
+                </div>
+              </div>
+            </div>
+            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">Inbuilt monitor CPR timer</div>
+          </div>
+          {/* Elapsed time */}
+          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white">
+            <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
+              <div className="relative w-[100px] h-[100px] flex items-center justify-center">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5" strokeLinecap="round" strokeDasharray="276.5" strokeDashoffset="207"/>
+                </svg>
+                <div className="flex flex-col items-center z-10">
+                  <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">00:05:00</span>
+                  <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Elapsed Time</span>
+                </div>
+              </div>
+            </div>
+            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">Elapsed time — odds/evens</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Static Add Tx Menu Component - Rendered inside the central box like in the real app
 function StaticAddTxMenu() {
   return (
@@ -557,8 +620,18 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
     intro2: {
       title: 'Getting Started',
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/1.png?raw=true',
-      nextScreen: 'home1',
+      nextScreen: 'timingMethod',
       elements: [],
+    },
+    timingMethod: {
+      title: 'Time Keeping',
+      image: '',
+      nextScreen: 'home1',
+      elements: [
+        { id: 'timingLog',     x: 50, y: 28, number: 1, title: 'Tx log only',   description: "This option means the app will only help you record the times of interventions. It will not assist you to keep track of times." },
+        { id: 'timingCPR',     x: 50, y: 58, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with." },
+        { id: 'timingElapsed', x: 50, y: 83, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor. You can then choose whether you are performing rhythm checks on even or odd minutes." },
+      ],
     },
     home1: {
       title: 'CPR Timer Home Screen',
@@ -681,18 +754,19 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: ['home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
+      backgroundColor: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: ['home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      justifyContent: ['home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      padding: ['home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
+      alignItems: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      justifyContent: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      padding: ['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       zIndex: 9999,
       overflowY: 'auto',
     }}>
       {/* Render static components for various screens */}
       {currentScreen === 'home1' && <StaticHomeScreen />}
+      {currentScreen === 'timingMethod' && <StaticTimingMethodScreen />}
       {currentScreen === 'addTxMenu' && <StaticAddTxMenu />}
       {currentScreen === 'adrenalineDose' && <StaticAdrenalineDose />}
       {(currentScreen === 'home2' || currentScreen === 'home2_summary' || currentScreen === 'home2_close') && <StaticHomeWithAlerts />}
@@ -700,7 +774,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       {currentScreen === 'caseSummary' && <StaticCaseSummary />}
       
       {/* Exit button overlay for static screens */}
-      {['home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) && (
+      {['home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) && (
         <button
           onClick={onClose}
           style={{
