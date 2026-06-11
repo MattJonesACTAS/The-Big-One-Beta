@@ -1204,27 +1204,31 @@ export default function App() {
         </div>
       )}
       {/* Top Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
-          {(state.running && !state.rhythmCheckPaused) ? 'Pause' : 'Play'}
-        </button>
-        <button 
-          onClick={() => {
-            if (timingMode === 'elapsed') {
-              setShowElapsedRecalibrate(true);
-            } else {
-              const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
-              const mins = Math.floor(currentCountdown / 60);
-              const secs = currentCountdown % 60;
-              setTimerAdjustValue({ mins, secs });
-              setShowTimerAdjust(true);
-            }
-          }} 
-          className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
-        >
-          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
-        </button>
+      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-1' : 'grid-cols-3'}`}>
+        {timingMode !== 'log' && (
+          <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
+            {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
+            {(state.running && !state.rhythmCheckPaused) ? 'Pause' : 'Play'}
+          </button>
+        )}
+        {timingMode !== 'log' && (
+          <button 
+            onClick={() => {
+              if (timingMode === 'elapsed') {
+                setShowElapsedRecalibrate(true);
+              } else {
+                const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
+                const mins = Math.floor(currentCountdown / 60);
+                const secs = currentCountdown % 60;
+                setTimerAdjustValue({ mins, secs });
+                setShowTimerAdjust(true);
+              }
+            }} 
+            className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
+          >
+            <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
+          </button>
+        )}
         <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="close-case">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> Close Case
         </button>
@@ -1286,6 +1290,34 @@ export default function App() {
         state.currentOverlay === 'phea' ? 'border-purple-400' :
         state.currentOverlay === 'vitals' ? 'border-sky-400' : 'border-emerald-500'
       }`}>
+        {timingMode === 'log' ? (
+          /* Log mode: scrollable running summary is the home screen */
+          <div className="h-full flex flex-col relative">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <SummaryStats state={state} pharmaSummary={pharmaSummary} />
+              <div>
+                <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
+                <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} />
+              </div>
+            </div>
+            <AnimatePresence>
+              {state.currentOverlay && state.currentOverlay !== 'tutorial' && (
+                <Overlay
+                  key={state.currentOverlay}
+                  type={state.currentOverlay as OverlayType}
+                  onClose={() => setState(p => ({ ...p, currentOverlay: null }))}
+                  addTreatment={addTreatment}
+                  state={state}
+                  pharmaSummary={pharmaSummary}
+                  isShockForced={isShockForced}
+                  toggleChecklistItem={toggleChecklistItem}
+                  onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
+                  timingMode={timingMode}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
@@ -1552,22 +1584,25 @@ export default function App() {
               </div>
           </div>
         </div>
+        )} {/* end else (non-log mode) */}
       </div>
 
       {/* Bottom Main Controls */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
-        <button 
-          onClick={() => {
-            if (isShockForced) return;
-            setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'summary' ? null : 'summary' }))
-          }}
-          disabled={isShockForced}
-          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
-          data-button="summary"
-        >
-          {state.currentOverlay === 'summary' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
-          {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
-        </button>
+      <div className={`grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        {timingMode !== 'log' && (
+          <button 
+            onClick={() => {
+              if (isShockForced) return;
+              setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'summary' ? null : 'summary' }))
+            }}
+            disabled={isShockForced}
+            className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+            data-button="summary"
+          >
+            {state.currentOverlay === 'summary' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
+            {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
+          </button>
+        )}
         <button 
           onClick={() => {
             if (isShockForced) return;
