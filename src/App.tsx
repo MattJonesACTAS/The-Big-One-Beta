@@ -2570,7 +2570,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
         {showElapsed && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>}
-        {showAgo && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>}
+        {showAgo && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Ago</div>}
       </div>
       
       {/* Table Body */}
@@ -2598,7 +2598,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
                 </div>
                 <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{timeDisplay}</div>
                 {showElapsed && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{elapsedDisplay}</div>}
-                {showAgo && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">{ago}</div>}
+                {showAgo && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{ago}</div>}
               </div>
             );
           })
