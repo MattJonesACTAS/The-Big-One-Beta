@@ -2046,12 +2046,14 @@ export default function App() {
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
                         <div className="w-full max-w-[220px] rounded-xl border border-neutral-200 overflow-hidden text-left bg-white shadow-sm">
-                          <div className="bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 tracking-widest uppercase">Arrest Summary</div>
-                          <div className="px-3 py-1.5 flex justify-between text-[11px] border-b border-neutral-100">
-                            <span className="text-neutral-500">CPR Rounds</span><span className="font-bold text-neutral-900">1</span>
+                          <div className="bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 tracking-widest uppercase">Treatment Log</div>
+                          <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1 border-b border-neutral-100">
+                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">Treatment</span>
+                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</span>
+                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</span>
                           </div>
-                          <div className="px-3 py-1.5 flex justify-between text-[11px]">
-                            <span className="text-neutral-500">Shocks given</span><span className="font-bold text-red-500">0</span>
+                          <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1">
+                            <span className="text-[11px] text-neutral-400 italic">No entries yet</span>
                           </div>
                         </div>
                       </div>
