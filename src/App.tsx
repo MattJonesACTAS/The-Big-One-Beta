@@ -2186,32 +2186,6 @@ export default function App() {
                   </div>
                 </div>
               )}
-
-              {catchupStep === 3 && (
-                <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900">What treatments have you already applied?</h2>
-                  <div className="space-y-2 py-3 px-2">
-                    <CounterItem label="Shock" value={priorCounts.shock} onChange={v => setPriorCounts(p => ({ ...p, shock: v }))} />
-                    <CounterItem label="Disarm" value={priorCounts.disarm} onChange={v => setPriorCounts(p => ({ ...p, disarm: v }))} />
-                    <CounterItem label="Adrenaline" value={priorCounts.adrenaline} onChange={v => setPriorCounts(p => ({ ...p, adrenaline: v }))} />
-                    <div className="grid grid-cols-3 gap-2">
-                      {['BVM', 'LMA', 'IO'].map(tx => (
-                        <button 
-                          key={tx}
-                          onClick={() => setPriorTxs(p => p.includes(tx) ? p.filter(t => t !== tx) : [...p, tx])}
-                          className={`p-3 rounded-xl font-bold text-base ${priorTxs.includes(tx) ? 'bg-amber-100 text-amber-900 ring-2 ring-amber-400' : 'bg-neutral-100 text-neutral-600'}`}
-                        >
-                          {tx}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
-                  </div>
-                </div>
-              )}
             </motion.div>
           </div>
         )}
