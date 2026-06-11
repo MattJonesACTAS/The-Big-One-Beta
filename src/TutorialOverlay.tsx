@@ -22,17 +22,12 @@ interface GlobalNode {
 const ALL_NODES: GlobalNode[] = [
   // --- Home screen nodes ---
   {
-    id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 4,
-    pages: [{ title: 'Total Time', description: "The total time indicates how long ago the monitor was turned on.\n\nDuring configuration, you will be prompted to copy this time from the monitor and enter it into the app.\n\nYou'll find this time in the top right corner of the monitor screen." }],
-    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
-  },
-  {
-    id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 5,
+    id: 'cprRound', type: 'positioned', x: 80.2, y: 22, displayNumber: 4,
     pages: [{ title: 'CPR Round', description: "The current round of CPR.\n\nThe CPR round counter will update every time the rhythm check counter reaches 0:00." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'timer', type: 'positioned', x: 50, y: 52, displayNumber: 6,
+    id: 'timer', type: 'positioned', x: 50, y: 52, displayNumber: 5,
     pages: [
       {
         title: 'Rhythm Check Timer',
@@ -46,28 +41,28 @@ const ALL_NODES: GlobalNode[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'pause', type: 'positioned', x: 19.0, y: 4.2, displayNumber: 7,
+    id: 'pause', type: 'positioned', x: 19.0, y: 4.2, displayNumber: 6,
     pages: [{ title: 'Pause Button', description: 'Pause and resume the rhythm check timer.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 8,
+    id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 7,
     pages: [{ title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer if your last rhythm check was longer.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'tabs', type: 'positioned', x: 50, y: 10.75, displayNumber: 9,
+    id: 'tabs', type: 'positioned', x: 50, y: 10.75, displayNumber: 8,
     pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• Prehospital emergency anaesthesia (PHEA)\n\n• Vital signs survey' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 10,
+    id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4, displayNumber: 9,
     pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Treatment screen ---
   {
-    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 11,
+    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40, displayNumber: 10,
     pages: [
       {
         title: 'Add Tx Submenu',
@@ -82,18 +77,18 @@ const ALL_NODES: GlobalNode[] = [
   },
   // --- Home with medication alerts ---
   {
-    id: 'adrenalineAlert', type: 'positioned', x: 28.4, y: 82.82, displayNumber: 12,
+    id: 'adrenalineAlert', type: 'positioned', x: 28.4, y: 82.82, displayNumber: 11,
     pages: [{ title: 'Medication alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && !sf
   },
   {
-    id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 13,
+    id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 12,
     pages: [{ title: 'Summary Button', description: "Next, let's have a look at the running case summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && !sf
   },
   // --- Summary overlay ---
   {
-    id: 'summaryInfo', type: 'positioned', x: 50, y: 50, displayNumber: 14,
+    id: 'summaryInfo', type: 'positioned', x: 50, y: 50, displayNumber: 13,
     pages: [
       {
         title: 'Arrest Summary',
@@ -115,29 +110,29 @@ const ALL_NODES: GlobalNode[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 15,
+    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, displayNumber: 14,
     pages: [{ title: 'Return to Home', description: 'Press the close button to return to the home page.' }],
     condition: (s) => s.currentOverlay === 'summary'
   },
   // --- Home after summary ---
   {
-    id: 'closeCase', type: 'positioned', x: 82.2, y: 4.2, displayNumber: 16,
+    id: 'closeCase', type: 'positioned', x: 82.2, y: 4.2, displayNumber: 15,
     pages: [{ title: 'Close Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case.\n\nLet's close the case and see the final summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Case summary ---
   {
-    id: 'finalStats', type: 'positioned', x: 50, y: 61.64, displayNumber: 17,
+    id: 'finalStats', type: 'positioned', x: 50, y: 61.64, displayNumber: 16,
     pages: [{ title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute.' }],
     condition: (s) => !s.running
   },
   {
-    id: 'export', type: 'positioned', x: 27, y: 14, displayNumber: 18,
+    id: 'export', type: 'positioned', x: 27, y: 14, displayNumber: 17,
     pages: [{ title: 'Export PDF', description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.' }],
     condition: (s) => !s.running
   },
   {
-    id: 'delete', type: 'positioned', x: 73, y: 14, displayNumber: 19,
+    id: 'delete', type: 'positioned', x: 73, y: 14, displayNumber: 18,
     pages: [{ title: 'Delete Case', description: "Once you've finished with the case and exported to PDF if needed, you can delete all case data.\n\nDelete the case to finish the tutorial." }],
     condition: (s) => !s.running
   }
