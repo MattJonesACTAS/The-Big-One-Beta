@@ -532,8 +532,10 @@ export default function App() {
               hasAutoClosedAt10.current = true;
             }
 
-            // Beep logic only between 10 and 5 seconds
-            if (countdown <= 10 && countdown > 5 && lastBeepSecond.current !== newElapsed) {
+            // Beep logic: in elapsed mode beep at 5s to 0s; in CPR mode beep at 10s to 5s
+            const beepStart = timingMode === 'elapsed' ? 5 : 10;
+            const beepEnd = timingMode === 'elapsed' ? 0 : 5;
+            if (countdown <= beepStart && countdown > beepEnd && lastBeepSecond.current !== newElapsed) {
               playBeep();
               lastBeepSecond.current = newElapsed;
             }
@@ -551,8 +553,12 @@ export default function App() {
                   setIsShockForced(true);
                 }
                 
-                // Reset immediately regardless of shock entry
-                nextTarget = newElapsed + 120;
+                // Reset: elapsed mode uses interval-based target; CPR mode uses +120
+                if (timingMode === 'elapsed' && rhythmInterval) {
+                  nextTarget = calcNextIntervalTarget(newElapsed, rhythmInterval);
+                } else {
+                  nextTarget = newElapsed + 120;
+                }
                 nextRound += 1;
                 nextOvertime = 0;
                 hasAutoClosedAt10.current = false;
@@ -1027,7 +1033,6 @@ export default function App() {
     // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
     setCprTimestamp(null);
-    setRhythmInterval(null);
     previousCountdown.current = adjustedRhythm;
   };
 
@@ -1264,16 +1269,18 @@ export default function App() {
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
-            {timingMode !== 'cpr' && (
+            {timingMode !== 'cpr' && timingMode !== 'elapsed' && (
               <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
                 <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
                 <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
               </div>
             )}
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
-            </div>
+            {timingMode !== 'elapsed' && (
+              <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
+                <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
+                <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
+              </div>
+            )}
           </div>
 
           {/* Rhythm Check - Centered vertically and responsive size */}
@@ -1341,10 +1348,18 @@ export default function App() {
                   }
                   animate={{ 
                     strokeDashoffset: state.rhythmCheckPaused
-                      ? 1 - Math.max(0, (state.frozenCountdown || 0) / 120) // Show frozen progress
+                      ? 1 - Math.max(0, (state.frozenCountdown || 0) / 120)
                       : state.rhythmCheckOvertime > 0 
-                        ? 1 - (state.rhythmCheckOvertime / 6) // Count down from 6 to 0
-                        : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
+                        ? 1 - (state.rhythmCheckOvertime / 6)
+                        : timingMode === 'elapsed' && rhythmInterval
+                          ? (() => {
+                              // Progress ring fills from 0 to 1 between two rhythm check times
+                              const prevTarget = state.rhythmCheckTarget - 120;
+                              const span = state.rhythmCheckTarget - prevTarget;
+                              const progress = (state.elapsedSeconds - prevTarget) / span;
+                              return 1 - Math.min(1, Math.max(0, progress));
+                            })()
+                          : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
                   }}
                   style={{ strokeDasharray: 1 }}
                   transition={{ duration: 0.5, ease: "linear" }}
@@ -1353,23 +1368,27 @@ export default function App() {
               
               <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
-                  className={`text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none ${
+                  className={`font-bold tabular-nums tracking-tighter leading-none ${
+                    timingMode === 'elapsed' ? 'text-[52px] sm:text-[80px]' : 'text-7xl sm:text-[120px]'
+                  } ${
                     state.rhythmCheckPaused ? 'text-neutral-900' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-600' :
                     (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
-                  {state.rhythmCheckPaused 
-                    ? formatTime(state.frozenCountdown || 0)
-                    : state.rhythmCheckOvertime > 0 
-                      ? formatTime(6 - state.rhythmCheckOvertime)
-                      : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
+                  {timingMode === 'elapsed'
+                    ? formatTimeWithSeconds(state.elapsedSeconds)
+                    : state.rhythmCheckPaused 
+                      ? formatTime(state.frozenCountdown || 0)
+                      : state.rhythmCheckOvertime > 0 
+                        ? formatTime(6 - state.rhythmCheckOvertime)
+                        : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
                   }
                 </div>
                 <div className={`text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
                   state.rhythmCheckOvertime > 0 ? 'text-red-600 flash-red' : 'text-neutral-400'
                 }`}>
-                  Rhythm Check
+                  {timingMode === 'elapsed' ? 'Elapsed Time' : 'Rhythm Check'}
                 </div>
               </div>
               </>
