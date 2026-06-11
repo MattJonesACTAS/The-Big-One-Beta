@@ -2579,11 +2579,11 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
           <div className="p-12 text-center text-neutral-300 italic">No treatments recorded</div>
         ) : (
           [...treatments].reverse().map((tx, i) => {
-            const timeVal = tx.clockSeconds;
+            const timeVal = isSummary ? tx.clockSeconds : tx.clock;
             const timeDisplay = tx.prior ? `< ${timeVal}` : timeVal;
-            const elapsedDisplay = tx.prior ? `< ${formatTimeWithSeconds(catchupElapsed)}` : formatTimeWithSeconds(tx.elapsed);
+            const elapsedDisplay = tx.prior ? `< ${isSummary ? formatTimeWithSeconds(catchupElapsed) : formatTime(catchupElapsed)}` : (isSummary ? formatTimeWithSeconds(tx.elapsed) : formatTime(tx.elapsed));
             const agoVal = tx.prior ? elapsedSeconds : (elapsedSeconds - tx.elapsed);
-            const ago = tx.prior ? `> ${formatTimeWithSeconds(agoVal)}` : formatTimeWithSeconds(agoVal);
+            const ago = tx.prior ? `> ${formatTimeHMM(agoVal)}` : formatTimeHMM(agoVal);
             const { med, dose } = splitTreatmentName(tx.name);
             
             return (
