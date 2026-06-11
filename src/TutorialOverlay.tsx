@@ -20,22 +20,6 @@ interface GlobalNode {
 }
 
 const ALL_NODES: GlobalNode[] = [
-  // --- Timing method nodes ---
-  {
-    id: 'timingLog', type: 'positioned', x: 50, y: 22, displayNumber: 1,
-    pages: [{ title: 'Tx log only', description: "This option means the app will only help you record the times of interventions. It will not assist you to keep track of times." }],
-    condition: (s) => s.running && s.currentOverlay === null
-  },
-  {
-    id: 'timingElapsed', type: 'positioned', x: 50, y: 62, displayNumber: 2,
-    pages: [{ title: 'Elapsed time', description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor. You can then choose whether you are performing rhythm checks on even or odd minutes." }],
-    condition: (s) => s.running && s.currentOverlay === null
-  },
-  {
-    id: 'timingCPR', type: 'positioned', x: 50, y: 82, displayNumber: 3,
-    pages: [{ title: 'CPR timer', description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with." }],
-    condition: (s) => s.running && s.currentOverlay === null
-  },
   // --- Home screen nodes ---
   {
     id: 'totalTime', type: 'positioned', x: 19.8, y: 22, displayNumber: 4,
