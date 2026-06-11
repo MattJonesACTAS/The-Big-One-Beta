@@ -641,9 +641,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'home1',
       elements: [
-        { id: 'timingLog',     x: 50, y: 35, number: 1, title: 'Tx log only',   description: "This option means the app will only help you record the times of interventions.\n\nIt will not assist you to keep track of times." },
-        { id: 'timingCPR',     x: 50, y: 44, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with.\n\nChoose 'CPR Timer' to progress in the tutorial." },
-        { id: 'timingElapsed', x: 50, y: 69, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor.\n\nYou can then choose whether you are performing rhythm checks on even or odd minutes." },
+        { id: 'timingLog',     x: 50, y: 28, number: 1, title: 'Tx log only',   description: "This option means the app will only help you record the times of interventions.\n\nIt will not assist you to keep track of times." },
+        { id: 'timingCPR',     x: 50, y: 46, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with.\n\nChoose 'CPR Timer' to progress in the tutorial." },
+        { id: 'timingElapsed', x: 50, y: 70, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor.\n\nYou can then choose whether you are performing rhythm checks on even or odd minutes." },
       ],
     },
     home1: {
