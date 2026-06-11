@@ -662,6 +662,8 @@ export default function App() {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
       const isROSC = name === 'Disarm - ROSC';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
+      // Increment round if shock/disarm logged out of turn (before timer hit 0)
+      const isOutOfTurn = isShockOrDisarm && !isROSC && (prev.rhythmCheckTarget - prev.elapsedSeconds) > 0;
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -681,6 +683,7 @@ export default function App() {
         ...prev,
         treatments: newTreatments,
         shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
+        cprRound: isOutOfTurn ? prev.cprRound + 1 : prev.cprRound,
         currentOverlay: null,
         // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
         rhythmCheckTarget: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) 
@@ -1384,7 +1387,7 @@ export default function App() {
               <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
                   className={`font-bold tabular-nums tracking-tighter leading-none ${
-                    timingMode === 'elapsed' ? 'text-[36px] sm:text-[56px]' : 'text-7xl sm:text-[120px]'
+                    timingMode === 'elapsed' ? 'text-[40px] sm:text-[62px]' : 'text-7xl sm:text-[120px]'
                   } ${
                     state.rhythmCheckPaused ? 'text-neutral-900' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-600' :
@@ -1401,7 +1404,7 @@ export default function App() {
                   }
                 </div>
                 <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
-                  timingMode === 'elapsed' ? 'text-[10px] sm:text-[13px]' : 'text-[14px] sm:text-[18px]'
+                  timingMode === 'elapsed' ? 'text-[11px] sm:text-[14px]' : 'text-[14px] sm:text-[18px]'
                 } ${
                   state.rhythmCheckOvertime > 0 ? 'text-red-600 flash-red' : 'text-neutral-400'
                 }`}>
@@ -2576,11 +2579,11 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
           <div className="p-12 text-center text-neutral-300 italic">No treatments recorded</div>
         ) : (
           [...treatments].reverse().map((tx, i) => {
-            const timeVal = isSummary ? tx.clockSeconds : tx.clock;
+            const timeVal = tx.clockSeconds;
             const timeDisplay = tx.prior ? `< ${timeVal}` : timeVal;
-            const elapsedDisplay = tx.prior ? `< ${isSummary ? formatTimeWithSeconds(catchupElapsed) : formatTime(catchupElapsed)}` : (isSummary ? formatTimeWithSeconds(tx.elapsed) : formatTime(tx.elapsed));
+            const elapsedDisplay = tx.prior ? `< ${formatTimeWithSeconds(catchupElapsed)}` : formatTimeWithSeconds(tx.elapsed);
             const agoVal = tx.prior ? elapsedSeconds : (elapsedSeconds - tx.elapsed);
-            const ago = tx.prior ? `> ${formatTimeHMM(agoVal)}` : formatTimeHMM(agoVal);
+            const ago = tx.prior ? `> ${formatTimeWithSeconds(agoVal)}` : formatTimeWithSeconds(agoVal);
             const { med, dose } = splitTreatmentName(tx.name);
             
             return (
