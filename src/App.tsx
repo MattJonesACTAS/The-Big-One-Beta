@@ -662,6 +662,7 @@ export default function App() {
     setState(prev => {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
       const isROSC = name === 'Disarm - ROSC';
+      const isRearrest = name === 'Rearrest';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
       // Increment round if shock/disarm logged out of turn (before timer hit 0)
       const isOutOfTurn = isShockOrDisarm && !isROSC && (prev.rhythmCheckTarget - prev.elapsedSeconds) > 0;
@@ -685,23 +686,31 @@ export default function App() {
         treatments: newTreatments,
         shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
         cprRound: isOutOfTurn ? prev.cprRound + 1 : prev.cprRound,
-        currentOverlay: null,
+        currentOverlay: isRearrest ? 'treatment' : null,
         // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
         rhythmCheckTarget: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) 
           ? prev.elapsedSeconds + 120 
           : prev.rhythmCheckTarget,
         rhythmCheckOvertime: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
-        // Pause for ROSC, unpause for other shock/disarm
+        // Pause for ROSC, unpause for other shock/disarm; Rearrest exits ROSC mode
         rhythmCheckPaused: isShockOrDisarm ? isROSC : prev.rhythmCheckPaused,
         // For ROSC, freeze the countdown at 2:00
         frozenCountdown: isROSC ? 120 : prev.frozenCountdown,
-        // Enter ROSC mode when ROSC logged, exit when any shock/disarm logged
-        isROSCMode: isROSC ? true : isShockOrDisarm ? false : prev.isROSCMode,
+        // Enter ROSC mode when ROSC logged, exit when any shock/disarm or rearrest logged
+        isROSCMode: isROSC ? true : (isShockOrDisarm || isRearrest) ? false : prev.isROSCMode,
         // Clear ROSC checklist when ROSC is logged again (new ROSC event)
         roscChecked: isROSC ? [] : prev.roscChecked
       };
     });
     
+    // Rearrest from Add Tx menu: stop flashing, set forced overlay, mark as rearrest
+    if (name === 'Rearrest') {
+      setRoscButtonFlashing(false);
+      setRearrested(true);
+      setIsShockForced(true);
+      return; // Skip the rest — overlay stays open for rhythm check outcome
+    }
+
     // Make ROSC button flash when ROSC is selected
     if (name === 'Disarm - ROSC') {
       setRoscButtonFlashing(true);
@@ -3193,7 +3202,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           { name: 'Shock - pVT', color: 'red' },
           { name: 'Disarm - Asystole', color: 'blue' },
           { name: 'Disarm - PEA', color: 'blue' },
-          { name: 'Disarm - ROSC', color: 'emerald' }
+          state.isROSCMode
+            ? { name: 'Rearrest', color: 'orange' }
+            : { name: 'Disarm - ROSC', color: 'emerald' }
         ]} 
         onSelect={addTreatment}
       />
@@ -3265,7 +3276,7 @@ function TxSection({
 }: { 
   title: string;
   color: string;
-  items: (string | { name: string; color?: string })[];
+  items: (string | { name: string; color?: string; displayName?: string })[];
   onSelect: (n: string) => void;
   initiallyExpanded?: boolean;
   sectionId?: string;
@@ -3297,7 +3308,8 @@ function TxSection({
   const textColorMap: Record<string, string> = {
     red: 'text-red-600',
     blue: 'text-blue-600',
-    emerald: 'text-emerald-600'
+    emerald: 'text-emerald-600',
+    orange: 'text-orange-600'
   };
 
   return (
@@ -3319,16 +3331,18 @@ function TxSection({
           {items.map(item => {
             const itemName = typeof item === 'string' ? item : item.name;
             const itemColor = typeof item === 'string' ? null : item.color;
-            const textColorClass = itemColor ? textColorMap[itemColor] : 'text-neutral-700';
+            const displayName = typeof item === 'string' ? item : (item.displayName ?? item.name);
+            const textColorClass = itemColor ? (textColorMap[itemColor] ?? 'text-neutral-700') : 'text-neutral-700';
+            const bgClass = itemColor === 'orange' ? 'bg-orange-50 hover:bg-orange-100' : 'bg-neutral-50 hover:bg-neutral-100';
             
             return (
               <button 
                 key={itemName} 
                 onClick={() => onSelect(itemName)} 
-                className={`w-full text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm hover:bg-neutral-100 btn-base ${textColorClass}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass}`}
                 data-medication={itemName}
               >
-                {itemName}
+                {displayName}
               </button>
             );
           })}
