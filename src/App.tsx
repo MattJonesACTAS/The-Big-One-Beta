@@ -1588,7 +1588,7 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      <div className={`grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      <div className={`grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : 'grid-cols-2'}`}>
         {timingMode !== 'log' && (
           <button 
             onClick={() => {
@@ -1615,6 +1615,23 @@ export default function App() {
           {state.currentOverlay === 'treatment' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <Plus size={18} className="sm:w-6 sm:h-6" />}
           {state.currentOverlay === 'treatment' ? 'Close' : 'Add Tx'}
         </button>
+        {timingMode === 'log' && state.isROSCMode && (
+          <button
+            onClick={() => {
+              setState(prev => ({
+                ...prev,
+                isROSCMode: false,
+                currentOverlay: 'treatment'
+              }));
+              setRoscButtonFlashing(false);
+              setRearrested(true);
+              setIsShockForced(true);
+            }}
+            className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-orange-500 text-white"
+          >
+            Re-arrest
+          </button>
+        )}
       </div>
 
 
@@ -2652,7 +2669,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
   const isCpr = timingMode === 'cpr';
   const isElapsedMode = timingMode === 'elapsed';
   // Column visibility
-  const showElapsed = !isCpr && !isElapsedMode;
+  const showElapsed = !isCpr && !isElapsedMode && timingMode !== 'log';
   const showAgo = !isSummary;  // Ago only shown in running log, not closed/PDF — same as before
 
   // Grid templates
