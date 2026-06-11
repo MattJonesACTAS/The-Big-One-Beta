@@ -775,22 +775,15 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       zIndex: 9999,
       overflowY: 'auto',
     }}>
-      {/* Render static components for various screens */}
+      {/* Render static components for non-catchup screens only */}
       {currentScreen === 'home1' && <StaticHomeScreen />}
-      {currentScreen === 'timingMethod' && <StaticTimingMethodScreen cprFading={allExplored && !showingInfoBox} />}
       {currentScreen === 'addTxMenu' && <StaticAddTxMenu />}
       {currentScreen === 'adrenalineDose' && <StaticAdrenalineDose />}
       {(currentScreen === 'home2' || currentScreen === 'home2_summary' || currentScreen === 'home2_close') && <StaticHomeWithAlerts />}
       {currentScreen === 'summary' && <StaticSummary />}
       {currentScreen === 'caseSummary' && <StaticCaseSummary />}
       
-      
-      {/* Timing method screen shown as background for all intro pages */}
-      {(currentScreen === 'intro1' || currentScreen === 'intro2' || currentScreen === 'intro3' || currentScreen === 'intro4') && (
-        <StaticTimingMethodScreen />
-      )}
-
-      {/* Intro message boxes */}
+      {/* Intro pages: dark overlay over the live catchup behind */}
       {(currentScreen === 'intro1' || currentScreen === 'intro2' || currentScreen === 'intro3' || currentScreen === 'intro4') && (
         <div style={{
           position: 'fixed',
@@ -1196,26 +1189,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
         </button>
       )}
       
-      {/* After all 3 timing nodes explored: CPR card fades via cprFading prop on StaticTimingMethodScreen */}
-      {allExplored && !showingInfoBox && currentScreen === 'timingMethod' && (
-        <div
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '47%',
-            left: '16px',
-            right: '16px',
-            height: '22%',
-            backgroundColor: 'transparent',
-            borderRadius: '16px',
-            cursor: 'pointer',
-            zIndex: 10001,
-          }}
-          role="button"
-          aria-label="Choose CPR Timer"
-        />
-      )}
-
       {/* Regular Next button for non-special screens */}
       {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'intro4' && currentScreen !== 'timingMethod' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
         <button
@@ -1303,9 +1276,10 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
             <p style={{
               margin: '0 0 20px 0',
               fontSize: '15px',
-              lineHeight: '1.5',
+              lineHeight: '1.6',
               color: '#444',
               textAlign: 'center',
+              whiteSpace: 'pre-line',
             }}>
               {activeExplanation.description}
             </p>

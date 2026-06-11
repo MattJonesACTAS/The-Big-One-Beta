@@ -368,12 +368,12 @@ export default function App() {
     const style = document.createElement('style');
     style.id = 'tutorial-cpr-flash-style';
     style.textContent = `
-      @keyframes tutorialCprPulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); border-color: #d1d5db; }
-        50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); border-color: #10b981; }
+      @keyframes tutorialCprFade {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.45; }
       }
       body.tutorial-flash-cpr-btn [data-tutorial="cpr-btn"] {
-        animation: tutorialCprPulse 1.5s infinite;
+        animation: tutorialCprFade 2s ease-in-out infinite;
       }
     `;
     document.head.appendChild(style);
@@ -1210,8 +1210,6 @@ export default function App() {
         <InteractiveTutorial
           onClose={() => {
             setShowInteractiveTutorial(false);
-            setShowCatchup(true);
-            setCatchupStep(6);
             setTutorialMode(true);
           }}
         />
@@ -1720,6 +1718,9 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => {
+                        setShowCatchup(true);
+                        setCatchupStep(6);
+                        setTimingMode(null);
                         setShowInteractiveTutorial(true);
                       }} 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
@@ -2082,7 +2083,13 @@ export default function App() {
 
                     {/* CPR timer */}
                     <button
-                      onClick={() => setTimingMode('cpr')}
+                      onClick={() => {
+                        setTimingMode('cpr');
+                        if (showInteractiveTutorial) {
+                          setShowInteractiveTutorial(false);
+                          setTutorialMode(true);
+                        }
+                      }}
                       data-tutorial="cpr-btn"
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'cpr' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
