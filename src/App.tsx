@@ -540,29 +540,36 @@ export default function App() {
               lastBeepSecond.current = newElapsed;
             }
 
-            // Handle rhythm check reaching 0:00 and overtime
+            // Handle rhythm check reaching 0:00
             if (countdown <= 0) {
-              // Calculate overtime (how many seconds past the target)
-              nextOvertime = newElapsed - prev.rhythmCheckTarget;
-              
-              // When overtime reaches 6 seconds, force shock entry and reset immediately
-              if (nextOvertime >= 6) {
-                // Force shock overlay (don't wait for user to complete it)
-                if (!showCatchup && !tutorialMode) {
-                  nextOverlay = 'treatment';
-                  setIsShockForced(true);
-                }
-                
-                // Reset: elapsed mode uses interval-based target; CPR mode uses +120
-                if (timingMode === 'elapsed' && rhythmInterval) {
+              if (timingMode === 'elapsed' && rhythmInterval) {
+                // Elapsed mode: fire overlay immediately at rhythm check time, no overtime phase
+                if (countdown === 0) {
+                  if (!showCatchup && !tutorialMode) {
+                    nextOverlay = 'treatment';
+                    setIsShockForced(true);
+                  }
                   nextTarget = calcNextIntervalTarget(newElapsed, rhythmInterval);
-                } else {
-                  nextTarget = newElapsed + 120;
+                  nextRound += 1;
+                  nextOvertime = 0;
+                  hasAutoClosedAt10.current = false;
+                  setHasShownForcedShock(false);
                 }
-                nextRound += 1;
-                nextOvertime = 0;
-                hasAutoClosedAt10.current = false;
-                setHasShownForcedShock(false); // Reset for next cycle
+              } else {
+                // CPR mode: 6-second overtime phase before forcing overlay
+                nextOvertime = newElapsed - prev.rhythmCheckTarget;
+                
+                if (nextOvertime >= 6) {
+                  if (!showCatchup && !tutorialMode) {
+                    nextOverlay = 'treatment';
+                    setIsShockForced(true);
+                  }
+                  nextTarget = newElapsed + 120;
+                  nextRound += 1;
+                  nextOvertime = 0;
+                  hasAutoClosedAt10.current = false;
+                  setHasShownForcedShock(false);
+                }
               }
             } else {
               nextOvertime = 0; // Reset overtime when not past target
@@ -1353,11 +1360,16 @@ export default function App() {
                         ? 1 - (state.rhythmCheckOvertime / 6)
                         : timingMode === 'elapsed' && rhythmInterval
                           ? (() => {
-                              // Progress ring fills from 0 to 1 between two rhythm check times
-                              const prevTarget = state.rhythmCheckTarget - 120;
-                              const span = state.rhythmCheckTarget - prevTarget;
-                              const progress = (state.elapsedSeconds - prevTarget) / span;
-                              return 1 - Math.min(1, Math.max(0, progress));
+                              // Progress ring fills from previous interval boundary to next
+                              const intervalMap: Record<string, { period: number; offset: number }> = {
+                                'evens':      { period: 120, offset: 0  },
+                                'odds':       { period: 120, offset: 60 },
+                                'half-evens': { period: 120, offset: 30 },
+                                'half-odds':  { period: 120, offset: 90 },
+                              };
+                              const { period, offset } = intervalMap[rhythmInterval];
+                              const phase = ((state.elapsedSeconds - offset) % period + period) % period;
+                              return 1 - (phase / period);
                             })()
                           : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
                   }}
