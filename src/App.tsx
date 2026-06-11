@@ -2124,65 +2124,8 @@ export default function App() {
 
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="grid grid-cols-1 gap-3 pt-2">
                     <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
-                    <button
-                      onClick={() => {
-                        if (timingMode === 'cpr') setCatchupStep(5);
-                        else if (timingMode === 'elapsed') setCatchupStep(7);
-                        else if (timingMode === 'log') handleCatchupStart();
-                      }}
-                      disabled={!timingMode}
-                      className={`py-4 rounded-xl font-bold transition-all ${timingMode ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
-                    >
-                      {timingMode === 'log' ? 'Start Case' : 'Continue'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {catchupStep === 7 && (
-                <div className="space-y-6 px-4 max-w-md mx-auto">
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold text-neutral-900">Rhythm Check Timing</h2>
-                    <p className="text-neutral-500 text-sm">When are rhythm checks due?</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {([
-                      { key: 'evens',      label: 'Evens',      example: '2:00, 4:00...' },
-                      { key: 'odds',       label: 'Odds',       example: '1:00, 3:00...' },
-                      { key: 'half-evens', label: 'Half evens', example: '2:30, 4:30...' },
-                      { key: 'half-odds',  label: 'Half odds',  example: '1:30, 3:30...' },
-                    ] as const).map(({ key, label, example }) => (
-                      <button
-                        key={key}
-                        onClick={() => setRhythmInterval(key)}
-                        className={`p-4 rounded-2xl transition-all duration-200 ${
-                          rhythmInterval === key
-                            ? 'bg-emerald-500 text-white shadow-lg scale-105'
-                            : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
-                        }`}
-                      >
-                        <div className="font-bold text-base">{label}</div>
-                        <div className={`text-xs mt-1 ${rhythmInterval === key ? 'text-emerald-100' : 'text-neutral-400'}`}>{example}</div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
-                    <button
-                      onClick={() => rhythmInterval && setCatchupStep(4)}
-                      disabled={!rhythmInterval}
-                      className={`py-4 rounded-xl font-bold transition-all ${
-                        rhythmInterval
-                          ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
-                          : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                      }`}
-                    >
-                      Next
-                    </button>
                   </div>
                 </div>
               )}
