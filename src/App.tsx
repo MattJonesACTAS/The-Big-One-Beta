@@ -709,12 +709,12 @@ export default function App() {
     
     setIsShockForced(false);
 
-    // If this treatment was logged from a rearrest, show interval picker (elapsed) or timer adjust (CPR)
+    // If this treatment was logged from a rearrest, show interval picker (elapsed) or timer adjust (CPR); log mode needs nothing
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
       if (timingMode === 'elapsed') {
         setShowRearrestIntervalPicker(true);
-      } else {
+      } else if (timingMode !== 'log') {
         setShowTimerAdjust(true);
       }
     }
@@ -1603,18 +1603,6 @@ export default function App() {
             {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
           </button>
         )}
-        <button 
-          onClick={() => {
-            if (isShockForced) return;
-            setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'treatment' ? null : 'treatment' }))
-          }}
-          disabled={isShockForced}
-          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
-          data-button="add-tx"
-        >
-          {state.currentOverlay === 'treatment' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <Plus size={18} className="sm:w-6 sm:h-6" />}
-          {state.currentOverlay === 'treatment' ? 'Close' : 'Add Tx'}
-        </button>
         {timingMode === 'log' && state.isROSCMode && (
           <button
             onClick={() => {
@@ -1632,6 +1620,18 @@ export default function App() {
             Re-arrest
           </button>
         )}
+        <button 
+          onClick={() => {
+            if (isShockForced) return;
+            setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'treatment' ? null : 'treatment' }))
+          }}
+          disabled={isShockForced}
+          className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+          data-button="add-tx"
+        >
+          {state.currentOverlay === 'treatment' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <Plus size={18} className="sm:w-6 sm:h-6" />}
+          {state.currentOverlay === 'treatment' ? 'Close' : 'Add Tx'}
+        </button>
       </div>
 
 
