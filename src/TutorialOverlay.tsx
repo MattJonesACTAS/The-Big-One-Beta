@@ -29,12 +29,12 @@ const ALL_NODES: GlobalNode[] = [
         description: 'The Big One is a cognitive aid for use during cardiac arrests.\n\nWith times and medications tracked automatically, you can focus on situational awareness and team leadership.'
       },
       {
-        title: 'Getting Started',
-        description: "On opening The Big One, you'll need to set up the case by entering:\n\n• Adult or paediatric patient\n\n• Estimated patient weight\n\n• The interventions that have already been performed"
-      },
-      {
         title: 'Navigating the Tutorial',
         description: "In this tutorial you'll see blue numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
+      },
+      {
+        title: 'Getting Started',
+        description: "On opening The Big One, you'll need to set up the case by entering:\n\n• Adult or paediatric patient\n\n• Estimated patient weight\n\n• The interventions that have already been performed"
       },
       {
         title: 'Time Keeping',

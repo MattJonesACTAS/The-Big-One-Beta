@@ -359,6 +359,7 @@ export default function App() {
   
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
+  const [showInteractiveTutorial, setShowInteractiveTutorial] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
 
@@ -1181,6 +1182,34 @@ export default function App() {
   return (
     <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
 
+      {/* Interactive Tutorial pre-screen */}
+      {showInteractiveTutorial && (
+        <InteractiveTutorial
+          onClose={() => {
+            setShowInteractiveTutorial(false);
+            const now = Date.now();
+            setState({
+              ...INITIAL_STATE,
+              running: true,
+              startTime: now,
+              pausedTime: 0,
+              elapsedSeconds: 0,
+              rhythmCheckTarget: 120,
+              cprRound: 1,
+              shocks: 0,
+              treatments: [],
+              catchupElapsed: 0,
+              startClockTime: now,
+              patientWeight: 100,
+              patientType: 'adult'
+            });
+            setShowCatchup(false);
+            setTimingMode('cpr');
+            setTutorialMode(true);
+          }}
+        />
+      )}
+
       {/* Disclaimer Modal */}
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
@@ -1684,25 +1713,7 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => {
-                        // Enter tutorial mode - start app with preset values
-                        const now = Date.now();
-                        setState({
-                          ...INITIAL_STATE,
-                          running: true,
-                          startTime: now,
-                          pausedTime: 0,
-                          elapsedSeconds: 0,
-                          rhythmCheckTarget: 120,
-                          cprRound: 1,
-                          shocks: 0,
-                          treatments: [],
-                          catchupElapsed: 0,
-                          startClockTime: now,
-                          patientWeight: 100,
-                          patientType: 'adult'
-                        });
-                        setShowCatchup(false);
-                        setTutorialMode(true);
+                        setShowInteractiveTutorial(true);
                       }} 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                     >
