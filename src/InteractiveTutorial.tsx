@@ -605,7 +605,7 @@ interface InteractiveTutorialProps {
 }
 
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) => {
-  const [currentScreen, setCurrentScreen] = useState('intro1');
+  const [currentScreen, setCurrentScreen] = useState('timingMethod');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
@@ -640,9 +640,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: '',
       nextScreen: 'home1',
       elements: [
-        { id: 'timingLog',     x: 50, y: 28, number: 1, title: 'Tx log only',   description: "This option means the app will only help you record the times of interventions. It will not assist you to keep track of times." },
-        { id: 'timingCPR',     x: 50, y: 58, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with." },
-        { id: 'timingElapsed', x: 50, y: 83, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor. You can then choose whether you are performing rhythm checks on even or odd minutes." },
+        { id: 'timingLog',     x: 50, y: 28, number: 1, title: 'Tx log only',   description: "This option means the app will only help you record the times of interventions.\n\nIt will not assist you to keep track of times." },
+        { id: 'timingElapsed', x: 50, y: 58, number: 2, title: 'Elapsed time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor.\n\nYou can then choose whether you are performing rhythm checks on even or odd minutes." },
+        { id: 'timingCPR',     x: 50, y: 83, number: 3, title: 'CPR timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nFor the tutorial we will use this option, because it's likely the one you're least familiar with.\n\nChoose 'CPR Timer' to progress in the tutorial." },
       ],
     },
     home1: {
@@ -650,13 +650,12 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/1.png?raw=true',
       nextScreen: 'addTxMenu',
       elements: [
-        { id: 'totalTime', x: 19.8, y: 22, number: 4, title: 'Total Time', description: "Total time the monitor has been turned on" },
-        { id: 'cprRound', x: 80.2, y: 22, number: 5, title: 'CPR Round', description: "The current round of CPR" },
-        { id: 'timer', x: 50, y: 52, number: 6, title: 'Rhythm Check Timer', description: "The countdown to the next rhythm check. When the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00." },
-        { id: 'pause', x: 19.0, y: 4.2, number: 7, title: 'Pause Button', description: "Pause and resume the rhythm check timer" },
-        { id: 'recalibrate', x: 51.0, y: 4.2, number: 8, title: 'Recalibrate Button', description: "The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer." },
-        { id: 'tabs', x: 50, y: 10.75, number: 9, title: 'Checklists', description: "Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)" },
-        { id: 'addTxBtn', x: 75, y: 95.4, number: 10, title: 'Add Treatment Button', description: "Tap here to log treatments and interventions during the arrest" },
+        { id: 'cprRound', x: 80.2, y: 22, number: 4, title: 'CPR Round', description: "The current round of CPR" },
+        { id: 'timer', x: 50, y: 52, number: 5, title: 'Rhythm Check Timer', description: "The countdown to the next rhythm check. When the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00." },
+        { id: 'pause', x: 19.0, y: 4.2, number: 6, title: 'Pause Button', description: "Pause and resume the rhythm check timer" },
+        { id: 'recalibrate', x: 51.0, y: 4.2, number: 7, title: 'Recalibrate Button', description: "The app estimates a rhythm check of 6 seconds. Recalibrate the timer to match reality if your rhythm checks are longer." },
+        { id: 'tabs', x: 50, y: 10.75, number: 8, title: 'Checklists', description: "Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)" },
+        { id: 'addTxBtn', x: 75, y: 95.4, number: 9, title: 'Add Treatment Button', description: "Tap here to log treatments and interventions during the arrest" },
       ],
     },
     addTxMenu: {
@@ -664,7 +663,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/2.png?raw=true',
       nextScreen: 'adrenalineDose',
       elements: [
-        { id: 'addTxSubmenu', x: 50, y: 45.9, number: 11, title: 'Add Tx submenu', description: "After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log" },
+        { id: 'addTxSubmenu', x: 50, y: 45.9, number: 10, title: 'Add Tx submenu', description: "After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log" },
       ],
     },
     adrenalineDose: {
@@ -672,7 +671,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/4.png?raw=true',
       nextScreen: 'home2',
       elements: [
-        { id: 'medications', x: 53.2, y: 44.2, number: 12, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone." },
+        { id: 'medications', x: 53.2, y: 44.2, number: 11, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication. Custom doses can also be added. Let's log adrenaline and amiodarone." },
       ],
     },
     home2: {
@@ -680,7 +679,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'home2_summary',
       elements: [
-        { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 13, title: 'Medication alerts', description: "When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due." },
+        { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 12, title: 'Medication alerts', description: "When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due." },
       ],
     },
     home2_summary: {
@@ -688,7 +687,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'summary',
       elements: [
-        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 14, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" },
+        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 13, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" },
       ],
     },
     summary: {
@@ -696,8 +695,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/6.png?raw=true',
       nextScreen: 'home2_close',
       elements: [
-        { id: 'pharmaSummary', x: 50, y: 50, number: 15, title: 'Medication Summary', description: "All medications logged will appear here, with an accumulative tally of the total amount of each drug given." },
-        { id: 'treatmentLog', x: 50, y: 70.9, number: 16, title: 'Treatment Log', description: "Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged." },
+        { id: 'pharmaSummary', x: 50, y: 50, number: 14, title: 'Medication Summary', description: "All medications logged will appear here, with an accumulative tally of the total amount of each drug given." },
+        { id: 'treatmentLog', x: 50, y: 70.9, number: 15, title: 'Treatment Log', description: "Chronological record of all logged interventions. Timestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged." },
       ],
     },
     home2_close: {
@@ -705,7 +704,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'caseSummary',
       elements: [
-        { id: 'close', x: 82.2, y: 4.2, number: 17, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." },
+        { id: 'close', x: 82.2, y: 4.2, number: 16, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital. We can now close the case." },
       ],
     },
     caseSummary: {
@@ -713,9 +712,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/8.png?raw=true',
       nextScreen: null,
       elements: [
-        { id: 'finalStats', x: 50, y: 61.64, number: 18, title: 'Final Case Data', description: "Now the case is over, the treatment log shows times to the second, not just to the minute" },
-        { id: 'export', x: 27, y: 14, number: 19, title: 'Export PDF', description: "Export the case summary and Tx log to a pdf, which you can then email for later review." },
-        { id: 'delete', x: 73, y: 14, number: 20, title: 'Delete Case', description: "Permanently delete the case information from the app" },
+        { id: 'finalStats', x: 50, y: 61.64, number: 17, title: 'Final Case Data', description: "Now the case is over, the treatment log shows times to the second, not just to the minute" },
+        { id: 'export', x: 27, y: 14, number: 18, title: 'Export PDF', description: "Export the case summary and Tx log to a pdf, which you can then email for later review." },
+        { id: 'delete', x: 73, y: 14, number: 19, title: 'Delete Case', description: "Permanently delete the case information from the app" },
       ],
     },
   };
@@ -1220,7 +1219,28 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose }) =>
       )}
       
       {/* Regular Next button for intro screens only */}
-      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
+      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'timingMethod' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
+
+      {/* After all 3 timing nodes explored: flash CPR timer card so user must press it */}
+      {allExplored && !showingInfoBox && currentScreen === 'timingMethod' && (
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '47%',
+            left: '16px',
+            right: '16px',
+            height: '22%',
+            backgroundColor: 'transparent',
+            border: '3px solid #10b981',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            zIndex: 10001,
+            animation: 'buttonPulse 2s infinite',
+          }}
+          aria-label="Choose CPR Timer"
+        />
+      )}
         <button
           onClick={handleNext}
           style={{
