@@ -2124,8 +2124,19 @@ export default function App() {
 
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 pt-2">
+                  <div className="grid grid-cols-2 gap-3 pt-2">
                     <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button
+                      onClick={() => {
+                        if (timingMode === 'cpr') setCatchupStep(5);
+                        else if (timingMode === 'elapsed') setCatchupStep(7);
+                        else if (timingMode === 'log') handleCatchupStart();
+                      }}
+                      disabled={!timingMode}
+                      className={`py-4 rounded-xl font-bold transition-all ${timingMode ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
+                    >
+                      {timingMode === 'log' ? 'Start Case' : 'Next'}
+                    </button>
                   </div>
                 </div>
               )}
