@@ -1725,6 +1725,7 @@ export default function App() {
                         setCatchupStep(6);
                         setTimingMode(null);
                         setTimingNodesComplete(false);
+                        setState(prev => ({ ...prev, patientType: 'adult', patientWeight: 70 }));
                         setShowInteractiveTutorial(true);
                       }} 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
