@@ -1775,8 +1775,8 @@ export default function App() {
                       <div className="flex flex-col items-center gap-3">
                         <div className="h-14 flex items-end justify-center">
                           <svg width="52" height="46" viewBox="0 0 52 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="26" cy="10" r="10" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
-                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
+                            <circle cx="26" cy="10" r="10" fill={weightType === 'adult' ? 'white' : '#6b9e7a'} />
+                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'adult' ? 'white' : '#6b9e7a'} />
                           </svg>
                         </div>
                         <div className="text-center">
@@ -1805,11 +1805,11 @@ export default function App() {
                         <div className="h-14 flex items-end justify-center">
                           <svg width="66" height="46" viewBox="0 0 66 46" fill="none" xmlns="http://www.w3.org/2000/svg">
                             {/* Carer - exact same coordinates as adult icon, slightly lighter */}
-                            <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#c4cad1'} />
-                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'paed' ? 'white' : '#c4cad1'} />
+                            <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#a8c4ae'} />
+                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'paed' ? 'white' : '#a8c4ae'} />
                             {/* Child - moved closer */}
-                            <circle cx="44" cy="23" r="6" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
-                            <path d="M32 46c0-6.627 5.373-14 12-14s12 7.373 12 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                            <circle cx="44" cy="23" r="6" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#d4849a'} />
+                            <path d="M32 46c0-6.627 5.373-14 12-14s12 7.373 12 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#d4849a'} />
                           </svg>
                         </div>
                         <div className="text-center">
