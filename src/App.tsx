@@ -1377,6 +1377,7 @@ export default function App() {
                   toggleChecklistItem={toggleChecklistItem}
                   onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
                   timingMode={timingMode}
+                  onDeleteTreatment={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))}
                 />
               )}
             </AnimatePresence>
@@ -1539,6 +1540,7 @@ export default function App() {
                 toggleChecklistItem={toggleChecklistItem}
                 onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
                 timingMode={timingMode}
+                onDeleteTreatment={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))}
               />
             )}
           </AnimatePresence>
@@ -2503,7 +2505,7 @@ function CounterItem({ label, value, onChange }: { label: string, value: number,
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem, onVitalsChange, timingMode }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem, onVitalsChange, timingMode, onDeleteTreatment }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -2513,7 +2515,8 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   isShockForced: boolean,
   toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
   onVitalsChange: (v: AppState['vitals']) => void,
-  timingMode?: string | null
+  timingMode?: string | null,
+  onDeleteTreatment?: (idx: number) => void
 }) {
   const isTop = ['reversibles', 'rosc', 'phea', 'vitals'].includes(type);
   
@@ -2530,7 +2533,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
-        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />}
+        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} onDelete={onDeleteTreatment} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
     </motion.div>
