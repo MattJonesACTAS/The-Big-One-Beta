@@ -1808,7 +1808,7 @@ export default function App() {
                             <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
                             <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
                             {/* Child - moved closer */}
-                            <circle cx="47" cy="21" r="6" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                            <circle cx="47" cy="23" r="6" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
                             <path d="M35 46c0-6.627 5.373-14 12-14s12 7.373 12 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
                           </svg>
                         </div>
