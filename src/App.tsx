@@ -174,7 +174,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Suxamethonium': { 
     doses: [
-      { dose: '1.5mg/kg', population: 'adult', indication: 'Intubation' },
+      { dose: '1.5mg/kg', population: 'adult', indication: 'Intubation', calculated: true },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -365,6 +365,22 @@ export default function App() {
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
+
+  // Correct timer drift when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && state.running && !state.rhythmCheckPaused) {
+        setState(prev => {
+          if (!prev.startTime || !prev.running || prev.rhythmCheckPaused) return prev;
+          const correctedElapsed = Math.floor((Date.now() - prev.startTime + prev.pausedTime) / 1000);
+          if (Math.abs(correctedElapsed - prev.elapsedSeconds) < 2) return prev;
+          return { ...prev, elapsedSeconds: correctedElapsed };
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [state.running, state.rhythmCheckPaused]);
 
   // Inject tutorial CPR button flash CSS
   useEffect(() => {
@@ -1345,7 +1361,7 @@ export default function App() {
               <SummaryStats state={state} pharmaSummary={pharmaSummary} />
               <div>
                 <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
-                <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} />
+                <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />
               </div>
             </div>
             <AnimatePresence>
@@ -2735,7 +2751,18 @@ function SectionGroup({
 }
 
 // --- TREATMENT LOG (EVEN COLUMNS) ---
-function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = false, timingMode }: { treatments: Treatment[], elapsedSeconds: number, catchupElapsed: number, isSummary?: boolean, timingMode?: string | null }) {
+function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = false, timingMode, onDelete }: { treatments: Treatment[], elapsedSeconds: number, catchupElapsed: number, isSummary?: boolean, timingMode?: string | null, onDelete?: (index: number) => void }) {
+  const [pendingDelete, setPendingDelete] = React.useState<number | null>(null);
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePressStart = (realIndex: number) => {
+    if (!onDelete) return;
+    longPressTimer.current = setTimeout(() => setPendingDelete(realIndex), 500);
+  };
+
+  const handlePressEnd = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
   // Helper to split treatment name into medication and dose
   const splitTreatmentName = (name: string): { med: string, dose: string | null } => {
     // Match dose patterns at the end: numbers followed by units (mg, mcg, mL, mMol, g, kg, %)
@@ -2772,6 +2799,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
           <div className="p-12 text-center text-neutral-300 italic">No treatments recorded</div>
         ) : (
           [...treatments].reverse().map((tx, i) => {
+            const realIndex = treatments.length - 1 - i; // actual index in treatments array
             const timeVal = isSummary ? tx.clockSeconds : tx.clock;
             const timeDisplay = tx.prior ? `< ${timeVal}` : timeVal;
             const elapsedDisplay = tx.prior ? `< ${isSummary ? formatTimeWithSeconds(catchupElapsed) : formatTime(catchupElapsed)}` : (isSummary ? formatTimeWithSeconds(tx.elapsed) : formatTime(tx.elapsed));
@@ -2780,7 +2808,15 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
             const { med, dose } = splitTreatmentName(tx.name);
             
             return (
-              <div key={i} className={`grid ${gridCols} px-4 py-4 items-center gap-1`}>
+              <div
+                key={i}
+                className={`grid ${gridCols} px-4 py-4 items-center gap-1 select-none ${onDelete ? 'cursor-pointer active:bg-neutral-50' : ''}`}
+                onMouseDown={() => handlePressStart(realIndex)}
+                onMouseUp={handlePressEnd}
+                onMouseLeave={handlePressEnd}
+                onTouchStart={() => handlePressStart(realIndex)}
+                onTouchEnd={handlePressEnd}
+              >
                 <div className="pr-1">
                   <div className={`text-[15px] font-bold ${
                     tx.name.toLowerCase().includes('shock') ? 'text-red-600' : 
@@ -2795,6 +2831,24 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
               </div>
             );
           })
+        )}
+      </div>
+
+      {/* Delete confirmation */}
+      {pendingDelete !== null && (
+        <div className="fixed inset-0 bg-black/60 z-[3000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl space-y-4">
+            <div className="text-center space-y-1">
+              <p className="font-bold text-neutral-900 text-lg">Delete treatment?</p>
+              <p className="text-neutral-500 text-sm">{treatments[pendingDelete]?.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setPendingDelete(null)} className="py-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
+              <button onClick={() => { onDelete?.(pendingDelete); setPendingDelete(null); }} className="py-3 rounded-xl bg-red-500 font-bold text-white">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
         )}
       </div>
     </div>
@@ -2876,7 +2930,7 @@ function SummaryOverlay({ state, pharmaSummary, timingMode }: { state: AppState,
         </div>
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
-        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} />
+        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />
       </div>
     </div>
   );
