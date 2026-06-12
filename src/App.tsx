@@ -1773,8 +1773,11 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className="h-14 flex items-center justify-center">
-                          <User size={52} strokeWidth={1.25} className={weightType === 'adult' ? 'text-white' : 'text-neutral-500'} />
+                        <div className="h-14 flex items-end justify-center pb-1">
+                          <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="26" cy="16" r="10" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
+                            <path d="M6 46c0-11.046 8.954-20 20-20s20 8.954 20 20" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
+                          </svg>
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
@@ -1800,7 +1803,10 @@ export default function App() {
                     >
                       <div className="flex flex-col items-center gap-3">
                         <div className="h-14 flex items-end justify-center pb-1">
-                          <User size={32} strokeWidth={1.25} className={weightType === 'paed' ? 'text-white' : 'text-neutral-500'} />
+                          <svg width="34" height="34" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="26" cy="16" r="10" fill={weightType === 'paed' ? 'white' : '#9ca3af'} />
+                            <path d="M6 46c0-11.046 8.954-20 20-20s20 8.954 20 20" fill={weightType === 'paed' ? 'white' : '#9ca3af'} />
+                          </svg>
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
