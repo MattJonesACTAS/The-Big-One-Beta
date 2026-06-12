@@ -1773,8 +1773,8 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className={`${weightType === 'adult' ? 'opacity-100' : 'opacity-60'}`}>
-                          <User size={48} strokeWidth={1.5} />
+                        <div className="h-12 flex items-center justify-center">
+                          <User size={48} strokeWidth={1.5} className={weightType === 'adult' ? 'text-white opacity-80' : 'text-neutral-400'} />
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
@@ -1799,8 +1799,8 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className={`${weightType === 'paed' ? 'opacity-100' : 'opacity-60'}`}>
-                          <User size={34} strokeWidth={1.5} />
+                        <div className="h-12 flex items-center justify-center">
+                          <User size={34} strokeWidth={1.5} className={weightType === 'paed' ? 'text-white opacity-80' : 'text-neutral-400'} />
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
