@@ -23,7 +23,8 @@ import {
   ArrowRight,
   Sliders,
   RefreshCw,
-  Hand
+  Hand,
+  User
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
 import InteractiveTutorial from './InteractiveTutorial';
@@ -1772,8 +1773,8 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className={`text-5xl ${weightType === 'adult' ? 'opacity-100' : 'opacity-60'}`}>
-                          👤
+                        <div className={`${weightType === 'adult' ? 'opacity-100' : 'opacity-60'}`}>
+                          <User size={48} strokeWidth={1.5} />
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
@@ -1798,8 +1799,8 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className={`text-5xl ${weightType === 'paed' ? 'opacity-100' : 'opacity-60'}`}>
-                          👶
+                        <div className={`${weightType === 'paed' ? 'opacity-100' : 'opacity-60'}`}>
+                          <User size={34} strokeWidth={1.5} />
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
