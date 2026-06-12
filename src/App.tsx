@@ -2530,7 +2530,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
-        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} />}
+        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
     </motion.div>
@@ -2875,7 +2875,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, timingMode }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, timingMode?: string | null }) {
+function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, timingMode?: string | null, onDelete?: (idx: number) => void }) {
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const hasVitals = Object.values(v).some(val => val !== '');
   const vitalRows = [
@@ -2907,7 +2907,7 @@ function SummaryOverlay({ state, pharmaSummary, timingMode }: { state: AppState,
         </div>
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
-        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />
+        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={onDelete} />
       </div>
     </div>
   );
