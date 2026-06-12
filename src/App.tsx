@@ -1773,8 +1773,8 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className="h-12 flex items-center justify-center">
-                          <User size={48} strokeWidth={1.5} className={weightType === 'adult' ? 'text-white opacity-80' : 'text-neutral-400'} />
+                        <div className="h-14 flex items-center justify-center">
+                          <User size={52} strokeWidth={1.25} className={weightType === 'adult' ? 'text-white' : 'text-neutral-500'} />
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
@@ -1799,8 +1799,8 @@ export default function App() {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <div className="h-12 flex items-center justify-center">
-                          <User size={34} strokeWidth={1.5} className={weightType === 'paed' ? 'text-white opacity-80' : 'text-neutral-400'} />
+                        <div className="h-14 flex items-end justify-center pb-1">
+                          <User size={32} strokeWidth={1.25} className={weightType === 'paed' ? 'text-white' : 'text-neutral-500'} />
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
