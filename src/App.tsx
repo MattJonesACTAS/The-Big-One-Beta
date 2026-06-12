@@ -1803,13 +1803,13 @@ export default function App() {
                     >
                       <div className="flex flex-col items-center gap-3">
                         <div className="h-14 flex items-end justify-center">
-                          <svg width="52" height="46" viewBox="0 0 64 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            {/* Adult figure (left, larger) */}
-                            <circle cx="24" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#9ca3af'} />
-                            <path d="M4 46c0-11.046 8.954-20 20-20s20 8.954 20 20" fill={weightType === 'paed' ? 'white' : '#9ca3af'} />
-                            {/* Child figure (right, smaller, slightly overlapping) */}
-                            <circle cx="47" cy="18" r="7" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
-                            <path d="M33 46c0-7.732 6.268-14 14-14s14 6.268 14 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                          <svg width="62" height="46" viewBox="0 0 74 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            {/* Adult figure (left, same size as adult icon) */}
+                            <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#9ca3af'} />
+                            <path d="M6 46c0-11.046 8.954-20 20-20s20 8.954 20 20" fill={weightType === 'paed' ? 'white' : '#9ca3af'} />
+                            {/* Child figure (right, smaller, overlapping) */}
+                            <circle cx="57" cy="18" r="7" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                            <path d="M43 46c0-7.732 6.268-14 14-14s14 6.268 14 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
                           </svg>
                         </div>
                         <div className="text-center">
