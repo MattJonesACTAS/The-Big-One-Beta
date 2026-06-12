@@ -1811,7 +1811,7 @@ export default function App() {
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
                           <div className={`text-xs mt-1 ${weightType === 'paed' ? 'text-pink-100' : 'text-neutral-400'}`}>
-                            Newborn-11 yrs
+                            24hrs - 11 yrs
                           </div>
                         </div>
                       </div>
