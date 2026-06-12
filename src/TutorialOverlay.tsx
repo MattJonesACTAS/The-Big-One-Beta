@@ -108,9 +108,7 @@ const ALL_NODES: GlobalNode[] = [
       },
       {
         title: 'Treatment Log',
-        description: 'At the bottom we have a chronological record of all logged interventions.\n\nTimestamps show the time of day and how long ago each Tx was logged.
-
-Treatments logged accidentally can be deleted by pressing on them in the Tx log.'
+        description: 'At the bottom we have a chronological record of all logged interventions.\n\nTimestamps show the time of day and how long ago each Tx was logged.\n\nTreatments logged accidentally can be deleted by pressing on them in the Tx log.'
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -312,10 +310,19 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   );
 }
 
+function renderWithItalics(text: string) {
+  const parts = text.split('The Big One');
+  return parts.map((part, i) => (
+    <React.Fragment key={i}>
+      {part}
+      {i < parts.length - 1 && <em>The Big One</em>}
+    </React.Fragment>
+  ));
+}
+
 function renderDescription(text: string) {
   const segments = text.split('\n\n');
 
-  // Group consecutive bullets into arrays, non-bullets stay as single items
   const groups: Array<{ type: 'text' | 'bullets'; items: string[] }> = [];
   for (const seg of segments) {
     if (seg.startsWith('•')) {
@@ -349,7 +356,7 @@ function renderDescription(text: string) {
                   marginBottom: bi < group.items.length - 1 ? '0.46em' : 0,
                   whiteSpace: 'pre-line'
                 }}>
-                  {bullet}
+                  {renderWithItalics(bullet)}
                 </p>
               ))}
             </div>
@@ -361,7 +368,7 @@ function renderDescription(text: string) {
             marginBottom: isLast ? 0 : '0.9em',
             whiteSpace: 'pre-line'
           }}>
-            {group.items[0]}
+            {renderWithItalics(group.items[0])}
           </p>
         );
       })}
