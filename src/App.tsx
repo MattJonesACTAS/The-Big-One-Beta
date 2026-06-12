@@ -1222,7 +1222,7 @@ export default function App() {
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.0</span></h1>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.1</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. The Big One tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
@@ -1250,8 +1250,8 @@ export default function App() {
         </div>
       )}
       {/* Top Controls */}
-      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-1' : 'grid-cols-3'}`}>
-        {timingMode !== 'log' && (
+      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-1' : timingMode === 'elapsed' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {timingMode !== 'log' && timingMode !== 'elapsed' && (
           <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
             {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
             {(state.running && !state.rhythmCheckPaused) ? 'Pause' : 'Play'}
@@ -1373,6 +1373,14 @@ export default function App() {
                 <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
               </div>
             )}
+            {timingMode === 'elapsed' && (
+              <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+                <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Next check</span>
+                <span className={`text-[22px] sm:text-[43px] font-bold tabular-nums leading-none ${(state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-500' : 'text-neutral-400'}`}>
+                  {formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))}
+                </span>
+              </div>
+            )}
             <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
               <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
               <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
@@ -1487,7 +1495,7 @@ export default function App() {
                         : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
                   }
                 </div>
-                <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 ${
+                <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 ${timingMode === 'elapsed' ? 'translate-y-0.5' : ''} ${
                   timingMode === 'elapsed' ? 'text-[11px] sm:text-[14px]' : 'text-[14px] sm:text-[18px]'
                 } ${
                   state.rhythmCheckOvertime > 0 ? 'text-red-600 flash-red' : 'text-neutral-400'
@@ -1735,7 +1743,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One v1.0</p>
+                    <p>The Big One v1.1</p>
                     <p>ACTAS CMG v1.0.5.4</p>
                     <p>Last reviewed May 2026</p>
                   </div>
@@ -2066,6 +2074,7 @@ export default function App() {
                     {/* Record keeping only */}
                     <button
                       onClick={() => setTimingMode('log')}
+                      disabled={showInteractiveTutorial}
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'log' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
@@ -2095,6 +2104,7 @@ export default function App() {
                           setTutorialMode(true);
                         }
                       }}
+                      disabled={showInteractiveTutorial && !timingNodesComplete}
                       data-tutorial="cpr-btn"
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'cpr' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
@@ -2124,6 +2134,7 @@ export default function App() {
                     {/* Elapsed time */}
                     <button
                       onClick={() => setTimingMode('elapsed')}
+                      disabled={showInteractiveTutorial}
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'elapsed' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
