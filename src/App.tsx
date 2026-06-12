@@ -1782,7 +1782,7 @@ export default function App() {
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
                           <div className={`text-xs mt-1 ${weightType === 'adult' ? 'text-emerald-100' : 'text-neutral-400'}`}>
-                            35-200 kg
+                            35 - 200 kg
                           </div>
                         </div>
                       </div>
@@ -1805,11 +1805,11 @@ export default function App() {
                         <div className="h-14 flex items-end justify-center">
                           <svg width="66" height="46" viewBox="0 0 66 46" fill="none" xmlns="http://www.w3.org/2000/svg">
                             {/* Carer - exact same coordinates as adult icon, slightly lighter */}
-                            <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
-                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
+                            <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#c4cad1'} />
+                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'paed' ? 'white' : '#c4cad1'} />
                             {/* Child - moved closer */}
-                            <circle cx="47" cy="23" r="6" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
-                            <path d="M35 46c0-6.627 5.373-14 12-14s12 7.373 12 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                            <circle cx="44" cy="23" r="6" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                            <path d="M32 46c0-6.627 5.373-14 12-14s12 7.373 12 14" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
                           </svg>
                         </div>
                         <div className="text-center">
