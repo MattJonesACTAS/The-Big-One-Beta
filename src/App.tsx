@@ -16,6 +16,7 @@ import {
   ChevronDown, 
   AlertCircle,
   XCircle,
+  X,
   Clock,
   Zap,
   ShieldCheck,
@@ -2772,9 +2773,13 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
     ? (showElapsed ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2fr_1fr]')
     : (showElapsed ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]' : 'grid-cols-[2.1fr_1fr_0.9fr]');
 
+  const deleteCol = onDelete ? 'auto ' : '';
+  const gridColsFinal = deleteCol + gridCols;
+
   return (
     <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
-      <div className={`grid ${gridCols} gap-1 bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
+      <div className={`grid ${gridColsFinal} gap-1 bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
+        {onDelete && <div />}
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
         {showElapsed && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>}
@@ -2795,11 +2800,15 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
             const { med, dose } = splitTreatmentName(tx.name);
 
             return (
-              <div
-                key={i}
-                className={`grid ${gridCols} px-4 py-4 items-center gap-1 ${onDelete ? 'cursor-pointer active:bg-neutral-50' : ''}`}
-                onClick={() => onDelete && setPendingDelete(realIndex)}
-              >
+              <div key={i} className={`grid ${gridColsFinal} px-4 py-4 items-center gap-1`}>
+                {onDelete && (
+                  <button
+                    onClick={() => setPendingDelete(realIndex)}
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors flex-shrink-0"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
                 <div className="pr-1">
                   <div className={`text-[15px] font-bold ${
                     tx.name.toLowerCase().includes('shock') ? 'text-red-600' :
