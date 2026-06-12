@@ -1776,7 +1776,7 @@ export default function App() {
                         <div className="h-14 flex items-end justify-center">
                           <svg width="52" height="46" viewBox="0 0 52 46" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="26" cy="10" r="10" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
-                            <path d="M6 46c0-11.046 8.954-16 20-16s20 4.954 20 16" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
+                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'adult' ? 'white' : '#9ca3af'} />
                           </svg>
                         </div>
                         <div className="text-center">
@@ -1806,10 +1806,10 @@ export default function App() {
                           <svg width="66" height="46" viewBox="0 0 66 46" fill="none" xmlns="http://www.w3.org/2000/svg">
                             {/* Carer - exact same coordinates as adult icon, slightly lighter */}
                             <circle cx="26" cy="10" r="10" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
-                            <path d="M6 46c0-11.046 8.954-16 20-16s20 4.954 20 16" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
+                            <path d="M6 46c0-11.046 8.954-24 20-24s20 12.954 20 24" fill={weightType === 'paed' ? 'white' : '#b0b8c1'} />
                             {/* Child - moved closer */}
                             <circle cx="47" cy="19" r="7" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
-                            <path d="M33 46c0-7.732 6.268-11 14-11s14 3.268 14 11" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
+                            <path d="M33 46c0-7.732 6.268-17 14-17s14 9.268 14 17" fill={weightType === 'paed' ? 'rgba(255,255,255,0.85)' : '#6b7280'} />
                           </svg>
                         </div>
                         <div className="text-center">
