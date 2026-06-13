@@ -1714,7 +1714,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden ${catchupTxMode ? '' : 'p-6 absolute'}`}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : 'p-6 absolute'}`}
               style={catchupTxMode ? { height: '80vh' } : {}}
             >
               {catchupTxMode && (
@@ -3467,7 +3467,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
           />
           
-          <div className="py-4 px-4 border-t border-neutral-100 bg-neutral-50 mb-4">
+          <div className="p-4 border-t border-neutral-100 bg-neutral-50 mb-4">
             <div className="flex gap-2">
               <input 
                 type="text" 
