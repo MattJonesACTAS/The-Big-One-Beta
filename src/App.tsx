@@ -1714,7 +1714,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl overflow-hidden ${catchupTxMode ? '' : 'absolute'}`}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden ${catchupTxMode ? '' : 'p-6 absolute'}`}
               style={catchupTxMode ? { height: '80vh' } : {}}
             >
               {catchupTxMode && (
