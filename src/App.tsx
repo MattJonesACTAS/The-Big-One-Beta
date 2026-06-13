@@ -3531,7 +3531,7 @@ function TxSection({
     <div>
       <div 
         onClick={handleToggle}
-        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${colorMap[color]}`}
+        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left sticky top-0 z-10 ${colorMap[color]}`}
       >
         <span>{title}</span>
         <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />
