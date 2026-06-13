@@ -3467,7 +3467,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
           />
           
-          <div className="p-6 border-t border-neutral-100 bg-neutral-50 px-2 sm:px-6 mb-4">
+          <div className="py-4 px-4 border-t border-neutral-100 bg-neutral-50 mb-4">
             <div className="flex gap-2">
               <input 
                 type="text" 
