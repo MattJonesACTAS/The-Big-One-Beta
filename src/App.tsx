@@ -3475,6 +3475,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
                 onChange={e => setCustomTx(e.target.value)}
                 placeholder="Custom treatment..."
                 className="flex-1 bg-white border border-neutral-200 rounded-xl p-4 text-base focus:ring-2 focus:ring-emerald-500 outline-none"
+                style={{ maxWidth: 'calc(100% - 8px)' }}
               />
               <button 
                 onClick={() => { if(customTx) { addTreatment(customTx); setCustomTx(''); } }} 
