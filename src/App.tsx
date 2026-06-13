@@ -2768,6 +2768,13 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
       const rest = name.slice('Sodium bicarbonate'.length).trim();
       return { med: 'Sodium bic.', dose: rest || null };
     }
+    // Shock/Disarm: split on ' - '
+    if (name.startsWith('Shock - ')) {
+      return { med: 'Shock', dose: name.slice(8) };
+    }
+    if (name.startsWith('Disarm - ')) {
+      return { med: 'Disarm', dose: name.slice(9) };
+    }
     // Match known medication names first, then treat remainder as dose
     const knownMeds = [
       'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
@@ -2821,7 +2828,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
                   {onDelete && (
                     <button
                       onClick={() => setPendingDelete(realIndex)}
-                      className="-ml-2 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="-ml-2.5 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       <X size={8} />
                     </button>
