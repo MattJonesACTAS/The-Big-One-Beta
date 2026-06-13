@@ -304,6 +304,7 @@ export default function App() {
     }
   });
   const [catchupStep, setCatchupStep] = useState(1);
+  const [catchupTxMode, setCatchupTxMode] = useState(false);
   const [catchupElapsed, setCatchupElapsed] = useState({ mins: 0, secs: 0 });
   const [catchupRhythm, setCatchupRhythm] = useState({ mins: 2, secs: 0 });
   const [weightType, setWeightType] = useState<'adult' | 'paed' | null>(null);
@@ -678,8 +679,16 @@ export default function App() {
       elapsed: state.elapsedSeconds,
       round: state.cprRound,
       clock: getLocalTime(now),
-      clockSeconds: getLocalTimeWithSeconds(now)
+      clockSeconds: getLocalTimeWithSeconds(now),
+      ...(catchupTxMode ? { prior: true } : {})
     };
+
+    // In catchup mode: just add as prior treatment and close overlay
+    if (catchupTxMode) {
+      setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment], currentOverlay: null }));
+      setCatchupTxMode(false);
+      return;
+    }
 
     setState(prev => {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
@@ -1129,7 +1138,7 @@ export default function App() {
           </button>
         </div>
 
-        <SummaryStats state={state} pharmaSummary={pharmaSummary} />
+        <ArrestSummarySection state={state} />
 
         {(() => {
           const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
@@ -1159,6 +1168,8 @@ export default function App() {
             </div>
           );
         })()}
+
+        <PharmaSummarySection pharmaSummary={pharmaSummary} />
         
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} isSummary={true} timingMode={timingMode} />
@@ -2063,6 +2074,12 @@ export default function App() {
                         </button>
                       ))}
                     </div>
+                    <button
+                      onClick={() => { setCatchupTxMode(true); setState(p => ({ ...p, currentOverlay: 'treatment' })); }}
+                      className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-600 flex items-center justify-center gap-2"
+                    >
+                      <Plus size={16} /> Full Tx list
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
@@ -2893,6 +2910,52 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
   );
 }
 
+function ArrestSummarySection({ state }: { state: AppState }) {
+  const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
+  const patientLabel = state.patientType === 'adult'
+    ? `Adult · ${state.patientWeight === '>100' ? '>100' : state.patientWeight}kg`
+    : state.patientType === 'paed'
+    ? `Paediatric · ${state.patientWeight}kg`
+    : null;
+  return (
+    <div className="space-y-6">
+      {patientLabel && (
+        <div className="rounded-xl overflow-hidden border border-neutral-100">
+          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider">PATIENT</div>
+          <div className="bg-white px-4 py-3">
+            <span className="text-[17px] font-bold text-neutral-900">{patientLabel}</span>
+          </div>
+        </div>
+      )}
+      <div>
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">ARREST SUMMARY</div>
+        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
+          <StatRow label="CPR Rounds" value={state.cprRound} />
+          <StatRow label="Shocks given" value={state.shocks} color="text-red-600" />
+          <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PharmaSummarySection({ pharmaSummary }: { pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
+  return (
+    <div>
+      <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">PHARMA SUMMARY</div>
+      <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
+        {Object.keys(pharmaSummary).length === 0 ? (
+          <div className="p-4 text-neutral-300 italic text-sm">No medications given</div>
+        ) : (
+          Object.entries(pharmaSummary).map(([name, info]) => (
+            <StatRow key={name} label={name} value={info.display} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, timingMode?: string | null, onDelete?: (idx: number) => void }) {
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const hasVitals = Object.values(v).some(val => val !== '');
@@ -2909,20 +2972,21 @@ function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete }: { state:
 
   return (
     <div className="space-y-6 pb-20">
-      <SummaryStats state={state} pharmaSummary={pharmaSummary} />
+      <ArrestSummarySection state={state} />
       <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
-          {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
-            <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-              <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
-              <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
-                {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
-              </span>
-            </div>
-          )) : (
-            <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded yet.</div>
-          )}
-        </div>
+        <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
+        {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
+          <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
+            <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
+            <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
+              {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
+            </span>
+          </div>
+        )) : (
+          <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded yet.</div>
+        )}
+      </div>
+      <PharmaSummarySection pharmaSummary={pharmaSummary} />
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={onDelete} />
