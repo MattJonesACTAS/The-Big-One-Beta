@@ -3538,7 +3538,7 @@ function TxSection({
     <div>
       <div 
         onClick={handleToggle}
-        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left sticky top-0 z-10 ${colorMap[color]}`}
+        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${colorMap[color]}`}
       >
         <span>{title}</span>
         <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />
@@ -3548,6 +3548,7 @@ function TxSection({
         animate={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
         transition={{ duration: 0.3 }}
         className="overflow-hidden bg-white"
+        style={!collapsed ? { maxHeight: '60vh', overflowY: 'auto' } : {}}
       >
         <div className="p-3 grid grid-cols-1 gap-2">
           {items.map(item => {
