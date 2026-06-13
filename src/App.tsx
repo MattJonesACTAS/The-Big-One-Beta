@@ -2803,7 +2803,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
   return (
     <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
       <div className={`grid ${gridCols} gap-1 bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
-        <div className={`text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left ${onDelete ? 'pl-4' : ''}`}>Treatment</div>
+        <div className={`text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left ${onDelete ? 'pl-5' : ''}`}>Treatment</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
         {showElapsed && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>}
         {showAgo && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>}
@@ -2824,7 +2824,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
 
             return (
               <div key={i} className={`grid ${gridCols} px-4 py-4 items-center gap-1`}>
-                <div className="pr-1 flex items-center gap-2">
+                <div className="pr-1 flex items-center gap-2.5">
                   {onDelete && (
                     <button
                       onClick={() => setPendingDelete(realIndex)}
