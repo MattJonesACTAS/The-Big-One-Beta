@@ -3468,17 +3468,17 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           />
           
           <div className="py-3 px-2 border-t border-neutral-100 bg-neutral-50 mb-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full">
               <input 
                 type="text" 
                 value={customTx}
                 onChange={e => setCustomTx(e.target.value)}
                 placeholder="Custom treatment..."
-                className="flex-1 bg-white border border-neutral-200 rounded-xl p-4 text-base focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="flex-1 min-w-0 bg-white border border-neutral-200 rounded-xl p-4 text-base focus:ring-2 focus:ring-emerald-500 outline-none"
               />
               <button 
                 onClick={() => { if(customTx) { addTreatment(customTx); setCustomTx(''); } }} 
-                className="bg-emerald-600 text-white px-6 rounded-xl font-bold btn-base"
+                className="bg-emerald-600 text-white px-4 rounded-xl font-bold btn-base flex-shrink-0"
               >
                 Add
               </button>
