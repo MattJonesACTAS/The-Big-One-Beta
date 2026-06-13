@@ -2801,9 +2801,9 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
                   {onDelete && (
                     <button
                       onClick={() => setPendingDelete(realIndex)}
-                      className="-ml-1 w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="-ml-2 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
                     >
-                      <X size={12} />
+                      <X size={8} />
                     </button>
                   )}
                   <div>
