@@ -1151,14 +1151,14 @@ export default function App() {
         {(() => {
           const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
           const vitalRows = [
-            { label: 'Heart Rate',     value: v.hr,   unit: 'bpm'    },
-            { label: 'Resp Rate',      value: v.rr,   unit: 'br/min' },
+            { label: 'HR',     value: v.hr,   unit: 'bpm'    },
+            { label: 'RR',      value: v.rr,   unit: 'br/min' },
             { label: 'SpO₂',           value: v.spo2, unit: '%'      },
             { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
             { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
             { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
             { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
-            { label: 'Temperature',    value: v.temp, unit: '°C'     },
+            { label: 'Temp',    value: v.temp, unit: '°C'     },
           ].filter(r => r.value !== '');
           return (
             <div className="rounded-xl overflow-hidden border border-neutral-100">
@@ -1359,14 +1359,14 @@ export default function App() {
               {(() => {
                 const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
                 const vitalRows = [
-                  { label: 'Heart Rate',     value: v.hr,   unit: 'bpm'    },
-                  { label: 'Resp Rate',      value: v.rr,   unit: 'br/min' },
+                  { label: 'HR',     value: v.hr,   unit: 'bpm'    },
+                  { label: 'RR',      value: v.rr,   unit: 'br/min' },
                   { label: 'SpO₂',           value: v.spo2, unit: '%'      },
                   { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
                   { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
                   { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
                   { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
-                  { label: 'Temperature',    value: v.temp, unit: '°C'     },
+                  { label: 'Temp',    value: v.temp, unit: '°C'     },
                 ].filter(r => r.value !== '');
                 return (
                   <div className="rounded-xl overflow-hidden border border-neutral-100">
@@ -2585,7 +2585,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
-        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} onClose={onClose} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} onDelete={onDeleteTreatment} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
@@ -2593,44 +2593,35 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   );
 }
 
-function VitalsOverlay({ vitals, onChange, onClose }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void, onClose?: () => void }) {
-  const [local, setLocal] = React.useState({ ...vitals });
-  const update = (key: keyof AppState['vitals'], val: string) => setLocal(prev => ({ ...prev, [key]: val }));
+function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
+  const update = (key: keyof AppState['vitals'], val: string) => onChange({ ...vitals, [key]: val });
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
-    { key: 'hr',   label: 'Heart Rate'    },
-    { key: 'rr',   label: 'Resp Rate'     },
-    { key: 'spo2', label: 'SpO₂'          },
-    { key: 'etco2',label: 'EtCO₂'         },
-    { key: 'bpSys',label: 'BP Systolic'   },
-    { key: 'bpDia',label: 'BP Diastolic'  },
-    { key: 'gcs',  label: 'GCS'           },
-    { key: 'bgl',  label: 'BGL'           },
-    { key: 'temp', label: 'Temperature'   },
+    { key: 'hr',   label: 'HR'           },
+    { key: 'rr',   label: 'RR'           },
+    { key: 'spo2', label: 'SpO₂'         },
+    { key: 'etco2',label: 'EtCO₂'        },
+    { key: 'bpSys',label: 'Systolic BP'  },
+    { key: 'bpDia',label: 'Diastolic BP' },
+    { key: 'gcs',  label: 'GCS'          },
+    { key: 'bgl',  label: 'BGL'          },
+    { key: 'temp', label: 'Temp'         },
   ];
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full overflow-y-auto">
       <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-sky-50 text-sky-800 border-sky-200">Vital Signs</div>
-      <div className="flex-1 p-3 space-y-2">
+      <div className="p-3 space-y-2">
         {fields.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
             <span className="text-[15px] font-bold text-neutral-800">{label}</span>
             <input
               type="text"
               inputMode="decimal"
-              value={local[key]}
+              value={vitals[key]}
               onChange={e => update(key, e.target.value)}
               className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
             />
           </div>
         ))}
-      </div>
-      <div className="flex-shrink-0 p-4 border-t border-neutral-100">
-        <button
-          onClick={() => { onChange(local); onClose?.(); }}
-          className="w-full bg-sky-600 text-white p-3 rounded-xl font-bold"
-        >
-          Save
-        </button>
       </div>
     </div>
   );
@@ -3026,14 +3017,14 @@ function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete }: { state:
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const hasVitals = Object.values(v).some(val => val !== '');
   const vitalRows = [
-    { label: 'Heart Rate',     value: v.hr,   unit: 'bpm'    },
-    { label: 'Resp Rate',      value: v.rr,   unit: 'br/min' },
+    { label: 'HR',     value: v.hr,   unit: 'bpm'    },
+    { label: 'RR',      value: v.rr,   unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
     { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
     { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
     { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
-    { label: 'Temperature',    value: v.temp, unit: '°C'     },
+    { label: 'Temp',    value: v.temp, unit: '°C'     },
   ].filter(r => r.value !== '');
 
   return (
