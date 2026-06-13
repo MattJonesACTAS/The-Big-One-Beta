@@ -684,7 +684,7 @@ export default function App() {
     };
 
     if (catchupTxMode) {
-      setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment], currentOverlay: null }));
+      setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment] }));
       setCatchupTxMode(false);
       return;
     }
@@ -1191,7 +1191,29 @@ export default function App() {
          </div>
         )}
 
-        {/* Tutorial Overlay - also show on case summary */}
+        {/* Full Tx list overlay during catchup */}
+        {catchupTxMode && (
+          <div className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+            <div className="flex-1 overflow-y-auto">
+              <TreatmentSelection
+                addTreatment={(name) => {
+                  addTreatment(name);
+                }}
+                state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
+                isShockForced={false}
+                patientTypeOverride={weightType}
+              />
+            </div>
+            <div className="flex-shrink-0 p-4 bg-white border-t border-neutral-100">
+              <button
+                onClick={() => setCatchupTxMode(false)}
+                className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        )}
         {tutorialMode && (
           <TutorialOverlay
             appState={state}
@@ -1706,7 +1728,7 @@ export default function App() {
 
       {/* Catchup Modal */}
       <AnimatePresence>
-        {showCatchup && !catchupTxMode && (
+        {showCatchup && (
           <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4">
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
@@ -2078,7 +2100,7 @@ export default function App() {
                       ))}
                     </div>
                     <button
-                      onClick={() => { setCatchupTxMode(true); setState(p => ({ ...p, currentOverlay: 'treatment' })); }}
+                      onClick={() => setCatchupTxMode(true)}
                       className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-600 flex items-center justify-center gap-2"
                     >
                       <Plus size={16} /> Full Tx list
