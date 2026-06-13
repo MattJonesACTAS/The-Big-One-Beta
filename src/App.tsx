@@ -2806,11 +2806,11 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
 
             return (
               <div key={i} className={`grid ${gridCols} px-4 py-4 items-center gap-1`}>
-                <div className="pr-1 flex items-center gap-2">
+                <div className="pr-1 flex items-center gap-1.5">
                   {onDelete && (
                     <button
                       onClick={() => setPendingDelete(realIndex)}
-                      className="w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="ml-1 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       <X size={8} />
                     </button>
