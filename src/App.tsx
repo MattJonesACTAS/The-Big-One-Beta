@@ -2372,7 +2372,7 @@ export default function App() {
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Recalibrate timer</div>
-              <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">{timingMode === 'elapsed' ? 'Adjust the current elapsed time or rhythm check' : 'Adjust the current rhythm check countdown'}</div>
             </button>
             )}
             <button
