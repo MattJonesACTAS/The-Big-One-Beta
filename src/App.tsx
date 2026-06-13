@@ -1708,12 +1708,11 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'flex flex-col' : 'p-6 overflow-hidden'}`}
-              style={catchupTxMode ? { maxHeight: '85vh' } : {}}
+              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl overflow-hidden absolute ${catchupTxMode ? 'max-h-[85vh] flex flex-col' : ''}`}
             >
               {catchupTxMode && (
                 <>
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto -mx-6 px-6">
                     <TreatmentSelection
                       addTreatment={(name) => {
                         addTreatment(name);
@@ -1725,7 +1724,7 @@ export default function App() {
                       noScroll
                     />
                   </div>
-                  <div className="flex-shrink-0 p-4 border-t border-neutral-100">
+                  <div className="pt-4 border-t border-neutral-100 -mx-6 px-6 mt-4">
                     <button
                       onClick={() => setCatchupTxMode(false)}
                       className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
@@ -3550,10 +3549,10 @@ function TxSection({
       </div>
       <div 
         style={{
-          maxHeight: collapsed ? 0 : '55vh',
-          overflowY: collapsed ? 'hidden' : 'auto',
+          maxHeight: collapsed ? 0 : '9999px',
+          overflowY: 'hidden',
           opacity: collapsed ? 0 : 1,
-          transition: 'max-height 0.3s ease, opacity 0.3s ease',
+          transition: 'max-height 0.35s ease, opacity 0.2s ease',
         }}
         className="bg-white"
       >
