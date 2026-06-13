@@ -276,16 +276,14 @@ const formatSodiumBicarbonateDose = (doseStr: string): string => {
 };
 
 const formatCalciumDose = (doseStr: string, weight: number | null): string => {
-  // Calcium chloride 10% = 100mg/mL
-  // 10mg/kg, max 1g (10mL)
+  // Calcium chloride 10% = 100mg/mL, dose 10mg/kg max 1g (10mL)
   if (!weight) return doseStr;
-  if (weight >= 100) {
-    return `10mg/kg — 1g max (10mL of 10%)`;
+  const calculatedMg = Math.min(10 * (typeof weight === 'number' ? weight : parseFloat(String(weight))), 1000);
+  const mL = Math.round(calculatedMg / 100 * 10) / 10;
+  if (calculatedMg >= 1000) {
+    return `1g / ${mL}mL`;
   }
-  const calculatedMg = 10 * weight; // 10mg/kg
-  const mg = Math.min(Math.round(calculatedMg * 10) / 10, 1000);
-  const mL = Math.round(mg / 100 * 10) / 10; // 100mg/mL
-  return `10mg/kg (${mg}mg / ${mL}mL of 10%)`;
+  return `${calculatedMg}mg / ${mL}mL`;
 };
 
 export default function App() {
@@ -2824,11 +2822,11 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
 
             return (
               <div key={i} className={`grid ${gridCols} px-4 py-4 items-center gap-1`}>
-                <div className="pr-1 flex items-center gap-2.5">
+                <div className="pr-1 flex items-center gap-3">
                   {onDelete && (
                     <button
                       onClick={() => setPendingDelete(realIndex)}
-                      className="-ml-2.5 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="-ml-1.5 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       <X size={8} />
                     </button>
