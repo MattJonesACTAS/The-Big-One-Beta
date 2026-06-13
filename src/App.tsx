@@ -1355,7 +1355,36 @@ export default function App() {
           /* Log mode: scrollable running summary is the home screen */
           <div className="h-full flex flex-col relative">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <SummaryStats state={state} pharmaSummary={pharmaSummary} />
+              <ArrestSummarySection state={state} />
+              {(() => {
+                const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+                const vitalRows = [
+                  { label: 'Heart Rate',     value: v.hr,   unit: 'bpm'    },
+                  { label: 'Resp Rate',      value: v.rr,   unit: 'br/min' },
+                  { label: 'SpO₂',           value: v.spo2, unit: '%'      },
+                  { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
+                  { label: 'Blood Pressure', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
+                  { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
+                  { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
+                  { label: 'Temperature',    value: v.temp, unit: '°C'     },
+                ].filter(r => r.value !== '');
+                return (
+                  <div className="rounded-xl overflow-hidden border border-neutral-100">
+                    <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider">VITAL SIGNS</div>
+                    {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
+                      <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
+                        <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
+                        <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
+                          {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
+                        </span>
+                      </div>
+                    )) : (
+                      <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded yet.</div>
+                    )}
+                  </div>
+                );
+              })()}
+              <PharmaSummarySection pharmaSummary={pharmaSummary} />
               <div>
                 <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />
