@@ -2585,7 +2585,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
-        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} onClose={onClose} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} onDelete={onDeleteTreatment} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
@@ -2593,8 +2593,9 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   );
 }
 
-function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
-  const update = (key: keyof AppState['vitals'], val: string) => onChange({ ...vitals, [key]: val });
+function VitalsOverlay({ vitals, onChange, onClose }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void, onClose?: () => void }) {
+  const [local, setLocal] = React.useState({ ...vitals });
+  const update = (key: keyof AppState['vitals'], val: string) => setLocal(prev => ({ ...prev, [key]: val }));
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
     { key: 'hr',   label: 'Heart Rate'    },
     { key: 'rr',   label: 'Resp Rate'     },
@@ -2607,21 +2608,29 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
     { key: 'temp', label: 'Temperature'   },
   ];
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto flex flex-col">
       <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-sky-50 text-sky-800 border-sky-200">Vital Signs</div>
-      <div className="p-3 space-y-2">
+      <div className="flex-1 p-3 space-y-2">
         {fields.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
             <span className="text-[15px] font-bold text-neutral-800">{label}</span>
             <input
               type="text"
               inputMode="decimal"
-              value={vitals[key]}
+              value={local[key]}
               onChange={e => update(key, e.target.value)}
               className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
             />
           </div>
         ))}
+      </div>
+      <div className="flex-shrink-0 p-4 border-t border-neutral-100">
+        <button
+          onClick={() => { onChange(local); onClose?.(); }}
+          className="w-full bg-sky-600 text-white p-3 rounded-xl font-bold"
+        >
+          Save
+        </button>
       </div>
     </div>
   );
