@@ -1714,8 +1714,8 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'overflow-y-auto' : 'overflow-hidden'}`}
-              style={catchupTxMode ? { maxHeight: '80vh', top: '50%', transform: 'translateY(-50%)' } : {}}
+              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl ${catchupTxMode ? 'overflow-y-auto' : 'overflow-hidden absolute'}`}
+              style={catchupTxMode ? { maxHeight: '80vh' } : {}}
             >
               {catchupTxMode && (
                 <div className="flex flex-col">
