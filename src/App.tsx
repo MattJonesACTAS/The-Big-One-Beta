@@ -1050,6 +1050,10 @@ export default function App() {
       initialTxs.push({ name: `Adrenaline push #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
     }
     
+    // Include any treatments added via the Full Tx list button
+    const extraPriorTxs = state.treatments.filter(t => t.prior);
+    const allInitialTxs = [...extraPriorTxs, ...initialTxs];
+
     setState({
       ...INITIAL_STATE,
       running: true,
@@ -1059,7 +1063,7 @@ export default function App() {
       rhythmCheckTarget: rhythmCheckTarget,
       cprRound: Math.max(1, priorCounts.shock + priorCounts.disarm),
       shocks: priorCounts.shock,
-      treatments: initialTxs,
+      treatments: allInitialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
       patientWeight: parsedWeight || (tutorialMode ? 70 : null),
@@ -1715,6 +1719,7 @@ export default function App() {
                     }}
                     state={state}
                     isShockForced={false}
+                    patientTypeOverride={weightType}
                   />
                   <button
                     onClick={() => setCatchupTxMode(false)}
@@ -3031,7 +3036,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false }: 
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatment: (n: string) => void, state: AppState, isShockForced?: boolean }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride }: { addTreatment: (n: string) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -3145,8 +3150,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   
   if (selectedMed && DOSE_CONFIG[selectedMed]) {
     const allDoses = DOSE_CONFIG[selectedMed].doses;
-    const filteredDoses = state.patientType 
-      ? allDoses.filter(d => d.population === 'both' || d.population === state.patientType)
+    const effectivePatientType = patientTypeOverride ?? state.patientType;
+    const filteredDoses = effectivePatientType 
+      ? allDoses.filter(d => d.population === 'both' || d.population === effectivePatientType)
       : allDoses;
     
     // Check if a dose is a unit-only custom input (e.g., "mg/h", "mg")
@@ -3197,7 +3203,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       }
       
       // Amiodarone paed: cap display at 300mg for arrest, 150mg for VT with output
-      if (selectedMed === 'Amiodarone' && doseOpt.dose.includes('/kg') && state.patientType === 'paed') {
+      if (selectedMed === 'Amiodarone' && doseOpt.dose.includes('/kg') && (effectivePatientType ?? state.patientType) === 'paed') {
         const base = calculateDose(doseOpt.dose, state.patientWeight);
         const mgMatch = base.match(/\(([\d.]+)mg\)/);
         if (mgMatch) {
