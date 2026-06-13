@@ -328,6 +328,9 @@ export default function App() {
   const [showTimerAdjust, setShowTimerAdjust] = useState(false);
   const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
+  const [showRecalibrateMenu, setShowRecalibrateMenu] = useState(false);
+  const [showWeightChange, setShowWeightChange] = useState(false);
+  const [newWeightInput, setNewWeightInput] = useState('');
   const [showRearrestIntervalPicker, setShowRearrestIntervalPicker] = useState(false);
   const [rearrestElapsed, setRearrestElapsed] = useState<number>(0);
   const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
@@ -1274,17 +1277,7 @@ export default function App() {
         )}
         {timingMode !== 'log' && (
           <button 
-            onClick={() => {
-              if (timingMode === 'elapsed') {
-                setShowElapsedRecalibrate(true);
-              } else {
-                const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
-                const mins = Math.floor(currentCountdown / 60);
-                const secs = currentCountdown % 60;
-                setTimerAdjustValue({ mins, secs });
-                setShowTimerAdjust(true);
-              }
-            }} 
+            onClick={() => setShowRecalibrateMenu(true)} 
             className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
           >
             <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
@@ -2351,6 +2344,80 @@ export default function App() {
             >
               Continue
             </button>
+          </div>
+        </div>
+      )}
+
+      {showRecalibrateMenu && (
+        <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
+            <h2 className="text-2xl font-bold text-neutral-900 text-center">Recalibrate</h2>
+            <button
+              onClick={() => {
+                setShowRecalibrateMenu(false);
+                if (timingMode === 'elapsed') {
+                  setShowElapsedRecalibrate(true);
+                } else {
+                  const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
+                  const mins = Math.floor(currentCountdown / 60);
+                  const secs = currentCountdown % 60;
+                  setTimerAdjustValue({ mins, secs });
+                  setShowTimerAdjust(true);
+                }
+              }}
+              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-left"
+            >
+              <div className="text-base">Recalibrate timer</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check</div>
+            </button>
+            <button
+              onClick={() => {
+                setNewWeightInput(String(state.patientWeight ?? ''));
+                setShowRecalibrateMenu(false);
+                setShowWeightChange(true);
+              }}
+              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-left"
+            >
+              <div className="text-base">Change patient weight</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {state.patientWeight}kg</div>
+            </button>
+            <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showWeightChange && (
+        <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Weight</h2>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                value={newWeightInput}
+                onChange={e => setNewWeightInput(e.target.value)}
+                className="flex-1 border-2 border-neutral-200 rounded-xl p-4 text-2xl font-bold text-center focus:border-emerald-500 outline-none"
+                placeholder="kg"
+              />
+              <span className="text-xl font-bold text-neutral-500">kg</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowWeightChange(false)} className="p-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
+              <button
+                onClick={() => {
+                  const w = parseFloat(newWeightInput);
+                  if (!isNaN(w) && w > 0) {
+                    setState(prev => ({ ...prev, patientWeight: w }));
+                  }
+                  setShowWeightChange(false);
+                }}
+                disabled={!newWeightInput || isNaN(parseFloat(newWeightInput))}
+                className="p-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}
