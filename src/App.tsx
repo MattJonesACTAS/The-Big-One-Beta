@@ -3467,7 +3467,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
           />
           
-          <div className="p-4 border-t border-neutral-100 bg-neutral-50 mb-4">
+          <div className="p-3 border-t border-neutral-100 bg-neutral-50 mb-4">
             <div className="flex gap-2">
               <input 
                 type="text" 
@@ -3475,7 +3475,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
                 onChange={e => setCustomTx(e.target.value)}
                 placeholder="Custom treatment..."
                 className="flex-1 bg-white border border-neutral-200 rounded-xl p-4 text-base focus:ring-2 focus:ring-emerald-500 outline-none"
-                style={{ maxWidth: 'calc(100% - 8px)' }}
               />
               <button 
                 onClick={() => { if(customTx) { addTreatment(customTx); setCustomTx(''); } }} 
