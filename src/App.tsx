@@ -1720,6 +1720,7 @@ export default function App() {
                     state={state}
                     isShockForced={false}
                     patientTypeOverride={weightType}
+                    noScroll
                   />
                   <button
                     onClick={() => setCatchupTxMode(false)}
@@ -3036,7 +3037,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false }: 
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride }: { addTreatment: (n: string) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll }: { addTreatment: (n: string) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -3405,7 +3406,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   }
   
   return (
-    <div className="h-full overflow-y-auto pb-4">
+    <div className={noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}>
       {isShockForced && (
         <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse">
            RHYTHM CHECK: SELECT SHOCK STATUS
@@ -3537,7 +3538,7 @@ function TxSection({
     <div>
       <div 
         onClick={handleToggle}
-        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${!collapsed ? 'sticky top-0 z-10' : ''} ${colorMap[color]}`}
+        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left sticky top-0 z-10 ${colorMap[color]}`}
       >
         <span>{title}</span>
         <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />
