@@ -1706,7 +1706,7 @@ export default function App() {
 
       {/* Catchup Modal */}
       <AnimatePresence>
-        {showCatchup && (
+        {showCatchup && !catchupTxMode && (
           <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4">
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
