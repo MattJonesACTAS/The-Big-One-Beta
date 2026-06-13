@@ -2392,16 +2392,31 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Weight</h2>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={newWeightInput}
-                onChange={e => setNewWeightInput(e.target.value)}
-                className="flex-1 border-2 border-neutral-200 rounded-xl p-4 text-2xl font-bold text-center focus:border-emerald-500 outline-none"
-                placeholder="kg"
-              />
-              <span className="text-xl font-bold text-neutral-500">kg</span>
-            </div>
+            <select
+              value={newWeightInput}
+              onChange={e => setNewWeightInput(e.target.value)}
+              className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+            >
+              <option value="">Select weight</option>
+              <option value="35">35 kg</option>
+              <option value="40">40 kg</option>
+              <option value="50">50 kg</option>
+              <option value="60">60 kg</option>
+              <option value="70">70 kg</option>
+              <option value="80">80 kg</option>
+              <option value="90">90 kg</option>
+              <option value="100">100 kg</option>
+              <option value="110">110 kg</option>
+              <option value="120">120 kg</option>
+              <option value="130">130 kg</option>
+              <option value="140">140 kg</option>
+              <option value="150">150 kg</option>
+              <option value="160">160 kg</option>
+              <option value="170">170 kg</option>
+              <option value="180">180 kg</option>
+              <option value="190">190 kg</option>
+              <option value="200">200 kg</option>
+            </select>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowWeightChange(false)} className="p-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
               <button
@@ -2412,7 +2427,7 @@ export default function App() {
                   }
                   setShowWeightChange(false);
                 }}
-                disabled={!newWeightInput || isNaN(parseFloat(newWeightInput))}
+                disabled={!newWeightInput}
                 className="p-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-40"
               >
                 Save
