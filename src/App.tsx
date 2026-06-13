@@ -1217,25 +1217,6 @@ export default function App() {
   return (
     <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
 
-      {/* Full Tx list overlay during catchup */}
-      {catchupTxMode && showCatchup && (
-        <div className="absolute inset-0 -m-4 bg-white z-[500] flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <TreatmentSelection
-              addTreatment={(name) => { addTreatment(name); }}
-              state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
-              isShockForced={false}
-              patientTypeOverride={weightType}
-            />
-          </div>
-          <div className="flex-shrink-0 p-4 border-t border-neutral-100">
-            <button onClick={() => setCatchupTxMode(false)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold">
-              Back
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Interactive Tutorial pre-screen */}
       {showInteractiveTutorial && (
         <InteractiveTutorial
@@ -1727,6 +1708,23 @@ export default function App() {
       <AnimatePresence>
         {showCatchup && (
           <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4">
+            {catchupTxMode && (
+              <div data-catchup-tx className="absolute inset-0 bg-white z-[1001] flex flex-col">
+                <div className="flex-1 overflow-y-auto">
+                  <TreatmentSelection
+                    addTreatment={(name) => { addTreatment(name); }}
+                    state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
+                    isShockForced={false}
+                    patientTypeOverride={weightType}
+                  />
+                </div>
+                <div className="flex-shrink-0 p-4 border-t border-neutral-100">
+                  <button onClick={() => setCatchupTxMode(false)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold">
+                    Back
+                  </button>
+                </div>
+              </div>
+            )}
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
               initial={{ x: '100%', opacity: 0 }}
