@@ -1718,7 +1718,7 @@ export default function App() {
               style={catchupTxMode ? { height: '80vh' } : {}}
             >
               {catchupTxMode && (
-                <div className="flex flex-col h-full -mx-6 -my-6">
+                <div className="flex flex-col h-full -my-6">
                   <div className="flex-1 overflow-hidden">
                     <TreatmentSelection
                       addTreatment={(name) => { addTreatment(name); }}
