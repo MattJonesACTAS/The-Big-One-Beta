@@ -683,13 +683,6 @@ export default function App() {
       ...(catchupTxMode ? { prior: true } : {})
     };
 
-    // In catchup mode: just add as prior treatment and close overlay
-    if (catchupTxMode) {
-      setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment], currentOverlay: null }));
-      setCatchupTxMode(false);
-      return;
-    }
-
     setState(prev => {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
       const isROSC = name === 'Disarm - ROSC';
@@ -1706,14 +1699,32 @@ export default function App() {
         {showCatchup && (
           <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4">
             <motion.div 
-              key={catchupStep}
+              key={catchupTxMode ? 'catchupTx' : catchupStep}
               initial={{ x: '100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
               className="bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl overflow-hidden absolute"
             >
-              {catchupStep === 1 && (
+              {catchupTxMode && (
+                <div>
+                  <TreatmentSelection
+                    addTreatment={(name) => {
+                      addTreatment(name);
+                      setCatchupTxMode(false);
+                    }}
+                    state={state}
+                    isShockForced={false}
+                  />
+                  <button
+                    onClick={() => setCatchupTxMode(false)}
+                    className="mt-4 w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+                  >
+                    Back
+                  </button>
+                </div>
+              )}
+              {!catchupTxMode && catchupStep === 1 && (
                 <div className="text-center space-y-6">
                   {/* Header with gradient accent */}
                   <div className="space-y-4">
@@ -1760,7 +1771,7 @@ export default function App() {
                 </div>
               )}
 
-              {catchupStep === 2 && (
+              {!catchupTxMode && catchupStep === 2 && (
                 <div className="space-y-6 px-4 max-w-md mx-auto">
                   <div className="text-center space-y-2">
                     <h2 className="text-2xl font-bold text-neutral-900">Patient Details</h2>
@@ -1986,7 +1997,7 @@ export default function App() {
                 </div>
               )}
 
-              {catchupStep === 5 && (
+              {!catchupTxMode && catchupStep === 5 && (
                 <div className="text-center space-y-6">
                   <h2 className="text-xl font-bold text-neutral-900 px-4">Enter current CPR timer</h2>
                   <p className="text-neutral-600 text-sm px-4">This is the countdown above the diamond on the monitor</p>
@@ -2056,7 +2067,7 @@ export default function App() {
                 </div>
               )}
 
-              {catchupStep === 3 && (
+              {!catchupTxMode && catchupStep === 3 && (
                 <div className="text-center space-y-5">
                   <h2 className="text-xl font-bold text-neutral-900">What treatments have you already applied?</h2>
                   <div className="space-y-2 py-3 px-2">
@@ -2075,7 +2086,7 @@ export default function App() {
                       ))}
                     </div>
                     <button
-                      onClick={() => { setCatchupTxMode(true); setState(p => ({ ...p, currentOverlay: 'treatment' })); }}
+                      onClick={() => { setCatchupTxMode(true); }}
                       className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-600 flex items-center justify-center gap-2"
                     >
                       <Plus size={16} /> Full Tx list
@@ -2088,7 +2099,7 @@ export default function App() {
                 </div>
               )}
 
-              {catchupStep === 6 && (
+              {!catchupTxMode && catchupStep === 6 && (
                 <div className="space-y-5 px-4 max-w-md mx-auto">
                   <div className="text-center space-y-2">
                     <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
