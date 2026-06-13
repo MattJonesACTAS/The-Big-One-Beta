@@ -1704,7 +1704,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'overflow-y-auto max-h-[85vh] p-6' : 'p-6 overflow-hidden'}`}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'overflow-y-auto max-h-[85vh] py-6' : 'p-6 overflow-hidden'}`}
             >
               {catchupTxMode && (
                 <div>
@@ -1718,7 +1718,7 @@ export default function App() {
                   />
                   <button
                     onClick={() => setCatchupTxMode(false)}
-                    className="mt-4 w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+                    className="mt-4 mx-4 w-[calc(100%-2rem)] bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
                   >
                     Back
                   </button>
