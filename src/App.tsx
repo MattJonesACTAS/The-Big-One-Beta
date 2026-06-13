@@ -1078,6 +1078,7 @@ export default function App() {
     
     // Reset all UI states for clean new case
     setShowCatchup(false);
+    setCatchupTxMode(false);
     setDisregardAdrenaline(null);
     setDisregardAmiodarone(null);
     setShowLoggedNotification(false);
@@ -1192,7 +1193,7 @@ export default function App() {
         )}
 
         {/* Full Tx list overlay during catchup */}
-        {catchupTxMode && (
+        {catchupTxMode && showCatchup && (
           <div className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
             <div className="flex-1 overflow-y-auto">
               <TreatmentSelection
