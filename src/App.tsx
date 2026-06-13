@@ -1708,27 +1708,32 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'overflow-y-auto max-h-[85vh] py-6' : 'p-6 overflow-hidden'}`}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'flex flex-col' : 'p-6 overflow-hidden'}`}
+              style={catchupTxMode ? { maxHeight: '85vh' } : {}}
             >
               {catchupTxMode && (
-                <div>
-                  <TreatmentSelection
-                    addTreatment={(name) => {
-                      addTreatment(name);
-                      setCatchupTxMode(false);
-                    }}
-                    state={state}
-                    isShockForced={false}
-                    patientTypeOverride={weightType}
-                    noScroll
-                  />
-                  <button
-                    onClick={() => setCatchupTxMode(false)}
-                    className="mt-4 mx-4 w-[calc(100%-2rem)] bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
-                  >
-                    Back
-                  </button>
-                </div>
+                <>
+                  <div className="flex-1 overflow-y-auto">
+                    <TreatmentSelection
+                      addTreatment={(name) => {
+                        addTreatment(name);
+                        setCatchupTxMode(false);
+                      }}
+                      state={state}
+                      isShockForced={false}
+                      patientTypeOverride={weightType}
+                      noScroll
+                    />
+                  </div>
+                  <div className="flex-shrink-0 p-4 border-t border-neutral-100">
+                    <button
+                      onClick={() => setCatchupTxMode(false)}
+                      className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </>
               )}
               {!catchupTxMode && catchupStep === 1 && (
                 <div className="text-center space-y-6">
