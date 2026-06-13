@@ -1192,29 +1192,6 @@ export default function App() {
          </div>
         )}
 
-        {/* Full Tx list overlay during catchup */}
-        {catchupTxMode && showCatchup && (
-          <div className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
-            <div className="flex-1 overflow-y-auto">
-              <TreatmentSelection
-                addTreatment={(name) => {
-                  addTreatment(name);
-                }}
-                state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
-                isShockForced={false}
-                patientTypeOverride={weightType}
-              />
-            </div>
-            <div className="flex-shrink-0 p-4 bg-white border-t border-neutral-100">
-              <button
-                onClick={() => setCatchupTxMode(false)}
-                className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
-              >
-                Back
-              </button>
-            </div>
-          </div>
-        )}
         {tutorialMode && (
           <TutorialOverlay
             appState={state}
@@ -1238,6 +1215,25 @@ export default function App() {
   }
 
   return (
+    <>
+    {/* Full Tx list overlay during catchup - outside main container to avoid overflow clipping */}
+    {catchupTxMode && showCatchup && (
+      <div className="fixed inset-0 z-[9999] bg-neutral-100 flex flex-col" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+        <div className="flex-1 overflow-y-auto">
+          <TreatmentSelection
+            addTreatment={(name) => { addTreatment(name); }}
+            state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
+            isShockForced={false}
+            patientTypeOverride={weightType}
+          />
+        </div>
+        <div className="flex-shrink-0 p-4 bg-white border-t border-neutral-100">
+          <button onClick={() => setCatchupTxMode(false)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold">
+            Back
+          </button>
+        </div>
+      </div>
+    )}
     <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
 
       {/* Interactive Tutorial pre-screen */}
@@ -2454,6 +2450,7 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 }
 
