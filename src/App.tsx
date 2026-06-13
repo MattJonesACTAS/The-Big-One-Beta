@@ -2369,7 +2369,7 @@ export default function App() {
                   setShowTimerAdjust(true);
                 }
               }}
-              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-left"
+              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Recalibrate timer</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check</div>
@@ -2381,7 +2381,7 @@ export default function App() {
                 setShowRecalibrateMenu(false);
                 setShowWeightChange(true);
               }}
-              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-left"
+              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Change patient weight</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {state.patientWeight}kg</div>
