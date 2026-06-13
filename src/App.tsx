@@ -242,48 +242,26 @@ const cleanDoseForLog = (doseStr: string): string => {
 };
 
 const formatGlucose10Dose = (doseStr: string): string => {
-  // For Glucose 10%, format as (xxxml/xxg) - 0.1g per mL
-  // Extract mL amount from various formats: "200mls", "200mL", "200ml", "2.5mL/kg (200mL)"
-  console.log('formatGlucose10Dose input:', doseStr);
   const mlMatch = doseStr.match(/([\d.]+)\s*(?:ml|mls|mL|mLs)/i);
-  console.log('formatGlucose10Dose match:', mlMatch);
   if (mlMatch) {
-    const mls = parseFloat(mlMatch[1]);
-    const grams = Math.round(mls * 0.1 * 10) / 10; // 0.1g per mL, rounded to 1 decimal
-    const result = `(${mls}ml/${grams}g)`;
-    console.log('formatGlucose10Dose output:', result);
-    return result;
+    return `${parseFloat(mlMatch[1])}mL`;
   }
-  console.log('formatGlucose10Dose no match, returning:', doseStr);
   return doseStr;
 };
 
 const formatSodiumBicarbonateDose = (doseStr: string): string => {
-  // For Sodium Bicarbonate 8.4%, format as (xxxmMol/xxxml) - 1mMol/mL concentration
-  // Extract mMol amount from various formats: "80mMol", "1mMol/kg (80mMol)"
-  console.log('formatSodiumBicarbonateDose input:', doseStr);
   const mmolMatch = doseStr.match(/([\d.]+)\s*(?:mmol|mMol|MMOL)/i);
-  console.log('formatSodiumBicarbonateDose match:', mmolMatch);
   if (mmolMatch) {
     const mmol = parseFloat(mmolMatch[1]);
-    const mls = Math.round(mmol * 10) / 10; // 1mMol = 1mL, rounded to 1 decimal
-    const result = `(${mmol}mMol/${mls}ml)`;
-    console.log('formatSodiumBicarbonateDose output:', result);
-    return result;
+    return `${mmol}mMol`;
   }
-  console.log('formatSodiumBicarbonateDose no match, returning:', doseStr);
   return doseStr;
 };
 
 const formatCalciumDose = (doseStr: string, weight: number | null): string => {
-  // Calcium chloride 10% = 100mg/mL, dose 10mg/kg max 1g (10mL)
   if (!weight) return doseStr;
   const calculatedMg = Math.min(10 * (typeof weight === 'number' ? weight : parseFloat(String(weight))), 1000);
-  const mL = Math.round(calculatedMg / 100 * 10) / 10;
-  if (calculatedMg >= 1000) {
-    return `1g / ${mL}mL`;
-  }
-  return `${calculatedMg}mg / ${mL}mL`;
+  return calculatedMg >= 1000 ? `1g` : `${calculatedMg}mg`;
 };
 
 export default function App() {
@@ -965,7 +943,6 @@ export default function App() {
 
   // --- Catchup Handlers ---
   const handleCatchupStart = (overrideWeight?: string) => {
-    console.log('handleCatchupStart called', { overrideWeight, weightInput });
     
     // Clear localStorage for a completely fresh start
     localStorage.clear();
@@ -993,8 +970,6 @@ export default function App() {
         }
       }
     }
-    
-    console.log('Parsed weight:', parsedWeight);
     
     // Adjust times based on elapsed time since they were entered
     if (elapsedTimestamp) {
@@ -1082,7 +1057,6 @@ export default function App() {
       patientWeight: parsedWeight || (tutorialMode ? 70 : null),
       patientType: weightType || (tutorialMode ? 'adult' : null)
     });
-    console.log('State set with weight:', parsedWeight, 'and type:', weightType);
     
     // Reset all UI states for clean new case
     setShowCatchup(false);
@@ -2994,22 +2968,17 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
   
   const handleDoseSelect = (dose: string) => {
     if (selectedMed) {
-      console.log('handleDoseSelect - selectedMed:', selectedMed);
-      console.log('handleDoseSelect - dose:', dose);
+
       const displayDose = calculateDose(dose, state.patientWeight);
-      console.log('handleDoseSelect - displayDose:', displayDose);
       let cleanDose = cleanDoseForLog(displayDose);
-      console.log('handleDoseSelect - cleanDose:', cleanDose);
       
       // For Glucose 10%, add gram calculation
       if (selectedMed === 'Glucose 10%') {
-        console.log('handleDoseSelect - formatting Glucose 10%');
         cleanDose = formatGlucose10Dose(cleanDose);
       }
       
       // For Sodium Bicarbonate, add mls calculation
       if (selectedMed === 'Sodium bicarbonate') {
-        console.log('handleDoseSelect - formatting Sodium Bicarbonate');
         cleanDose = formatSodiumBicarbonateDose(cleanDose);
       }
       
@@ -3034,10 +3003,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
           }
         }
       }
-      
-      console.log('handleDoseSelect - final cleanDose:', cleanDose);
       const finalTreatment = `${selectedMed} ${cleanDose}`;
-      console.log('handleDoseSelect - adding treatment:', finalTreatment);
       addTreatment(finalTreatment);
       setSelectedMed(null);
       setCustomDose('');
@@ -3130,12 +3096,23 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
     const getButtonDisplayDose = (doseOpt: { dose: string; indication?: string }) => {
       const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
       
-      // Calcium: show calculated mg/g first, formula after
+      // Glucose 10%: show mL/dose with formula
+      if (selectedMed === 'Glucose 10%' && doseOpt.dose.includes('/kg')) {
+        const base = calculateDose(doseOpt.dose, state.patientWeight);
+        const mlMatch = base.match(/\(([\d.]+)mL\)/i);
+        if (mlMatch) {
+          const mls = parseFloat(mlMatch[1]);
+          const grams = Math.round(mls * 0.1 * 10) / 10;
+          return `${mls}mL/${grams}g (${doseOpt.dose})`;
+        }
+        return base;
+      }
+      
+      // Calcium: show calculated dose first, formula after
       if (selectedMed === 'Calcium' && doseOpt.dose.includes('/kg')) {
         const calculatedMg = Math.min(10 * weight, 1000);
-        const mL = Math.round(calculatedMg / 100 * 10) / 10;
         const doseDisplay = calculatedMg >= 1000 ? `1g` : `${calculatedMg}mg`;
-        return `${doseDisplay} / ${mL}mL (10mg/kg)`;
+        return `${doseDisplay} (10mg/kg)`;
       }
       
       // Amiodarone paed: cap display at 300mg for arrest, 150mg for VT with output
