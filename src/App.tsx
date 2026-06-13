@@ -683,6 +683,12 @@ export default function App() {
       ...(catchupTxMode ? { prior: true } : {})
     };
 
+    if (catchupTxMode) {
+      setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment], currentOverlay: null }));
+      setCatchupTxMode(false);
+      return;
+    }
+
     setState(prev => {
       const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
       const isROSC = name === 'Disarm - ROSC';
@@ -1708,32 +1714,8 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl overflow-hidden absolute ${catchupTxMode ? 'max-h-[85vh] flex flex-col' : ''}`}
+              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl overflow-hidden absolute`}
             >
-              {catchupTxMode && (
-                <>
-                  <div className="flex-1 overflow-y-auto -mx-6 px-6">
-                    <TreatmentSelection
-                      addTreatment={(name) => {
-                        addTreatment(name);
-                        setCatchupTxMode(false);
-                      }}
-                      state={state}
-                      isShockForced={false}
-                      patientTypeOverride={weightType}
-                      noScroll
-                    />
-                  </div>
-                  <div className="pt-4 border-t border-neutral-100 -mx-6 px-6 mt-4">
-                    <button
-                      onClick={() => setCatchupTxMode(false)}
-                      className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold"
-                    >
-                      Back
-                    </button>
-                  </div>
-                </>
-              )}
               {!catchupTxMode && catchupStep === 1 && (
                 <div className="text-center space-y-6">
                   {/* Header with gradient accent */}
@@ -2096,7 +2078,7 @@ export default function App() {
                       ))}
                     </div>
                     <button
-                      onClick={() => { setCatchupTxMode(true); }}
+                      onClick={() => { setCatchupTxMode(true); setState(p => ({ ...p, currentOverlay: 'treatment' })); }}
                       className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-600 flex items-center justify-center gap-2"
                     >
                       <Plus size={16} /> Full Tx list
@@ -3547,14 +3529,11 @@ function TxSection({
         <span>{title}</span>
         <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />
       </div>
-      <div 
-        style={{
-          maxHeight: collapsed ? 0 : '9999px',
-          overflowY: 'hidden',
-          opacity: collapsed ? 0 : 1,
-          transition: 'max-height 0.35s ease, opacity 0.2s ease',
-        }}
-        className="bg-white"
+      <motion.div 
+        initial={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
+        animate={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
+        transition={{ duration: 0.3 }}
+        className="overflow-hidden bg-white"
       >
         <div className="p-3 grid grid-cols-1 gap-2">
           {items.map(item => {
@@ -3576,7 +3555,7 @@ function TxSection({
             );
           })}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
