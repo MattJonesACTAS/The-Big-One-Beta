@@ -244,7 +244,9 @@ const cleanDoseForLog = (doseStr: string): string => {
 const formatGlucose10Dose = (doseStr: string): string => {
   const mlMatch = doseStr.match(/([\d.]+)\s*(?:ml|mls|mL|mLs)/i);
   if (mlMatch) {
-    return `${parseFloat(mlMatch[1])}mL`;
+    const mls = parseFloat(mlMatch[1]);
+    const grams = Math.round(mls * 0.1 * 10) / 10;
+    return `${mls}mL/${grams}g`;
   }
   return doseStr;
 };
