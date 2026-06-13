@@ -1718,8 +1718,8 @@ export default function App() {
               style={catchupTxMode ? { height: '80vh' } : {}}
             >
               {catchupTxMode && (
-                <div className="flex flex-col h-full overflow-hidden">
-                  <div className="flex-1 overflow-hidden">
+                <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div className="flex-1 overflow-hidden" style={{ width: '100%' }}>
                     <TreatmentSelection
                       addTreatment={(name) => { addTreatment(name); }}
                       state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
@@ -3410,7 +3410,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   }
   
   return (
-    <div className={noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}>
+    <div className={`w-full ${noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}`}>
       {isShockForced && (
         <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse">
            RHYTHM CHECK: SELECT SHOCK STATUS
