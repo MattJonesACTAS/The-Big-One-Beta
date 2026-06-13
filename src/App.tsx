@@ -1218,7 +1218,7 @@ export default function App() {
     <>
     {/* Full Tx list overlay during catchup - outside main container to avoid overflow clipping */}
     {catchupTxMode && showCatchup && (
-      <div className="fixed inset-0 z-[9999] bg-neutral-100 flex flex-col" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+      <div className="fixed inset-0 z-[9999] flex flex-col max-w-2xl mx-auto bg-neutral-100" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
         <div className="flex-1 overflow-y-auto">
           <TreatmentSelection
             addTreatment={(name) => { addTreatment(name); }}
