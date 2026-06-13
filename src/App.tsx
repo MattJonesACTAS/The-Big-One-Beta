@@ -2782,7 +2782,10 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
     ];
     for (const med of knownMeds) {
       if (name.startsWith(med + ' ')) {
-        const dose = name.slice(med.length).trim();
+        let dose = name.slice(med.length).trim();
+        // For weight-based doses "0.01mg/kg (0.13mg)", show only the calculated value
+        const calcMatch = dose.match(/\(([\d.]+(?:mg|mL|mMol|mcg|g))\)/i);
+        if (calcMatch) dose = calcMatch[1];
         return { med, dose: dose || null };
       }
     }
@@ -3123,34 +3126,51 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       }
     };
     
-    // Display dose on button — applies max caps and special formatting
+    // Display dose on button — calculated dose first, formula in brackets
     const getButtonDisplayDose = (doseOpt: { dose: string; indication?: string }) => {
-      const base = calculateDose(doseOpt.dose, state.patientWeight);
       const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
-      // Calcium: show mg and mL with 1g max cap
+      
+      // Calcium: show calculated mg/g first, formula after
       if (selectedMed === 'Calcium' && doseOpt.dose.includes('/kg')) {
-        return formatCalciumDose(base, weight);
+        const calculatedMg = Math.min(10 * weight, 1000);
+        const mL = Math.round(calculatedMg / 100 * 10) / 10;
+        const doseDisplay = calculatedMg >= 1000 ? `1g` : `${calculatedMg}mg`;
+        return `${doseDisplay} / ${mL}mL (10mg/kg)`;
       }
+      
       // Amiodarone paed: cap display at 300mg for arrest, 150mg for VT with output
       if (selectedMed === 'Amiodarone' && doseOpt.dose.includes('/kg') && state.patientType === 'paed') {
+        const base = calculateDose(doseOpt.dose, state.patientWeight);
         const mgMatch = base.match(/\(([\d.]+)mg\)/);
         if (mgMatch) {
           const calculated = parseFloat(mgMatch[1]);
           if (doseOpt.indication?.includes('cardiac arrest') && !doseOpt.indication?.includes('repeat')) {
             const capped = Math.min(calculated, 300);
-            return `5mg/kg (${capped}mg${calculated > 300 ? ' — 300mg max' : ''})`;
+            return `${capped}mg (5mg/kg${calculated > 300 ? ' - 300mg max' : ''})`;
           }
           if (doseOpt.indication?.includes('repeat')) {
             const capped = Math.min(calculated, 150);
-            return `2.5mg/kg (${capped}mg${calculated > 150 ? ' — 150mg max' : ''})`;
+            return `${capped}mg (2.5mg/kg${calculated > 150 ? ' - 150mg max' : ''})`;
           }
           if (doseOpt.indication?.includes('VT with output')) {
             const capped = Math.min(calculated, 150);
-            return `5mg/kg (${capped}mg${calculated > 150 ? ' — 150mg max' : ''})`;
+            return `${capped}mg (5mg/kg${calculated > 150 ? ' - 150mg max' : ''})`;
           }
         }
       }
-      return base;
+      
+      // Weight-based: reorder to "Xcalculated (formula)"
+      if (doseOpt.dose.includes('/kg')) {
+        const base = calculateDose(doseOpt.dose, state.patientWeight);
+        const calcMatch = base.match(/\(([\d.]+)(mg|mL|mMol|mcg|g)\)/i);
+        if (calcMatch) {
+          return `${calcMatch[1]}${calcMatch[2]} (${doseOpt.dose})`;
+        }
+        return base;
+      }
+      
+      // Fixed dose: just return as-is
+      return doseOpt.dose;
     };
 
     return (
