@@ -2768,8 +2768,19 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
       const rest = name.slice('Sodium bicarbonate'.length).trim();
       return { med: 'Sodium bic.', dose: rest || null };
     }
-    const doseMatch = name.match(/^(.+?)\s+([\d.]+(?:mg\/kg|mMol\/kg|mL\/kg|mcg|mg|mL|mMol|g|kg|%|\/\d+mL))$/);
-    if (doseMatch) return { med: doseMatch[1], dose: doseMatch[2] };
+    // Match known medication names first, then treat remainder as dose
+    const knownMeds = [
+      'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
+      'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
+      'Lignocaine', 'Magnesium', 'Midazolam', 'Morphine', 'Normal saline',
+      'Suxamethonium', 'Morph/midaz infusion'
+    ];
+    for (const med of knownMeds) {
+      if (name.startsWith(med + ' ')) {
+        const dose = name.slice(med.length).trim();
+        return { med, dose: dose || null };
+      }
+    }
     return { med: name, dose: null };
   };
 
