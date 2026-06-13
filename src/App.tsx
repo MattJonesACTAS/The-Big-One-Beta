@@ -1714,19 +1714,20 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl ${catchupTxMode ? 'overflow-y-auto' : 'overflow-hidden absolute'}`}
-              style={catchupTxMode ? { maxHeight: '80vh' } : {}}
+              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl overflow-hidden ${catchupTxMode ? '' : 'absolute'}`}
+              style={catchupTxMode ? { height: '80vh' } : {}}
             >
               {catchupTxMode && (
-                <div className="flex flex-col">
-                  <TreatmentSelection
-                    addTreatment={(name) => { addTreatment(name); }}
-                    state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
-                    isShockForced={false}
-                    patientTypeOverride={weightType}
-                    noScroll
-                  />
-                  <div className="pt-4 border-t border-neutral-100 mt-2">
+                <div className="flex flex-col h-full -mx-6 -my-6">
+                  <div className="flex-1 overflow-hidden">
+                    <TreatmentSelection
+                      addTreatment={(name) => { addTreatment(name); }}
+                      state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
+                      isShockForced={false}
+                      patientTypeOverride={weightType}
+                    />
+                  </div>
+                  <div className="flex-shrink-0 p-4 border-t border-neutral-100">
                     <button onClick={() => setCatchupTxMode(false)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold">
                       Back
                     </button>
