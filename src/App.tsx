@@ -329,6 +329,7 @@ export default function App() {
   const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [showRearrestIntervalPicker, setShowRearrestIntervalPicker] = useState(false);
+  const [rearrestElapsed, setRearrestElapsed] = useState<number>(0);
   const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
@@ -751,7 +752,10 @@ export default function App() {
     // If this treatment was logged from a rearrest, show interval picker (elapsed) or timer adjust (CPR); log mode needs nothing
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
-      if (timingMode === 'elapsed') {
+      if (name === 'Disarm - ROSC') {
+        // ROSC again — go straight back to ROSC mode, no interval picker needed
+      } else if (timingMode === 'elapsed') {
+        setRearrestElapsed(state.elapsedSeconds);
         setShowRearrestIntervalPicker(true);
       } else if (timingMode !== 'log') {
         setShowTimerAdjust(true);
@@ -1393,10 +1397,12 @@ export default function App() {
                 </span>
               </div>
             )}
+            {!state.isROSCMode && (
             <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
               <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
               <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
             </div>
+            )}
           </div>
 
           {/* Rhythm Check - Centered vertically and responsive size */}
@@ -2269,7 +2275,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-bold text-neutral-900">Rhythm Check Timing</h2>
-              <p className="text-neutral-500 text-sm">When are rhythm checks due?</p>
+              <p className="text-neutral-500 text-sm">Rearrest at {formatTime(rearrestElapsed)} — when are rhythm checks due?</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -2298,7 +2304,7 @@ export default function App() {
               disabled={!rhythmInterval}
               onClick={() => {
                 if (!rhythmInterval) return;
-                const newTarget = calcNextIntervalTarget(state.elapsedSeconds, rhythmInterval);
+                const newTarget = calcNextIntervalTarget(rearrestElapsed, rhythmInterval);
                 setState(prev => ({
                   ...prev,
                   rhythmCheckTarget: newTarget,
