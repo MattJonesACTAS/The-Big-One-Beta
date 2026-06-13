@@ -3543,12 +3543,14 @@ function TxSection({
         <span>{title}</span>
         <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />
       </div>
-      <motion.div 
-        initial={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
-        animate={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
-        transition={{ duration: 0.3 }}
-        className="overflow-hidden bg-white"
-        style={!collapsed ? { maxHeight: '60vh', overflowY: 'auto' } : {}}
+      <div 
+        style={{
+          maxHeight: collapsed ? 0 : '55vh',
+          overflowY: collapsed ? 'hidden' : 'auto',
+          opacity: collapsed ? 0 : 1,
+          transition: 'max-height 0.3s ease, opacity 0.3s ease',
+        }}
+        className="bg-white"
       >
         <div className="p-3 grid grid-cols-1 gap-2">
           {items.map(item => {
@@ -3570,7 +3572,7 @@ function TxSection({
             );
           })}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
