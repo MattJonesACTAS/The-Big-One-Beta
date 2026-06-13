@@ -2275,7 +2275,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-bold text-neutral-900">Rhythm Check Timing</h2>
-              <p className="text-neutral-500 text-sm">Rearrest at {formatTime(rearrestElapsed)} — when are rhythm checks due?</p>
+              <p className="text-neutral-500 text-sm">Rearrest at {formatTimeWithSeconds(rearrestElapsed)} — when are rhythm checks due?</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
