@@ -1714,20 +1714,19 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? '' : 'overflow-hidden'}`}
+              className={`bg-white rounded-[28px] p-6 max-w-md w-[90%] shadow-2xl absolute ${catchupTxMode ? 'overflow-y-auto' : 'overflow-hidden'}`}
+              style={catchupTxMode ? { maxHeight: '80vh', top: '50%', transform: 'translateY(-50%)' } : {}}
             >
               {catchupTxMode && (
-                <div className="flex flex-col" style={{ maxHeight: '70vh' }}>
-                  <div className="flex-1 overflow-y-auto -mx-6">
-                    <TreatmentSelection
-                      addTreatment={(name) => { addTreatment(name); }}
-                      state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
-                      isShockForced={false}
-                      patientTypeOverride={weightType}
-                      noScroll
-                    />
-                  </div>
-                  <div className="pt-4 border-t border-neutral-100 -mx-6 px-6 mt-2">
+                <div className="flex flex-col">
+                  <TreatmentSelection
+                    addTreatment={(name) => { addTreatment(name); }}
+                    state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
+                    isShockForced={false}
+                    patientTypeOverride={weightType}
+                    noScroll
+                  />
+                  <div className="pt-4 border-t border-neutral-100 mt-2">
                     <button onClick={() => setCatchupTxMode(false)} className="w-full bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold">
                       Back
                     </button>
