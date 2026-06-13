@@ -58,7 +58,7 @@ const INITIAL_STATE: AppState = {
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
   'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Lignocaine',
-  'Magnesium', 'Midazolam', 'Morphine', 'Normal Saline', 'Oxygen', 'Sodium Bicarbonate', 'Suxamethonium'
+  'Magnesium', 'Midazolam', 'Morphine', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
 type DoseOption = {
@@ -159,14 +159,14 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with midazolam - push dose' }
     ]
   },
-  'Normal Saline': { 
+  'Normal saline': { 
     doses: [
       { dose: '250mL', population: 'both' },
       { dose: '500mL', population: 'both' },
       { dose: 'Other', population: 'both' }
     ] 
   },
-  'Sodium Bicarbonate': { 
+  'Sodium bicarbonate': { 
     doses: [
       { dose: '1mMol/kg', population: 'both', indication: 'Cardiac arrest: Hyperkalaemia/OD / Cardioactive drug OD with output', calculated: true },
       { dose: '0.5mMol/kg', population: 'both', indication: 'Hyperkalaemia with output', calculated: true },
@@ -569,7 +569,7 @@ export default function App() {
           let nextPaused = prev.rhythmCheckPaused;
           
           // Only update rhythm check if not paused
-          if (!prev.rhythmCheckPaused) {
+          if (!prev.rhythmCheckPaused && timingMode !== 'log') {
             const countdown = prev.rhythmCheckTarget - newElapsed;
 
             // Auto-close overlay ONCE at 10s (not in tutorial)
@@ -2759,6 +2759,15 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
   const [pendingDelete, setPendingDelete] = React.useState<number | null>(null);
 
   const splitTreatmentName = (name: string): { med: string, dose: string | null } => {
+    // Oxygen: split route onto second line
+    if (name.startsWith('Oxygen ')) {
+      return { med: 'Oxygen', dose: name.slice(7) };
+    }
+    // Sodium bicarbonate: abbreviate in Tx log
+    if (name.startsWith('Sodium bicarbonate')) {
+      const rest = name.slice('Sodium bicarbonate'.length).trim();
+      return { med: 'Sodium bic.', dose: rest || null };
+    }
     const doseMatch = name.match(/^(.+?)\s+([\d.]+(?:mg\/kg|mMol\/kg|mL\/kg|mcg|mg|mL|mMol|g|kg|%|\/\d+mL))$/);
     if (doseMatch) return { med: doseMatch[1], dose: doseMatch[2] };
     return { med: name, dose: null };
@@ -2980,7 +2989,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       }
       
       // For Sodium Bicarbonate, add mls calculation
-      if (selectedMed === 'Sodium Bicarbonate') {
+      if (selectedMed === 'Sodium bicarbonate') {
         console.log('handleDoseSelect - formatting Sodium Bicarbonate');
         cleanDose = formatSodiumBicarbonateDose(cleanDose);
       }
@@ -3046,7 +3055,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
       }
       
       // For Sodium Bicarbonate, add mls calculation
-      if (selectedMed === 'Sodium Bicarbonate') {
+      if (selectedMed === 'Sodium bicarbonate') {
         doseWithUnit = formatSodiumBicarbonateDose(doseWithUnit);
       }
       
@@ -3237,7 +3246,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced }: { addTreatme
                   return `/ ${grams}g`;
                 }
                 
-                if (selectedMed === 'Sodium Bicarbonate') {
+                if (selectedMed === 'Sodium bicarbonate') {
                   const mls = Math.round(value * 10) / 10;
                   return `/ ${mls}ml`;
                 }
