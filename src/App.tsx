@@ -2936,9 +2936,9 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
     <div className="space-y-6">
       {patientLabel && (
         <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider">PATIENT</div>
+          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider text-center">PATIENT</div>
           <div className="bg-white px-4 py-3">
-            <span className="text-[17px] font-bold text-neutral-900">{patientLabel}</span>
+            <span className="text-[17px] font-bold text-neutral-900 text-center block">{patientLabel}</span>
           </div>
         </div>
       )}
@@ -2978,9 +2978,9 @@ function ArrestSummarySection({ state }: { state: AppState }) {
     <div className="space-y-6">
       {patientLabel && (
         <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider">PATIENT</div>
+          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider text-center">PATIENT</div>
           <div className="bg-white px-4 py-3">
-            <span className="text-[17px] font-bold text-neutral-900">{patientLabel}</span>
+            <span className="text-[17px] font-bold text-neutral-900 text-center block">{patientLabel}</span>
           </div>
         </div>
       )}
