@@ -918,9 +918,13 @@ export default function App() {
     Object.keys(summary).forEach(med => {
       const { totalDose, unit, count } = summary[med];
       if (totalDose > 0 && unit) {
-        // Round to 2 decimal places and remove trailing zeros
         const roundedDose = parseFloat(totalDose.toFixed(2));
-        summary[med].display = `${roundedDose}${unit} (${count})`;
+        if (med === 'Glucose 10%' && unit === 'mL') {
+          const grams = Math.round(roundedDose * 0.1 * 10) / 10;
+          summary[med].display = `${roundedDose}mL/${grams}g (${count})`;
+        } else {
+          summary[med].display = `${roundedDose}${unit} (${count})`;
+        }
       } else {
         summary[med].display = `${count}`;
       }
