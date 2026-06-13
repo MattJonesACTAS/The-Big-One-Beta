@@ -1219,7 +1219,7 @@ export default function App() {
 
       {/* Full Tx list overlay during catchup */}
       {catchupTxMode && showCatchup && (
-        <div className="absolute inset-0 bg-white z-[500] flex flex-col">
+        <div className="absolute inset-0 -m-4 bg-white z-[500] flex flex-col">
           <div className="flex-1 overflow-y-auto">
             <TreatmentSelection
               addTreatment={(name) => { addTreatment(name); }}
