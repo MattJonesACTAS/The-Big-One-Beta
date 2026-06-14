@@ -51,7 +51,7 @@ const ALL_NODES: GlobalNode[] = [
   },
   {
     id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2, displayNumber: 7,
-    pages: [{ title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer if your last rhythm check was longer.\n\nYou can also use this button to update the patient weight if it changes during the case.' }],
+    pages: [{ title: 'Recalibrate Button', description: 'The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer if your last rhythm check was longer.\n\nYou can also use this button to change the estimated patient weight.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
