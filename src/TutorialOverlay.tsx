@@ -31,7 +31,7 @@ const ALL_NODES: GlobalNode[] = [
     pages: [
       {
         title: 'Rhythm Check Timer',
-        description: "The countdown to the next rhythm check.\n\nIf during configuration you choose 'CPR Timer' as your method of rhythm check time keeping, you will be prompted to copy the actual live CPR timer on the monitor into the app (you just did this earlier).\n\nThe CPR timer is then shown here for your reference."
+        description: "The countdown to the next rhythm check.\n\nEarlier we chose 'CPR Timer' as our method of keeping track of rhythm checks. We then entered the imaginary live CPR timer from our currently imaginary monitor.\n\nThe app now shows you the same CPR timer here for your reference."
       },
       {
         title: 'Timer Behaviour',
