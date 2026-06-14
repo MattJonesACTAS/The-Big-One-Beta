@@ -2252,7 +2252,7 @@ export default function App() {
                     <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(3)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
                       onClick={() => {
-                        if (timingMode === 'cpr') setCatchupStep(5);
+                        if (timingMode === 'cpr') { setCatchupRhythm({ mins: 0, secs: 0 }); setCatchupStep(5); }
                         else if (timingMode === 'elapsed') setCatchupStep(7);
                         else if (timingMode === 'log') handleCatchupStart();
                       }}
