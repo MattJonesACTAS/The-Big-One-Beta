@@ -2169,7 +2169,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'log' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        No timer — record keeping only
+                        No timer - record keeping only
                       </div>
                     </button>
 
@@ -2205,7 +2205,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'cpr' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        Inbuilt monitor CPR timer
+                        Monitor's inbuilt CPR timer
                       </div>
                     </button>
 
@@ -2240,7 +2240,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'elapsed' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        Elapsed time — odds/evens
+                        Monitor's elapsed case time - odds/evens
                       </div>
                     </button>
 
