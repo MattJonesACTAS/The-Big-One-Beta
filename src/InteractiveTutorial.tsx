@@ -889,7 +889,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               height: '100%',
               transform: 'translate(-50%, -50%)',
               borderRadius: '50%',
-              border: '2px solid #10b981',
+              border: '2px solid #ef4444',
               animation: 'ripple 2s infinite',
               opacity: 0.6,
             }} />
@@ -903,14 +903,14 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               transform: 'translate(-50%, -50%)',
               borderRadius: '50%',
               backgroundColor: '#fff',
-              border: '3px solid #10b981',
+              border: '3px solid #ef4444',
               boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '15px',
               fontWeight: '700',
-              color: '#10b981',
+              color: '#ef4444',
             }}>
               {element.number}
             </div>
@@ -922,10 +922,10 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         @keyframes ripple {
           0% {
             transform: translate(-50%, -50%) scale(1);
-            opacity: 0.6;
+            opacity: 0.5;
           }
           100% {
-            transform: translate(-50%, -50%) scale(1.8);
+            transform: translate(-50%, -50%) scale(1.7);
             opacity: 0;
           }
         }

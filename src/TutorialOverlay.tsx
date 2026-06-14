@@ -298,8 +298,8 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
 
       <style>{`
         @keyframes tutorialPulse {
-          0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-          50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+          0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+          60% { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
         }
         @keyframes slideInPage {
           from { transform: translateX(40px); opacity: 0; }
