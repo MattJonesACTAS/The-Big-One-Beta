@@ -31,7 +31,7 @@ const ALL_NODES: GlobalNode[] = [
     pages: [
       {
         title: 'Rhythm Check Timer',
-        description: "The countdown to the next rhythm check.\n\nEarlier we chose 'CPR Timer' as our method of keeping track of rhythm checks. We then entered the imaginary live CPR timer from our currently imaginary monitor.\n\nThe app now shows you the same CPR timer here for your reference."
+        description: "The countdown to the next rhythm check.\n\nEarlier we chose 'CPR Timer' as our method of keeping track of rhythm checks.\n\nWe then entered the imaginary live CPR timer from our imaginary monitor.\n\nThe app now shows you the same CPR timer here for your reference."
       },
       {
         title: 'Timer Behaviour',
