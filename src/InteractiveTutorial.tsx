@@ -873,9 +873,17 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               position: 'absolute',
               left: `${element.x}%`,
               top: `${element.y}%`,
+              transform: 'translate(-50%, -50%)',
               width: '50px',
               height: '50px',
-              transform: 'translate(-50%, -50%)',
+              cursor: 'pointer',
+              zIndex: 10,
+              pointerEvents: 'auto',
+            }}
+          >
+            <div style={{
+              width: '50px',
+              height: '50px',
               borderRadius: '50%',
               backgroundColor: '#ef4444',
               display: 'flex',
@@ -884,21 +892,18 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               fontSize: '20px',
               fontWeight: '700',
               color: 'white',
-              cursor: 'pointer',
-              zIndex: 10,
-              pointerEvents: 'auto',
               animation: 'nodeBreath 2s ease-in-out infinite',
-            }}
-          >
-            {element.number}
+            }}>
+              {element.number}
+            </div>
           </div>
         );
       })}
 
       <style>{`
         @keyframes nodeBreath {
-          0%, 100% { transform: translate(-50%, -50%) scale(1); }
-          50% { transform: translate(-50%, -50%) scale(1.15); }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
         }
         @keyframes buttonPulse {
           0%, 100% {

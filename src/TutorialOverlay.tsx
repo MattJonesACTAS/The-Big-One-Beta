@@ -240,17 +240,21 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
             left: `${currentNode.x}%`, top: `${currentNode.y}%`,
             transform: 'translate(-50%, -50%)',
             width: '50px', height: '50px',
+            cursor: 'pointer', zIndex: 10001, pointerEvents: 'auto',
+          }}
+        >
+          <div style={{
+            width: '50px', height: '50px',
             borderRadius: '50%',
             backgroundColor: '#ef4444',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '20px', fontWeight: '700', color: 'white',
-            cursor: 'pointer', zIndex: 10001, pointerEvents: 'auto',
             animation: 'nodeBreath 2s ease-in-out infinite',
-          }}
-        >
-          {currentNode.displayNumber}
+          }}>
+            {currentNode.displayNumber}
+          </div>
         </div>
       )}
 
@@ -301,8 +305,8 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
 
       <style>{`
         @keyframes nodeBreath {
-          0%, 100% { transform: translate(-50%, -50%) scale(1); }
-          50% { transform: translate(-50%, -50%) scale(1.15); }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
         }
         @keyframes slideInPage {
           from { transform: translateX(40px); opacity: 0; }
