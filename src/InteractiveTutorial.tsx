@@ -873,61 +873,32 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               position: 'absolute',
               left: `${element.x}%`,
               top: `${element.y}%`,
-              width: '43px',
-              height: '43px',
-              transform: 'translate(-50%, -50%)',
-              cursor: 'pointer',
-              zIndex: 10,
-              pointerEvents: 'auto',
-            }}
-          >
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              width: '100%',
-              height: '100%',
+              width: '50px',
+              height: '50px',
               transform: 'translate(-50%, -50%)',
               borderRadius: '50%',
-              border: '2px solid #ef4444',
-              animation: 'ripple 2s infinite',
-              opacity: 0.6,
-            }} />
-            
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              width: '26px',
-              height: '26px',
-              transform: 'translate(-50%, -50%)',
-              borderRadius: '50%',
-              backgroundColor: '#fff',
-              border: '3px solid #ef4444',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              backgroundColor: '#ef4444',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '15px',
+              fontSize: '20px',
               fontWeight: '700',
-              color: '#ef4444',
-            }}>
-              {element.number}
-            </div>
+              color: 'white',
+              cursor: 'pointer',
+              zIndex: 10,
+              pointerEvents: 'auto',
+              animation: 'nodeBreath 2s ease-in-out infinite',
+            }}
+          >
+            {element.number}
           </div>
         );
       })}
 
       <style>{`
-        @keyframes ripple {
-          0% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0.5;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1.7);
-            opacity: 0;
-          }
+        @keyframes nodeBreath {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-50%, -50%) scale(1.15); }
         }
         @keyframes buttonPulse {
           0%, 100% {

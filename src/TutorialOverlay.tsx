@@ -233,22 +233,25 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
 
       {/* Positioned node circle */}
       {currentNode?.type === 'positioned' && conditionMet && !activePositioned && !tutorialDone && (
-        <button
+        <div
           onClick={handleNodeClick}
           style={{
             position: 'absolute',
             left: `${currentNode.x}%`, top: `${currentNode.y}%`,
             transform: 'translate(-50%, -50%)',
-            width: '50px', height: '50px', borderRadius: '50%',
-            backgroundColor: '#ef4444', color: 'white',
-            fontSize: '20px', fontWeight: '700', border: 'none',
+            width: '50px', height: '50px',
+            borderRadius: '50%',
+            backgroundColor: '#ef4444',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px', fontWeight: '700', color: 'white',
             cursor: 'pointer', zIndex: 10001, pointerEvents: 'auto',
-            animation: 'tutorialPulse 2s infinite',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            animation: 'nodeBreath 2s ease-in-out infinite',
           }}
         >
           {currentNode.displayNumber}
-        </button>
+        </div>
       )}
 
       {/* Popup modal */}
@@ -297,9 +300,9 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
       )}
 
       <style>{`
-        @keyframes tutorialPulse {
-          0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-          60% { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        @keyframes nodeBreath {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-50%, -50%) scale(1.15); }
         }
         @keyframes slideInPage {
           from { transform: translateX(40px); opacity: 0; }
