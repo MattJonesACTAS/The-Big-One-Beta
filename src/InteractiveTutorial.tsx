@@ -130,7 +130,7 @@ function StaticTimingMethodScreen({ cprFading = false }: { cprFading?: boolean }
                 <div className="px-3 py-2"><span className="text-[11px] text-neutral-400 italic">No entries yet</span></div>
               </div>
             </div>
-            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">No timer - record keeping only</div>
+            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700"><div>No timer</div><div className="font-medium">(record keeping only)</div></div>
           </div>
           {/* CPR timer */}
           <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white" style={cprFading ? { animation: 'cprCardFade 2s ease-in-out infinite' } : {}}>
@@ -162,7 +162,7 @@ function StaticTimingMethodScreen({ cprFading = false }: { cprFading?: boolean }
                 </div>
               </div>
             </div>
-            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">Monitor's elapsed case time - odds/evens</div>
+            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700"><div>Monitor's elapsed case time</div><div className="font-medium">(odds/evens method)</div></div>
           </div>
         </div>
       </div>
