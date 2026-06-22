@@ -58,7 +58,7 @@ const INITIAL_STATE: AppState = {
 
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
-  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam', 'Lignocaine',
+  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam (Kepra)', 'Lignocaine',
   'Magnesium', 'Midazolam', 'Morphine', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
@@ -153,15 +153,13 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Midazolam': { 
     doses: [
-      { dose: '0.05mg/kg', population: 'both', indication: 'Post intubation sedation with ketamine' },
-      { dose: 'mg/h', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
-      { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with morphine - push dose' }
+      { dose: '0.05mg/kg', population: 'both', indication: 'Post-intubation sedation (adjunct to ketamine)', calculated: true },
+      { dose: 'Other', population: 'both' }
     ] 
   },
   'Morphine': {
     doses: [
-      { dose: 'mg/h', population: 'adult', indication: 'Post intubation sedation morph/midaz infusion' },
-      { dose: 'mg', population: 'adult', indication: 'Post intubation sedation with midazolam - push dose' }
+      { dose: 'Other', population: 'both' }
     ]
   },
   'Normal saline': { 
@@ -197,7 +195,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: 'Other', population: 'both' }
     ]
   },
-  'Levetiracetam': {
+  'Levetiracetam (Kepra)': {
     doses: [
       { dose: '40mg/kg', population: 'both', indication: 'Seizure', calculated: true },
       { dose: 'Other', population: 'both' }
@@ -2990,8 +2988,8 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
     const knownMeds = [
       'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
       'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
-      'Levetiracetam', 'Lignocaine',
-      'Levetiracetam', 'Lignocaine', 'Magnesium', 'Midazolam', 'Morphine', 'Normal saline',
+      'Levetiracetam (Kepra)', 'Lignocaine',
+      'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam', 'Morphine', 'Normal saline',
       'Suxamethonium', 'Morph/midaz infusion'
     ];
     for (const med of knownMeds) {
@@ -3431,7 +3429,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       }
       
       // Levetiracetam: 40mg/kg max 3000mg
-      if (selectedMed === 'Levetiracetam' && doseOpt.dose.includes('/kg')) {
+      if (selectedMed === 'Levetiracetam (Kepra)' && doseOpt.dose.includes('/kg')) {
         const base = calculateDose(doseOpt.dose, state.patientWeight);
         const calcMatch = base.match(/\(([\d.]+)(mg)\)/i);
         if (calcMatch) {
