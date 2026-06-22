@@ -59,7 +59,7 @@ const INITIAL_STATE: AppState = {
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
   'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam (Kepra)', 'Lignocaine',
-  'Magnesium', 'Midazolam', 'Morph/midaz infusion', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
+  'Magnesium', 'Midazolam push', 'Morph/midaz infusion', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
 type DoseOption = {
@@ -151,7 +151,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: 'Other', population: 'both' }
     ] 
   },
-  'Midazolam': { 
+  'Midazolam push': { 
     doses: [
       { dose: '0.05mg/kg', population: 'both', indication: 'Post-intubation sedation (adjunct to ketamine)', calculated: true },
       { dose: 'Other', population: 'both' }
@@ -191,7 +191,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Morph/midaz infusion': {
     doses: [
-      { dose: '30mg:30mg/30mL', population: 'adult', indication: 'Post-intubation analgosedation' },
+      { dose: '30mg/30mL', population: 'adult', indication: 'Post-intubation analgosedation' },
       { dose: 'Other', population: 'both' }
     ]
   },
@@ -2989,7 +2989,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
       'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
       'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
       'Levetiracetam (Kepra)', 'Lignocaine',
-      'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam', 'Morph/midaz infusion', 'Normal saline',
+      'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam push', 'Morph/midaz infusion', 'Normal saline',
       'Suxamethonium', 'Morph/midaz infusion'
     ];
     for (const med of knownMeds) {
