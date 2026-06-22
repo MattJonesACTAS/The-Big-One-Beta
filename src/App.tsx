@@ -86,7 +86,6 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: '1mg/500mL', population: 'both', indication: 'Gravity fed — adult & paed' },
       { dose: '3mg/50mL', population: 'both', indication: 'Infusion pump — adult or large paed (≥21kg)', minWeight: 21 },
       { dose: '300mcg/50mL', population: 'paed', indication: 'Infusion pump — small paed (≤20kg)', maxWeight: 20 },
-      { dose: 'Other', population: 'both' }
     ] 
   },
   'Amiodarone': { 
@@ -136,7 +135,6 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Ketamine infusion': {
     doses: [
       { dose: '400mg/40mL', population: 'adult', indication: 'Post-intubation analgosedation' },
-      { dose: 'Other', population: 'both' }
     ]
   },
   'Lignocaine': { 
@@ -193,7 +191,6 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Morph/midaz infusion': {
     doses: [
       { dose: '30mg/30mL', population: 'adult', indication: 'Post-intubation analgosedation' },
-      { dose: 'Other', population: 'both' }
     ]
   },
   'Levetiracetam (Kepra)': {
