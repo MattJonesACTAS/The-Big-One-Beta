@@ -59,7 +59,7 @@ const INITIAL_STATE: AppState = {
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
   'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam (Kepra)', 'Lignocaine',
-  'Magnesium', 'Midazolam', 'Morphine', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
+  'Magnesium', 'Midazolam', 'Morph/midaz infusion', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
 type DoseOption = {
@@ -2989,7 +2989,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
       'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
       'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
       'Levetiracetam (Kepra)', 'Lignocaine',
-      'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam', 'Morphine', 'Normal saline',
+      'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam', 'Morph/midaz infusion', 'Normal saline',
       'Suxamethonium', 'Morph/midaz infusion'
     ];
     for (const med of knownMeds) {
