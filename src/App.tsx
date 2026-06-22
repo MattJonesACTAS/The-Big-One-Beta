@@ -3181,15 +3181,15 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
               <div key={drug} className="flex items-center justify-between px-4 py-3 gap-3">
                 <span className="text-[14px] font-semibold text-neutral-500 flex-shrink-0">{drug}</span>
                 {onUpdateInfusionDose ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded-lg overflow-hidden focus-within:border-emerald-400">
                     <input
                       type="text"
                       value={infusionDoses?.[drug] ?? ''}
                       onChange={e => onUpdateInfusionDose(drug, e.target.value)}
                       placeholder="0"
-                      className="w-14 text-right text-[15px] font-bold text-neutral-900 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1 outline-none focus:border-emerald-400"
+                      className="w-10 text-right text-[15px] font-bold text-neutral-900 bg-transparent px-2 py-1 outline-none"
                     />
-                    <span className="text-[13px] font-medium text-neutral-400">
+                    <span className="text-[13px] font-medium text-neutral-400 pr-2">
                       {drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}
                     </span>
                   </div>
