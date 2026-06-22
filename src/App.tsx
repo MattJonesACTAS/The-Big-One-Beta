@@ -58,7 +58,7 @@ const INITIAL_STATE: AppState = {
 
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
-  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Lignocaine',
+  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam', 'Lignocaine',
   'Magnesium', 'Midazolam', 'Morphine', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
@@ -66,6 +66,9 @@ type DoseOption = {
   dose: string;
   population: 'adult' | 'paed' | 'both';
   indication?: string;
+  calculated?: boolean;
+  minWeight?: number;
+  maxWeight?: number;
 };
 
 
@@ -80,8 +83,8 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   'Adrenaline infusion': { 
     doses: [
       { dose: '1mg/500mL', population: 'both', indication: 'Gravity fed — adult & paed' },
-      { dose: '3mg/50mL', population: 'both', indication: 'Infusion pump — adult or large paed (≥21kg)' },
-      { dose: '300mcg/50mL', population: 'paed', indication: 'Infusion pump — small paed (≤20kg)' },
+      { dose: '3mg/50mL', population: 'both', indication: 'Infusion pump — adult or large paed (≥21kg)', minWeight: 21 },
+      { dose: '300mcg/50mL', population: 'paed', indication: 'Infusion pump — small paed (≤20kg)', maxWeight: 20 },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -131,7 +134,8 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Ketamine infusion': {
     doses: [
-      { dose: 'mg/h', population: 'both', indication: 'Post intubation analgosedation' }
+      { dose: '400mg/40mL', population: 'adult', indication: 'Post-intubation analgosedation' },
+      { dose: 'Other', population: 'both' }
     ]
   },
   'Lignocaine': { 
@@ -185,6 +189,18 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
       { dose: 'Nasal cannulae', population: 'both' },
       { dose: 'NRB', population: 'both' },
       { dose: 'BVM', population: 'both' }
+    ]
+  },
+  'Morph/midaz infusion': {
+    doses: [
+      { dose: '30mg:30mg/30mL', population: 'adult', indication: 'Post-intubation analgosedation' },
+      { dose: 'Other', population: 'both' }
+    ]
+  },
+  'Levetiracetam': {
+    doses: [
+      { dose: '40mg/kg', population: 'both', indication: 'Seizure', calculated: true },
+      { dose: 'Other', population: 'both' }
     ]
   }
 };
@@ -2974,7 +2990,8 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
     const knownMeds = [
       'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
       'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
-      'Lignocaine', 'Magnesium', 'Midazolam', 'Morphine', 'Normal saline',
+      'Levetiracetam', 'Lignocaine',
+      'Levetiracetam', 'Lignocaine', 'Magnesium', 'Midazolam', 'Morphine', 'Normal saline',
       'Suxamethonium', 'Morph/midaz infusion'
     ];
     for (const med of knownMeds) {
@@ -3335,8 +3352,14 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   if (selectedMed && DOSE_CONFIG[selectedMed]) {
     const allDoses = DOSE_CONFIG[selectedMed].doses;
     const effectivePatientType = patientTypeOverride ?? state.patientType;
+    const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
     const filteredDoses = effectivePatientType 
-      ? allDoses.filter(d => d.population === 'both' || d.population === effectivePatientType)
+      ? allDoses.filter(d => {
+          if (d.population !== 'both' && d.population !== effectivePatientType) return false;
+          if (d.minWeight !== undefined && !isNaN(weight) && weight < d.minWeight) return false;
+          if (d.maxWeight !== undefined && !isNaN(weight) && weight > d.maxWeight) return false;
+          return true;
+        })
       : allDoses;
     
     // Check if a dose is a unit-only custom input (e.g., "mg/h", "mg")
@@ -3407,6 +3430,18 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         }
       }
       
+      // Levetiracetam: 40mg/kg max 3000mg
+      if (selectedMed === 'Levetiracetam' && doseOpt.dose.includes('/kg')) {
+        const base = calculateDose(doseOpt.dose, state.patientWeight);
+        const calcMatch = base.match(/\(([\d.]+)(mg)\)/i);
+        if (calcMatch) {
+          const calculated = parseFloat(calcMatch[1]);
+          const capped = Math.min(calculated, 3000);
+          return `${capped}mg (40mg/kg${calculated > 3000 ? ' - 3000mg max' : ''})`;
+        }
+        return base;
+      }
+
       // Weight-based: reorder to "Xcalculated (formula)"
       if (doseOpt.dose.includes('/kg')) {
         const base = calculateDose(doseOpt.dose, state.patientWeight);
