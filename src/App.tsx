@@ -3184,17 +3184,22 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
               <div key={drug} className="flex items-center justify-between px-4 py-3 gap-3">
                 <span className="text-[14px] font-semibold text-neutral-500 flex-shrink-0">{drug}</span>
                 {onUpdateInfusionDose ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="text"
                       value={infusionDoses?.[drug] ?? ''}
                       onChange={e => onUpdateInfusionDose(drug, e.target.value)}
-                      placeholder="Enter dose"
-                      className="w-28 text-right text-[15px] font-bold text-neutral-900 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1 outline-none focus:border-emerald-400"
+                      placeholder="0"
+                      className="w-14 text-right text-[15px] font-bold text-neutral-900 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1 outline-none focus:border-emerald-400"
                     />
+                    <span className="text-[13px] font-medium text-neutral-400">
+                      {drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}
+                    </span>
                   </div>
                 ) : (
-                  <span className="text-[15px] font-bold text-neutral-900">{infusionDoses?.[drug] || '—'}</span>
+                  <span className="text-[15px] font-bold text-neutral-900">
+                    {infusionDoses?.[drug] ? `${infusionDoses[drug]}${drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : '—'}
+                  </span>
                 )}
               </div>
             ))}
