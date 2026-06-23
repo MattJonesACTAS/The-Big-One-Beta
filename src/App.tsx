@@ -3187,7 +3187,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
                       value={infusionDoses?.[drug] ?? ''}
                       onChange={e => onUpdateInfusionDose(drug, e.target.value)}
                       placeholder="0"
-                      className="w-10 text-right text-[15px] font-bold text-neutral-900 bg-transparent px-2 py-1 outline-none"
+                      className="w-16 text-right text-[15px] font-bold text-neutral-900 bg-transparent px-2 py-1 outline-none"
                     />
                     <span className="text-[13px] font-medium text-neutral-400 pr-2">
                       {drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}
