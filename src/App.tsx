@@ -3178,8 +3178,8 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
               <StatRow key={name} label={name} value={info.display} />
             ))}
             {activeInfusions && activeInfusions.map(drug => (
-              <div key={drug} className="flex items-center justify-between px-4 py-3 gap-3">
-                <span className="text-[14px] font-semibold text-neutral-500 flex-shrink-0">{drug}</span>
+              <div key={drug} className="flex items-center justify-between p-2 px-3">
+                <span className="text-neutral-500 text-[16px] font-medium">{drug}</span>
                 {onUpdateInfusionDose ? (
                   <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded-lg overflow-hidden focus-within:border-emerald-400">
                     <input
@@ -3187,14 +3187,14 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
                       value={infusionDoses?.[drug] ?? ''}
                       onChange={e => onUpdateInfusionDose(drug, e.target.value)}
                       placeholder="0"
-                      className="w-16 text-right text-[15px] font-bold text-neutral-900 bg-transparent px-2 py-1 outline-none"
+                      className="w-16 text-right text-[16px] font-black text-neutral-900 bg-transparent px-2 py-1 outline-none"
                     />
                     <span className="text-[13px] font-medium text-neutral-400 pr-2 w-8 text-left flex-shrink-0">
                       {drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}
                     </span>
                   </div>
                 ) : (
-                  <span className="text-[15px] font-bold text-neutral-900">
+                  <span className="text-[16px] font-black text-neutral-900">
                     {infusionDoses?.[drug] ? `${infusionDoses[drug]}${drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : '—'}
                   </span>
                 )}
