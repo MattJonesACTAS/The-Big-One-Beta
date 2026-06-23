@@ -83,9 +83,9 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[] }> = {
   },
   'Adrenaline infusion': { 
     doses: [
-      { dose: '1mg/500mL', population: 'both', indication: 'Gravity fed — adult & paed' },
       { dose: '3mg/50mL', population: 'both', indication: 'Infusion pump — adult or large paed (≥21kg)', minWeight: 21 },
       { dose: '300mcg/50mL', population: 'paed', indication: 'Infusion pump — small paed (≤20kg)', maxWeight: 20 },
+      { dose: '1mg/500mL', population: 'both', indication: 'Gravity fed — adult & paed' },
     ] 
   },
   'Amiodarone': { 
@@ -3571,13 +3571,13 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
                 const unitMatches = doses
                   .filter(d => d !== 'Other')
                   .map(d => {
-                    // Match common patterns: mg/kg, mL, mg, g, etc.
                     const match = d.match(/(mg\/kg|mMol\/kg|mL\/kg|mcg\/kg|u\/kg|mg|mL|mMol|mcg|g|u|%)$/i);
-                    return match ? match[1] : null;
+                    if (!match) return null;
+                    // Strip /kg — custom entry is a flat dose, not weight-based
+                    return match[1].replace('/kg', '');
                   })
                   .filter(Boolean);
                 
-                // Return most common unit or first found
                 if (unitMatches.length > 0) {
                   return unitMatches[0] as string;
                 }
@@ -3585,9 +3585,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               };
               
               const doses = filteredDoses.map(d => d.dose);
-              // Use customUnit if specified, otherwise extract from dose options
               const unit = DOSE_CONFIG[selectedMed].customUnit || getUnitFromDoses(doses);
-              const placeholder = unit ? `Custom dose (${unit})...` : 'Custom dose...';
+              const placeholder = unit ? `Enter dose...` : 'Enter dose...';
               
               // Calculate secondary unit for live display
               const getSecondaryUnit = () => {
