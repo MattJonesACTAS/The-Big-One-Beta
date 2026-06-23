@@ -3189,7 +3189,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
                       placeholder="0"
                       className="w-16 text-right text-[15px] font-bold text-neutral-900 bg-transparent px-2 py-1 outline-none"
                     />
-                    <span className="text-[13px] font-medium text-neutral-400 pr-2">
+                    <span className="text-[13px] font-medium text-neutral-400 pr-2 w-8 text-left flex-shrink-0">
                       {drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}
                     </span>
                   </div>
