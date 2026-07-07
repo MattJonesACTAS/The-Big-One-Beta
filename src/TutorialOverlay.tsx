@@ -104,7 +104,7 @@ const ALL_NODES: GlobalNode[] = [
       },
       {
         title: 'Vital Signs Survey',
-        description: "Next, we have the vital signs survey. Any vital signs entered via the VSS tab will appear here for quick reference during the case and at handover."
+        description: "Next, we have the vital signs survey.\n\nAny vital signs entered via the VSS tab will appear here for quick reference during the case and at handover."
       },
       {
         title: 'Pharma Summary',

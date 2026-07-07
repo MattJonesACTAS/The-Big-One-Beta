@@ -849,6 +849,7 @@ export default function App() {
     }
     
     if (lastAdr.prior) {
+      if (tutorialMode) return { text: "", show: false, isDue: false };
       return { text: "Next adrenaline: unknown", show: true, isDue: false };
     }
 
@@ -861,7 +862,7 @@ export default function App() {
     } else {
       return { text: `Next adrenaline: Round ${nextDueRound}`, show: true, isDue: false };
     }
-  }, [state.treatments, state.cprRound]);
+  }, [state.treatments, state.cprRound, tutorialMode]);
 
   const amiodaroneStatus = useMemo(() => {
     const allAmioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
@@ -882,6 +883,7 @@ export default function App() {
     }
     
     if (lastAmio.prior) {
+      if (tutorialMode) return { text: '', show: false, isDue: false, countdown: 0, flashRed: false };
       return { text: "Next amiodarone: unknown", show: true, isDue: false, countdown: 0, flashRed: false };
     }
 
@@ -902,7 +904,7 @@ export default function App() {
       const flashRed = timeUntilNext <= 30; // Flash red when 30s or less
       return { text: `Next amiodarone: ${timeStr}`, show: true, isDue: false, countdown: timeUntilNext, flashRed };
     }
-  }, [state.treatments, state.elapsedSeconds]);
+  }, [state.treatments, state.elapsedSeconds, tutorialMode]);
 
 
   const pharmaSummary = useMemo(() => {
