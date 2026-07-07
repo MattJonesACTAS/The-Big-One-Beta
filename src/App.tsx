@@ -258,6 +258,29 @@ const cleanDoseForLog = (doseStr: string): string => {
   return doseStr;
 };
 
+const getAdrenalinePushDose = (patientType: string | null, weight: number | null): string => {
+  if (patientType === 'paed' && weight) {
+    return cleanDoseForLog(calculateDose('0.01mg/kg', weight));
+  }
+  return '1mg';
+};
+
+// doseNumber 1 = first (cardiac arrest) dose, 2 = second (repeat) dose
+const getAmiodaroneDose = (patientType: string | null, weight: number | null, doseNumber: 1 | 2): string => {
+  if (patientType === 'paed' && weight) {
+    const doseStr = doseNumber === 1 ? '5mg/kg' : '2.5mg/kg';
+    const clean = cleanDoseForLog(calculateDose(doseStr, weight));
+    const mgMatch = clean.match(/([\d.]+)mg/);
+    if (mgMatch) {
+      const cap = doseNumber === 1 ? 300 : 150;
+      const capped = Math.min(parseFloat(mgMatch[1]), cap);
+      return `${capped}mg`;
+    }
+    return clean;
+  }
+  return doseNumber === 1 ? '300mg' : '150mg';
+};
+
 const formatGlucose10Dose = (doseStr: string): string => {
   const mlMatch = doseStr.match(/([\d.]+)\s*(?:ml|mls|mL|mLs)/i);
   if (mlMatch) {
@@ -328,7 +351,7 @@ export default function App() {
   const [paedWeightMethod, setPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
   const [paedAgeLabel, setPaedAgeLabel] = useState<string>('');
   const [weightInput, setWeightInput] = useState('');
-  const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0 });
+  const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
@@ -1079,7 +1102,12 @@ export default function App() {
       initialTxs.push({ name: `Disarm #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
     }
     for (let i = 0; i < priorCounts.adrenaline; i++) {
-      initialTxs.push({ name: `Adrenaline push #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
+      const adrenalineDose = getAdrenalinePushDose(weightType, parsedWeight);
+      initialTxs.push({ name: `Adrenaline push ${adrenalineDose}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
+    }
+    for (let i = 0; i < priorCounts.amiodarone; i++) {
+      const amiodaroneDose = getAmiodaroneDose(weightType, parsedWeight, i === 0 ? 1 : 2);
+      initialTxs.push({ name: `Amiodarone ${amiodaroneDose}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
     }
     
     // Include any treatments added via the Full Tx list button
@@ -1115,7 +1143,7 @@ export default function App() {
     setWeightType(null);
     setPaedWeightMethod(null);
     setWeightInput('');
-    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0 });
+    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
     setPriorTxs([]);
     // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
@@ -1247,6 +1275,7 @@ export default function App() {
       {/* Interactive Tutorial pre-screen */}
       {showInteractiveTutorial && (
         <InteractiveTutorial
+          catchupStep={catchupStep}
           onClose={() => {
             setShowInteractiveTutorial(false);
             setTimingNodesComplete(false);
@@ -1811,10 +1840,9 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setShowCatchup(true);
-                        setCatchupStep(6);
+                        setCatchupStep(2);
                         setTimingMode(null);
                         setTimingNodesComplete(false);
-                        setState(prev => ({ ...prev, patientType: 'adult', patientWeight: 70 }));
                         setShowInteractiveTutorial(true);
                       }} 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl text-base font-semibold shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
@@ -2004,7 +2032,8 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button 
                       onClick={() => setCatchupStep(1)} 
-                      className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors"
+                      disabled={showInteractiveTutorial}
+                      className={`py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'bg-neutral-100 text-neutral-300 cursor-default' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
                     >
                       Back
                     </button>
@@ -2136,6 +2165,7 @@ export default function App() {
                     <CounterItem label="Shock" value={priorCounts.shock} onChange={v => setPriorCounts(p => ({ ...p, shock: v }))} />
                     <CounterItem label="Disarm" value={priorCounts.disarm} onChange={v => setPriorCounts(p => ({ ...p, disarm: v }))} />
                     <CounterItem label="Adrenaline" value={priorCounts.adrenaline} onChange={v => setPriorCounts(p => ({ ...p, adrenaline: v }))} />
+                    <CounterItem label="Amiodarone" value={priorCounts.amiodarone} onChange={v => setPriorCounts(p => ({ ...p, amiodarone: Math.min(2, v) }))} />
                     <div className="grid grid-cols-3 gap-2">
                       {['BVM', 'LMA', 'IO'].map(tx => (
                         <button 
