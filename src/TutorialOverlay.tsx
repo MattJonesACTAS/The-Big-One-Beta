@@ -78,7 +78,7 @@ const ALL_NODES: GlobalNode[] = [
       },
       {
         title: 'Medications',
-        description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog a 1mg adrenaline push to progress."
+        description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog an adrenaline push dose to progress."
       }
     ],
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
