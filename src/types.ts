@@ -14,6 +14,7 @@ export interface Treatment {
 
 export interface AppState {
   running: boolean;
+  exportAttempted: boolean;
   startTime: number | null;
   pausedTime: number;
   elapsedSeconds: number;
@@ -35,6 +36,8 @@ export interface AppState {
   roscChecked: string[];
   pheaChecked: string[];
   isROSCMode: boolean;
+  timingMode: 'cpr' | 'elapsed' | 'log' | null;
+  rhythmInterval: 'evens' | 'odds' | 'half-evens' | 'half-odds' | null;
   vitals: {
     hr: string; rr: string; gcs: string;
     bpSys: string; bpDia: string; spo2: string;
