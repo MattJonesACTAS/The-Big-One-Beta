@@ -54,6 +54,8 @@ const INITIAL_STATE: AppState = {
   roscChecked: [],
   pheaChecked: [],
   isROSCMode: false,
+  timingMode: null,
+  rhythmInterval: null,
   vitals: { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }
 };
 
@@ -356,8 +358,8 @@ export default function App() {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
-  const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | 'log' | null>(null);
-  const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(null);
+  const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | 'log' | null>(() => state.timingMode);
+  const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
   const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
   const [isCaseClosed, setIsCaseClosed] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
@@ -370,8 +372,12 @@ export default function App() {
   const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [showRecalibrateMenu, setShowRecalibrateMenu] = useState(false);
+  const [showModeChange, setShowModeChange] = useState(false);
   const [showWeightChange, setShowWeightChange] = useState(false);
   const [newWeightInput, setNewWeightInput] = useState('');
+  const [newPatientType, setNewPatientType] = useState<'adult' | 'paed' | null>(null);
+  const [newPaedWeightMethod, setNewPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
+  const [newPaedAgeLabel, setNewPaedAgeLabel] = useState<string | null>(null);
   const [showRearrestIntervalPicker, setShowRearrestIntervalPicker] = useState(false);
   const [rearrestElapsed, setRearrestElapsed] = useState<number>(0);
   const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
@@ -386,8 +392,10 @@ export default function App() {
   
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
+  const tutorialInitialWeightRef = useRef<number | null>(null);
   const [showInteractiveTutorial, setShowInteractiveTutorial] = useState(false);
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
+  const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
 
@@ -406,6 +414,27 @@ export default function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [state.running, state.rhythmCheckPaused]);
+
+  // Mirror timingMode/rhythmInterval into persisted state so a page reload
+  // mid-case (crash, phone restart, tab close) restores the correct timing
+  // method instead of losing it.
+  useEffect(() => {
+    setState(prev => {
+      if (prev.timingMode === timingMode && prev.rhythmInterval === rhythmInterval) return prev;
+      return { ...prev, timingMode, rhythmInterval };
+    });
+  }, [timingMode, rhythmInterval]);
+
+  // Capture the patient weight as it was when the tutorial started, so we know
+  // once it's actually been changed (used to stop the recalibrate/weight flash).
+  useEffect(() => {
+    if (tutorialMode && tutorialInitialWeightRef.current === null) {
+      tutorialInitialWeightRef.current = state.patientWeight;
+    }
+    if (!tutorialMode) {
+      tutorialInitialWeightRef.current = null;
+    }
+  }, [tutorialMode, state.patientWeight]);
 
   // Inject tutorial CPR button flash CSS
   useEffect(() => {
@@ -435,15 +464,30 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-cpr-btn');
     }
     
-    // Node 5 (addTxBtn) complete - flash Add Tx button (index 6 = waiting for treatment screen)
-    if (tutorialMode && tutorialScreen.index === 6 && state.currentOverlay === null) {
+    // Node 3 (recalibrate) complete - flash Recalibrate button (index 5 = waiting for weight change)
+    // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
+    // Both stop as soon as the weight actually changes, even before the node is dismissed.
+    const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
+    if (tutorialMode && tutorialScreen.index === 5 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
+      document.body.classList.add('tutorial-flash-recalibrate');
+    } else {
+      document.body.classList.remove('tutorial-flash-recalibrate');
+    }
+    if (tutorialMode && tutorialScreen.index === 5 && showRecalibrateMenu && weightUnchanged) {
+      document.body.classList.add('tutorial-flash-weight');
+    } else {
+      document.body.classList.remove('tutorial-flash-weight');
+    }
+
+    // Node 6 (addTxBtn) complete - flash Add Tx button (index 7 = waiting for treatment screen)
+    if (tutorialMode && tutorialScreen.index === 7 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
-    // Node 6 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 7)
-    if (tutorialMode && tutorialScreen.index === 7) {
+    // Node 7 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 8)
+    if (tutorialMode && tutorialScreen.index === 8) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -451,22 +495,22 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
 
-    // Node 8 (summaryBtn) complete - flash Summary button (index 9 = waiting for summary overlay)
-    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === null) {
+    // Node 9 (summaryBtn) complete - flash Summary button (index 10 = waiting for summary overlay)
+    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 10 (closeOverlay) complete - flash summary close button (index 11 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === 'summary') {
+    // Node 11 (closeOverlay) complete - flash summary close button (index 12 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 11 (closeCase) complete - flash Close Case button (index 12 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === null) {
+    // Node 12 (closeCase) complete - flash Close Case button (index 13 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
@@ -481,6 +525,8 @@ export default function App() {
     
     return () => {
       document.body.classList.remove('tutorial-flash-cpr-btn');
+      document.body.classList.remove('tutorial-flash-recalibrate');
+      document.body.classList.remove('tutorial-flash-weight');
       document.body.classList.remove('tutorial-flash-add-tx');
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
@@ -489,7 +535,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-close');
       document.body.classList.remove('tutorial-flash-delete');
     };
-  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete]);
+  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, state.patientWeight, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -1284,6 +1330,7 @@ export default function App() {
             setTutorialMode(true);
           }}
           onTimingNodesComplete={() => setTimingNodesComplete(true)}
+          onCatchupNodeStatusChange={(_screen, cleared) => setCatchupNodeCleared(cleared)}
         />
       )}
 
@@ -1328,6 +1375,7 @@ export default function App() {
         )}
         <button 
           onClick={() => setShowRecalibrateMenu(true)} 
+          data-button="recalibrate"
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
           <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
@@ -2041,9 +2089,9 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => weightInput && setCatchupStep(3)}
-                      disabled={!weightInput}
+                      disabled={!weightInput || (showInteractiveTutorial && !catchupNodeCleared)}
                       className={`py-4 rounded-xl font-bold transition-all ${
-                        weightInput
+                        weightInput && !(showInteractiveTutorial && !catchupNodeCleared)
                           ? weightType === 'adult'
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                             : 'bg-pink-400 text-white hover:bg-pink-500 shadow-md'
@@ -2058,7 +2106,7 @@ export default function App() {
 
               {catchupStep === 4 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter elapsed time</h2>
+                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter Elapsed Time</h2>
                   <p className="text-neutral-600 text-sm px-4">This is the time at the top right corner of the monitor</p>
                   <ElapsedTimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
                   
@@ -2092,7 +2140,7 @@ export default function App() {
 
               {!catchupTxMode && catchupStep === 5 && (
                 <div className="text-center space-y-6">
-                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter current CPR timer</h2>
+                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter Current CPR Timer</h2>
                   <p className="text-neutral-600 text-sm px-4">This is the countdown above the diamond on the monitor</p>
                   <TimePicker 
                     value={catchupRhythm} 
@@ -2104,9 +2152,14 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setCprTimestamp(Date.now());
+                        if (showInteractiveTutorial) {
+                          setShowInteractiveTutorial(false);
+                          setTutorialMode(true);
+                        }
                         handleCatchupStart();
                       }}
-                      className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base"
+                      disabled={showInteractiveTutorial && !catchupNodeCleared}
+                      className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && !catchupNodeCleared ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
                     >
                       Start Case
                     </button>
@@ -2162,33 +2215,52 @@ export default function App() {
 
               {!catchupTxMode && catchupStep === 3 && (
                 <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900">What treatments have you already applied?</h2>
-                  <div className="space-y-2 py-3 px-2">
-                    <CounterItem label="Shock" value={priorCounts.shock} onChange={v => setPriorCounts(p => ({ ...p, shock: v }))} />
-                    <CounterItem label="Disarm" value={priorCounts.disarm} onChange={v => setPriorCounts(p => ({ ...p, disarm: v }))} />
-                    <CounterItem label="Adrenaline" value={priorCounts.adrenaline} onChange={v => setPriorCounts(p => ({ ...p, adrenaline: v }))} />
-                    <CounterItem label="Amiodarone" value={priorCounts.amiodarone} onChange={v => setPriorCounts(p => ({ ...p, amiodarone: Math.min(2, v) }))} />
-                    <div className="grid grid-cols-3 gap-2">
-                      {['BVM', 'LMA', 'IO'].map(tx => (
-                        <button 
-                          key={tx}
-                          onClick={() => setPriorTxs(p => p.includes(tx) ? p.filter(t => t !== tx) : [...p, tx])}
-                          className={`p-3 rounded-xl font-bold text-base ${priorTxs.includes(tx) ? 'bg-amber-100 text-amber-900 ring-2 ring-amber-400' : 'bg-neutral-100 text-neutral-600'}`}
-                        >
-                          {tx}
-                        </button>
-                      ))}
+                  <h2 className="text-xl font-bold text-neutral-900">What treatments have<br />you already applied?</h2>
+                  <div className="space-y-3 py-3 px-2">
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5">
+                      <p className="text-xs font-bold uppercase tracking-wide text-red-900 text-center mb-2.5">Rhythm checks</p>
+                      <div className="space-y-2">
+                        <CounterItem label="Shock" value={priorCounts.shock} onChange={v => setPriorCounts(p => ({ ...p, shock: v }))} activeBorderClass="border-red-700" />
+                        <CounterItem label="Disarm" value={priorCounts.disarm} onChange={v => setPriorCounts(p => ({ ...p, disarm: v }))} activeBorderClass="border-red-700" />
+                      </div>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-900 text-center mb-2.5">Medications</p>
+                      <div className="space-y-2">
+                        <CounterItem label="Adrenaline" value={priorCounts.adrenaline} onChange={v => setPriorCounts(p => ({ ...p, adrenaline: v }))} activeBorderClass="border-emerald-700" />
+                        <CounterItem label="Amiodarone" value={priorCounts.amiodarone} onChange={v => setPriorCounts(p => ({ ...p, amiodarone: Math.min(2, v) }))} activeBorderClass="border-emerald-700" />
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5">
+                      <p className="text-xs font-bold uppercase tracking-wide text-blue-900 text-center mb-2.5">Airway and access</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {['BVM', 'LMA', 'IO', 'IV'].map(tx => (
+                          <button 
+                            key={tx}
+                            onClick={() => setPriorTxs(p => p.includes(tx) ? p.filter(t => t !== tx) : [...p, tx])}
+                            className={`p-3 rounded-xl font-bold text-base bg-white border-2 ${priorTxs.includes(tx) ? 'border-blue-800 text-blue-900' : 'border-neutral-200 text-neutral-600'}`}
+                          >
+                            {tx}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <button
                       onClick={() => setCatchupTxMode(true)}
-                      className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-600 flex items-center justify-center gap-2"
+                      className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-700 border border-neutral-300 flex items-center justify-center gap-2"
                     >
                       <Plus size={16} /> Full Tx list
                     </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-emerald-600 text-white p-3 rounded-xl font-bold btn-base">Next</button>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                      <button
+                        onClick={() => { setCatchupStep(6); setTimingMode(null); }}
+                        disabled={showInteractiveTutorial && !catchupNodeCleared}
+                        className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && !catchupNodeCleared ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2231,10 +2303,6 @@ export default function App() {
                     <button
                       onClick={() => {
                         setTimingMode('cpr');
-                        if (showInteractiveTutorial) {
-                          setShowInteractiveTutorial(false);
-                          setTutorialMode(true);
-                        }
                       }}
                       disabled={showInteractiveTutorial && !timingNodesComplete}
                       data-tutorial="cpr-btn"
@@ -2433,13 +2501,32 @@ export default function App() {
             <button
               onClick={() => {
                 setNewWeightInput(String(state.patientWeight ?? ''));
+                setNewPatientType(state.patientType as 'adult' | 'paed');
+                if (state.patientType === 'paed' && state.patientAge) {
+                  setNewPaedWeightMethod('age');
+                  setNewPaedAgeLabel(state.patientAge);
+                } else {
+                  setNewPaedWeightMethod('weight');
+                  setNewPaedAgeLabel(null);
+                }
                 setShowRecalibrateMenu(false);
                 setShowWeightChange(true);
               }}
+              data-button="change-weight"
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Change patient weight</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {state.patientWeight}kg</div>
+            </button>
+            <button
+              onClick={() => {
+                setShowRecalibrateMenu(false);
+                setShowModeChange(true);
+              }}
+              className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
+            >
+              <div className="text-base">Change timing mode</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode === 'cpr' ? 'CPR Timer' : timingMode === 'elapsed' ? 'Elapsed Time' : 'Tx Log Only'}</div>
             </button>
             <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
               Cancel
@@ -2452,7 +2539,38 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Weight</h2>
-            {state.patientType === 'adult' ? (
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  setNewPatientType('adult');
+                  setNewWeightInput('');
+                }}
+                className={`p-3 rounded-xl font-bold text-center transition-all duration-200 ${
+                  newPatientType === 'adult'
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
+                }`}
+              >
+                Adult
+              </button>
+              <button
+                onClick={() => {
+                  setNewPatientType('paed');
+                  if (!newPaedWeightMethod) setNewPaedWeightMethod('age');
+                  setNewWeightInput('');
+                }}
+                className={`p-3 rounded-xl font-bold text-center transition-all duration-200 ${
+                  newPatientType === 'paed'
+                    ? 'bg-pink-400 text-white shadow-md'
+                    : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-pink-300'
+                }`}
+              >
+                Paediatric
+              </button>
+            </div>
+
+            {newPatientType === 'adult' ? (
               <select
                 value={newWeightInput}
                 onChange={e => setNewWeightInput(e.target.value)}
@@ -2479,15 +2597,58 @@ export default function App() {
                 <option value="200">200 kg</option>
               </select>
             ) : (
-              <div className="relative">
-                <input
-                  type="number"
-                  value={newWeightInput}
-                  onChange={e => setNewWeightInput(e.target.value)}
-                  className="w-full border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none"
-                  placeholder="Enter weight"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+              <div className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-pink-900 mb-3">Select weight by age</label>
+                  <select
+                    value={newPaedWeightMethod === 'age' ? newWeightInput : ''}
+                    onChange={(e) => {
+                      setNewPaedWeightMethod('age');
+                      setNewWeightInput(e.target.value);
+                      const opt = e.target.options[e.target.selectedIndex];
+                      setNewPaedAgeLabel(opt.text.split(' (')[0]);
+                    }}
+                    className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
+                  >
+                    <option value="">Choose age</option>
+                    {[
+                      ['Newborn', 3], ['3 months', 5], ['6 months', 7],
+                      ['12 months', 11], ['2 years', 13],
+                      ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21],
+                      ['7 years', 23], ['8 years', 25], ['9 years', 27], ['10 years', 30],
+                      ['11 years', 33]
+                    ].map(([age, weight]) => (
+                      <option key={age} value={weight}>{age} ({weight} kg)</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-pink-200"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-pink-50 px-3 text-xs font-bold text-pink-400">OR</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="Enter weight"
+                      value={newPaedWeightMethod === 'weight' ? newWeightInput : ''}
+                      onChange={(e) => {
+                        setNewPaedWeightMethod('weight');
+                        setNewWeightInput(e.target.value);
+                        setNewPaedAgeLabel(null);
+                      }}
+                      className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+                  </div>
+                </div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -2496,7 +2657,12 @@ export default function App() {
                 onClick={() => {
                   const w = parseFloat(newWeightInput);
                   if (!isNaN(w) && w > 0) {
-                    setState(prev => ({ ...prev, patientWeight: w }));
+                    setState(prev => ({
+                      ...prev,
+                      patientWeight: w,
+                      patientType: newPatientType,
+                      patientAge: (newPatientType === 'paed' && newPaedWeightMethod === 'age' && newPaedAgeLabel) ? newPaedAgeLabel : null,
+                    }));
                   }
                   setShowWeightChange(false);
                 }}
@@ -2506,6 +2672,56 @@ export default function App() {
                 Save
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showModeChange && (
+        <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-neutral-900">Change Timing Mode</h2>
+              <p className="text-neutral-500 text-sm">How do you want to keep track of rhythm checks from now on?</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                disabled={timingMode === 'log'}
+                onClick={() => {
+                  setTimingMode('log');
+                  setShowModeChange(false);
+                }}
+                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'log' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
+              >
+                Tx Log Only
+              </button>
+              <button
+                disabled={timingMode === 'elapsed'}
+                onClick={() => {
+                  setTimingMode('elapsed');
+                  if (!rhythmInterval) setRhythmInterval('evens');
+                  setShowModeChange(false);
+                  setShowElapsedRecalibrate(true);
+                }}
+                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'elapsed' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
+              >
+                Elapsed Time
+              </button>
+              <button
+                disabled={timingMode === 'cpr'}
+                onClick={() => {
+                  setTimingMode('cpr');
+                  setTimerAdjustValue({ mins: 2, secs: 0 });
+                  setShowModeChange(false);
+                  setShowTimerAdjust(true);
+                }}
+                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'cpr' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
+              >
+                CPR Timer
+              </button>
+            </div>
+            <button onClick={() => setShowModeChange(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
+              Cancel
+            </button>
           </div>
         </div>
       )}
@@ -2741,9 +2957,9 @@ function TimePicker({ value, onChange, maxSeconds }: { value: { mins: number, se
   );
 }
 
-function CounterItem({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) {
+function CounterItem({ label, value, onChange, activeBorderClass }: { label: string, value: number, onChange: (v: number) => void, activeBorderClass?: string }) {
   return (
-    <div className="flex items-center justify-between bg-neutral-50 p-2.5 rounded-2xl border border-neutral-100">
+    <div className={`flex items-center justify-between bg-white p-2.5 rounded-2xl border-2 ${value > 0 ? (activeBorderClass || 'border-neutral-400') : 'border-neutral-200'}`}>
       <span className="text-base font-bold text-neutral-800 ml-2">{label}</span>
       <div className="flex items-center gap-4">
         <button onClick={() => onChange(Math.max(0, value - 1))} className="w-9 h-9 bg-white shadow-sm border border-neutral-200 rounded-xl font-bold text-xl flex items-center justify-center">−</button>
