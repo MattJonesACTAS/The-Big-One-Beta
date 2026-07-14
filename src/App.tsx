@@ -1290,33 +1290,14 @@ export default function App() {
            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
              <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Delete this case?</h2>
-             {state.exportAttempted ? (
-               <p className="text-neutral-500 mb-8">All data will be lost and you will return to the start screen.</p>
-             ) : (
-               <p className="text-red-600 font-semibold mb-8">You haven't exported this case yet. Once deleted, this data is permanently unrecoverable — there's no cloud backup.</p>
-             )}
+             <p className="text-neutral-500 mb-8">
+               All data will be lost and you will return to the start screen.
+               {!state.exportAttempted && " You haven't exported this case yet."}
+             </p>
              <div className="grid grid-cols-2 gap-3">
                <button onClick={() => setShowDeleteWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
-               {state.exportAttempted ? (
-                 <button onClick={deleteCase} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Delete</button>
-               ) : (
-                 <button
-                   onClick={() => {
-                     setState(prev => ({ ...prev, exportAttempted: true }));
-                     setShowDeleteWarning(false);
-                     window.print();
-                   }}
-                   className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base"
-                 >
-                   Export First
-                 </button>
-               )}
+               <button onClick={deleteCase} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Delete</button>
              </div>
-             {!state.exportAttempted && (
-               <button onClick={deleteCase} className="w-full mt-3 p-3 rounded-xl font-bold text-red-600 text-sm">
-                 Delete without exporting
-               </button>
-             )}
            </div>
          </div>
         )}
