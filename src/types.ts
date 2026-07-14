@@ -14,7 +14,6 @@ export interface Treatment {
 
 export interface AppState {
   running: boolean;
-  exportAttempted: boolean;
   startTime: number | null;
   pausedTime: number;
   elapsedSeconds: number;
