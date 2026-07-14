@@ -1940,7 +1940,7 @@ export default function App() {
                         <div className="text-center">
                           <div className="font-bold text-lg">Adult</div>
                           <div className={`text-xs mt-1 ${weightType === 'adult' ? 'text-emerald-100' : 'text-neutral-400'}`}>
-                            35 - 200 kg
+                            ≥12 years
                           </div>
                         </div>
                       </div>
