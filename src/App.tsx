@@ -323,17 +323,13 @@ const renumberTreatments = (treatments: Treatment[]): Treatment[] => {
 
 // Pure pharma summary calculation, usable for both live case state and
 // archived previous-case snapshots (neither depends on component state).
-// Converts a dose amount between mg and mcg so mixed-unit entries for the
-// same drug (e.g. one push logged in mg, another in mcg) can still be summed
-// together. Returns null for any other unit pairing - those aren't simple
-// linear conversions (mL is volume, mMol is molar, etc.) and stay unsummed.
-const convertDoseUnit = (amount: number, fromUnit: string, toUnit: string): number | null => {
-  const fu = fromUnit.toLowerCase();
-  const tu = toUnit.toLowerCase();
-  if (fu === tu) return amount;
-  if (fu === 'mg' && tu === 'mcg') return amount * 1000;
-  if (fu === 'mcg' && tu === 'mg') return amount / 1000;
-  return null;
+// mg/mcg entries always aggregate internally as mcg, regardless of which
+// unit was logged first - keeps aggregation order-independent, so the
+// display-time formatting below can pick whichever unit reads best.
+const toCanonicalUnit = (amount: number, unit: string): { unit: string, amount: number } => {
+  const u = unit.toLowerCase();
+  if (u === 'mg') return { unit: 'mcg', amount: amount * 1000 };
+  return { unit, amount };
 };
 
 const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string }> => {
@@ -351,11 +347,11 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
       if (doseStr) {
         const directMatch = doseStr.match(/([\d.]+)(mg\/h|mg|mL|mMol|mcg|g|u|%)/i);
         if (directMatch) {
-          const [_, amount, unit] = directMatch;
+          const [_, rawAmount, rawUnit] = directMatch;
+          const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
           if (!summary[medName].unit) summary[medName].unit = unit;
-          const converted = convertDoseUnit(parseFloat(amount), unit, summary[medName].unit);
-          if (converted !== null) {
-            summary[medName].totalDose += converted;
+          if (summary[medName].unit === unit) {
+            summary[medName].totalDose += amount;
           }
         }
       }
@@ -380,21 +376,21 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
           // Extract the calculated value in parentheses
           const calculatedMatch = doseStr.match(/\(([\d.]+)(mg|mL|mMol|mcg|g|u|%)\)/i);
           if (calculatedMatch) {
-            const [_, amount, unit] = calculatedMatch;
+            const [_, rawAmount, rawUnit] = calculatedMatch;
+            const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
             if (!summary[med].unit) summary[med].unit = unit;
-            const converted = convertDoseUnit(parseFloat(amount), unit, summary[med].unit);
-            if (converted !== null) {
-              summary[med].totalDose += converted;
+            if (summary[med].unit === unit) {
+              summary[med].totalDose += amount;
             }
           } else {
             // Direct dose: "1mg", "300mg", "100mL", etc.
             const directMatch = doseStr.match(/([\d.]+)(mg|mL|mMol|mcg|g|u|%)/i);
             if (directMatch) {
-              const [_, amount, unit] = directMatch;
+              const [_, rawAmount, rawUnit] = directMatch;
+              const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
               if (!summary[med].unit) summary[med].unit = unit;
-              const converted = convertDoseUnit(parseFloat(amount), unit, summary[med].unit);
-              if (converted !== null) {
-                summary[med].totalDose += converted;
+              if (summary[med].unit === unit) {
+                summary[med].totalDose += amount;
               }
             }
           }
@@ -409,12 +405,18 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
   Object.keys(summary).forEach(med => {
     const { totalDose, unit, count } = summary[med];
     if (totalDose > 0 && unit) {
-      const roundedDose = parseFloat(totalDose.toFixed(2));
-      if (med === 'Glucose 10%' && unit === 'mL') {
-        const grams = Math.round(roundedDose * 0.1 * 10) / 10;
-        summary[med].display = `${roundedDose}mL/${grams}g (${count})`;
+      // mcg totals of 1000 or more read more naturally as mg
+      if (unit.toLowerCase() === 'mcg' && totalDose >= 1000) {
+        const mgValue = parseFloat((totalDose / 1000).toFixed(2));
+        summary[med].display = `${mgValue}mg (${count})`;
       } else {
-        summary[med].display = `${roundedDose}${unit} (${count})`;
+        const roundedDose = parseFloat(totalDose.toFixed(2));
+        if (med === 'Glucose 10%' && unit === 'mL') {
+          const grams = Math.round(roundedDose * 0.1 * 10) / 10;
+          summary[med].display = `${roundedDose}mL/${grams}g (${count})`;
+        } else {
+          summary[med].display = `${roundedDose}${unit} (${count})`;
+        }
       }
     } else {
       summary[med].display = `${count}`;
