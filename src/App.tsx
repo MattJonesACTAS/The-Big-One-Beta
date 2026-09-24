@@ -15,6 +15,7 @@ import {
   Trash2, 
   ChevronDown, 
   AlertCircle,
+  AlertTriangle,
   XCircle,
   X,
   Clock,
@@ -624,6 +625,7 @@ export default function App() {
   const [rearrestElapsed, setRearrestElapsed] = useState<number>(0);
   const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
+  const [showPatternSwitchModal, setShowPatternSwitchModal] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
   const patternSwitchNoticeRef = useRef<string | null>(null);
   const [isShockForced, setIsShockForced] = useState(false);
@@ -1079,6 +1081,7 @@ export default function App() {
         setRhythmInterval(earlyResetPattern);
         const patternLabels: Record<string, string> = { evens: 'Evens', odds: 'Odds', 'half-evens': 'Half evens', 'half-odds': 'Half odds' };
         patternSwitchNoticeRef.current = patternLabels[earlyResetPattern];
+        setShowPatternSwitchModal(true);
       }
     }
 
@@ -1560,6 +1563,19 @@ export default function App() {
              </div>
            </div>
          </div>
+        )}
+
+        {showPatternSwitchModal && (
+          <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+              <AlertTriangle size={48} className="mx-auto text-amber-600 mb-4" />
+              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Rhythm Check Pattern Changed</h2>
+              <p className="text-neutral-500 mb-8">
+                Since this was logged early, the app switched rhythm checks to <strong>{patternSwitchNoticeRef.current}</strong> to keep the next check as close to 2:00 away as possible.
+              </p>
+              <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
+            </div>
+          </div>
         )}
 
         {tutorialMode && (
@@ -3086,11 +3102,9 @@ export default function App() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className={`fixed top-0 left-0 right-0 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] ${patternSwitchNoticeRef.current ? 'bg-amber-600' : 'bg-emerald-600'}`}
+            className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000]"
           >
-            {patternSwitchNoticeRef.current
-              ? `✓ ${loggedTreatmentRef.current} logged — rhythm check switched to ${patternSwitchNoticeRef.current}`
-              : `✓ ${loggedTreatmentRef.current} logged`}
+            ✓ {loggedTreatmentRef.current} logged
           </motion.div>
         )}
       </AnimatePresence>
