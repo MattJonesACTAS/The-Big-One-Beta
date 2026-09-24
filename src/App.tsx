@@ -3150,7 +3150,18 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
 }
 
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
-  const update = (key: keyof AppState['vitals'], val: string) => onChange({ ...vitals, [key]: val });
+  const [draft, setDraft] = useState<Partial<AppState['vitals']>>({});
+
+  const commit = (key: keyof AppState['vitals']) => {
+    if (draft[key] === undefined) return;
+    onChange({ ...vitals, [key]: draft[key] });
+    setDraft(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
     { key: 'hr',   label: 'HR'           },
     { key: 'rr',   label: 'RR'           },
@@ -3166,18 +3177,33 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
     <div className="h-full overflow-y-auto">
       <div className="p-2.5 px-4 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-sky-50 text-sky-800 border-sky-200">Vital Signs</div>
       <div className="p-3 space-y-2">
-        {fields.map(({ key, label }) => (
-          <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
-            <span className="text-[15px] font-bold text-neutral-800">{label}</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={vitals[key]}
-              onChange={e => update(key, e.target.value)}
-              className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
-            />
-          </div>
-        ))}
+        {fields.map(({ key, label }) => {
+          const hasDraft = draft[key] !== undefined && draft[key] !== vitals[key];
+          return (
+            <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
+              <span className="text-[15px] font-bold text-neutral-800">{label}</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={draft[key] !== undefined ? draft[key] : vitals[key]}
+                  onChange={e => setDraft(prev => ({ ...prev, [key]: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') commit(key); }}
+                  className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
+                />
+                {hasDraft && (
+                  <button
+                    onClick={() => commit(key)}
+                    className="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center"
+                    aria-label={`Confirm ${label}`}
+                  >
+                    <Check size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
