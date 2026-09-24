@@ -3792,9 +3792,15 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
         <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
-          <StatRow label="CPR Rounds" value={state.cprRound} />
-          <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
-          <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+          {state.cprRound > 0 ? (
+            <>
+              <StatRow label="CPR Rounds" value={state.cprRound} />
+              <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+              <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+            </>
+          ) : (
+            <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No arrest data recorded.</div>
+          )}
         </div>
       </div>
     </div>
