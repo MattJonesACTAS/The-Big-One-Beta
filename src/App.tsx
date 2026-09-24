@@ -632,6 +632,7 @@ export default function App() {
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt10 = useRef<boolean>(false);
   const previousCountdown = useRef<number | null>(null);
+  const earlyResetIntervalRef = useRef<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(null);
   
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
@@ -1060,6 +1061,29 @@ export default function App() {
       // code sheet counts them.
       const isLogModeRoundComplete = timingMode === 'log' && isShockOrDisarm && !isROSC;
       const shouldResetTimer = isROSC || (isShockOrDisarm && wasRhythmCheckPaused);
+
+      // When a shock/disarm is logged early (isOutOfTurn), automatically
+      // switch to whichever of evens/odds/half-evens/half-odds puts the
+      // next check closest to - but not over - 2:00 away from right now.
+      // Excludes rearrest, which already has its own explicit interval
+      // picker the user works through manually; this only covers a plain
+      // early log during ongoing resuscitation.
+      let earlyResetTarget: number | null = null;
+      let earlyResetPattern: 'evens' | 'odds' | 'half-evens' | 'half-odds' | null = null;
+      if (isOutOfTurn && !rearrested) {
+        const patterns: Array<'evens' | 'odds' | 'half-evens' | 'half-odds'> = ['evens', 'odds', 'half-evens', 'half-odds'];
+        let bestDelta = -1;
+        for (const p of patterns) {
+          const candidate = calcNextIntervalTarget(prev.elapsedSeconds, p);
+          const delta = candidate - prev.elapsedSeconds;
+          if (delta > bestDelta) {
+            bestDelta = delta;
+            earlyResetTarget = candidate;
+            earlyResetPattern = p;
+          }
+        }
+      }
+      earlyResetIntervalRef.current = earlyResetPattern;
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -1081,11 +1105,14 @@ export default function App() {
         treatments: newTreatments,
         cprRound: (isOutOfTurn || isLogModeRoundComplete) ? prev.cprRound + 1 : prev.cprRound,
         currentOverlay: isRearrest ? 'treatment' : null,
-        // Reset rhythm check to 2:00 for ROSC, or when unpausing via other shock/disarm
-        rhythmCheckTarget: shouldResetTimer 
-          ? prev.elapsedSeconds + 120 
-          : prev.rhythmCheckTarget,
-        rhythmCheckOvertime: shouldResetTimer ? 0 : prev.rhythmCheckOvertime,
+        // Reset rhythm check to 2:00 for ROSC, or when unpausing via other shock/disarm,
+        // or to the auto-selected pattern's target when logged early
+        rhythmCheckTarget: earlyResetTarget !== null
+          ? earlyResetTarget
+          : shouldResetTimer 
+            ? prev.elapsedSeconds + 120 
+            : prev.rhythmCheckTarget,
+        rhythmCheckOvertime: (earlyResetTarget !== null || shouldResetTimer) ? 0 : prev.rhythmCheckOvertime,
         // Pause for ROSC, unpause for other shock/disarm; Rearrest exits ROSC mode
         rhythmCheckPaused: isShockOrDisarm ? isROSC : prev.rhythmCheckPaused,
         // For ROSC, freeze the countdown at 2:00
@@ -1096,6 +1123,15 @@ export default function App() {
         roscChecked: isROSC ? [] : prev.roscChecked
       };
     });
+
+    // Apply the auto-selected interval pattern from an early shock/disarm
+    // log, computed inside the setState callback above (needs prev's fresh
+    // values) but applied here since rhythmInterval is separate component
+    // state, not part of the main case state.
+    if (earlyResetIntervalRef.current) {
+      setRhythmInterval(earlyResetIntervalRef.current);
+      earlyResetIntervalRef.current = null;
+    }
     
     // Rearrest from Add Tx menu: stop flashing, set forced overlay, mark as rearrest
     if (name === 'Rearrest') {
