@@ -1052,7 +1052,13 @@ export default function App() {
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
       // Increment round if shock/disarm logged out of turn (before timer hit 0)
       // Do NOT increment if responding to a forced rhythm check overlay (already incremented by timer)
-      const isOutOfTurn = isShockOrDisarm && !isROSC && !isShockForced && (prev.rhythmCheckTarget - prev.elapsedSeconds) > 0;
+      // This only applies in elapsed mode - it relies on an actively-ticking
+      // rhythmCheckTarget, which log mode doesn't maintain.
+      const isOutOfTurn = timingMode !== 'log' && isShockOrDisarm && !isROSC && !isShockForced && (prev.rhythmCheckTarget - prev.elapsedSeconds) > 0;
+      // Log mode has no timer to compare against - every shock/disarm (other
+      // than ROSC) simply marks the end of a CPR round, the same way a paper
+      // code sheet counts them.
+      const isLogModeRoundComplete = timingMode === 'log' && isShockOrDisarm && !isROSC;
       const shouldResetTimer = isROSC || (isShockOrDisarm && wasRhythmCheckPaused);
       
       // Auto-add OPA before BVM
@@ -1073,7 +1079,7 @@ export default function App() {
       return {
         ...prev,
         treatments: newTreatments,
-        cprRound: isOutOfTurn ? prev.cprRound + 1 : prev.cprRound,
+        cprRound: (isOutOfTurn || isLogModeRoundComplete) ? prev.cprRound + 1 : prev.cprRound,
         currentOverlay: isRearrest ? 'treatment' : null,
         // Reset rhythm check to 2:00 for ROSC, or when unpausing via other shock/disarm
         rhythmCheckTarget: shouldResetTimer 
