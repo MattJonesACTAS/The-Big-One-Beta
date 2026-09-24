@@ -1681,34 +1681,7 @@ export default function App() {
           <div className="h-full flex flex-col relative">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <ArrestSummarySection state={state} showRecordingDuration />
-              {(() => {
-                const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
-                const vitalRows = [
-                  { label: 'HR',     value: v.hr,   unit: 'bpm'    },
-                  { label: 'RR',      value: v.rr,   unit: 'br/min' },
-                  { label: 'SpO₂',           value: v.spo2, unit: '%'      },
-                  { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
-                  { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
-                  { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
-                  { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
-                  { label: 'Temp',    value: v.temp, unit: '°C'     },
-                ].filter(r => r.value !== '');
-                return (
-                  <div className="rounded-xl overflow-hidden border border-neutral-100">
-                    <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center">VITAL SIGNS</div>
-                    {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
-                      <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-                        <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
-                        <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
-                          {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
-                        </span>
-                      </div>
-                    )) : (
-                      <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded yet.</div>
-                    )}
-                  </div>
-                );
-              })()}
+              <VitalSignsSection vitals={state.vitals} />
               <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} />
               <div>
                 <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
@@ -3789,20 +3762,16 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
           )}
         </div>
       )}
-      <div>
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
-          {state.cprRound > 0 ? (
-            <>
-              <StatRow label="CPR Rounds" value={state.cprRound} />
-              <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
-              <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
-            </>
-          ) : (
-            <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No arrest data recorded.</div>
-          )}
+      {state.cprRound > 0 && (
+        <div>
+          <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
+          <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
+            <StatRow label="CPR Rounds" value={state.cprRound} />
+            <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+            <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -3858,35 +3827,10 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
 }
 
 function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
-  const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
-  const hasVitals = Object.values(v).some(val => val !== '');
-  const vitalRows = [
-    { label: 'HR',     value: v.hr,   unit: 'bpm'    },
-    { label: 'RR',      value: v.rr,   unit: 'br/min' },
-    { label: 'SpO₂',           value: v.spo2, unit: '%'      },
-    { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
-    { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
-    { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
-    { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
-    { label: 'Temp',    value: v.temp, unit: '°C'     },
-  ].filter(r => r.value !== '');
-
   return (
     <div className="space-y-6 pb-20">
       <ArrestSummarySection state={state} showRecordingDuration />
-      <div className="rounded-xl overflow-hidden border border-neutral-100 shadow-sm">
-        <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center">VITAL SIGNS</div>
-        {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
-          <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-            <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
-            <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
-              {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
-            </span>
-          </div>
-        )) : (
-          <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded yet.</div>
-        )}
-      </div>
+      <VitalSignsSection vitals={state.vitals} />
       <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
