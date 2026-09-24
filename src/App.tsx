@@ -969,7 +969,7 @@ export default function App() {
     setShowResetWarning(false);
   };
 
-  const addTreatment = (name: string) => {
+  const addTreatment = (name: string, options?: { customDose?: boolean }) => {
     const now = new Date();
 
     // First time a given treatment type is logged, leave it unnumbered.
@@ -987,7 +987,8 @@ export default function App() {
       clock: getLocalTime(now),
       clockSeconds: getLocalTimeWithSeconds(now),
       loggedAt: now.getTime(),
-      ...(catchupTxMode ? { prior: true } : {})
+      ...(catchupTxMode ? { prior: true } : {}),
+      ...(options?.customDose ? { customDose: true } : {})
     };
 
     if (catchupTxMode) {
@@ -1130,7 +1131,7 @@ export default function App() {
   };
 
   const adrenalineStatus = useMemo(() => {
-    const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push'));
+    const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose);
     const lastAdr = adrTreatments[adrTreatments.length - 1];
 
     if (!lastAdr) {
@@ -3117,7 +3118,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
-  addTreatment: (n: string) => void,
+  addTreatment: (n: string, options?: { customDose?: boolean }) => void,
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   isShockForced: boolean,
@@ -3818,7 +3819,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false }: 
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll }: { addTreatment: (n: string) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll }: { addTreatment: (n: string, options?: { customDose?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -3917,7 +3918,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         doseWithUnit = formatCalciumDose(doseWithUnit, state.patientWeight);
       }
       
-      addTreatment(`${selectedMed} ${doseWithUnit}`);
+      addTreatment(`${selectedMed} ${doseWithUnit}`, { customDose: true });
       setSelectedMed(null);
       setCustomDose('');
     }

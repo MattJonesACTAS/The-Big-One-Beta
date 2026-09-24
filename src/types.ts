@@ -10,10 +10,16 @@ export interface Treatment {
   clock: string;
   clockSeconds: string;
   prior?: boolean;
+  loggedAt?: number;
+  timeUnknown?: boolean;
+  customDose?: boolean;
 }
 
 export interface AppState {
   running: boolean;
+  reversiblesChecklistOpened: boolean;
+  caseOpenedAt: number | null;
+  caseClosedAt: number | null;
   startTime: number | null;
   pausedTime: number;
   elapsedSeconds: number;
@@ -35,7 +41,7 @@ export interface AppState {
   roscChecked: string[];
   pheaChecked: string[];
   isROSCMode: boolean;
-  timingMode: 'cpr' | 'elapsed' | 'log' | null;
+  timingMode: 'elapsed' | 'log' | null;
   rhythmInterval: 'evens' | 'odds' | 'half-evens' | 'half-odds' | null;
   vitals: {
     hr: string; rr: string; gcs: string;
