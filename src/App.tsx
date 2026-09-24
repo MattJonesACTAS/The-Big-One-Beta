@@ -21,11 +21,12 @@ import {
   Zap,
   ShieldCheck,
   Stethoscope,
-  ArrowRight,
   Sliders,
   RefreshCw,
   Hand,
-  User
+  User,
+  Check,
+  MoreVertical
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
 import InteractiveTutorial from './InteractiveTutorial';
@@ -34,6 +35,9 @@ import TutorialOverlay from './TutorialOverlay';
 // --- Constants ---
 const INITIAL_STATE: AppState = {
   running: false,
+  reversiblesChecklistOpened: false,
+  caseOpenedAt: null,
+  caseClosedAt: null,
   startTime: null,
   pausedTime: 0,
   elapsedSeconds: 0,
@@ -222,9 +226,9 @@ const formatTimeWithSeconds = (seconds: number) => {
 };
 
 const formatTimeHMM = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  return `${hours}:${mins.toString().padStart(2, '0')}`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}m, ${secs.toString().padStart(2, '0')}s`;
 };
 
 const getLocalTime = (date?: Date) => {
@@ -235,6 +239,183 @@ const getLocalTime = (date?: Date) => {
 const getLocalTimeWithSeconds = (date?: Date) => {
   const d = date || new Date();
   return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+};
+
+// Medications that carry a dose/detail suffix after the drug name, used both
+// for identity-matching (numbering repeats) and for splitting the med from
+// its dose in the treatment log display.
+const KNOWN_MEDS = [
+  'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
+  'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
+  'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam push',
+  'Morph/midaz infusion', 'Normal saline', 'Suxamethonium'
+];
+
+// Identifies the 'type' of a treatment for numbering purposes, ignoring any
+// numbering already present (so re-checking an already-numbered entry like
+// "Shock #2 - VF" still correctly identifies as "Shock").
+const getTreatmentIdentity = (rawName: string): string => {
+  const name = rawName.replace(/#\d+\s*/, '').replace(/\s+/g, ' ').trim();
+  if (name.startsWith('Oxygen ')) return 'Oxygen';
+  if (name.startsWith('Sodium bicarbonate')) return 'Sodium bicarbonate';
+  if (name.startsWith('Shock')) return 'Shock';
+  if (name.startsWith('Disarm')) return 'Disarm';
+  for (const med of KNOWN_MEDS) {
+    if (name === med || name.startsWith(med + ' ')) return med;
+  }
+  return name;
+};
+
+// Inserts '#N' immediately after the identity portion of a (never-yet-numbered)
+// treatment name, e.g. ('Shock - VF', 'Shock', 2) -> 'Shock #2 - VF',
+// ('Adrenaline push 1mg', 'Adrenaline push', 2) -> 'Adrenaline push #2 1mg',
+// ('BVM', 'BVM', 2) -> 'BVM #2'.
+const insertTreatmentNumber = (name: string, identity: string, num: number): string => {
+  if (name.startsWith(identity)) {
+    return `${identity} #${num}${name.slice(identity.length)}`;
+  }
+  return `${name} #${num}`;
+};
+
+// Removes an existing '#N' from a name that's already been numbered, so it
+// can be correctly renumbered (or left bare) after treatments are re-ordered
+// by a deletion, e.g. ('Shock #3 - VF', 'Shock') -> 'Shock - VF'.
+const stripTreatmentNumber = (name: string, identity: string): string => {
+  if (!name.startsWith(identity)) return name;
+  const rest = name.slice(identity.length).replace(/^ #\d+/, '');
+  return identity + rest;
+};
+
+// Re-derives correct sequential numbering for every treatment, in chronological
+// (stored) order, per identity group. Call this any time the treatment list is
+// reordered or an entry removed, so e.g. deleting 'Tx #2' out of '#1, #2, #3'
+// correctly leaves '#1, #2' rather than a gap at '#1, #3'.
+const renumberTreatments = (treatments: Treatment[]): Treatment[] => {
+  const seenCounts: Record<string, number> = {};
+  return treatments.map(t => {
+    const identity = getTreatmentIdentity(t.name);
+    const baseName = stripTreatmentNumber(t.name, identity);
+    const count = (seenCounts[identity] = (seenCounts[identity] || 0) + 1);
+    return { ...t, name: count > 1 ? insertTreatmentNumber(baseName, identity, count) : baseName };
+  });
+};
+
+// Pure pharma summary calculation, usable for both live case state and
+// archived previous-case snapshots (neither depends on component state).
+const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string }> => {
+  const summary: Record<string, { totalDose: number, unit: string, count: number, display: string }> = {};
+
+  treatments.forEach(tx => {
+    // Special handling for morph/midaz infusion
+    if (tx.name.startsWith('Morph/midaz infusion')) {
+      const medName = 'Morph/midaz infusion';
+      if (!summary[medName]) {
+        summary[medName] = { totalDose: 0, unit: '', count: 0, display: '' };
+      }
+
+      const doseStr = tx.name.substring(medName.length).trim();
+      if (doseStr) {
+        const directMatch = doseStr.match(/([\d.]+)(mg\/h|mg|mL|mMol|mcg|g|u|%)/i);
+        if (directMatch) {
+          const [_, amount, unit] = directMatch;
+          if (!summary[medName].unit) summary[medName].unit = unit;
+          if (summary[medName].unit === unit) {
+            summary[medName].totalDose += parseFloat(amount);
+          }
+        }
+      }
+      summary[medName].count++;
+      return; // Skip regular medication processing for this treatment
+    }
+
+    for (const med of MEDICATIONS) {
+      // Skip Oxygen in pharma summary
+      if (med === 'Oxygen') continue;
+
+      if (tx.name.startsWith(med)) {
+        if (!summary[med]) {
+          summary[med] = { totalDose: 0, unit: '', count: 0, display: '' };
+        }
+
+        // Extract dose from treatment name (everything after medication name)
+        const doseStr = tx.name.substring(med.length).trim();
+
+        if (doseStr) {
+          // For weight-based doses with calculated value: "0.01mg/kg (3.5mg)"
+          // Extract the calculated value in parentheses
+          const calculatedMatch = doseStr.match(/\(([\d.]+)(mg|mL|mMol|mcg|g|u|%)\)/i);
+          if (calculatedMatch) {
+            const [_, amount, unit] = calculatedMatch;
+            if (!summary[med].unit) summary[med].unit = unit;
+            if (summary[med].unit === unit) {
+              summary[med].totalDose += parseFloat(amount);
+            }
+          } else {
+            // Direct dose: "1mg", "300mg", "100mL", etc.
+            const directMatch = doseStr.match(/([\d.]+)(mg|mL|mMol|mcg|g|u|%)/i);
+            if (directMatch) {
+              const [_, amount, unit] = directMatch;
+              if (!summary[med].unit) summary[med].unit = unit;
+              if (summary[med].unit === unit) {
+                summary[med].totalDose += parseFloat(amount);
+              }
+            }
+          }
+        }
+        summary[med].count++;
+        break;
+      }
+    }
+  });
+
+  // Format display strings
+  Object.keys(summary).forEach(med => {
+    const { totalDose, unit, count } = summary[med];
+    if (totalDose > 0 && unit) {
+      const roundedDose = parseFloat(totalDose.toFixed(2));
+      if (med === 'Glucose 10%' && unit === 'mL') {
+        const grams = Math.round(roundedDose * 0.1 * 10) / 10;
+        summary[med].display = `${roundedDose}mL/${grams}g (${count})`;
+      } else {
+        summary[med].display = `${roundedDose}${unit} (${count})`;
+      }
+    } else {
+      summary[med].display = `${count}`;
+    }
+  });
+
+  return summary;
+};
+
+// --- Previous case backup ---
+// Keeps a rolling backup of the last N closed cases in a separate localStorage
+// key, so a case survives even if something (crash, tab discard, reload)
+// wipes the in-memory "closed case" view before the user exports/deletes it.
+const PREVIOUS_CASES_KEY = 'theBigOnePreviousCases';
+const MAX_PREVIOUS_CASES = 3;
+
+const loadPreviousCases = (): AppState[] => {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_CASES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('Failed to load previous cases backup:', e);
+    return [];
+  }
+};
+
+const savePreviousCase = (caseState: AppState) => {
+  try {
+    const existing = loadPreviousCases();
+    const updated = [caseState, ...existing].slice(0, MAX_PREVIOUS_CASES);
+    localStorage.setItem(PREVIOUS_CASES_KEY, JSON.stringify(updated));
+  } catch (e) {
+    // Storage full or unavailable - don't let backup failure block closing the case,
+    // but do log it rather than fail completely silently.
+    console.error('Failed to save previous case backup:', e);
+  }
 };
 
 const calculateDose = (doseStr: string, weight: number | null): string => {
@@ -340,7 +521,9 @@ export default function App() {
     if (!saved) return true; // No saved state = show catchup
     try {
       const loaded = JSON.parse(saved);
-      return !loaded.running; // Show catchup if timer not running
+      if (loaded.running) return false; // Actively running -> home screen
+      if (loaded.caseClosedAt) return false; // Closed but not deleted -> case summary screen
+      return true; // Never started -> catchup
     } catch (e) {
       return true;
     }
@@ -348,7 +531,6 @@ export default function App() {
   const [catchupStep, setCatchupStep] = useState(1);
   const [catchupTxMode, setCatchupTxMode] = useState(false);
   const [catchupElapsed, setCatchupElapsed] = useState({ hrs: 0, mins: 0, secs: 0 });
-  const [catchupRhythm, setCatchupRhythm] = useState({ mins: 2, secs: 0 });
   const [weightType, setWeightType] = useState<'adult' | 'paed' | null>(null);
   const [paedWeightMethod, setPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
   const [paedAgeLabel, setPaedAgeLabel] = useState<string>('');
@@ -357,22 +539,35 @@ export default function App() {
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
-  const [cprTimestamp, setCprTimestamp] = useState<number | null>(null);
-  const [timingMode, setTimingMode] = useState<'cpr' | 'elapsed' | 'log' | null>(() => state.timingMode);
+  const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | null>(() => state.timingMode);
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
   const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
-  const [isCaseClosed, setIsCaseClosed] = useState(false);
-  const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [isCaseClosed, setIsCaseClosed] = useState(() => {
+    const saved = localStorage.getItem('theBigOneState');
+    if (!saved) return false;
+    try {
+      const loaded = JSON.parse(saved);
+      return !loaded.running && !!loaded.caseClosedAt;
+    } catch (e) {
+      return false;
+    }
+  });
+  const [showEndWarning, setShowEndWarning] = useState(false);
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
-  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
+  const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
+  const [viewingPreviousCase, setViewingPreviousCase] = useState<AppState | null>(null);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
-  const [showTimerAdjust, setShowTimerAdjust] = useState(false);
-  const [timerAdjustValue, setTimerAdjustValue] = useState({ mins: 2, secs: 0 });
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [showRecalibrateMenu, setShowRecalibrateMenu] = useState(false);
   const [showModeChange, setShowModeChange] = useState(false);
+  const [pendingModeChangeFrom, setPendingModeChangeFrom] = useState<'elapsed' | 'log' | null>(null);
+  const [stagedElapsedSeconds, setStagedElapsedSeconds] = useState(0);
+  const [elapsedManuallyEdited, setElapsedManuallyEdited] = useState(false);
+  const [stagedRhythmInterval, setStagedRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds'>('evens');
   const [showWeightChange, setShowWeightChange] = useState(false);
   const [newWeightInput, setNewWeightInput] = useState('');
   const [newPatientType, setNewPatientType] = useState<'adult' | 'paed' | null>(null);
@@ -436,58 +631,58 @@ export default function App() {
     }
   }, [tutorialMode, state.patientWeight]);
 
-  // Inject tutorial CPR button flash CSS
+  // Inject tutorial Elapsed Time button flash CSS
   useEffect(() => {
     const style = document.createElement('style');
-    style.id = 'tutorial-cpr-flash-style';
+    style.id = 'tutorial-elapsed-flash-style';
     style.textContent = `
-      @keyframes tutorialCprFade {
+      @keyframes tutorialElapsedFade {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.45; }
       }
-      body.tutorial-flash-cpr-btn [data-tutorial="cpr-btn"] {
-        animation: tutorialCprFade 2s ease-in-out infinite;
+      body.tutorial-flash-elapsed-btn [data-tutorial="elapsed-btn"] {
+        animation: tutorialElapsedFade 2s ease-in-out infinite;
       }
     `;
     document.head.appendChild(style);
-    return () => { document.getElementById('tutorial-cpr-flash-style')?.remove(); };
+    return () => { document.getElementById('tutorial-elapsed-flash-style')?.remove(); };
   }, []);
   useEffect(() => {
     console.log('Tutorial screen tracking:', tutorialScreen);
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
 
-    // Tutorial: flash CPR button when all timing nodes explored
+    // Tutorial: flash Elapsed Time button when all timing nodes explored
     if (showInteractiveTutorial && timingNodesComplete) {
-      document.body.classList.add('tutorial-flash-cpr-btn');
+      document.body.classList.add('tutorial-flash-elapsed-btn');
     } else {
-      document.body.classList.remove('tutorial-flash-cpr-btn');
+      document.body.classList.remove('tutorial-flash-elapsed-btn');
     }
     
-    // Node 3 (recalibrate) complete - flash Recalibrate button (index 5 = waiting for weight change)
+    // Node 8 (recalibrate) complete - flash Recalibrate button (index 3 = waiting for weight change)
     // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
     // Both stop as soon as the weight actually changes, even before the node is dismissed.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
-    if (tutorialMode && tutorialScreen.index === 5 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 3 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
       document.body.classList.add('tutorial-flash-recalibrate');
     } else {
       document.body.classList.remove('tutorial-flash-recalibrate');
     }
-    if (tutorialMode && tutorialScreen.index === 5 && showRecalibrateMenu && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 3 && showRecalibrateMenu && weightUnchanged) {
       document.body.classList.add('tutorial-flash-weight');
     } else {
       document.body.classList.remove('tutorial-flash-weight');
     }
 
-    // Node 6 (addTxBtn) complete - flash Add Tx button (index 7 = waiting for treatment screen)
-    if (tutorialMode && tutorialScreen.index === 7 && state.currentOverlay === null) {
+    // Node 10 (addTxBtn) complete - flash Add Tx button (index 5 = waiting for treatment screen)
+    if (tutorialMode && tutorialScreen.index === 5 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
-    // Node 7 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 8)
-    if (tutorialMode && tutorialScreen.index === 8) {
+    // Node 11 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 6)
+    if (tutorialMode && tutorialScreen.index === 6) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -495,45 +690,56 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
 
-    // Node 9 (summaryBtn) complete - flash Summary button (index 10 = waiting for summary overlay)
-    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === null) {
+    // Node 13 (summaryBtn) complete - flash Summary button (index 8 = waiting for summary overlay)
+    if (tutorialMode && tutorialScreen.index === 8 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 11 (closeOverlay) complete - flash summary close button (index 12 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === 'summary') {
+    // Node 14 (summaryInfo) complete - flash the Adrenaline push row's menu
+    // button (index 9), until the entry is actually moved or deleted
+    const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
+      || state.treatments.some(t => t.name.startsWith('Adrenaline push') && t.timeUnknown);
+    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === 'summary' && !adrenalineHandled) {
+      document.body.classList.add('tutorial-flash-adrenaline-tx');
+    } else {
+      document.body.classList.remove('tutorial-flash-adrenaline-tx');
+    }
+
+    // Node 15 (closeOverlay) complete - flash summary close button (index 10 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 12 (closeCase) complete - flash Close Case button (index 13 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === null) {
+    // Node 16 (endCase) complete - flash End Case button (index 11 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === null) {
+      document.body.classList.add('tutorial-flash-end');
+    } else {
+      document.body.classList.remove('tutorial-flash-end');
+    }
+
+    // Tutorial done - flash Close Case button
+    if (tutorialMode && tutorialScreen.complete) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
     }
-
-    // Tutorial done - flash Delete Case button
-    if (tutorialMode && tutorialScreen.complete) {
-      document.body.classList.add('tutorial-flash-delete');
-    } else {
-      document.body.classList.remove('tutorial-flash-delete');
-    }
     
     return () => {
-      document.body.classList.remove('tutorial-flash-cpr-btn');
+      document.body.classList.remove('tutorial-flash-elapsed-btn');
       document.body.classList.remove('tutorial-flash-recalibrate');
       document.body.classList.remove('tutorial-flash-weight');
       document.body.classList.remove('tutorial-flash-add-tx');
       document.body.classList.remove('tutorial-flash-adrenaline');
       document.body.classList.remove('tutorial-flash-dose');
       document.body.classList.remove('tutorial-flash-summary');
+      document.body.classList.remove('tutorial-flash-adrenaline-tx');
       document.body.classList.remove('tutorial-flash-summary-close');
+      document.body.classList.remove('tutorial-flash-end');
       document.body.classList.remove('tutorial-flash-close');
-      document.body.classList.remove('tutorial-flash-delete');
     };
   }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, state.patientWeight, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
 
@@ -624,6 +830,19 @@ export default function App() {
     return () => clearInterval(interval);
   }, [catchupStep]);
 
+  // While the Recalibrate Elapsed Time modal is open, keep the staged elapsed
+  // time ticking up live (matching the real running case) unless the user has
+  // actually started editing it by hand - that way, someone who only wants to
+  // change the rhythm check interval doesn't need to touch the timer at all,
+  // and won't accidentally commit a stale snapshot from when the modal opened.
+  useEffect(() => {
+    if (!showElapsedRecalibrate || elapsedManuallyEdited) return;
+    const interval = window.setInterval(() => {
+      setStagedElapsedSeconds(s => s + 1);
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [showElapsedRecalibrate, elapsedManuallyEdited]);
+
   useEffect(() => {
     let interval: number;
     if (state.running) {
@@ -672,7 +891,8 @@ export default function App() {
                   setHasShownForcedShock(false);
                 }
               } else {
-                // CPR mode: 6-second overtime phase before forcing overlay
+                // Fallback fixed 2-minute cycle with a 6-second overtime phase
+                // (used if timingMode/rhythmInterval aren't set yet)
                 nextOvertime = newElapsed - prev.rhythmCheckTarget;
                 
                 if (nextOvertime >= 6) {
@@ -708,7 +928,7 @@ export default function App() {
       }, 500);
     }
     return () => clearInterval(interval);
-  }, [state.running]);
+  }, [state.running, timingMode, rhythmInterval, tutorialMode, showCatchup]);
 
   const togglePause = () => {
     setState(prev => {
@@ -749,28 +969,24 @@ export default function App() {
     setShowResetWarning(false);
   };
 
-  const applyTimerAdjustment = () => {
-    const totalSeconds = timerAdjustValue.mins * 60 + timerAdjustValue.secs;
-    
-    if (totalSeconds > 0) {
-      setState(prev => ({
-        ...prev,
-        rhythmCheckTarget: prev.elapsedSeconds + totalSeconds,
-        rhythmCheckOvertime: 0
-      }));
-    }
-    
-    setShowTimerAdjust(false);
-  };
-
   const addTreatment = (name: string) => {
     const now = new Date();
+
+    // First time a given treatment type is logged, leave it unnumbered.
+    // Every subsequent log of that same type gets numbered (#2, #3, ...).
+    // Counts across catchup-added and live-added entries together, and
+    // Shock/Disarm are counted independently of one another.
+    const identity = getTreatmentIdentity(name);
+    const priorCount = state.treatments.filter(t => getTreatmentIdentity(t.name) === identity).length;
+    const displayName = priorCount > 0 ? insertTreatmentNumber(name, identity, priorCount + 1) : name;
+
     const treatment: Treatment = {
-      name,
+      name: displayName,
       elapsed: state.elapsedSeconds,
       round: state.cprRound,
       clock: getLocalTime(now),
       clockSeconds: getLocalTimeWithSeconds(now),
+      loggedAt: now.getTime(),
       ...(catchupTxMode ? { prior: true } : {})
     };
 
@@ -788,6 +1004,7 @@ export default function App() {
       // Increment round if shock/disarm logged out of turn (before timer hit 0)
       // Do NOT increment if responding to a forced rhythm check overlay (already incremented by timer)
       const isOutOfTurn = isShockOrDisarm && !isROSC && !isShockForced && (prev.rhythmCheckTarget - prev.elapsedSeconds) > 0;
+      const shouldResetTimer = isROSC || (isShockOrDisarm && wasRhythmCheckPaused);
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -797,7 +1014,8 @@ export default function App() {
           elapsed: state.elapsedSeconds,
           round: state.cprRound,
           clock: getLocalTime(now),
-          clockSeconds: getLocalTimeWithSeconds(now)
+          clockSeconds: getLocalTimeWithSeconds(now),
+          loggedAt: now.getTime()
         };
         newTreatments.push(opaTreatment);
       }
@@ -809,11 +1027,11 @@ export default function App() {
         shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
         cprRound: isOutOfTurn ? prev.cprRound + 1 : prev.cprRound,
         currentOverlay: isRearrest ? 'treatment' : null,
-        // Reset rhythm check to 2:00 for ROSC or when unpausing via other shock/disarm
-        rhythmCheckTarget: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) 
+        // Reset rhythm check to 2:00 for ROSC, or when unpausing via other shock/disarm
+        rhythmCheckTarget: shouldResetTimer 
           ? prev.elapsedSeconds + 120 
           : prev.rhythmCheckTarget,
-        rhythmCheckOvertime: (isROSC || (isShockOrDisarm && wasRhythmCheckPaused)) ? 0 : prev.rhythmCheckOvertime,
+        rhythmCheckOvertime: shouldResetTimer ? 0 : prev.rhythmCheckOvertime,
         // Pause for ROSC, unpause for other shock/disarm; Rearrest exits ROSC mode
         rhythmCheckPaused: isShockOrDisarm ? isROSC : prev.rhythmCheckPaused,
         // For ROSC, freeze the countdown at 2:00
@@ -840,7 +1058,7 @@ export default function App() {
     
     setIsShockForced(false);
 
-    // If this treatment was logged from a rearrest, show interval picker (elapsed) or timer adjust (CPR); log mode needs nothing
+    // If this treatment was logged from a rearrest, show interval picker (elapsed mode); log mode needs nothing
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
       if (name === 'Disarm - ROSC') {
@@ -848,8 +1066,6 @@ export default function App() {
       } else if (timingMode === 'elapsed') {
         setRearrestElapsed(state.elapsedSeconds);
         setShowRearrestIntervalPicker(true);
-      } else if (timingMode !== 'log') {
-        setShowTimerAdjust(true);
       }
     }
     
@@ -875,6 +1091,33 @@ export default function App() {
     }
   };
 
+  const deleteTreatment = (idx: number) => {
+    setState(prev => {
+      const remaining = prev.treatments.filter((_, i) => i !== idx);
+      return { ...prev, treatments: renumberTreatments(remaining) };
+    });
+  };
+
+  // Retroactively correct WHEN a treatment happened by dragging it to a new
+  // position in the log. The moved item's exact time becomes unknown (shown
+  // as a dash) rather than guessed - if it happened somewhere between two
+  // other treatments, there's no way to know exactly when within that gap,
+  // and displaying a specific inherited time would overstate the precision
+  // of the correction. Every other entry keeps its own original time
+  // unchanged, since dragging something else past them says nothing about
+  // when they themselves happened.
+  const moveTreatment = (fromIdx: number, toIdx: number) => {
+    setState(prev => {
+      if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= prev.treatments.length || toIdx >= prev.treatments.length) {
+        return prev;
+      }
+      const treatments = [...prev.treatments];
+      const [moved] = treatments.splice(fromIdx, 1);
+      treatments.splice(toIdx, 0, { ...moved, timeUnknown: true });
+      return { ...prev, treatments: renumberTreatments(treatments) };
+    });
+  };
+
   const toggleChecklistItem = (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => {
     setState(prev => {
       const key = `${checklist}Checked` as 'reversiblesChecked' | 'roscChecked' | 'pheaChecked';
@@ -886,29 +1129,37 @@ export default function App() {
     });
   };
 
-  const adrenalineRoundStatus = useMemo(() => {
+  const adrenalineStatus = useMemo(() => {
     const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push'));
-    const lastAdr = adrTreatments.pop();
-    
+    const lastAdr = adrTreatments[adrTreatments.length - 1];
+
     if (!lastAdr) {
-      return { text: "", show: false, isDue: false };
-    }
-    
-    if (lastAdr.prior) {
-      if (tutorialMode) return { text: "", show: false, isDue: false };
-      return { text: "Next adrenaline: unknown", show: true, isDue: false };
+      return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
     }
 
-    const roundGiven = lastAdr.round || (Math.floor(lastAdr.elapsed / 120) + 1);
-    const nextDueRound = roundGiven + 2;
-    const isDue = state.cprRound >= nextDueRound;
-    
-    if (isDue) {
-      return { text: "Next adrenaline: THIS ROUND", show: true, isDue: true };
-    } else {
-      return { text: `Next adrenaline: Round ${nextDueRound}`, show: true, isDue: false };
+    if (lastAdr.prior) {
+      if (tutorialMode) return { text: '', show: false, isDue: false, countdown: 0, flashRed: false };
+      return { text: "Next adrenaline: unknown", show: true, isDue: false, countdown: 0, flashRed: false };
     }
-  }, [state.treatments, state.cprRound, tutorialMode]);
+
+    const timeSinceLastDose = state.elapsedSeconds - lastAdr.elapsed;
+    const timeUntilNext = 240 - timeSinceLastDose; // 4 minutes = 240 seconds
+
+    if (timeUntilNext <= 0) {
+      // Show negative countdown when overdue
+      const overdueTime = Math.abs(timeUntilNext);
+      const mins = Math.floor(overdueTime / 60);
+      const secs = overdueTime % 60;
+      const timeStr = `-${mins}:${secs.toString().padStart(2, '0')}`;
+      return { text: `Next adrenaline: ${timeStr}`, show: true, isDue: true, countdown: timeUntilNext, flashRed: true };
+    } else {
+      const mins = Math.floor(timeUntilNext / 60);
+      const secs = timeUntilNext % 60;
+      const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+      const flashRed = timeUntilNext <= 30; // Flash red when 30s or less
+      return { text: `Next adrenaline: ${timeStr}`, show: true, isDue: false, countdown: timeUntilNext, flashRed };
+    }
+  }, [state.treatments, state.elapsedSeconds, tutorialMode]);
 
   const amiodaroneStatus = useMemo(() => {
     const allAmioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
@@ -953,90 +1204,7 @@ export default function App() {
   }, [state.treatments, state.elapsedSeconds, tutorialMode]);
 
 
-  const pharmaSummary = useMemo(() => {
-    const summary: Record<string, { totalDose: number, unit: string, count: number, display: string }> = {};
-    
-    state.treatments.forEach(tx => {
-      // Special handling for morph/midaz infusion
-      if (tx.name.startsWith('Morph/midaz infusion')) {
-        const medName = 'Morph/midaz infusion';
-        if (!summary[medName]) {
-          summary[medName] = { totalDose: 0, unit: '', count: 0, display: '' };
-        }
-        
-        const doseStr = tx.name.substring(medName.length).trim();
-        if (doseStr) {
-          const directMatch = doseStr.match(/([\d.]+)(mg\/h|mg|mL|mMol|mcg|g|u|%)/i);
-          if (directMatch) {
-            const [_, amount, unit] = directMatch;
-            if (!summary[medName].unit) summary[medName].unit = unit;
-            if (summary[medName].unit === unit) {
-              summary[medName].totalDose += parseFloat(amount);
-            }
-          }
-        }
-        summary[medName].count++;
-        return; // Skip regular medication processing for this treatment
-      }
-      
-      for (const med of MEDICATIONS) {
-        // Skip Oxygen in pharma summary
-        if (med === 'Oxygen') continue;
-        
-        if (tx.name.startsWith(med)) {
-          if (!summary[med]) {
-            summary[med] = { totalDose: 0, unit: '', count: 0, display: '' };
-          }
-          
-          // Extract dose from treatment name (everything after medication name)
-          const doseStr = tx.name.substring(med.length).trim();
-          
-          if (doseStr) {
-            // For weight-based doses with calculated value: "0.01mg/kg (3.5mg)"
-            // Extract the calculated value in parentheses
-            const calculatedMatch = doseStr.match(/\(([\d.]+)(mg|mL|mMol|mcg|g|u|%)\)/i);
-            if (calculatedMatch) {
-              const [_, amount, unit] = calculatedMatch;
-              if (!summary[med].unit) summary[med].unit = unit;
-              if (summary[med].unit === unit) {
-                summary[med].totalDose += parseFloat(amount);
-              }
-            } else {
-              // Direct dose: "1mg", "300mg", "100mL", etc.
-              const directMatch = doseStr.match(/([\d.]+)(mg|mL|mMol|mcg|g|u|%)/i);
-              if (directMatch) {
-                const [_, amount, unit] = directMatch;
-                if (!summary[med].unit) summary[med].unit = unit;
-                if (summary[med].unit === unit) {
-                  summary[med].totalDose += parseFloat(amount);
-                }
-              }
-            }
-          }
-          summary[med].count++;
-          break;
-        }
-      }
-    });
-    
-    // Format display strings
-    Object.keys(summary).forEach(med => {
-      const { totalDose, unit, count } = summary[med];
-      if (totalDose > 0 && unit) {
-        const roundedDose = parseFloat(totalDose.toFixed(2));
-        if (med === 'Glucose 10%' && unit === 'mL') {
-          const grams = Math.round(roundedDose * 0.1 * 10) / 10;
-          summary[med].display = `${roundedDose}mL/${grams}g (${count})`;
-        } else {
-          summary[med].display = `${roundedDose}${unit} (${count})`;
-        }
-      } else {
-        summary[med].display = `${count}`;
-      }
-    });
-    
-    return summary;
-  }, [state.treatments]);
+  const pharmaSummary = useMemo(() => computePharmaSummary(state.treatments), [state.treatments]);
 
   // --- Elapsed time interval calculator ---
   const calcNextIntervalTarget = (elapsedSecs: number, interval: 'evens' | 'odds' | 'half-evens' | 'half-odds'): number => {
@@ -1055,17 +1223,16 @@ export default function App() {
   // --- Catchup Handlers ---
   const handleCatchupStart = (overrideWeight?: string) => {
     
-    // Clear localStorage for a completely fresh start
+    // Clear localStorage for a completely fresh start, but keep the previous-cases
+    // backup archive - it must survive across cases, not just within one.
+    const previousCasesBackupOnStart = localStorage.getItem(PREVIOUS_CASES_KEY);
     localStorage.clear();
     sessionStorage.clear();
+    if (previousCasesBackupOnStart) {
+      localStorage.setItem(PREVIOUS_CASES_KEY, previousCasesBackupOnStart);
+    }
     
     let adjustedElapsed = catchupElapsed.hrs * 3600 + catchupElapsed.mins * 60 + catchupElapsed.secs;
-    let adjustedRhythm = catchupRhythm.mins * 60 + catchupRhythm.secs;
-    
-    // If rhythm check is too short (<= 6 seconds), start with full 2:00 instead
-    if (adjustedRhythm <= 6) {
-      adjustedRhythm = 120;
-    }
     
     // Use override weight if provided, otherwise use weightInput state
     const finalWeight = overrideWeight || weightInput;
@@ -1088,12 +1255,6 @@ export default function App() {
       adjustedElapsed += timeSinceElapsed;
     }
     
-    // Only apply CPR timestamp adjustment in CPR timer mode
-    if (timingMode === 'cpr' && cprTimestamp) {
-      const timeSinceCpr = Math.floor((Date.now() - cprTimestamp) / 1000);
-      adjustedRhythm = Math.max(0, adjustedRhythm - timeSinceCpr);
-    }
-    
     const now = Date.now();
     const startClockTime = now - (adjustedElapsed * 1000);
     
@@ -1102,25 +1263,15 @@ export default function App() {
     if (timingMode === 'elapsed' && rhythmInterval) {
       rhythmCheckTarget = calcNextIntervalTarget(adjustedElapsed, rhythmInterval);
     } else {
-      rhythmCheckTarget = adjustedElapsed + adjustedRhythm;
+      // Log mode doesn't act on this value at all (rhythm-check tracking is
+      // disabled entirely in log mode), so a simple default is fine here.
+      rhythmCheckTarget = adjustedElapsed + 120;
     }
 
     const initialTxs: Treatment[] = [];
     const baseClock = new Date(startClockTime);
-    
-    priorTxs.forEach(name => {
-      // Auto-add OPA before BVM
-      if (name === 'BVM') {
-        initialTxs.push({
-          name: 'OPA',
-          elapsed: 0,
-          round: 0,
-          clock: getLocalTime(baseClock),
-          clockSeconds: getLocalTimeWithSeconds(baseClock),
-          prior: true
-        });
-      }
-      
+
+    const pushPrior = (name: string) => {
       initialTxs.push({
         name,
         elapsed: 0,
@@ -1129,33 +1280,39 @@ export default function App() {
         clockSeconds: getLocalTimeWithSeconds(baseClock),
         prior: true
       });
-    });
+    };
 
-    // Auto-add "Pads on" before shocks/disarms in catchup
+    // Auto-add "CPR" and "Pads on" before shocks/disarms in catchup
     if (priorCounts.shock > 0 || priorCounts.disarm > 0) {
-      initialTxs.push({ 
-        name: 'Pads on', 
-        elapsed: 0, 
-        round: 0, 
-        clock: getLocalTime(baseClock), 
-        clockSeconds: getLocalTimeWithSeconds(baseClock), 
-        prior: true 
-      });
+      pushPrior('CPR');
+      pushPrior('Pads on');
     }
 
     for (let i = 0; i < priorCounts.shock; i++) {
-      initialTxs.push({ name: `Shock #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
+      pushPrior(i === 0 ? 'Shock' : `Shock #${i+1}`);
     }
     for (let i = 0; i < priorCounts.disarm; i++) {
-      initialTxs.push({ name: `Disarm #${i+1}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
+      pushPrior(i === 0 ? 'Disarm' : `Disarm #${i+1}`);
     }
+
+    // Airway/access buttons, always presented in a fixed chronological order
+    // (earliest to latest) regardless of the order they were tapped in:
+    // OPA, BVM, LMA, IV access, IO access
+    if (priorTxs.includes('BVM')) pushPrior('OPA');
+    if (priorTxs.includes('BVM')) pushPrior('BVM');
+    if (priorTxs.includes('LMA')) pushPrior('LMA');
+    if (priorTxs.includes('IV')) pushPrior('IV access');
+    if (priorTxs.includes('IO')) pushPrior('IO access');
+
     for (let i = 0; i < priorCounts.adrenaline; i++) {
       const adrenalineDose = getAdrenalinePushDose(weightType, parsedWeight);
-      initialTxs.push({ name: `Adrenaline push ${adrenalineDose}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
+      const baseName = `Adrenaline push ${adrenalineDose}`;
+      pushPrior(i === 0 ? baseName : insertTreatmentNumber(baseName, 'Adrenaline push', i + 1));
     }
     for (let i = 0; i < priorCounts.amiodarone; i++) {
       const amiodaroneDose = getAmiodaroneDose(weightType, parsedWeight, i === 0 ? 1 : 2);
-      initialTxs.push({ name: `Amiodarone ${amiodaroneDose}`, elapsed: 0, round: 0, clock: getLocalTime(baseClock), clockSeconds: getLocalTimeWithSeconds(baseClock), prior: true });
+      const baseName = `Amiodarone ${amiodaroneDose}`;
+      pushPrior(i === 0 ? baseName : insertTreatmentNumber(baseName, 'Amiodarone', i + 1));
     }
     
     // Include any treatments added via the Full Tx list button
@@ -1166,6 +1323,7 @@ export default function App() {
       ...INITIAL_STATE,
       running: true,
       startTime: now,
+      caseOpenedAt: now,
       pausedTime: adjustedElapsed * 1000,
       elapsedSeconds: adjustedElapsed,
       rhythmCheckTarget: rhythmCheckTarget,
@@ -1195,40 +1353,55 @@ export default function App() {
     setPriorTxs([]);
     // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
-    setCprTimestamp(null);
-    previousCountdown.current = adjustedRhythm;
-  };
-
-  const deleteCase = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    // Unregister service worker and force true hard reload
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(registration => registration.unregister());
-      });
-    }
-    
-    // Force hard reload with cache bypass
-    window.location.href = window.location.pathname + '?nocache=' + Date.now();
-    setTimeout(() => {
-      window.location.reload(true);
-    }, 100);
+    previousCountdown.current = rhythmCheckTarget - adjustedElapsed;
   };
 
   const closeCase = () => {
+    // Preserve the previous-cases backup archive - it's meant to survive
+    // independent of whatever happens to the current case's own data.
+    const previousCasesBackup = localStorage.getItem(PREVIOUS_CASES_KEY);
+    localStorage.clear();
+    sessionStorage.clear();
+    if (previousCasesBackup) {
+      localStorage.setItem(PREVIOUS_CASES_KEY, previousCasesBackup);
+    }
+    
+    // Unregister service worker (removes stale cached content) then do a single
+    // clean reload of the current URL. Previously this also navigated to a
+    // modified '?nocache=' URL before reloading again 100ms later - a redundant
+    // double-navigation that's a plausible source of timing issues on some
+    // platforms (e.g. installed/home-screen apps), removed here in favour of
+    // the simplest reliable approach.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => registration.unregister());
+      }).finally(() => {
+        window.location.reload();
+      });
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const endCase = () => {
     addTreatment('Close case');
-    setState(prev => ({ ...prev, running: false }));
+    setState(prev => {
+      const closed = { ...prev, running: false, caseClosedAt: Date.now() };
+      if (!tutorialMode) {
+        savePreviousCase(closed);
+        setPreviousCases(loadPreviousCases());
+      }
+      return closed;
+    });
     setIsCaseClosed(true);
-    setShowCloseWarning(false);
+    setShowEndWarning(false);
   };
 
   if (isCaseClosed) {
     return (
       <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
         <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => window.print()}
@@ -1237,59 +1410,36 @@ export default function App() {
             <FileText size={20} /> Export PDF
           </button>
           <button 
-            onClick={() => setShowDeleteWarning(true)}
+            onClick={() => setShowCloseWarning(true)}
             className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold btn-base border border-red-100"
-            data-button="delete-case"
+            data-button="close-case"
           >
-            <Trash2 size={20} /> Delete Case
+            <Trash2 size={20} /> Close Case
           </button>
         </div>
 
-        <ArrestSummarySection state={state} />
+        <ArrestSummarySection state={state} showRecordingDuration />
 
-        {(() => {
-          const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
-          const vitalRows = [
-            { label: 'HR',     value: v.hr,   unit: 'bpm'    },
-            { label: 'RR',      value: v.rr,   unit: 'br/min' },
-            { label: 'SpO₂',           value: v.spo2, unit: '%'      },
-            { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
-            { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
-            { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
-            { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
-            { label: 'Temp',    value: v.temp, unit: '°C'     },
-          ].filter(r => r.value !== '');
-          return (
-            <div className="rounded-xl overflow-hidden border border-neutral-100">
-              <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center">VITAL SIGNS</div>
-              {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
-                <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-                  <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
-                  <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
-                    {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
-                  </span>
-                </div>
-              )) : (
-                <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded.</div>
-              )}
-            </div>
-          );
-        })()}
+        <VitalSignsSection vitals={state.vitals} />
 
         <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
         
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
-        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} isSummary={true} timingMode={timingMode} />
+        <div>
+          <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
+          <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} isSummary={true} />
+        </div>
 
-        {showDeleteWarning && (
-           <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6">
+        {showCloseWarning && (
+           <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
              <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
-             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Delete this case?</h2>
-             <p className="text-neutral-500 mb-8">All data will be lost and you will return to the start screen.</p>
+             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Close this case?</h2>
+             <p className="text-neutral-500 mb-8">
+               You will return to the welcome page. Only your most recent three cases are saved as a backup, found under 'View previous cases' on the welcome screen.
+             </p>
              <div className="grid grid-cols-2 gap-3">
-               <button onClick={() => setShowDeleteWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
-               <button onClick={deleteCase} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Delete</button>
+               <button onClick={() => setShowCloseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
+               <button onClick={closeCase} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Close</button>
              </div>
            </div>
          </div>
@@ -1338,7 +1488,7 @@ export default function App() {
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.1</span></h1>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.2</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. The Big One tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
@@ -1376,12 +1526,12 @@ export default function App() {
         <button 
           onClick={() => setShowRecalibrateMenu(true)} 
           data-button="recalibrate"
-          className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
+          className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
           <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
-        <button onClick={() => setShowCloseWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="close-case">
-          <XCircle size={14} className="sm:w-4 sm:h-4" /> Close Case
+        <button onClick={() => setShowEndWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="end-case">
+          <XCircle size={14} className="sm:w-4 sm:h-4" /> End Case
         </button>
       </div>
 
@@ -1390,10 +1540,18 @@ export default function App() {
         <button 
           onClick={() => {
             if (isShockForced) return;
-            setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'reversibles' ? null : 'reversibles' }))
+            setState(p => ({
+              ...p,
+              reversiblesChecklistOpened: true,
+              currentOverlay: p.currentOverlay === 'reversibles' ? null : 'reversibles'
+            }));
           }}
           disabled={isShockForced}
-          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${
+            state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' :
+            !state.reversiblesChecklistOpened ? 'bg-red-600 text-white animate-pulse' :
+            'bg-blue-100 text-blue-700'
+          } ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'reversibles' ? 'Close' : '4H 4T'}
         </button>
@@ -1445,7 +1603,7 @@ export default function App() {
           /* Log mode: scrollable running summary is the home screen */
           <div className="h-full flex flex-col relative">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <ArrestSummarySection state={state} />
+              <ArrestSummarySection state={state} showRecordingDuration />
               {(() => {
                 const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
                 const vitalRows = [
@@ -1477,7 +1635,7 @@ export default function App() {
               <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} />
               <div>
                 <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
-                <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))} />
+                <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} />
               </div>
             </div>
             <AnimatePresence>
@@ -1492,8 +1650,8 @@ export default function App() {
                   isShockForced={isShockForced}
                   toggleChecklistItem={toggleChecklistItem}
                   onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
-                  timingMode={timingMode}
-                  onDeleteTreatment={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))}
+                  onDeleteTreatment={deleteTreatment}
+                  onMoveTreatment={moveTreatment}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
                 />
               )}
@@ -1503,7 +1661,7 @@ export default function App() {
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
-            {timingMode !== 'cpr' && timingMode !== 'elapsed' && (
+            {timingMode !== 'elapsed' && (
               <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
                 <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
                 <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
@@ -1511,17 +1669,11 @@ export default function App() {
             )}
             {timingMode === 'elapsed' && !state.isROSCMode && (
               <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-                <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Next check</span>
-                <span className={`text-[22px] sm:text-[43px] font-bold tabular-nums leading-none ${(state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-500' : 'text-neutral-400'}`}>
+                <span className="text-[12px] sm:text-[14px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Next check</span>
+                <span className={`text-[25px] sm:text-[47px] font-bold tabular-nums leading-none ${(state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-500' : 'text-neutral-400'}`}>
                   {formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))}
                 </span>
               </div>
-            )}
-            {!state.isROSCMode && (
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px] ml-auto">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{state.cprRound}</span>
-            </div>
             )}
           </div>
 
@@ -1660,8 +1812,8 @@ export default function App() {
                 isShockForced={isShockForced}
                 toggleChecklistItem={toggleChecklistItem}
                 onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
-                timingMode={timingMode}
-                onDeleteTreatment={(idx) => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, i) => i !== idx) }))}
+                onDeleteTreatment={deleteTreatment}
+                onMoveTreatment={moveTreatment}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
               />
             )}
@@ -1692,7 +1844,7 @@ export default function App() {
             {/* Adrenaline Warning */}
             <div 
               onClick={() => {
-                if (!adrenalineRoundStatus.show || disregardAdrenaline === 'confirmed') return;
+                if (!adrenalineStatus.show || disregardAdrenaline === 'confirmed') return;
                 if (disregardAdrenaline === 'pending') {
                   setDisregardAdrenaline('confirmed');
                 } else if (disregardAdrenaline !== 'confirmed') {
@@ -1700,13 +1852,13 @@ export default function App() {
                 }
               }}
               className={`flex-1 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 min-h-[90px] sm:min-h-[120px] ${
-                !adrenalineRoundStatus.show || disregardAdrenaline === 'confirmed' 
+                !adrenalineStatus.show || disregardAdrenaline === 'confirmed' 
                   ? 'opacity-0 pointer-events-none' 
                   : 'opacity-100 cursor-pointer'
               } ${
                 disregardAdrenaline === 'pending'
                   ? 'bg-red-200 text-red-900 border-neutral-100'
-                  : adrenalineRoundStatus.isDue 
+                  : adrenalineStatus.flashRed 
                   ? 'bg-red-200 text-red-900 border-neutral-100 animate-pulse' 
                   : 'bg-neutral-100 text-neutral-900 border-neutral-100'
               }`}
@@ -1716,19 +1868,21 @@ export default function App() {
               ) : (
                 <>
                   <span className={`font-bold tracking-widest text-center mb-1.5 sm:mb-3 ${
-                    adrenalineRoundStatus.isDue 
-                      ? 'text-[10px] sm:text-[12px] text-red-900'
-                      : 'text-[10px] sm:text-[12px] text-neutral-900'
+                    adrenalineStatus.flashRed 
+                      ? 'text-[12px] sm:text-[14px] text-red-900'
+                      : 'text-[12px] sm:text-[14px] text-neutral-900'
                   }`}>
-                    {adrenalineRoundStatus.text.split(':')[0] + ':'}
+                    {adrenalineStatus.text.includes(':') ? adrenalineStatus.text.split(':')[0] + ':' : adrenalineStatus.text}
                   </span>
-                  <span className={`font-bold text-center leading-none tabular-nums ${
-                    adrenalineRoundStatus.isDue
-                      ? 'text-[22px] sm:text-[43px] text-red-900'
-                      : 'text-[22px] sm:text-[43px] text-neutral-400'
-                  }`}>
-                    {adrenalineRoundStatus.text.split(':').slice(1).join(':').trim()}
-                  </span>
+                  {adrenalineStatus.text.includes(':') && (
+                    <span className={`font-bold text-center leading-none tabular-nums ${
+                      adrenalineStatus.flashRed
+                        ? 'text-[25px] sm:text-[47px] text-red-900'
+                        : 'text-[25px] sm:text-[47px] text-neutral-400'
+                    }`}>
+                      {adrenalineStatus.text.split(':').slice(1).join(':').trim()}
+                    </span>
+                  )}
                 </>
               )}
             </div>
@@ -1761,16 +1915,16 @@ export default function App() {
                   <>
                     <span className={`font-bold tracking-widest text-center mb-1.5 sm:mb-3 ${
                       amiodaroneStatus.flashRed
-                        ? 'text-[10px] sm:text-[12px] text-red-900'
-                        : 'text-[10px] sm:text-[12px] text-neutral-900'
+                        ? 'text-[12px] sm:text-[14px] text-red-900'
+                        : 'text-[12px] sm:text-[14px] text-neutral-900'
                     }`}>
                       {amiodaroneStatus.text.includes(':') ? amiodaroneStatus.text.split(':')[0] + ':' : amiodaroneStatus.text}
                     </span>
                     {amiodaroneStatus.text.includes(':') && (
                       <span className={`font-bold text-center leading-none tabular-nums ${
                         amiodaroneStatus.flashRed
-                          ? 'text-[22px] sm:text-[43px] text-red-900'
-                          : 'text-[22px] sm:text-[43px] text-neutral-400'
+                          ? 'text-[25px] sm:text-[47px] text-red-900'
+                          : 'text-[25px] sm:text-[47px] text-neutral-400'
                       }`}>
                         {amiodaroneStatus.text.split(':').slice(1).join(':').trim()}
                       </span>
@@ -1881,7 +2035,6 @@ export default function App() {
                       onClick={() => {
                         setCatchupStep(2);
                         setUseManualEntry(true);
-                        setCatchupRhythm({ mins: 0, secs: 0 });
                       }} 
                       className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white p-5 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
                     >
@@ -1899,12 +2052,99 @@ export default function App() {
                     >
                       Tutorial
                     </button>
+                    {previousCases.length > 0 && (
+                      <button
+                        onClick={() => setShowPreviousCasesList(true)}
+                        className="w-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 p-4 rounded-2xl text-base font-semibold transition-all duration-200"
+                      >
+                        View Previous Cases
+                      </button>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One v1.1</p>
-                    <p>ACTAS CMG v1.0.5.4</p>
-                    <p>Last reviewed May 2026</p>
+                    <p>The Big One v1.2</p>
+                    <p>ACTAS CMG v1.1.0.2</p>
+                    <p>Last reviewed July 2026</p>
+                  </div>
+                </div>
+              )}
+
+              {showPreviousCasesList && (
+                <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
+                  <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl max-h-[85vh] flex flex-col">
+                    <h2 className="text-xl font-bold text-neutral-900 text-center mb-4 flex-shrink-0">Previous Cases</h2>
+                    <p className="text-xs text-neutral-500 text-center mb-4 flex-shrink-0">The last {MAX_PREVIOUS_CASES} closed cases are kept here as a backup, in case a case is closed but never exported.</p>
+                    <div className="space-y-3 overflow-y-auto flex-1">
+                      {previousCases.length === 0 && (
+                        <p className="text-neutral-400 text-center text-sm py-6">No previous cases saved yet.</p>
+                      )}
+                      {previousCases.map((pc, i) => {
+                        const pcPatientLabel = pc.patientType === 'adult'
+                          ? `Adult · ${pc.patientWeight}kg`
+                          : pc.patientType === 'paed'
+                          ? (pc.patientAge ? `Paediatric · ${pc.patientAge} · ${pc.patientWeight}kg` : `Paediatric · ${pc.patientWeight}kg`)
+                          : 'Patient details not recorded';
+                        const closedDate = pc.caseClosedAt ? new Date(pc.caseClosedAt) : null;
+                        const closedLabel = closedDate
+                          ? `${closedDate.toLocaleDateString('en-AU')} · ${getLocalTime(closedDate)}`
+                          : 'Closure time not recorded';
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => { setViewingPreviousCase(pc); setShowPreviousCasesList(false); }}
+                            className="w-full text-left bg-neutral-50 hover:bg-neutral-100 rounded-2xl p-4 border border-neutral-200 transition-colors"
+                          >
+                            <div className="font-bold text-neutral-900">{pcPatientLabel}</div>
+                            <div className="text-sm text-neutral-500 mt-0.5">Closed {closedLabel}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button onClick={() => setShowPreviousCasesList(false)} className="w-full mt-4 p-3 rounded-xl bg-neutral-100 font-bold text-neutral-700 btn-base flex-shrink-0">Close</button>
+                  </div>
+                </div>
+              )}
+
+              {viewingPreviousCase && (
+                <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto">
+                  <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 pb-24">
+                    <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => window.print()}
+                        className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold btn-base border border-emerald-100"
+                      >
+                        <FileText size={20} /> Export PDF
+                      </button>
+                      <button
+                        onClick={() => { setViewingPreviousCase(null); setShowPreviousCasesList(true); }}
+                        className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold btn-base border border-red-100"
+                      >
+                        Back
+                      </button>
+                    </div>
+
+                    <ArrestSummarySection state={viewingPreviousCase} showRecordingDuration />
+
+                    <VitalSignsSection vitals={viewingPreviousCase.vitals} />
+
+                    <PharmaSummarySection
+                      pharmaSummary={computePharmaSummary(viewingPreviousCase.treatments)}
+                      infusionDoses={viewingPreviousCase.infusionDoses}
+                      activeInfusions={INFUSION_DRUGS.filter(d => viewingPreviousCase.treatments.some(t => t.name.startsWith(d)))}
+                    />
+
+                    <div>
+                      <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
+                      <TreatmentLog
+                        treatments={viewingPreviousCase.treatments}
+                        elapsedSeconds={viewingPreviousCase.elapsedSeconds}
+                        caseOpenedAt={viewingPreviousCase.caseOpenedAt}
+                        isSummary={true}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -2113,7 +2353,7 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => {
-                        setCatchupStep(timingMode === 'elapsed' ? 7 : 6);
+                        setCatchupStep(7);
                         setUseManualEntry(false);
                       }} 
                       className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
@@ -2123,41 +2363,12 @@ export default function App() {
                     <button 
                       onClick={() => { 
                         setElapsedTimestamp(Date.now());
-                        if (timingMode === 'elapsed') {
-                          handleCatchupStart();
-                        } else {
-                          setCatchupRhythm({ mins: 0, secs: 0 });
-                          setCatchupStep(5);
-                        }
-                      }} 
-                      className={'p-3 rounded-xl font-bold btn-base text-white bg-emerald-600'}
-                    >
-                      {timingMode === 'elapsed' ? 'Start Case' : 'Next'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {!catchupTxMode && catchupStep === 5 && (
-                <div className="text-center space-y-6">
-                  <h2 className="text-xl font-bold text-neutral-900 px-4">Enter Current CPR Timer</h2>
-                  <p className="text-neutral-600 text-sm px-4">This is the countdown above the diamond on the monitor</p>
-                  <TimePicker 
-                    value={catchupRhythm} 
-                    onChange={setCatchupRhythm} 
-                    maxSeconds={120}
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
-                    <button 
-                      onClick={() => {
-                        setCprTimestamp(Date.now());
                         if (showInteractiveTutorial) {
                           setShowInteractiveTutorial(false);
                           setTutorialMode(true);
                         }
                         handleCatchupStart();
-                      }}
+                      }} 
                       disabled={showInteractiveTutorial && !catchupNodeCleared}
                       className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && !catchupNodeCleared ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
                     >
@@ -2285,7 +2496,7 @@ export default function App() {
                           <div className="bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 tracking-widest uppercase">Treatment Log</div>
                           <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1 border-b border-neutral-100">
                             <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">Treatment</span>
-                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</span>
+                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-center">Logged at</span>
                             <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</span>
                           </div>
                           <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1">
@@ -2299,42 +2510,11 @@ export default function App() {
                       </div>
                     </button>
 
-                    {/* CPR timer */}
-                    <button
-                      onClick={() => {
-                        setTimingMode('cpr');
-                      }}
-                      disabled={showInteractiveTutorial && !timingNodesComplete}
-                      data-tutorial="cpr-btn"
-                      className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'cpr' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
-                    >
-                      <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-                        <div className="relative w-[100px] h-[100px] flex items-center justify-center">
-                          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
-                            <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5"
-                              strokeLinecap="round"
-                              strokeDasharray="276.5"
-                              strokeDashoffset={276.5 * (1 - ((120 - (demoTick % 120)) / 120))}
-                            />
-                          </svg>
-                          <div className="flex flex-col items-center z-10">
-                            <span className="text-[22px] font-bold tabular-nums leading-none text-neutral-900">
-                              {`${Math.floor((120 - (demoTick % 120)) / 60)}:${String((120 - (demoTick % 120)) % 60).padStart(2,'0')}`}
-                            </span>
-                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'cpr' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        Monitor's inbuilt CPR timer
-                      </div>
-                    </button>
-
                     {/* Elapsed time */}
                     <button
                       onClick={() => setTimingMode('elapsed')}
-                      disabled={showInteractiveTutorial}
+                      disabled={showInteractiveTutorial && !timingNodesComplete}
+                      data-tutorial="elapsed-btn"
                       className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'elapsed' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
                     >
                       <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
@@ -2362,7 +2542,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'elapsed' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        <div>Monitor's elapsed case time</div>
+                        <div>Time keeping assistance</div>
                         <div className="font-medium">(odds/evens method)</div>
                       </div>
                     </button>
@@ -2373,8 +2553,7 @@ export default function App() {
                     <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(3)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
                       onClick={() => {
-                        if (timingMode === 'cpr') { setCatchupRhythm({ mins: 0, secs: 0 }); setCatchupStep(5); }
-                        else if (timingMode === 'elapsed') setCatchupStep(7);
+                        if (timingMode === 'elapsed') setCatchupStep(7);
                         else if (timingMode === 'log') handleCatchupStart();
                       }}
                       disabled={!timingMode}
@@ -2392,14 +2571,14 @@ export default function App() {
 
 
       {/* Warning Modals */}
-      {showCloseWarning && (
+      {showEndWarning && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Close this case?</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">End this case?</h2>
             <p className="text-neutral-500 mb-8">This will end the timer and show the final summary.</p>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowCloseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
-              <button onClick={closeCase} className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">OK</button>
+              <button onClick={() => setShowEndWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
+              <button onClick={endCase} className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">End</button>
             </div>
           </div>
         </div>
@@ -2478,24 +2657,19 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Recalibrate</h2>
-            {timingMode !== 'log' && (
+            {timingMode === 'elapsed' && (
             <button
               onClick={() => {
                 setShowRecalibrateMenu(false);
-                if (timingMode === 'elapsed') {
-                  setShowElapsedRecalibrate(true);
-                } else {
-                  const currentCountdown = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
-                  const mins = Math.floor(currentCountdown / 60);
-                  const secs = currentCountdown % 60;
-                  setTimerAdjustValue({ mins, secs });
-                  setShowTimerAdjust(true);
-                }
+                setStagedElapsedSeconds(state.elapsedSeconds);
+                setStagedRhythmInterval(rhythmInterval || 'evens');
+                setElapsedManuallyEdited(false);
+                setShowElapsedRecalibrate(true);
               }}
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Recalibrate timer</div>
-              <div className="text-xs text-neutral-500 font-medium mt-0.5">{timingMode === 'elapsed' ? 'Adjust the current elapsed time or rhythm check' : 'Adjust the current rhythm check countdown'}</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check</div>
             </button>
             )}
             <button
@@ -2526,7 +2700,7 @@ export default function App() {
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Change timing mode</div>
-              <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode === 'cpr' ? 'CPR Timer' : timingMode === 'elapsed' ? 'Elapsed Time' : 'Tx Log Only'}</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode === 'elapsed' ? 'Elapsed Time' : 'Tx Log Only'}</div>
             </button>
             <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
               Cancel
@@ -2700,26 +2874,19 @@ export default function App() {
               <button
                 disabled={timingMode === 'elapsed'}
                 onClick={() => {
+                  setPendingModeChangeFrom(timingMode);
                   setTimingMode('elapsed');
-                  if (!rhythmInterval) setRhythmInterval('evens');
+                  const startingInterval = rhythmInterval || 'evens';
+                  if (!rhythmInterval) setRhythmInterval(startingInterval);
+                  setStagedElapsedSeconds(state.elapsedSeconds);
+                  setStagedRhythmInterval(startingInterval);
+                  setElapsedManuallyEdited(false);
                   setShowModeChange(false);
                   setShowElapsedRecalibrate(true);
                 }}
                 className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'elapsed' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
               >
                 Elapsed Time
-              </button>
-              <button
-                disabled={timingMode === 'cpr'}
-                onClick={() => {
-                  setTimingMode('cpr');
-                  setTimerAdjustValue({ mins: 2, secs: 0 });
-                  setShowModeChange(false);
-                  setShowTimerAdjust(true);
-                }}
-                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'cpr' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
-              >
-                CPR Timer
               </button>
             </div>
             <button onClick={() => setShowModeChange(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
@@ -2739,21 +2906,16 @@ export default function App() {
 
             <div>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 text-center">Elapsed Time</p>
-              <TimePicker
-                value={{ mins: Math.floor(state.elapsedSeconds / 60), secs: state.elapsedSeconds % 60 }}
-                onChange={(v) => {
-                  const newElapsed = v.mins * 60 + v.secs;
-                  const newTarget = calcNextIntervalTarget(newElapsed, rhythmInterval || 'evens');
-                  setState(prev => ({
-                    ...prev,
-                    elapsedSeconds: newElapsed,
-                    startTime: Date.now(),
-                    pausedTime: newElapsed * 1000,
-                    rhythmCheckTarget: newTarget,
-                    rhythmCheckOvertime: 0
-                  }));
+              <ElapsedTimePicker
+                value={{
+                  hrs: Math.floor(stagedElapsedSeconds / 3600),
+                  mins: Math.floor((stagedElapsedSeconds % 3600) / 60),
+                  secs: stagedElapsedSeconds % 60,
                 }}
-                maxSeconds={5999}
+                onChange={(v) => {
+                  setElapsedManuallyEdited(true);
+                  setStagedElapsedSeconds(v.hrs * 3600 + v.mins * 60 + v.secs);
+                }}
               />
             </div>
 
@@ -2768,63 +2930,53 @@ export default function App() {
                 ] as const).map(({ key, label, example }) => (
                   <button
                     key={key}
-                    onClick={() => {
-                      setRhythmInterval(key);
-                      const newTarget = calcNextIntervalTarget(state.elapsedSeconds, key);
-                      setState(prev => ({ ...prev, rhythmCheckTarget: newTarget, rhythmCheckOvertime: 0 }));
-                    }}
+                    onClick={() => setStagedRhythmInterval(key)}
                     className={`p-3 rounded-xl transition-all duration-200 ${
-                      rhythmInterval === key
+                      stagedRhythmInterval === key
                         ? 'bg-emerald-500 text-white shadow-md'
                         : 'bg-white text-neutral-700 border-2 border-neutral-200 hover:border-emerald-300'
                     }`}
                   >
                     <div className="font-bold text-sm">{label}</div>
-                    <div className={`text-xs mt-0.5 ${rhythmInterval === key ? 'text-emerald-100' : 'text-neutral-400'}`}>{example}</div>
+                    <div className={`text-xs mt-0.5 ${stagedRhythmInterval === key ? 'text-emerald-100' : 'text-neutral-400'}`}>{example}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <button
-              onClick={() => setShowElapsedRecalibrate(false)}
-              className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showTimerAdjust && (
-        <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Adjust Rhythm Check Timer</h2>
-            <p className="text-neutral-500 mb-6">Match the app's rhythm check timer to the monitor's CPR timer</p>
-            
-            <div className="mb-8">
-              <TimePicker 
-                value={timerAdjustValue}
-                onChange={setTimerAdjustValue}
-                maxSeconds={120}
-              />
-            </div>
-            
             <div className="grid grid-cols-2 gap-3">
-              <button 
+              <button
                 onClick={() => {
-                  setShowTimerAdjust(false);
-                  setTimerAdjustValue({ mins: 2, secs: 0 });
-                }} 
+                  // Discard staged changes entirely - nothing here was ever written to state.
+                  setShowElapsedRecalibrate(false);
+                  if (pendingModeChangeFrom !== null) {
+                    setTimingMode(pendingModeChangeFrom);
+                    setPendingModeChangeFrom(null);
+                  }
+                }}
                 className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base"
               >
                 Cancel
               </button>
-              <button 
-                onClick={applyTimerAdjustment} 
-                className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base"
+              <button
+                onClick={() => {
+                  // Commit staged changes to real state.
+                  const newTarget = calcNextIntervalTarget(stagedElapsedSeconds, stagedRhythmInterval);
+                  setRhythmInterval(stagedRhythmInterval);
+                  setState(prev => ({
+                    ...prev,
+                    elapsedSeconds: stagedElapsedSeconds,
+                    startTime: Date.now(),
+                    pausedTime: stagedElapsedSeconds * 1000,
+                    rhythmCheckTarget: newTarget,
+                    rhythmCheckOvertime: 0
+                  }));
+                  setShowElapsedRecalibrate(false);
+                  setPendingModeChangeFrom(null);
+                }}
+                className="bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
               >
-                Set Timer
+                Done
               </button>
             </div>
           </div>
@@ -2973,7 +3125,7 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem, onVitalsChange, timingMode, onDeleteTreatment, onUpdateInfusionDose }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onUpdateInfusionDose }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -2983,8 +3135,8 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   isShockForced: boolean,
   toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
   onVitalsChange: (v: AppState['vitals']) => void,
-  timingMode?: string | null,
   onDeleteTreatment?: (idx: number) => void,
+  onMoveTreatment?: (fromIdx: number, toIdx: number) => void,
   onUpdateInfusionDose?: (drug: string, dose: string) => void
 }) {
   const isTop = ['reversibles', 'rosc', 'phea', 'vitals'].includes(type);
@@ -3002,7 +3154,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
-        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} timingMode={timingMode} onDelete={onDeleteTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
+        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
         {type === 'treatment' && <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />}
       </div>
     </motion.div>
@@ -3046,8 +3198,8 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
 function ReversiblesOverlay({ checkedItems, onToggle }: { checkedItems: string[], onToggle: (label: string) => void }) {
   return (
     <div className="h-full">
-      <SectionGroup title="PREHOSPITAL CORRECTABLE" color="blue" items={['Hypoxia', 'Hypovolaemia', 'Hypothermia', 'Hyperkalaemia', 'Tension Pneumothorax', 'Some toxins']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="HOSPITAL ONLY CORRECTABLE" color="blue" items={['Hypokalaemia', 'Hydrogen Ion Excess', 'Thrombosis Coronary/Pulmonary', 'Tamponade']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="PREHOSPITAL CORRECTABLE" color="blue" items={['Hypoxia', 'Hypovolaemia', 'Hypothermia', 'Hyperkalaemia', 'Tension pneumothorax', 'Some toxins']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="HOSPITAL ONLY CORRECTABLE" color="blue" items={['Hypokalaemia', 'Hydrogen ion excess', 'Thrombosis coronary/pulmonary', 'Tamponade']} checkedItems={checkedItems} onToggle={onToggle} />
     </div>
   );
 }
@@ -3223,8 +3375,50 @@ function SectionGroup({
 }
 
 // --- TREATMENT LOG (EVEN COLUMNS) ---
-function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = false, timingMode, onDelete }: { treatments: Treatment[], elapsedSeconds: number, catchupElapsed: number, isSummary?: boolean, timingMode?: string | null, onDelete?: (index: number) => void }) {
+function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = false, onDelete, onMove }: { treatments: Treatment[], elapsedSeconds: number, caseOpenedAt?: number | null, isSummary?: boolean, onDelete?: (index: number) => void, onMove?: (fromIndex: number, toIndex: number) => void }) {
   const [pendingDelete, setPendingDelete] = React.useState<number | null>(null);
+  const [reorderingRealIdx, setReorderingRealIdx] = React.useState<number | null>(null);
+  const [draggingRealIdx, setDraggingRealIdx] = React.useState<number | null>(null);
+  // Gap index in VISUAL (top-to-bottom, newest-first) order: 0 = above the
+  // topmost row, treatments.length = below the bottommost row.
+  const [dragOverGapIdx, setDragOverGapIdx] = React.useState<number | null>(null);
+  const rowRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
+
+  const handleDragPointerDown = (realIdx: number) => (e: React.PointerEvent) => {
+    setDraggingRealIdx(realIdx);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleDragPointerMove = (e: React.PointerEvent) => {
+    if (draggingRealIdx === null) return;
+    const y = e.clientY;
+    const rowsByVisualPosition = (Object.entries(rowRefs.current) as [string, HTMLDivElement | null][])
+      .filter((entry): entry is [string, HTMLDivElement] => entry[1] !== null)
+      .map(([key, el]) => ({ realIdx: parseInt(key, 10), mid: el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2 }))
+      .sort((a, b) => a.mid - b.mid); // ascending Y = visual top-to-bottom = newest-first
+    let gapIdx = 0;
+    rowsByVisualPosition.forEach(r => { if (y > r.mid) gapIdx++; });
+    setDragOverGapIdx(gapIdx);
+  };
+
+  const handleDragPointerUp = () => {
+    if (draggingRealIdx !== null && dragOverGapIdx !== null) {
+      const n = treatments.length;
+      // Convert a visual gap index (0=top/newest, n=bottom/oldest) into a real
+      // chronological-array index: gapIdx rows are visually above the gap, so
+      // (n - gapIdx) real-array items (the oldest ones) sit before it.
+      const targetIdxInFullArray = n - dragOverGapIdx;
+      const toIdx = targetIdxInFullArray <= draggingRealIdx ? targetIdxInFullArray : targetIdxInFullArray - 1;
+      if (toIdx !== draggingRealIdx) {
+        onMove?.(draggingRealIdx, toIdx);
+        // The item moved to a new array position - follow it, so the checkmark
+        // stays attached to the same treatment, not the same slot.
+        setReorderingRealIdx(toIdx);
+      }
+    }
+    setDraggingRealIdx(null);
+    setDragOverGapIdx(null);
+  };
 
   const splitTreatmentName = (name: string): { med: string, dose: string | null } => {
     // Oxygen: split route onto second line
@@ -3236,49 +3430,49 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
       const rest = name.slice('Sodium bicarbonate'.length).trim();
       return { med: 'Sodium bic.', dose: rest || null };
     }
-    // Shock/Disarm: split on ' - '
-    if (name.startsWith('Shock - ')) {
-      return { med: 'Shock', dose: name.slice(8) };
+    // Shock/Disarm: split on first ' - ' (handles both plain 'Shock - VF' and
+    // numbered 'Shock #3 - VF' forms)
+    if (/^Shock( #\d+)? - /.test(name)) {
+      const dashIdx = name.indexOf(' - ');
+      return { med: name.slice(0, dashIdx), dose: name.slice(dashIdx + 3) };
     }
-    if (name.startsWith('Disarm - ')) {
-      return { med: 'Disarm', dose: name.slice(9) };
+    if (/^Disarm( #\d+)? - /.test(name)) {
+      const dashIdx = name.indexOf(' - ');
+      return { med: name.slice(0, dashIdx), dose: name.slice(dashIdx + 3) };
     }
     // Match known medication names first, then treat remainder as dose
-    const knownMeds = [
-      'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
-      'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
-      'Levetiracetam (Kepra)', 'Lignocaine',
-      'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam push', 'Morph/midaz infusion', 'Normal saline',
-      'Suxamethonium', 'Morph/midaz infusion'
-    ];
-    for (const med of knownMeds) {
+    for (const med of KNOWN_MEDS) {
       if (name.startsWith(med + ' ')) {
         let dose = name.slice(med.length).trim();
+        let displayMed = med;
+        // Pull a '#N' prefix (from repeat logging) into the med line, not the dose line
+        const numMatch = dose.match(/^#(\d+)\s*/);
+        if (numMatch) {
+          displayMed = `${med} #${numMatch[1]}`;
+          dose = dose.slice(numMatch[0].length);
+        }
         // For weight-based doses "0.01mg/kg (0.13mg)", show only the calculated value
         const calcMatch = dose.match(/\(([\d.]+(?:mg|mL|mMol|mcg|g))\)/i);
         if (calcMatch) dose = calcMatch[1];
-        return { med, dose: dose || null };
+        displayMed = displayMed.replace('Adrenaline', 'Adren.').replace(/infusion/i, 'Infus.');
+        return { med: displayMed, dose: dose || null };
       }
     }
     return { med: name, dose: null };
   };
 
-  const isCpr = timingMode === 'cpr';
-  const isElapsedMode = timingMode === 'elapsed';
-  const showElapsed = !isCpr && !isElapsedMode && timingMode !== 'log';
   const showAgo = !isSummary;
 
   const gridCols = isSummary
-    ? (showElapsed ? 'grid-cols-[2fr_1fr_1fr]' : 'grid-cols-[2fr_1fr]')
-    : (showElapsed ? 'grid-cols-[2.1fr_1fr_1.4fr_0.9fr]' : 'grid-cols-[2.1fr_1fr_0.9fr]');
+    ? 'grid-cols-[1.8fr_1.2fr]'
+    : 'grid-cols-[1.9fr_1fr_1.1fr]';
 
   return (
     <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
       <div className={`grid ${gridCols} gap-1 bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
         <div className={`text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left ${onDelete ? 'pl-5' : ''}`}>Treatment</div>
-        <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
-        {showElapsed && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>}
-        {showAgo && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>}
+        <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Logged at</div>
+        {showAgo && <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right pr-[20px]">Ago</div>}
       </div>
 
       <div className="divide-y divide-neutral-100">
@@ -3288,38 +3482,69 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
           [...treatments].reverse().map((tx, i) => {
             const realIndex = treatments.length - 1 - i;
             const timeVal = isSummary ? tx.clockSeconds : tx.clock;
-            const timeDisplay = tx.prior ? `< ${timeVal}` : timeVal;
-            const elapsedDisplay = tx.prior ? `< ${isSummary ? formatTimeWithSeconds(catchupElapsed) : formatTime(catchupElapsed)}` : (isSummary ? formatTimeWithSeconds(tx.elapsed) : formatTime(tx.elapsed));
-            const agoVal = tx.prior ? elapsedSeconds : (elapsedSeconds - tx.elapsed);
-            const ago = tx.prior ? `> ${formatTimeHMM(agoVal)}` : formatTimeHMM(agoVal);
+            const timeDisplay = tx.timeUnknown ? '—' : (tx.prior ? `< ${timeVal}` : timeVal);
+            const agoVal = tx.prior
+              ? (caseOpenedAt != null ? Math.max(0, Math.floor((Date.now() - caseOpenedAt) / 1000)) : elapsedSeconds)
+              : (tx.loggedAt != null ? Math.max(0, Math.floor((Date.now() - tx.loggedAt) / 1000)) : (elapsedSeconds - tx.elapsed));
+            const ago = tx.timeUnknown ? '—' : (tx.prior ? `> ${formatTimeHMM(agoVal)}` : formatTimeHMM(agoVal));
             const { med, dose } = splitTreatmentName(tx.name);
+            const isReorderingThis = reorderingRealIdx === realIndex;
 
             return (
-              <div key={i} className={`grid ${gridCols} px-4 py-4 items-center gap-1`}>
-                <div className="pr-1 flex items-center gap-3">
-                  {onDelete && (
-                    <button
-                      onClick={() => setPendingDelete(realIndex)}
-                      className="-ml-1.5 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 text-neutral-400 hover:text-red-500 transition-colors"
-                    >
-                      <X size={8} />
-                    </button>
-                  )}
-                  <div>
-                    <div className={`text-[15px] font-bold ${
-                      tx.name.toLowerCase().includes('shock') ? 'text-red-600' :
-                      tx.name.toLowerCase().includes('disarm') ? 'text-blue-600' :
-                      'text-neutral-900'
-                    }`}>{med}</div>
-                    {dose && <div className="text-[13px] text-neutral-500 font-medium mt-0.5">{dose}</div>}
+              <React.Fragment key={i}>
+                {dragOverGapIdx === i && (
+                  <div className="h-[3px] bg-blue-500 rounded-full mx-4 -my-[1.5px] relative z-10" />
+                )}
+                <div
+                  ref={(el) => { rowRefs.current[realIndex] = el; }}
+                  onPointerDown={isReorderingThis ? handleDragPointerDown(realIndex) : undefined}
+                  onPointerMove={isReorderingThis ? handleDragPointerMove : undefined}
+                  onPointerUp={isReorderingThis ? handleDragPointerUp : undefined}
+                  onPointerCancel={isReorderingThis ? handleDragPointerUp : undefined}
+                  style={isReorderingThis ? { touchAction: 'none' } : undefined}
+                  className={`grid ${gridCols} px-4 py-4 items-center gap-1 transition-colors ${
+                    isReorderingThis ? 'bg-blue-50 cursor-grab active:cursor-grabbing' : ''
+                  }`}
+                >
+                  <div className="pr-1 flex items-center gap-2">
+                    {onDelete && (
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          if (isReorderingThis) {
+                            setReorderingRealIdx(null);
+                          } else {
+                            setPendingDelete(realIndex);
+                          }
+                        }}
+                        data-tx={tx.name.startsWith('Adrenaline push') ? 'adrenaline-push' : undefined}
+                        className={`-ml-1.5 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full transition-colors ${
+                          isReorderingThis
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-400 hover:text-neutral-600'
+                        }`}
+                      >
+                        {isReorderingThis ? <Check size={8} /> : <MoreVertical size={8} />}
+                      </button>
+                    )}
+                    <div>
+                      <div className={`text-[15px] font-bold ${isSummary ? '' : 'ml-[2px]'} ${
+                        tx.name.toLowerCase().includes('shock') ? 'text-red-600' :
+                        tx.name.toLowerCase().includes('disarm') ? 'text-blue-600' :
+                        'text-neutral-900'
+                      }`}>{med}</div>
+                      {dose && <div className="text-[13px] text-neutral-500 font-medium mt-0.5">{dose}</div>}
+                    </div>
                   </div>
+                  <div className={`text-[16px] text-neutral-800 font-medium tabular-nums text-center ${isSummary ? '' : '-ml-[2px]'}`}>{timeDisplay}</div>
+                  {showAgo && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">{ago}</div>}
                 </div>
-                <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{timeDisplay}</div>
-                {showElapsed && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">{elapsedDisplay}</div>}
-                {showAgo && <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">{ago}</div>}
-              </div>
+              </React.Fragment>
             );
           })
+        )}
+        {dragOverGapIdx === treatments.length && (
+          <div className="h-[3px] bg-blue-500 rounded-full mx-4 -my-[1.5px] relative z-10" />
         )}
       </div>
 
@@ -3327,12 +3552,14 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
         <div className="fixed inset-0 bg-black/60 z-[3000] flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl space-y-4">
             <div className="text-center space-y-1">
-              <p className="font-bold text-neutral-900 text-lg">Delete treatment?</p>
-              <p className="text-neutral-500 text-sm">{treatments[pendingDelete]?.name}</p>
+              <p className="font-bold text-neutral-900 text-lg">{treatments[pendingDelete]?.name}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setPendingDelete(null)} className="py-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
-              <button onClick={() => { onDelete?.(pendingDelete); setPendingDelete(null); }} className="py-3 rounded-xl bg-red-500 font-bold text-white">Delete</button>
+            <div className="space-y-2">
+              {onMove && (
+                <button onClick={() => { setReorderingRealIdx(pendingDelete); setPendingDelete(null); }} className="w-full py-3 rounded-xl bg-blue-50 font-bold text-blue-700">Reorder</button>
+              )}
+              <button onClick={() => { onDelete?.(pendingDelete); setPendingDelete(null); }} className="w-full py-3 rounded-xl bg-red-50 font-bold text-red-600">Delete</button>
+              <button onClick={() => setPendingDelete(null)} className="w-full py-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
             </div>
           </div>
         </div>
@@ -3344,7 +3571,7 @@ function TreatmentLog({ treatments, elapsedSeconds, catchupElapsed, isSummary = 
 function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
   const patientLabel = state.patientType === 'adult'
-    ? `Adult · ${state.patientWeight === '>100' ? '>100' : state.patientWeight}kg`
+    ? `Adult · ${state.patientWeight}kg`
     : state.patientType === 'paed'
     ? state.patientAge ? `Paediatric · ${state.patientAge} · ${state.patientWeight}kg` : `Paediatric · ${state.patientWeight}kg`
     : null;
@@ -3384,21 +3611,72 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
   );
 }
 
-function ArrestSummarySection({ state }: { state: AppState }) {
+function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
+  const v = vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+  const vitalRows = [
+    { label: 'HR',     value: v.hr,   unit: 'bpm'    },
+    { label: 'RR',      value: v.rr,   unit: 'br/min' },
+    { label: 'SpO₂',           value: v.spo2, unit: '%'      },
+    { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
+    { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
+    { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
+    { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
+    { label: 'Temp',    value: v.temp, unit: '°C'     },
+  ].filter(r => r.value !== '');
+  return (
+    <div className="rounded-xl overflow-hidden border border-neutral-100">
+      <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center">VITAL SIGNS</div>
+      {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
+        <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
+          <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
+          <span className="text-[17px] font-bold text-neutral-900 tabular-nums">
+            {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
+          </span>
+        </div>
+      )) : (
+        <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded.</div>
+      )}
+    </div>
+  );
+}
+
+function ArrestSummarySection({ state, showRecordingDuration }: { state: AppState, showRecordingDuration?: boolean }) {
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
-  const patientLabel = state.patientType === 'adult'
-    ? `Adult · ${state.patientWeight === '>100' ? '>100' : state.patientWeight}kg`
-    : state.patientType === 'paed'
-    ? state.patientAge ? `Paediatric · ${state.patientAge} · ${state.patientWeight}kg` : `Paediatric · ${state.patientWeight}kg`
+  const isPaedWithAge = state.patientType === 'paed' && !!state.patientAge;
+  const patientTypeLabel = state.patientType === 'adult' ? 'Adult' : state.patientType === 'paed' ? 'Paediatric' : null;
+  // Single-line label for adult, or paediatric with a custom (non-age-based) weight
+  const patientOneLineLabel = state.patientType === 'adult'
+    ? `Adult · ${state.patientWeight}kg`
+    : state.patientType === 'paed' && !isPaedWithAge
+    ? `Paediatric · ${state.patientWeight}kg`
     : null;
+  // Two-line detail (age · weight) only for paediatric estimated by age
+  const patientDetailLabel = isPaedWithAge ? `${state.patientAge} · ${state.patientWeight}kg` : null;
   return (
     <div className="space-y-6">
-      {patientLabel && (
-        <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider text-center">PATIENT</div>
-          <div className="bg-white px-4 py-3">
-            <span className="text-[17px] font-bold text-neutral-900 text-center block">{patientLabel}</span>
-          </div>
+      {(patientTypeLabel || showRecordingDuration) && (
+        <div className="rounded-xl overflow-hidden border border-neutral-100 bg-white px-4 py-3 flex items-start justify-between gap-3 shadow-sm">
+          {patientTypeLabel && (
+            <div>
+              <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">Patient settings</div>
+              {isPaedWithAge ? (
+                <>
+                  <div className="text-[15px] font-bold text-neutral-900">{patientTypeLabel}</div>
+                  <div className="text-[15px] font-bold text-neutral-900">{patientDetailLabel}</div>
+                </>
+              ) : (
+                <div className="text-[15px] font-bold text-neutral-900">{patientOneLineLabel}</div>
+              )}
+            </div>
+          )}
+          {showRecordingDuration && (
+            <div className="text-right">
+              <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">App recording for</div>
+              <div className="text-[15px] font-bold text-neutral-800 tabular-nums">
+                {state.caseOpenedAt ? formatTimeHMM(Math.floor(((state.caseClosedAt ?? Date.now()) - state.caseOpenedAt) / 1000)) : '—'}
+              </div>
+            </div>
+          )}
         </div>
       )}
       <div>
@@ -3463,7 +3741,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete, onUpdateInfusionDose }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, timingMode?: string | null, onDelete?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
+function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onUpdateInfusionDose }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const hasVitals = Object.values(v).some(val => val !== '');
   const vitalRows = [
@@ -3479,8 +3757,8 @@ function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete, onUpdateIn
 
   return (
     <div className="space-y-6 pb-20">
-      <ArrestSummarySection state={state} />
-      <div className="rounded-xl overflow-hidden border border-neutral-100">
+      <ArrestSummarySection state={state} showRecordingDuration />
+      <div className="rounded-xl overflow-hidden border border-neutral-100 shadow-sm">
         <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center">VITAL SIGNS</div>
         {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
           <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
@@ -3496,7 +3774,7 @@ function SummaryOverlay({ state, pharmaSummary, timingMode, onDelete, onUpdateIn
       <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
       <div>
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
-        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} catchupElapsed={state.catchupElapsed} timingMode={timingMode} onDelete={onDelete} />
+        <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={onDelete} onMove={onMove} />
       </div>
     </div>
   );
@@ -3764,7 +4042,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">{selectedMed}</h2>
           {state.patientWeight && (
             <p className="text-neutral-500 text-sm mb-2">
-              Patient weight: {state.patientWeight === '>100' ? '>100' : state.patientWeight}kg
+              Patient weight: {state.patientWeight}kg
             </p>
           )}
           {state.patientType && (
@@ -3945,7 +4223,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           { name: 'Disarm - PEA', color: 'blue' },
           state.isROSCMode
             ? { name: 'Rearrest', color: 'orange' }
-            : { name: 'Disarm - ROSC', color: 'emerald' }
+            : { name: 'Disarm - ROSC', color: 'emerald' },
+          ...(isShockForced ? [{ name: 'Rhythm check delayed' }] : [])
         ]} 
         onSelect={addTreatment}
       />
@@ -3965,7 +4244,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           <TxSection 
             title="Airway" 
             color="blue" 
-            items={['ETT', 'FONA', 'IGT', 'LMA']} 
+            items={['ETT', 'FONA', 'IGT', 'LMA', 'NPA', 'OPA', 'Suction']} 
             onSelect={addTreatment}
             sectionId="airway"
             expandedSection={expandedSection}
@@ -3975,7 +4254,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           <TxSection 
             title="Other Tx" 
             color="neutral" 
-            items={['Corpuls', 'Extrication', 'IO', 'IV access', 'Pacing', 'Reassurance provided']} 
+            items={['Corpuls', 'Extrication', 'IO access', 'IV access', 'Pacing', 'Reassurance provided']} 
             onSelect={addTreatment}
             sectionId="otherTx"
             expandedSection={expandedSection}
