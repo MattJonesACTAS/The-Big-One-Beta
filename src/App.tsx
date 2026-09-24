@@ -85,7 +85,8 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
       { dose: '1mg', population: 'adult', indication: 'Cardiac arrest' },
       { dose: '0.01mg/kg', population: 'paed', indication: 'Cardiac arrest', calculated: true },
       { dose: 'Other', population: 'both' }
-    ] 
+    ],
+    customUnit: 'mcg'
   },
   'Adrenaline infusion': { 
     doses: [
