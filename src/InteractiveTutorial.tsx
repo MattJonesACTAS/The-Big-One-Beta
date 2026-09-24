@@ -603,10 +603,11 @@ interface TutorialScreens {
 interface InteractiveTutorialProps {
   onClose: () => void;
   onTimingNodesComplete?: () => void;
+  onCatchupNodeStatusChange?: (screen: string, cleared: boolean) => void;
   catchupStep?: number;
 }
 
-const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, catchupStep }) => {
+const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
@@ -651,11 +652,26 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     timingMethod: {
       title: 'Time Keeping',
       image: '',
-      nextScreen: 'home1',
+      nextScreen: 'rhythmCheckTiming',
       elements: [
-        { id: 'timingLog',     x: 50, y: 25, number: 3, title: 'Tx Log Only',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses.\n\nThis option can also be useful if you are acting as scribe during a simulation." },
-        { id: 'timingCPR',     x: 50, y: 47, number: 5, title: 'CPR Timer',     description: "Choose this option if you are using the monitor's inbuilt CPR timer, found above the compression depth diamond on the CPR screen.\n\nLet's use this option for the tutorial, as it's likely the time keeping method you're least familiar with.\n\nChoose 'CPR timer' to progress in the tutorial." },
-        { id: 'timingElapsed', x: 50, y: 70, number: 4, title: 'Elapsed Time',  description: "Choose this option if you are using the elapsed time found at the top right corner of the monitor.\n\nYou can then choose whether you are performing rhythm checks on even or odd minutes." },
+        { id: 'timingLog',     x: 50, y: 38.0, number: 3, title: 'No Timer Mode',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses.\n\nThis option can also be useful if you are acting as scribe during a simulation." },
+        { id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
+      ],
+    },
+    rhythmCheckTiming: {
+      title: 'Rhythm Check Timing',
+      image: '',
+      nextScreen: 'enterElapsedTime',
+      elements: [
+        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 5, title: 'Rhythm Check Timing', description: "You will need to enter which minute intervals the rhythm checks are occurring.\n\nChoose an option to continue." },
+      ],
+    },
+    enterElapsedTime: {
+      title: 'Enter Current Elapsed Time',
+      image: '',
+      nextScreen: 'home1', // progression driven by real catchupStep, not by Next click
+      elements: [
+        { id: 'enterElapsedTime', x: 50, y: 50, number: 6, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.\n\nEnter any time you like to move forward." },
       ],
     },
     home1: {
@@ -670,13 +686,14 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         { id: 'tabs', x: 50, y: 10.75, number: 10, title: 'Checklists', description: "Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)" },
         { id: 'addTxBtn', x: 75, y: 95.4, number: 11, title: 'Add Treatment Button', description: "Tap here to log treatments and interventions during the arrest" },
       ],
+
     },
     addTxMenu: {
       title: 'Add Treatment Menu',
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/2.png?raw=true',
       nextScreen: 'adrenalineDose',
       elements: [
-        { id: 'addTxSubmenu', x: 50, y: 45.9, number: 12, title: 'Add Tx submenu', description: "After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log" },
+        { id: 'addTxSubmenu', x: 50, y: 45.9, number: 12, title: 'Add Tx Submenu', description: "After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log" },
       ],
     },
     adrenalineDose: {
@@ -692,7 +709,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
       nextScreen: 'home2_summary',
       elements: [
-        { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 14, title: 'Medication alerts', description: "When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due." },
+        { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 14, title: 'Medication Alerts', description: "When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due." },
       ],
     },
     home2_summary: {
@@ -736,10 +753,22 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
   const requiredElements = new Set(currentScreenData.elements.map(el => el.id));
   const allExplored = Array.from(requiredElements).every(id => exploredElements.has(id));
 
-  // Notify parent when all timing method nodes explored so it can flash the CPR button
+  // Notify parent when all timing method nodes explored so it can flash the Elapsed Time button
   useEffect(() => {
     if (currentScreen === 'timingMethod' && allExplored && onTimingNodesComplete) {
       onTimingNodesComplete();
+    }
+  }, [currentScreen, allExplored]);
+
+  // Notify parent whether the current page's node(s) have been cleared, so the
+  // real Continue/Next button on that page can be gated until the user has
+  // actually read it (timingMethod uses its own onTimingNodesComplete above
+  // since the Elapsed Time button there is gated separately).
+  useEffect(() => {
+    const gatedScreens = ['patientDetails', 'previousTreatments', 'enterElapsedTime'];
+    if (gatedScreens.includes(currentScreen) && onCatchupNodeStatusChange) {
+      console.log('[TUTORIAL DEBUG] screen:', currentScreen, 'allExplored:', allExplored, 'exploredElements:', Array.from(exploredElements), 'requiredElements:', Array.from(requiredElements));
+      onCatchupNodeStatusChange(currentScreen, allExplored);
     }
   }, [currentScreen, allExplored]);
 
@@ -749,9 +778,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
   // not by an internal 'Next' click.
   useEffect(() => {
     if (catchupStep === undefined) return;
-    const stepToScreen: Record<number, string> = { 2: 'patientDetails', 3: 'previousTreatments', 6: 'timingMethod' };
+    const stepToScreen: Record<number, string> = { 2: 'patientDetails', 3: 'previousTreatments', 6: 'timingMethod', 7: 'rhythmCheckTiming', 4: 'enterElapsedTime' };
     const targetScreen = stepToScreen[catchupStep];
-    const catchupLinkedScreens = ['patientDetails', 'previousTreatments', 'timingMethod'];
+    const catchupLinkedScreens = ['patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime'];
     if (targetScreen && catchupLinkedScreens.includes(currentScreen) && currentScreen !== targetScreen) {
       setCurrentScreen(targetScreen);
       setExploredElements(new Set());
@@ -800,16 +829,16 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
+      backgroundColor: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      justifyContent: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      padding: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'home1', 'timingMethod', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
+      alignItems: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      justifyContent: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      padding: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       zIndex: 9999,
       overflowY: 'auto',
-      pointerEvents: ['timingMethod', 'patientDetails', 'previousTreatments'].includes(currentScreen) ? 'none' : 'auto',
+      pointerEvents: ['timingMethod', 'rhythmCheckTiming', 'patientDetails', 'previousTreatments', 'enterElapsedTime'].includes(currentScreen) ? 'none' : 'auto',
     }}>
       {/* Render static components for non-catchup screens only */}
       {currentScreen === 'home1' && <StaticHomeScreen />}
@@ -839,7 +868,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             width: '85%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
-            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
               {currentScreen === 'intro1' && 'Welcome!'}
               {currentScreen === 'intro2' && 'Navigating the Tutorial'}
               {currentScreen === 'intro3' && 'Getting Started'}
@@ -893,10 +922,10 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             width: '85%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
-            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
               Time Keeping
             </h2>
-            {renderIntroDescription("On this page, you will need to select how you want the app to help you, or not help you, keep track of your next rhythm checks.\n\nLet's look at the three options.")}
+            {renderIntroDescription("Next you can choose whether the app provides you with a rhythm check countdown or not.")}
             <button
               onClick={() => setTimingIntroDismissed(true)}
               style={{
@@ -1246,7 +1275,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       )}
       
       {/* Regular Next button for non-special screens */}
-      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'patientDetails' && currentScreen !== 'previousTreatments' && currentScreen !== 'timingMethod' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
+      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'patientDetails' && currentScreen !== 'previousTreatments' && currentScreen !== 'timingMethod' && currentScreen !== 'rhythmCheckTiming' && currentScreen !== 'enterElapsedTime' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
         <button
           onClick={handleNext}
           style={{
@@ -1324,7 +1353,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
           >
             <h3 style={{
               margin: '0 0 12px 0',
-              fontSize: '20px',
+              fontSize: '24px',
               fontWeight: '700',
               color: '#1a1a1a',
               textAlign: 'center',
@@ -1333,7 +1362,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             </h3>
             <p style={{
               margin: '0 0 20px 0',
-              fontSize: '15px',
+              fontSize: '16px',
               lineHeight: '1.6',
               color: '#444',
               textAlign: 'left',
@@ -1390,7 +1419,7 @@ function renderIntroDescription(text: string) {
     }
   }
   return (
-    <div style={{ color: '#555', marginBottom: '20px', lineHeight: '1.6', textAlign: 'left' }}>
+    <div style={{ color: '#555', marginBottom: '20px', lineHeight: '1.6', textAlign: 'left', fontSize: '16px' }}>
       {groups.map((group, gi) => {
         const isLast = gi === groups.length - 1;
         if (group.type === 'bullets') {

@@ -1480,7 +1480,7 @@ export default function App() {
             setTutorialMode(true);
           }}
           onTimingNodesComplete={() => setTimingNodesComplete(true)}
-          onCatchupNodeStatusChange={(_screen, cleared) => setCatchupNodeCleared(cleared)}
+          onCatchupNodeStatusChange={(_screen, cleared) => { console.log('[TUTORIAL DEBUG] App.tsx received:', _screen, cleared); setCatchupNodeCleared(cleared); }}
         />
       )}
 
