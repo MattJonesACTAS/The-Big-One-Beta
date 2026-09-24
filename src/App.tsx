@@ -1669,9 +1669,9 @@ export default function App() {
             )}
             {timingMode === 'elapsed' && !state.isROSCMode && (
               <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-                <span className="text-[12px] sm:text-[14px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Next check</span>
-                <span className={`text-[25px] sm:text-[47px] font-bold tabular-nums leading-none ${(state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-500' : 'text-neutral-400'}`}>
-                  {formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))}
+                <span className="text-[12px] sm:text-[14px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Elapsed Time</span>
+                <span className="text-[25px] sm:text-[47px] font-bold tabular-nums leading-none text-neutral-400">
+                  {formatTimeWithSeconds(state.elapsedSeconds)}
                 </span>
               </div>
             )}
@@ -1768,31 +1768,25 @@ export default function App() {
               
               <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
                 <div 
-                  className={`font-bold tabular-nums tracking-tighter leading-none ${
-                    timingMode === 'elapsed' ? 'text-[40px] sm:text-[62px]' : 'text-7xl sm:text-[120px]'
-                  } ${
+                  className={`font-bold tabular-nums tracking-tighter leading-none text-7xl sm:text-[120px] ${
                     state.rhythmCheckPaused ? 'text-neutral-900' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-600' :
                     (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
-                  {timingMode === 'elapsed'
-                    ? formatTimeWithSeconds(state.elapsedSeconds)
-                    : state.rhythmCheckPaused 
-                      ? formatTime(state.frozenCountdown || 0)
-                      : state.rhythmCheckOvertime > 0 
-                        ? formatTime(6 - state.rhythmCheckOvertime)
-                        : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
+                  {state.rhythmCheckPaused 
+                    ? formatTime(state.frozenCountdown || 0)
+                    : state.rhythmCheckOvertime > 0 
+                      ? formatTime(6 - state.rhythmCheckOvertime)
+                      : formatTime(Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds))
                   }
                 </div>
-                <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 ${timingMode === 'elapsed' ? 'translate-y-0.5' : ''} ${
-                  timingMode === 'elapsed' ? 'text-[11px] sm:text-[14px]' : 'text-[14px] sm:text-[18px]'
-                } ${
+                <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 text-[14px] sm:text-[18px] ${
                   state.rhythmCheckOvertime > 0 ? 'text-red-600 flash-red' :
                   (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && !state.rhythmCheckPaused ? 'text-red-600' :
                   'text-neutral-400'
                 }`}>
-                  {timingMode === 'elapsed' ? 'Elapsed Time' : 'Rhythm Check'}
+                  Next Check
                 </div>
               </div>
               </>
