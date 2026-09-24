@@ -3191,15 +3191,14 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
                   onKeyDown={e => { if (e.key === 'Enter') commit(key); }}
                   className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
                 />
-                {hasDraft && (
-                  <button
-                    onClick={() => commit(key)}
-                    className="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center"
-                    aria-label={`Confirm ${label}`}
-                  >
-                    <Check size={14} />
-                  </button>
-                )}
+                <button
+                  onClick={() => commit(key)}
+                  disabled={!hasDraft}
+                  className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ${hasDraft ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  aria-label={`Confirm ${label}`}
+                >
+                  <Check size={10} />
+                </button>
               </div>
             </div>
           );
