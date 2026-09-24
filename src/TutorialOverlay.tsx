@@ -27,7 +27,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'elapsedCorner', type: 'positioned', x: 20, y: 22,
+    id: 'elapsedCorner', type: 'positioned', x: 25, y: 27,
     pages: [
       {
         title: 'Elapsed Timer',
