@@ -409,6 +409,15 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
       if (unit.toLowerCase() === 'mcg' && totalDose >= 1000) {
         const mgValue = parseFloat((totalDose / 1000).toFixed(2));
         summary[med].display = `${mgValue}mg (${count})`;
+      } else if (unit.toLowerCase() === 'ml' && totalDose >= 1000) {
+        // mL totals of 1000 or more read more naturally as L
+        const litres = parseFloat((totalDose / 1000).toFixed(2));
+        if (med === 'Glucose 10%') {
+          const grams = Math.round(totalDose * 0.1 * 10) / 10;
+          summary[med].display = `${litres}L/${grams}g (${count})`;
+        } else {
+          summary[med].display = `${litres}L (${count})`;
+        }
       } else {
         const roundedDose = parseFloat(totalDose.toFixed(2));
         if (med === 'Glucose 10%' && unit === 'mL') {
