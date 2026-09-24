@@ -1565,19 +1565,6 @@ export default function App() {
          </div>
         )}
 
-        {showPatternSwitchModal && (
-          <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
-            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-              <AlertTriangle size={48} className="mx-auto text-amber-600 mb-4" />
-              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Rhythm Check Pattern Changed</h2>
-              <p className="text-neutral-500 mb-8">
-                Since this was logged early, the app switched rhythm checks to <strong>{patternSwitchNoticeRef.current}</strong> to keep the next check as close to 2:00 away as possible.
-              </p>
-              <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
-            </div>
-          </div>
-        )}
-
         {tutorialMode && (
           <TutorialOverlay
             appState={state}
@@ -1922,6 +1909,19 @@ export default function App() {
               />
             )}
           </AnimatePresence>
+
+          {showPatternSwitchModal && (
+            <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
+              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                <AlertTriangle size={48} className="mx-auto text-amber-600 mb-4" />
+                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Rhythm Check Pattern Changed</h2>
+                <p className="text-neutral-500 mb-8">
+                  Since this was logged early, the app switched rhythm checks to <strong>{patternSwitchNoticeRef.current}</strong> to keep the next check as close to 2:00 away as possible.
+                </p>
+                <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
+              </div>
+            </div>
+          )}
 
           {/* Tutorial Overlay - renders on top of real app */}
           {tutorialMode && (
