@@ -2523,15 +2523,9 @@ export default function App() {
                           </svg>
                           <div className="flex flex-col items-center z-10">
                             <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">
-                              {(() => {
-                                const total = 120 + (demoTick % 3600);
-                                const h = Math.floor(total / 3600);
-                                const m = Math.floor((total % 3600) / 60);
-                                const s = total % 60;
-                                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                              })()}
+                              {`${Math.floor((120 - (demoTick % 120)) / 60)}:${String((120 - (demoTick % 120)) % 60).padStart(2,'0')}`}
                             </span>
-                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Elapsed Time</span>
+                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Next Check</span>
                           </div>
                         </div>
                       </div>
