@@ -663,26 +663,26 @@ export default function App() {
     // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
     // Both stop as soon as the weight actually changes, even before the node is dismissed.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
-    if (tutorialMode && tutorialScreen.index === 3 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 4 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
       document.body.classList.add('tutorial-flash-recalibrate');
     } else {
       document.body.classList.remove('tutorial-flash-recalibrate');
     }
-    if (tutorialMode && tutorialScreen.index === 3 && showRecalibrateMenu && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 4 && showRecalibrateMenu && weightUnchanged) {
       document.body.classList.add('tutorial-flash-weight');
     } else {
       document.body.classList.remove('tutorial-flash-weight');
     }
 
-    // Node 10 (addTxBtn) complete - flash Add Tx button (index 5 = waiting for treatment screen)
-    if (tutorialMode && tutorialScreen.index === 5 && state.currentOverlay === null) {
+    // Node 11 (addTxBtn) complete - flash Add Tx button (index 6 = waiting for treatment screen)
+    if (tutorialMode && tutorialScreen.index === 6 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
-    // Node 11 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 6)
-    if (tutorialMode && tutorialScreen.index === 6) {
+    // Node 12 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 7)
+    if (tutorialMode && tutorialScreen.index === 7) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -690,32 +690,32 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
 
-    // Node 13 (summaryBtn) complete - flash Summary button (index 8 = waiting for summary overlay)
-    if (tutorialMode && tutorialScreen.index === 8 && state.currentOverlay === null) {
+    // Node 14 (summaryBtn) complete - flash Summary button (index 9 = waiting for summary overlay)
+    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 14 (summaryInfo) complete - flash the Adrenaline push row's menu
-    // button (index 9), until the entry is actually moved or deleted
+    // Node 15 (summaryInfo) complete - flash the Adrenaline push row's menu
+    // button (index 10), until the entry is actually moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
       || state.treatments.some(t => t.name.startsWith('Adrenaline push') && t.timeUnknown);
-    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === 'summary' && !adrenalineHandled) {
+    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === 'summary' && !adrenalineHandled) {
       document.body.classList.add('tutorial-flash-adrenaline-tx');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline-tx');
     }
 
-    // Node 15 (closeOverlay) complete - flash summary close button (index 10 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === 'summary') {
+    // Node 16 (closeOverlay) complete - flash summary close button (index 11 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 16 (endCase) complete - flash End Case button (index 11 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === null) {
+    // Node 17 (endCase) complete - flash End Case button (index 12 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-end');
     } else {
       document.body.classList.remove('tutorial-flash-end');

@@ -27,55 +27,47 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'cprRound', type: 'positioned', x: 80.2, y: 22,
-    pages: [{ title: 'CPR Round', description: "The current round of CPR.\n\nThe CPR round counter will update every time the rhythm check counter reaches 0:00." }],
+    id: 'elapsedCorner', type: 'positioned', x: 20, y: 22,
+    pages: [
+      {
+        title: 'Elapsed Timer',
+        description: "Earlier we chose 'Time keeping assistance' as our app mode.\n\nNow we have the elapsed case time available right in front of us, mirroring the monitor's.\n\nThis can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient."
+      },
+      {
+        title: 'No Timer Option',
+        description: "If you had selected the 'No timer' option instead, the app would only help you keep a log of interventions you apply during the case.\n\nIt would not assist you to keep track of rhythm checks."
+      }
+    ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
     id: 'timer', type: 'positioned', x: 50, y: 52,
     pages: [
       {
-        title: 'Rhythm Check Timer',
-        description: "The countdown to the next rhythm check.\n\nEarlier we chose 'CPR timer' as our method of keeping track of rhythm checks.\n\nWe then entered the imaginary live CPR timer from our imaginary monitor.\n\nThe app now shows you the same CPR timer here for you to reference during the case, rather than needing to look at the monitor.\n\nThis can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient."
-      },
-      {
-        title: 'Timer Behaviour',
-        description: "When the timer reaches 00:10 you will be forced back to the home screen so that you don't miss the rhythm check.\n\nWhen the timer reaches 0:00, it allows six seconds for the rhythm check, then restarts from 2:00.\n\nYou will then be forced to record whether you shocked or disarmed."
-      },
-      {
-        title: 'Elapsed Time Option',
-        description: "If you had selected to use the monitor's elapsed time to keep track of rhythm checks, the elapsed time would appear here instead."
-      },
-      {
-        title: 'Tx Log Only Option',
-        description: "If you had selected the 'Tx log only' option, then the app will only help you keep a log of interventions you apply during the case.\n\nIt will not assist you to keep track of rhythm checks."
+        title: 'Rhythm Check Countdown',
+        description: "This shows the countdown to your next rhythm check, calculated from your chosen odds/evens interval.\n\nThe ring fills as you approach the next check, and both the ring and the number will turn red once it's due - the app will prompt you automatically at that point."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'pause', type: 'positioned', x: 19.0, y: 4.2,
-    pages: [{ title: 'Pause Button', description: 'Pause and resume the rhythm check timer.' }],
+    id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2,
+    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change time keeping method\n\nChange the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'recalibrate', type: 'positioned', x: 51.0, y: 4.2,
-    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Update the CPR timer if it has become desynchronised with the monitor\n\n• Change the patient's weight\n\n• Change time keeping method\n\nChange the patient's weight to move forward." }],
-    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
-  },
-  {
-    id: 'tabs', type: 'positioned', x: 50, y: 10.75,
-    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• Prehospital emergency anaesthesia (PHEA)\n\n• Vital signs survey' }],
+    id: 'tabs', type: 'positioned', x: 50, y: 10.97,
+    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• Prehospital emergency anaesthesia (PHEA)\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {
-    id: 'addTxBtn', type: 'positioned', x: 75, y: 95.4,
+    id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29,
     pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Treatment screen ---
   {
-    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 40,
+    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 36.08,
     pages: [
       {
         title: 'Add Tx Submenu',
@@ -90,7 +82,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Home with medication alerts ---
   {
-    id: 'adrenalineAlert', type: 'positioned', x: 28.4, y: 82.82,
+    id: 'adrenalineAlert', type: 'positioned', x: 28.05, y: 83.32,
     pages: [{ title: 'Medication Alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && !sf
   },
@@ -117,7 +109,11 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
       },
       {
         title: 'Treatment Log',
-        description: "At the bottom we have a chronological record of all logged interventions.\n\nTimestamps show the time of day and how long ago each Tx was logged.\n\nTreatments logged accidentally can be deleted using the 'x' button to the left of each entry in the Tx log."
+        description: "At the bottom we have a chronological record of all logged interventions.\n\nTimestamps show the time of day and how long ago each Tx was logged."
+      },
+      {
+        title: 'Editing Treatments',
+        description: "Treatments in the Tx log can be deleted or reordered by pressing the button with three dots to the left of the treatment name.\n\nMoving a Tx is useful if you realise partway through a case that something was actually given a bit earlier or later than when you logged it - for example, remembering a dose given a few minutes ago that you hadn't recorded at the time.\n\nMove or delete the Adrenaline push entry you added earlier to continue."
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -126,11 +122,13 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4,
     pages: [{ title: 'Return to Home', description: 'Press the close button to return to the home page.' }],
     condition: (s) => s.currentOverlay === 'summary'
+      && (!s.treatments.some(t => t.name.startsWith('Adrenaline push'))
+          || s.treatments.some(t => t.name.startsWith('Adrenaline push') && t.timeUnknown))
   },
   // --- Home after summary ---
   {
-    id: 'closeCase', type: 'positioned', x: 82.2, y: 4.2,
-    pages: [{ title: 'Close Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can close the case.\n\nLet's close the case and see the final summary page." }],
+    id: 'endCase', type: 'positioned', x: 75.22, y: 4.2,
+    pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case.\n\nLet's end the case and see the final summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Case summary ---
@@ -140,13 +138,13 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => !s.running
   },
   {
-    id: 'export', type: 'positioned', x: 27, y: 14,
+    id: 'export', type: 'positioned', x: 27.23, y: 14.45,
     pages: [{ title: 'Export PDF', description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.' }],
     condition: (s) => !s.running
   },
   {
-    id: 'delete', type: 'positioned', x: 73, y: 14,
-    pages: [{ title: 'Delete Case', description: "Once you've finished with the case and exported to PDF if needed, you can delete all case data.\n\nDelete the case to finish the tutorial, and we'll see you at The Big One!" }],
+    id: 'delete', type: 'positioned', x: 73.46, y: 14.45,
+    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved.\n\nClose the case to finish the tutorial and we'll see you at The Big One!" }],
     condition: (s) => !s.running
   }
 ];
@@ -156,7 +154,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
 // silently produce a duplicate or skipped number again. Only 'positioned'
 // nodes get a visible number (popups like homeIntro don't).
 // BASE_TUTORIAL_NUMBER is the last number used by InteractiveTutorial.tsx's
-// catchup-flow nodes (Patient Type=1 ... Enter Current CPR Timer=6) — this
+// catchup-flow nodes (Patient Type=1 ... Enter Current Elapsed Time=6) — this
 // picks up right after that.
 const BASE_TUTORIAL_NUMBER = 6;
 let positionedCount = 0;
@@ -374,7 +372,7 @@ function renderDescription(text: string) {
   }
 
   return (
-    <div style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left' }}>
+    <div style={{ color: '#666', marginBottom: '24px', lineHeight: '1.5', textAlign: 'left', fontSize: '16px' }}>
       {groups.map((group, gi) => {
         const isLast = gi === groups.length - 1;
         if (group.type === 'bullets') {
