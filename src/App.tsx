@@ -1399,7 +1399,7 @@ export default function App() {
       pausedTime: adjustedElapsed * 1000,
       elapsedSeconds: adjustedElapsed,
       rhythmCheckTarget: rhythmCheckTarget,
-      cprRound: Math.max(1, priorCounts.shock + priorCounts.disarm),
+      cprRound: priorCounts.shock + priorCounts.disarm,
       treatments: allInitialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
