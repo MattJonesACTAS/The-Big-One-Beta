@@ -3194,7 +3194,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
                 <button
                   onClick={() => commit(key)}
                   disabled={!hasDraft}
-                  className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ${hasDraft ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 ${hasDraft ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                   aria-label={`Confirm ${label}`}
                 >
                   <Check size={10} />
