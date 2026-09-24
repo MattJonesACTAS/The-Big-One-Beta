@@ -28,7 +28,6 @@ export interface AppState {
   rhythmCheckOvertime: number;
   frozenCountdown?: number;
   cprRound: number;
-  shocks: number;
   treatments: Treatment[];
   currentOverlay: string | null;
   catchupElapsed: number;

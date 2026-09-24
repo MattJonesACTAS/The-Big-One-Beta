@@ -45,7 +45,6 @@ const INITIAL_STATE: AppState = {
   rhythmCheckOvertime: 0, // Counts up from 0 to 6 after rhythm check hits 0:00
   rhythmCheckPaused: false, // When true, rhythm check stays frozen even while running
   cprRound: 1,
-  shocks: 0,
   treatments: [],
   currentOverlay: null,
   catchupElapsed: 0,
@@ -1074,7 +1073,6 @@ export default function App() {
       return {
         ...prev,
         treatments: newTreatments,
-        shocks: (name.includes('Shock') && !name.includes('Disarm')) ? prev.shocks + 1 : prev.shocks,
         cprRound: isOutOfTurn ? prev.cprRound + 1 : prev.cprRound,
         currentOverlay: isRearrest ? 'treatment' : null,
         // Reset rhythm check to 2:00 for ROSC, or when unpausing via other shock/disarm
@@ -1402,7 +1400,6 @@ export default function App() {
       elapsedSeconds: adjustedElapsed,
       rhythmCheckTarget: rhythmCheckTarget,
       cprRound: Math.max(1, priorCounts.shock + priorCounts.disarm),
-      shocks: priorCounts.shock,
       treatments: allInitialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
@@ -3674,6 +3671,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
 }
 
 function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
+  const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
   const patientLabel = state.patientType === 'adult'
     ? `Adult · ${state.patientWeight}kg`
@@ -3695,7 +3693,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
         <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
           <StatRow label="CPR Rounds" value={state.cprRound} />
-          <StatRow label="Shocks given" value={state.shocks} color="text-red-600" />
+          <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
           <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
         </div>
       </div>
@@ -3746,6 +3744,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 }
 
 function ArrestSummarySection({ state, showRecordingDuration }: { state: AppState, showRecordingDuration?: boolean }) {
+  const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
   const isPaedWithAge = state.patientType === 'paed' && !!state.patientAge;
   const patientTypeLabel = state.patientType === 'adult' ? 'Adult' : state.patientType === 'paed' ? 'Paediatric' : null;
@@ -3788,7 +3787,7 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
         <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
           <StatRow label="CPR Rounds" value={state.cprRound} />
-          <StatRow label="Shocks given" value={state.shocks} color="text-red-600" />
+          <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
           <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
         </div>
       </div>
