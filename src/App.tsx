@@ -168,7 +168,8 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
   'Morphine': {
     doses: [
       { dose: 'Other', population: 'both' }
-    ]
+    ],
+    customUnit: 'mg'
   },
   'Normal saline': { 
     doses: [
@@ -211,6 +212,25 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
 };
 
 const INFUSION_DRUGS = ['Adrenaline infusion', 'Ketamine infusion', 'Morph/midaz infusion'];
+
+// Default unit for a drug's custom ("Other") dose entry: an explicit
+// customUnit override, or extracted from its preset doses. /kg is stripped
+// since a manually-typed custom dose is always an absolute dose, not a
+// weight-based rate.
+const getDefaultCustomUnit = (med: string): string => {
+  const config = DOSE_CONFIG[med];
+  if (!config) return '';
+  if (config.customUnit) return config.customUnit;
+  const unitMatches = config.doses
+    .filter(d => d.dose !== 'Other')
+    .map(d => {
+      const match = d.dose.match(/(mg\/kg|mMol\/kg|mL\/kg|mcg\/kg|u\/kg|mg|mL|mMol|mcg|g|u|%)$/i);
+      if (!match) return null;
+      return match[1].replace('/kg', '');
+    })
+    .filter((u): u is string => Boolean(u));
+  return unitMatches.length > 0 ? unitMatches[0] : '';
+};
 
 // --- Utilities ---
 const formatTime = (seconds: number) => {
@@ -3824,6 +3844,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
+  const [selectedCustomUnit, setSelectedCustomUnit] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(isShockForced ? 'rhythmCheck' : null);
   const [customInputValues, setCustomInputValues] = useState<Record<string, string>>({});
   
@@ -3877,31 +3898,14 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       addTreatment(finalTreatment);
       setSelectedMed(null);
       setCustomDose('');
+      setSelectedCustomUnit(null);
     }
   };
   
   const handleCustomDoseAdd = () => {
     if (selectedMed && customDose && DOSE_CONFIG[selectedMed]) {
-      // Use customUnit if specified, otherwise extract unit from dose options
-      const customUnit = DOSE_CONFIG[selectedMed].customUnit;
-      let unit = '';
-      
-      if (customUnit) {
-        unit = customUnit;
-      } else {
-        // Extract unit from dose options
-        const doses = DOSE_CONFIG[selectedMed].doses.map(d => d.dose);
-        const unitMatches = doses
-          .filter(d => d !== 'Other')
-          .map(d => {
-            const match = d.match(/(mg\/kg|mMol\/kg|mL\/kg|mcg\/kg|u\/kg|mg|mL|mMol|mcg|g|u|%)$/i);
-            return match ? match[1] : null;
-          })
-          .filter(Boolean);
-        
-        unit = unitMatches.length > 0 ? unitMatches[0] : '';
-      }
-      
+      const unit = selectedCustomUnit ?? getDefaultCustomUnit(selectedMed);
+
       let doseWithUnit = unit ? `${customDose}${unit}` : customDose;
       
       // For Glucose 10%, add gram calculation
@@ -3922,6 +3926,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       addTreatment(`${selectedMed} ${doseWithUnit}`, { customDose: true });
       setSelectedMed(null);
       setCustomDose('');
+      setSelectedCustomUnit(null);
     }
   };
   
@@ -3929,6 +3934,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
     // Update both states atomically to prevent flash
     setSelectedMed(null);
     setCustomDose('');
+    setSelectedCustomUnit(null);
     setExpandedSection(() => 'medications');
   };
   
@@ -4127,26 +4133,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             })}
             
             {showOther && (() => {
-              // Extract common unit from dose strings
-              const getUnitFromDoses = (doses: string[]): string => {
-                const unitMatches = doses
-                  .filter(d => d !== 'Other')
-                  .map(d => {
-                    const match = d.match(/(mg\/kg|mMol\/kg|mL\/kg|mcg\/kg|u\/kg|mg|mL|mMol|mcg|g|u|%)$/i);
-                    if (!match) return null;
-                    // Strip /kg — custom entry is a flat dose, not weight-based
-                    return match[1].replace('/kg', '');
-                  })
-                  .filter(Boolean);
-                
-                if (unitMatches.length > 0) {
-                  return unitMatches[0] as string;
-                }
-                return '';
-              };
-              
-              const doses = filteredDoses.map(d => d.dose);
-              const unit = DOSE_CONFIG[selectedMed].customUnit || getUnitFromDoses(doses);
+              const defaultUnit = getDefaultCustomUnit(selectedMed);
+              const unit = selectedCustomUnit ?? defaultUnit;
+              const canToggleUnit = defaultUnit === 'mg' || defaultUnit === 'mcg';
               const placeholder = unit ? `Enter dose...` : 'Enter dose...';
               
               // Calculate secondary unit for live display
@@ -4180,7 +4169,16 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
                     placeholder={placeholder}
                     className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
                   />
-                  {(unit || secondaryUnit) && (
+                  {canToggleUnit ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCustomUnit(unit === 'mg' ? 'mcg' : 'mg')}
+                      className="mr-2 px-2 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-sm font-bold whitespace-nowrap flex-shrink-0"
+                      aria-label="Toggle dose unit"
+                    >
+                      {unit}
+                    </button>
+                  ) : (unit || secondaryUnit) && (
                     <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">
                       {unit}{secondaryUnit ? ` ${secondaryUnit}` : ''}
                     </span>
