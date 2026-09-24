@@ -625,6 +625,7 @@ export default function App() {
   const [roscButtonFlashing, setRoscButtonFlashing] = useState(false);
   const [showLoggedNotification, setShowLoggedNotification] = useState(false);
   const loggedTreatmentRef = useRef<string>('');
+  const patternSwitchNoticeRef = useRef<string | null>(null);
   const [isShockForced, setIsShockForced] = useState(false);
   const [rearrested, setRearrested] = useState(false);
   const [editingTreatmentIndex, setEditingTreatmentIndex] = useState<number | null>(null);
@@ -1061,6 +1062,7 @@ export default function App() {
     const isOutOfTurnForReset = timingMode !== 'log' && isShockOrDisarmForReset && !isROSCForReset && !isShockForced && (state.rhythmCheckTarget - state.elapsedSeconds) > 0;
     let earlyResetTarget: number | null = null;
     let earlyResetPattern: 'evens' | 'odds' | 'half-evens' | 'half-odds' | null = null;
+    patternSwitchNoticeRef.current = null;
     if (isOutOfTurnForReset && !rearrested) {
       const patterns: Array<'evens' | 'odds' | 'half-evens' | 'half-odds'> = ['evens', 'odds', 'half-evens', 'half-odds'];
       let bestDelta = -1;
@@ -1073,7 +1075,11 @@ export default function App() {
           earlyResetPattern = p;
         }
       }
-      if (earlyResetPattern) setRhythmInterval(earlyResetPattern);
+      if (earlyResetPattern) {
+        setRhythmInterval(earlyResetPattern);
+        const patternLabels: Record<string, string> = { evens: 'Evens', odds: 'Odds', 'half-evens': 'Half evens', 'half-odds': 'Half odds' };
+        patternSwitchNoticeRef.current = patternLabels[earlyResetPattern];
+      }
     }
 
     setState(prev => {
@@ -3080,9 +3086,11 @@ export default function App() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed top-0 left-0 right-0 bg-emerald-600 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000]"
+            className={`fixed top-0 left-0 right-0 text-white py-3 px-4 text-center font-bold shadow-lg z-[2000] ${patternSwitchNoticeRef.current ? 'bg-amber-600' : 'bg-emerald-600'}`}
           >
-            ✓ {loggedTreatmentRef.current} logged
+            {patternSwitchNoticeRef.current
+              ? `✓ ${loggedTreatmentRef.current} logged — rhythm check switched to ${patternSwitchNoticeRef.current}`
+              : `✓ ${loggedTreatmentRef.current} logged`}
           </motion.div>
         )}
       </AnimatePresence>
