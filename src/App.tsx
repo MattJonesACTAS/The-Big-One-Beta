@@ -285,7 +285,7 @@ const getTreatmentIdentity = (rawName: string): string => {
   // still both attempts at the same procedure, so they number together
   // (e.g. "IV access - Unsuccessful" then "IV access #2") rather than being
   // treated as unrelated entries.
-  const FAILABLE_INTERVENTIONS = ['ETT', 'FONA', 'IGT', 'LMA', 'IO access', 'IV access'];
+  const FAILABLE_INTERVENTIONS = ['ETT', 'FONA', 'IGT', 'LMA', 'IO access', 'IV access', 'NPA', 'OPA', 'Suction', 'Reassurance provided'];
   for (const proc of FAILABLE_INTERVENTIONS) {
     if (name === proc || name.startsWith(proc + ' ')) return proc;
   }
@@ -1924,7 +1924,7 @@ export default function App() {
                 <AlertTriangle size={48} className="mx-auto text-amber-600 mb-4" />
                 <h2 className="text-2xl font-bold text-neutral-900 mb-4">Unscheduled rhythm check added.</h2>
                 <p className="text-neutral-500 mb-2">2:00 countdown restarted.</p>
-                <p className="text-neutral-500 mb-8">Future rhythm checks change to {patternSwitchNoticeRef.current}.</p>
+                <p className="text-neutral-500 mb-8">Future rhythm checks changed to {patternSwitchNoticeRef.current}.</p>
                 <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
               </div>
             </div>
@@ -4350,7 +4350,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               { name: 'FONA', failable: true },
               { name: 'IGT', failable: true },
               { name: 'LMA', failable: true },
-              'NPA', 'OPA', 'Suction'
+              { name: 'NPA', failable: true },
+              { name: 'OPA', failable: true },
+              { name: 'Suction', failable: true }
             ]} 
             onSelect={addTreatment}
             sectionId="airway"
@@ -4365,7 +4367,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               'Corpuls', 'Extrication',
               { name: 'IO access', failable: true },
               { name: 'IV access', failable: true },
-              'Pacing', 'Reassurance provided'
+              'Pacing', { name: 'Reassurance provided', failable: true }
             ]} 
             onSelect={addTreatment}
             sectionId="otherTx"
