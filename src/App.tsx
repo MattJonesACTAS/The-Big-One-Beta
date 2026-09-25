@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   RotateCcw, 
@@ -979,6 +980,32 @@ export default function App() {
       navigator.storage.persist();
     }
   }, []);
+
+  // PWA update handling: a new build can finish downloading and installing
+  // in the background at any time (registerType: 'prompt' means it won't
+  // take over on its own). Applying it immediately could reload the page
+  // out from under an active case or the closed-case summary, so this
+  // instead waits until the app is back on the welcome screen - no case
+  // running, and not viewing a closed case - before reloading into the new
+  // version. The current case (localStorage) and the last three saved
+  // cases aren't at risk either way; this is purely about not disrupting
+  // whoever's using the app mid-case.
+  const updateSWFnRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
+  const [updateWaiting, setUpdateWaiting] = useState(false);
+
+  useEffect(() => {
+    updateSWFnRef.current = registerSW({
+      onNeedRefresh() {
+        setUpdateWaiting(true);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (updateWaiting && !state.running && !isCaseClosed) {
+      updateSWFnRef.current?.(true);
+    }
+  }, [updateWaiting, state.running, isCaseClosed]);
 
   // Timer logic
   // Demo tick for animated timers on timing mode selection screen
