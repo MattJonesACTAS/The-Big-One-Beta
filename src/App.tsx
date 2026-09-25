@@ -254,6 +254,19 @@ const formatTimeHMM = (seconds: number) => {
   return `${mins.toString().padStart(2, '0')}m, ${secs.toString().padStart(2, '0')}s`;
 };
 
+// For "App recording for" specifically - once a case runs an hour or more,
+// hr/min reads more naturally than a large minute count (matches the same
+// threshold-switch pattern used for mcg->mg and mL->L in the Pharma Summary).
+const formatRecordingDuration = (seconds: number): string => {
+  const totalMins = Math.floor(seconds / 60);
+  if (totalMins >= 60) {
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    return `${hrs}hr, ${mins}min`;
+  }
+  return formatTimeHMM(seconds);
+};
+
 const getLocalTime = (date?: Date) => {
   const d = date || new Date();
   return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -757,9 +770,9 @@ export default function App() {
     }
 
     // Node 15 (summaryInfo) complete - flash the Adrenaline push row's menu
-    // button (index 10), until the entry is actually moved or deleted
+    // button (index 10), until the entry is actually edited, moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
-      || state.treatments.some(t => t.name.startsWith('Adrenaline push') && t.timeUnknown);
+      || state.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
     if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === 'summary' && !adrenalineHandled) {
       document.body.classList.add('tutorial-flash-adrenaline-tx');
     } else {
@@ -1282,7 +1295,7 @@ export default function App() {
       const updated = [...prev.treatments];
       const original = updated[editingTreatmentIndex];
       const { customDose: _oldCustomDose, ...rest } = original;
-      updated[editingTreatmentIndex] = { ...rest, name, ...(options?.customDose ? { customDose: true } : {}) };
+      updated[editingTreatmentIndex] = { ...rest, name, edited: true, ...(options?.customDose ? { customDose: true } : {}) };
       return { ...prev, treatments: renumberTreatments(updated), currentOverlay: null };
     });
     setEditingTreatmentIndex(null);
@@ -3834,7 +3847,7 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
             <div className="text-right">
               <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">App recording for</div>
               <div className="text-[15px] font-bold text-neutral-800 tabular-nums">
-                {state.caseOpenedAt ? formatTimeHMM(Math.floor(((state.caseClosedAt ?? Date.now()) - state.caseOpenedAt) / 1000)) : '—'}
+                {state.caseOpenedAt ? formatRecordingDuration(Math.floor(((state.caseClosedAt ?? Date.now()) - state.caseOpenedAt) / 1000)) : '—'}
               </div>
             </div>
           )}

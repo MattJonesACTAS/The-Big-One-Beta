@@ -76,6 +76,10 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
       {
         title: 'Medications',
         description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog an adrenaline push dose to progress."
+      },
+      {
+        title: 'Successful / Unsuccessful',
+        description: "For some interventions in Airway and Other Tx, you can choose to log them as successful or unsuccessful to keep your record keeping accurate."
       }
     ],
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
@@ -113,7 +117,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
       },
       {
         title: 'Editing Treatments',
-        description: "Treatments in the Tx log can be deleted or reordered by pressing the button with three dots to the left of the treatment name.\n\nMoving a Tx is useful if you realise partway through a case that something was actually given a bit earlier or later than when you logged it - for example, remembering a dose given a few minutes ago that you hadn't recorded at the time.\n\nMove or delete the Adrenaline push entry you added earlier to continue."
+        description: "Treatments in the Tx log can be edited, reordered or deleted by pressing the button to the left of the treatment name.\n\n'Edit' lets you correct what was logged while keeping its original time and position in the log. For example, you can change the drug you gave, the dose you gave, or change it to something else completely.\n\n'Reorder' let's you shift a Tx to its correct position in the log. This is useful if you realise that you missed logging something that happened earlier.\n\nEdit, reorder or delete the adrenaline push entry you logged earlier to continue."
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -123,7 +127,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [{ title: 'Return to Home', description: 'Press the close button to return to the home page.' }],
     condition: (s) => s.currentOverlay === 'summary'
       && (!s.treatments.some(t => t.name.startsWith('Adrenaline push'))
-          || s.treatments.some(t => t.name.startsWith('Adrenaline push') && t.timeUnknown))
+          || s.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited)))
   },
   // --- Home after summary ---
   {
