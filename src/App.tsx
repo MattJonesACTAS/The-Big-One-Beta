@@ -653,6 +653,21 @@ export default function App() {
   const [isShockForced, setIsShockForced] = useState(false);
   const [rearrested, setRearrested] = useState(false);
   const [editingTreatmentIndex, setEditingTreatmentIndex] = useState<number | null>(null);
+
+  // If a rhythm check becomes forced while editing a past entry, the edit is
+  // cancelled outright (no changes saved) rather than left running - without
+  // this, isShockForced would stay stuck true once the edit completes, since
+  // completing an edit goes through editTreatment, which has no reason to
+  // know about (or resolve) a real shock/disarm outcome. Cancelling forces
+  // the person straight back to the real, now-visible shock/disarm buttons -
+  // the same priority the tutorial overlay already gives itself for this
+  // exact situation.
+  useEffect(() => {
+    if (isShockForced && editingTreatmentIndex !== null) {
+      setEditingTreatmentIndex(null);
+    }
+  }, [isShockForced, editingTreatmentIndex]);
+
   const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt10 = useRef<boolean>(false);
