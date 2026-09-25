@@ -1174,7 +1174,9 @@ export default function App() {
     // If this treatment was logged from a rearrest, auto-pick the interval
     // pattern the same way an early (out-of-turn) shock/disarm does - the
     // rearrest is itself an unscheduled event, so the same "closest to but
-    // not over 2:00" logic applies directly.
+    // not over 2:00" logic applies directly. Applied silently here, no
+    // acknowledgment modal - unlike a plain early shock, a rearrest already
+    // has plenty happening on screen and doesn't need an extra prompt.
     if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
       if (name === 'Disarm - ROSC') {
@@ -1200,9 +1202,6 @@ export default function App() {
           rhythmCheckOvertime: 0,
           rhythmCheckPaused: false
         }));
-        const patternLabels: Record<string, string> = { evens: 'Evens', odds: 'Odds', 'half-evens': 'Half evens', 'half-odds': 'Half odds' };
-        patternSwitchNoticeRef.current = patternLabels[bestPattern];
-        setShowPatternSwitchModal(true);
       }
     }
     
