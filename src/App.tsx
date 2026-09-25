@@ -1038,8 +1038,34 @@ export default function App() {
     setShowResetWarning(false);
   };
 
+  // Checks whether the adrenaline/amiodarone timer would already be overdue
+  // right now - called at the exact moment Rearrest is pressed, from
+  // whichever of the app's several Rearrest buttons triggered it - not when
+  // ROSC first started, however long ago that was. If overdue, wipes it so
+  // it stays hidden rather than reappearing as a stale warning.
+  const applyRearrestTimerWipeCheck = () => {
+    const adrDoses = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (state.adrenalineWipedAt ?? -1));
+    const lastAdr = adrDoses[adrDoses.length - 1];
+    const adrenalineNowOverdue = !!lastAdr && !lastAdr.prior && (240 - (state.elapsedSeconds - lastAdr.elapsed)) <= 0;
+
+    const allAmioDoses = state.treatments.filter(t => t.name.includes('Amiodarone'));
+    let amiodaroneNowOverdue = false;
+    if (allAmioDoses.length < 2) {
+      const amioDoses = allAmioDoses.filter(t => t.elapsed > (state.amiodaroneWipedAt ?? -1));
+      const lastAmio = amioDoses[amioDoses.length - 1];
+      amiodaroneNowOverdue = !!lastAmio && !lastAmio.prior && (300 - (state.elapsedSeconds - lastAmio.elapsed)) <= 0;
+    }
+
+    if (adrenalineNowOverdue || amiodaroneNowOverdue) {
+      setState(prev => ({
+        ...prev,
+        adrenalineWipedAt: adrenalineNowOverdue ? state.elapsedSeconds : prev.adrenalineWipedAt,
+        amiodaroneWipedAt: amiodaroneNowOverdue ? state.elapsedSeconds : prev.amiodaroneWipedAt
+      }));
+    }
+  };
+
   const addTreatment = (name: string, options?: { customDose?: boolean }) => {
-    console.log('[ADDTREATMENT CALLED]', { name, catchupTxMode, isShockForced, rearrested });
     const now = new Date();
 
     // First time a given treatment type is logged, leave it unnumbered.
@@ -1164,41 +1190,7 @@ export default function App() {
       setRoscButtonFlashing(false);
       setRearrested(true);
       setIsShockForced(true);
-
-      // Check whether the adrenaline/amiodarone timer would already be
-      // overdue right now, at the moment Rearrest is pressed - not when
-      // ROSC first started, however long ago that was. If overdue, wipe it
-      // so it stays hidden rather than reappearing as a stale warning.
-      const adrDoses = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (state.adrenalineWipedAt ?? -1));
-      const lastAdr = adrDoses[adrDoses.length - 1];
-      const adrenalineNowOverdue = !!lastAdr && !lastAdr.prior && (240 - (state.elapsedSeconds - lastAdr.elapsed)) <= 0;
-
-      const allAmioDoses = state.treatments.filter(t => t.name.includes('Amiodarone'));
-      let amiodaroneNowOverdue = false;
-      if (allAmioDoses.length < 2) {
-        const amioDoses = allAmioDoses.filter(t => t.elapsed > (state.amiodaroneWipedAt ?? -1));
-        const lastAmio = amioDoses[amioDoses.length - 1];
-        amiodaroneNowOverdue = !!lastAmio && !lastAmio.prior && (300 - (state.elapsedSeconds - lastAmio.elapsed)) <= 0;
-      }
-
-      console.log('[REARREST WIPE DEBUG]', {
-        elapsedSecondsNow: state.elapsedSeconds,
-        existingAdrenalineWipedAt: state.adrenalineWipedAt,
-        lastAdr: lastAdr ? { name: lastAdr.name, elapsed: lastAdr.elapsed, prior: lastAdr.prior } : null,
-        adrenalineNowOverdue,
-        existingAmiodaroneWipedAt: state.amiodaroneWipedAt,
-        allAmioDosesCount: allAmioDoses.length,
-        amiodaroneNowOverdue
-      });
-
-      if (adrenalineNowOverdue || amiodaroneNowOverdue) {
-        setState(prev => ({
-          ...prev,
-          adrenalineWipedAt: adrenalineNowOverdue ? state.elapsedSeconds : prev.adrenalineWipedAt,
-          amiodaroneWipedAt: amiodaroneNowOverdue ? state.elapsedSeconds : prev.amiodaroneWipedAt
-        }));
-      }
-
+      applyRearrestTimerWipeCheck();
       return; // Skip the rest — overlay stays open for rhythm check outcome
     }
 
@@ -1333,14 +1325,6 @@ export default function App() {
     }
     const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (state.adrenalineWipedAt ?? -1));
     const lastAdr = adrTreatments[adrTreatments.length - 1];
-    console.log('[ADRENALINE STATUS DEBUG]', {
-      isROSCMode: state.isROSCMode,
-      adrenalineWipedAt: state.adrenalineWipedAt,
-      elapsedSeconds: state.elapsedSeconds,
-      allAdrenalineTreatments: state.treatments.filter(t => t.name.includes('Adrenaline push')).map(t => ({ name: t.name, elapsed: t.elapsed, customDose: t.customDose })),
-      filteredCount: adrTreatments.length,
-      lastAdr: lastAdr ? { name: lastAdr.name, elapsed: lastAdr.elapsed } : null
-    });
 
     if (!lastAdr) {
       return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
@@ -1883,6 +1867,7 @@ export default function App() {
                     setRoscButtonFlashing(false);
                     setRearrested(true);
                     setIsShockForced(true);
+                    applyRearrestTimerWipeCheck();
                   }}
                   className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center"
                 >
@@ -2158,6 +2143,7 @@ export default function App() {
               setRoscButtonFlashing(false);
               setRearrested(true);
               setIsShockForced(true);
+              applyRearrestTimerWipeCheck();
             }}
             className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-orange-500 text-white"
           >
