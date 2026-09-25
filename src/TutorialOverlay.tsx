@@ -57,7 +57,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   {
     id: 'tabs', type: 'positioned', x: 50, y: 10.97,
-    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• Prehospital emergency anaesthesia (PHEA)\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.' }],
+    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {
@@ -74,12 +74,12 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
         description: "The Add Tx submenu has four categories of treatments you can log:\n\n• Rhythm Check (shocks and disarms)\n\n• Medications\n\n• Airway\n\n• Other Tx\n\nYou can also free type custom interventions."
       },
       {
-        title: 'Medications',
-        description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog an adrenaline push dose to progress."
-      },
-      {
         title: 'Successful / Unsuccessful',
         description: "For some interventions in Airway and Other Tx, you can choose to log them as successful or unsuccessful to keep your record keeping accurate."
+      },
+      {
+        title: 'Medications',
+        description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog an adrenaline push dose to progress."
       }
     ],
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf

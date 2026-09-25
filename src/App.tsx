@@ -665,6 +665,7 @@ export default function App() {
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
+  const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
 
   // Correct timer drift when tab becomes visible again
   useEffect(() => {
@@ -691,6 +692,36 @@ export default function App() {
       return { ...prev, timingMode, rhythmInterval };
     });
   }, [timingMode, rhythmInterval]);
+
+  // The Case Summary screen is the only scrollable page in the app - the
+  // tutorial's node markers are positioned relative to the viewport (fixed),
+  // not the scroll position, so without this the marker over Export PDF
+  // would drift out of alignment with the actual button if the page had
+  // been scrolled. Export PDF sits near the top, so scrolling to top keeps
+  // them aligned.
+  useEffect(() => {
+    if (tutorialMode && tutorialNodeIndex === 13) {
+      caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [tutorialMode, tutorialNodeIndex]);
+
+
+  // Temporary diagnostic: logs once per relevant change (not every second)
+  // to trace why the weight-change and end-case flashes might not be
+  // appearing as expected.
+  useEffect(() => {
+    if (!tutorialMode) return;
+    console.log('[FLASH TRACE]', {
+      tutorialScreenIndex: tutorialScreen.index,
+      tutorialNodeIndex,
+      showRecalibrateMenu,
+      showWeightChange,
+      patientWeight: state.patientWeight,
+      tutorialInitialWeight: tutorialInitialWeightRef.current,
+      currentOverlay: state.currentOverlay
+    });
+  }, [tutorialMode, tutorialScreen.index, tutorialNodeIndex, showRecalibrateMenu, showWeightChange, state.patientWeight, state.currentOverlay]);
 
   // Capture the patient weight as it was when the tutorial started, so we know
   // once it's actually been changed (used to stop the recalibrate/weight flash).
@@ -1607,7 +1638,7 @@ export default function App() {
 
   if (isCaseClosed) {
     return (
-      <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
+      <div ref={caseSummaryScrollRef} className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
         <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
 
         <div className="grid grid-cols-2 gap-4">
