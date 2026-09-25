@@ -3478,7 +3478,13 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
                 Editing: {state.treatments[editingTreatmentIndex].name}
               </div>
             )}
-            <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={isShockForced} />
+            {/* isShockForced deliberately not passed through while editing:
+                that gate exists to force documenting a live rhythm check
+                outcome before anything else, which has nothing to do with
+                correcting an existing, already-logged entry. Without this,
+                a rhythm check timer hitting 0:00 mid-edit would suddenly
+                collapse this menu down to just the shock/disarm buttons. */}
+            <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={editingTreatmentIndex != null ? false : isShockForced} />
           </>
         )}
       </div>
