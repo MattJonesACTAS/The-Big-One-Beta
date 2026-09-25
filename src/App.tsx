@@ -1118,30 +1118,6 @@ export default function App() {
       // code sheet counts them.
       const isLogModeRoundComplete = timingMode === 'log' && isShockOrDisarm && !isROSC;
       const shouldResetTimer = isROSC || (isShockOrDisarm && wasRhythmCheckPaused);
-
-      // When entering ROSC, if the adrenaline/amiodarone timer was already
-      // overdue at that moment, mark it as "wiped" so it stays hidden and
-      // doesn't resume as a stale overdue timer if the patient later
-      // rearrests. If it wasn't yet overdue, it isn't wiped - hiding it
-      // during ROSC is handled purely by isROSCMode below, so it naturally
-      // reappears, still correctly counting, once ROSC ends.
-      let adrenalineWipedAt = prev.adrenalineWipedAt;
-      let amiodaroneWipedAt = prev.amiodaroneWipedAt;
-      if (isROSC) {
-        const adrDoses = prev.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (prev.adrenalineWipedAt ?? -1));
-        const lastAdr = adrDoses[adrDoses.length - 1];
-        if (lastAdr && !lastAdr.prior && (240 - (prev.elapsedSeconds - lastAdr.elapsed)) <= 0) {
-          adrenalineWipedAt = prev.elapsedSeconds;
-        }
-        const allAmioDoses = prev.treatments.filter(t => t.name.includes('Amiodarone'));
-        if (allAmioDoses.length < 2) {
-          const amioDoses = allAmioDoses.filter(t => t.elapsed > (prev.amiodaroneWipedAt ?? -1));
-          const lastAmio = amioDoses[amioDoses.length - 1];
-          if (lastAmio && !lastAmio.prior && (300 - (prev.elapsedSeconds - lastAmio.elapsed)) <= 0) {
-            amiodaroneWipedAt = prev.elapsedSeconds;
-          }
-        }
-      }
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -1178,9 +1154,7 @@ export default function App() {
         // Enter ROSC mode when ROSC logged, exit when any shock/disarm or rearrest logged
         isROSCMode: isROSC ? true : (isShockOrDisarm || isRearrest) ? false : prev.isROSCMode,
         // Clear ROSC checklist when ROSC is logged again (new ROSC event)
-        roscChecked: isROSC ? [] : prev.roscChecked,
-        adrenalineWipedAt,
-        amiodaroneWipedAt
+        roscChecked: isROSC ? [] : prev.roscChecked
       };
     });
 
@@ -1189,6 +1163,31 @@ export default function App() {
       setRoscButtonFlashing(false);
       setRearrested(true);
       setIsShockForced(true);
+
+      // Check whether the adrenaline/amiodarone timer would already be
+      // overdue right now, at the moment Rearrest is pressed - not when
+      // ROSC first started, however long ago that was. If overdue, wipe it
+      // so it stays hidden rather than reappearing as a stale warning.
+      const adrDoses = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (state.adrenalineWipedAt ?? -1));
+      const lastAdr = adrDoses[adrDoses.length - 1];
+      const adrenalineNowOverdue = !!lastAdr && !lastAdr.prior && (240 - (state.elapsedSeconds - lastAdr.elapsed)) <= 0;
+
+      const allAmioDoses = state.treatments.filter(t => t.name.includes('Amiodarone'));
+      let amiodaroneNowOverdue = false;
+      if (allAmioDoses.length < 2) {
+        const amioDoses = allAmioDoses.filter(t => t.elapsed > (state.amiodaroneWipedAt ?? -1));
+        const lastAmio = amioDoses[amioDoses.length - 1];
+        amiodaroneNowOverdue = !!lastAmio && !lastAmio.prior && (300 - (state.elapsedSeconds - lastAmio.elapsed)) <= 0;
+      }
+
+      if (adrenalineNowOverdue || amiodaroneNowOverdue) {
+        setState(prev => ({
+          ...prev,
+          adrenalineWipedAt: adrenalineNowOverdue ? state.elapsedSeconds : prev.adrenalineWipedAt,
+          amiodaroneWipedAt: amiodaroneNowOverdue ? state.elapsedSeconds : prev.amiodaroneWipedAt
+        }));
+      }
+
       return; // Skip the rest — overlay stays open for rhythm check outcome
     }
 
