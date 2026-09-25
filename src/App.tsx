@@ -753,6 +753,23 @@ export default function App() {
     }
   }, [tutorialMode, state.patientWeight]);
 
+  // Temporary diagnostic: logs once per relevant change (not every second)
+  // to trace why the recalibrate/weight flash still isn't appearing despite
+  // the index===4 condition and node-advancement mechanism both checking out.
+  useEffect(() => {
+    if (!tutorialMode) return;
+    console.log('[RECALIBRATE FLASH TRACE]', {
+      tutorialScreenIndex: tutorialScreen.index,
+      tutorialNodeIndex,
+      showRecalibrateMenu,
+      showWeightChange,
+      patientWeight: state.patientWeight,
+      tutorialInitialWeight: tutorialInitialWeightRef.current,
+      weightUnchanged: state.patientWeight === tutorialInitialWeightRef.current,
+      bodyHasFlashClass: document.body.classList.contains('tutorial-flash-recalibrate')
+    });
+  }, [tutorialMode, tutorialScreen.index, tutorialNodeIndex, showRecalibrateMenu, showWeightChange, state.patientWeight]);
+
   // Inject tutorial Elapsed Time button flash CSS
   useEffect(() => {
     const style = document.createElement('style');
