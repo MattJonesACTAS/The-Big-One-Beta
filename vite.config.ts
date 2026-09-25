@@ -4,13 +4,13 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: '/The-Big-One-Beta/',
+  base: '/The-Big-One/',
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'inline',
+      registerType: 'prompt',
+      injectRegister: false,
       devOptions: {
         enabled: false
       },
