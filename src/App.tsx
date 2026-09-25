@@ -735,6 +735,8 @@ export default function App() {
     // Live Summary overlay: each of its four "info" nodes is anchored to a
     // different section spread across that scroll, so each scrolls its own
     // section to the centre of the screen and locks that container in place.
+    // Skipped when a scroll-restore from an edit is pending (below) - that
+    // takes priority over re-centring on the tutorial's own target section.
     const sectionForNode: Record<number, string> = {
       9: 'arrestSummary',
       10: 'vitalSigns',
@@ -743,7 +745,9 @@ export default function App() {
     };
     const section = sectionForNode[tutorialNodeIndex];
     if (section) {
-      document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (summaryScrollPositionRef.current === null) {
+        document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
       if (container) {
         const prevOverflow = container.style.overflowY;
@@ -761,14 +765,22 @@ export default function App() {
   // Restores the Summary overlay's scroll position after an edit completes,
   // so the person lands back on the same part of the Tx log rather than the
   // top, and can see the change take effect where they were looking. Applies
-  // in both normal use and tutorial mode. Consumes the stored position once
-  // used, so a later, unrelated open of the Summary overlay isn't affected.
+  // in both normal use and tutorial mode. Waits a frame before setting
+  // scrollTop, since the overlay has only just (re)mounted via its key-based
+  // remount and the Tx log's content needs to have actually laid out first
+  // for scrollTop to land correctly. Consumes the stored position as soon as
+  // it's read (not after the frame), so the check above that skips the
+  // tutorial's own scrollIntoView takes effect on this same render, not one
+  // render late.
   useEffect(() => {
     if (state.currentOverlay === 'summary' && summaryScrollPositionRef.current !== null) {
       const position = summaryScrollPositionRef.current;
       summaryScrollPositionRef.current = null;
-      const container = document.querySelector('[data-scroll-container="summary"]');
-      if (container) container.scrollTop = position;
+      const frame = requestAnimationFrame(() => {
+        const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
+        if (container) container.scrollTop = position;
+      });
+      return () => cancelAnimationFrame(frame);
     }
   }, [state.currentOverlay]);
 
