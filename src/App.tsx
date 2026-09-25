@@ -281,6 +281,14 @@ const getTreatmentIdentity = (rawName: string): string => {
   if (name.startsWith('Sodium bicarbonate')) return 'Sodium bicarbonate';
   if (name.startsWith('Shock')) return 'Shock';
   if (name.startsWith('Disarm')) return 'Disarm';
+  // Failable interventions: a failed attempt and a later successful one are
+  // still both attempts at the same procedure, so they number together
+  // (e.g. "IV access - Unsuccessful" then "IV access #2") rather than being
+  // treated as unrelated entries.
+  const FAILABLE_INTERVENTIONS = ['ETT', 'FONA', 'IGT', 'LMA', 'IO access', 'IV access'];
+  for (const proc of FAILABLE_INTERVENTIONS) {
+    if (name === proc || name.startsWith(proc + ' ')) return proc;
+  }
   for (const med of KNOWN_MEDS) {
     if (name === med || name.startsWith(med + ' ')) return med;
   }
@@ -1914,10 +1922,9 @@ export default function App() {
             <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
               <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
                 <AlertTriangle size={48} className="mx-auto text-amber-600 mb-4" />
-                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Rhythm Check Pattern Changed</h2>
-                <p className="text-neutral-500 mb-8">
-                  Since this was logged early, the app switched rhythm checks to <strong>{patternSwitchNoticeRef.current}</strong> to keep the next check as close to 2:00 away as possible.
-                </p>
+                <h2 className="text-2xl font-bold text-neutral-900 mb-4">Unscheduled rhythm check added.</h2>
+                <p className="text-neutral-500 mb-2">2:00 countdown restarted.</p>
+                <p className="text-neutral-500 mb-8">Future rhythm checks change to {patternSwitchNoticeRef.current}.</p>
                 <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
               </div>
             </div>
@@ -4338,7 +4345,13 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           <TxSection 
             title="Airway" 
             color="blue" 
-            items={['ETT', 'FONA', 'IGT', 'LMA', 'NPA', 'OPA', 'Suction']} 
+            items={[
+              { name: 'ETT', failable: true },
+              { name: 'FONA', failable: true },
+              { name: 'IGT', failable: true },
+              { name: 'LMA', failable: true },
+              'NPA', 'OPA', 'Suction'
+            ]} 
             onSelect={addTreatment}
             sectionId="airway"
             expandedSection={expandedSection}
@@ -4348,7 +4361,12 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           <TxSection 
             title="Other Tx" 
             color="neutral" 
-            items={['Corpuls', 'Extrication', 'IO access', 'IV access', 'Pacing', 'Reassurance provided']} 
+            items={[
+              'Corpuls', 'Extrication',
+              { name: 'IO access', failable: true },
+              { name: 'IV access', failable: true },
+              'Pacing', 'Reassurance provided'
+            ]} 
             onSelect={addTreatment}
             sectionId="otherTx"
             expandedSection={expandedSection}
@@ -4390,7 +4408,7 @@ function TxSection({
 }: { 
   title: string;
   color: string;
-  items: (string | { name: string; color?: string; displayName?: string })[];
+  items: (string | { name: string; color?: string; displayName?: string; failable?: boolean })[];
   onSelect: (n: string) => void;
   initiallyExpanded?: boolean;
   sectionId?: string;
@@ -4398,6 +4416,11 @@ function TxSection({
   onToggle?: (id: string) => void;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
+  // Tracks which failable items (ETT, IV access, etc.) are currently staged
+  // as unsuccessful. Defaults to successful (absent from this map) - set at
+  // logging time via a toggle right on the item, rather than requiring a
+  // trip into the three-dot menu afterward.
+  const [markedUnsuccessful, setMarkedUnsuccessful] = useState<Record<string, boolean>>({});
   
   // Use controlled state if provided, otherwise use internal state
   const collapsed = sectionId && expandedSection !== undefined 
@@ -4446,9 +4469,32 @@ function TxSection({
             const itemName = typeof item === 'string' ? item : item.name;
             const itemColor = typeof item === 'string' ? null : item.color;
             const displayName = typeof item === 'string' ? item : (item.displayName ?? item.name);
+            const failable = typeof item === 'string' ? false : !!item.failable;
             const textColorClass = itemColor ? (textColorMap[itemColor] ?? 'text-neutral-700') : 'text-neutral-700';
             const bgClass = itemColor === 'orange' ? 'bg-orange-50 hover:bg-orange-100' : 'bg-neutral-50 hover:bg-neutral-100';
-            
+            const isUnsuccessful = !!markedUnsuccessful[itemName];
+
+            if (failable) {
+              return (
+                <div key={itemName} className="flex items-stretch gap-2">
+                  <button
+                    onClick={() => onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName)}
+                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass}`}
+                    data-medication={itemName}
+                  >
+                    {displayName}
+                  </button>
+                  <button
+                    onClick={() => setMarkedUnsuccessful(prev => ({ ...prev, [itemName]: !prev[itemName] }))}
+                    className={`flex-shrink-0 px-3 rounded-xl font-bold text-xs btn-base ${isUnsuccessful ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}
+                    aria-label={`Mark ${displayName} as ${isUnsuccessful ? 'successful' : 'unsuccessful'}`}
+                  >
+                    {isUnsuccessful ? 'Unsuccessful' : 'Successful'}
+                  </button>
+                </div>
+              );
+            }
+
             return (
               <button 
                 key={itemName} 
