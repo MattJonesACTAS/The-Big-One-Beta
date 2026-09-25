@@ -1180,6 +1180,16 @@ export default function App() {
         amiodaroneNowOverdue = !!lastAmio && !lastAmio.prior && (300 - (state.elapsedSeconds - lastAmio.elapsed)) <= 0;
       }
 
+      console.log('[REARREST WIPE DEBUG]', {
+        elapsedSecondsNow: state.elapsedSeconds,
+        existingAdrenalineWipedAt: state.adrenalineWipedAt,
+        lastAdr: lastAdr ? { name: lastAdr.name, elapsed: lastAdr.elapsed, prior: lastAdr.prior } : null,
+        adrenalineNowOverdue,
+        existingAmiodaroneWipedAt: state.amiodaroneWipedAt,
+        allAmioDosesCount: allAmioDoses.length,
+        amiodaroneNowOverdue
+      });
+
       if (adrenalineNowOverdue || amiodaroneNowOverdue) {
         setState(prev => ({
           ...prev,
@@ -1322,6 +1332,14 @@ export default function App() {
     }
     const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (state.adrenalineWipedAt ?? -1));
     const lastAdr = adrTreatments[adrTreatments.length - 1];
+    console.log('[ADRENALINE STATUS DEBUG]', {
+      isROSCMode: state.isROSCMode,
+      adrenalineWipedAt: state.adrenalineWipedAt,
+      elapsedSeconds: state.elapsedSeconds,
+      allAdrenalineTreatments: state.treatments.filter(t => t.name.includes('Adrenaline push')).map(t => ({ name: t.name, elapsed: t.elapsed, customDose: t.customDose })),
+      filteredCount: adrTreatments.length,
+      lastAdr: lastAdr ? { name: lastAdr.name, elapsed: lastAdr.elapsed } : null
+    });
 
     if (!lastAdr) {
       return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
