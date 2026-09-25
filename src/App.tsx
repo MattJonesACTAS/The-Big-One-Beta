@@ -1039,6 +1039,7 @@ export default function App() {
   };
 
   const addTreatment = (name: string, options?: { customDose?: boolean }) => {
+    console.log('[ADDTREATMENT CALLED]', { name, catchupTxMode, isShockForced, rearrested });
     const now = new Date();
 
     // First time a given treatment type is logged, leave it unnumbered.
