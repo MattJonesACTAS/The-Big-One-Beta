@@ -994,16 +994,22 @@ export default function App() {
   const [updateWaiting, setUpdateWaiting] = useState(false);
 
   useEffect(() => {
-    updateSWFnRef.current = registerSW({
-      onNeedRefresh() {
-        setUpdateWaiting(true);
-      }
-    });
+    try {
+      updateSWFnRef.current = registerSW({
+        onNeedRefresh() {
+          setUpdateWaiting(true);
+        }
+      });
+    } catch (err) {
+      console.error('PWA update registration failed (non-fatal):', err);
+    }
   }, []);
 
   useEffect(() => {
     if (updateWaiting && !state.running && !isCaseClosed) {
-      updateSWFnRef.current?.(true);
+      updateSWFnRef.current?.(true)?.catch((err) => {
+        console.error('PWA update apply failed (non-fatal):', err);
+      });
     }
   }, [updateWaiting, state.running, isCaseClosed]);
 
