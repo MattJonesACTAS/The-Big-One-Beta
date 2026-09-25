@@ -1402,19 +1402,6 @@ export default function App() {
 
   const pharmaSummary = useMemo(() => computePharmaSummary(state.treatments), [state.treatments]);
 
-  // Temporary diagnostic: logs once per relevant change (not every second)
-  // to trace why a fresh adrenaline dose given after rearrest might not show
-  // its timer.
-  useEffect(() => {
-    console.log('[ADRENALINE WIPE TRACE]', {
-      isROSCMode: state.isROSCMode,
-      adrenalineWipedAt: state.adrenalineWipedAt,
-      allAdrenalineDoses: state.treatments.filter(t => t.name.includes('Adrenaline push')).map(t => ({ name: t.name, elapsed: t.elapsed, customDose: t.customDose, prior: t.prior })),
-      currentAdrenalineStatusShow: adrenalineStatus.show,
-      currentAdrenalineStatusText: adrenalineStatus.text
-    });
-  }, [state.treatments, state.adrenalineWipedAt, state.isROSCMode]);
-
   // --- Elapsed time interval calculator ---
   const calcNextIntervalTarget = (elapsedSecs: number, interval: 'evens' | 'odds' | 'half-evens' | 'half-odds'): number => {
     const intervalMap = {
