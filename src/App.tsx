@@ -712,12 +712,22 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const el = caseSummaryScrollRef.current;
       const prevBodyOverflow = document.body.style.overflow;
+      const prevBodyTouchAction = document.body.style.touchAction;
       document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
       const prevOverflow = el?.style.overflowY;
-      if (el) el.style.overflowY = 'hidden';
+      const prevTouchAction = el?.style.touchAction;
+      if (el) {
+        el.style.overflowY = 'hidden';
+        el.style.touchAction = 'none';
+      }
       return () => {
         document.body.style.overflow = prevBodyOverflow;
-        if (el) el.style.overflowY = prevOverflow ?? '';
+        document.body.style.touchAction = prevBodyTouchAction;
+        if (el) {
+          el.style.overflowY = prevOverflow ?? '';
+          el.style.touchAction = prevTouchAction ?? '';
+        }
       };
     }
 
@@ -736,11 +746,16 @@ export default function App() {
       const container = document.querySelector('[data-tutorial-scroll-container="summary"]') as HTMLElement | null;
       if (container) {
         const prevOverflow = container.style.overflowY;
+        const prevTouchAction = container.style.touchAction;
         container.style.overflowY = 'hidden';
-        return () => { container.style.overflowY = prevOverflow; };
+        container.style.touchAction = 'none';
+        return () => {
+          container.style.overflowY = prevOverflow;
+          container.style.touchAction = prevTouchAction;
+        };
       }
     }
-  }, [tutorialMode, tutorialNodeIndex]);
+  }, [tutorialMode, tutorialNodeIndex, state.currentOverlay, isCaseClosed]);
 
 
   // Capture the patient weight as it was when the tutorial started, so we know
@@ -3962,13 +3977,19 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
           )}
         </div>
       )}
-      {state.cprRound > 0 && (
+      {(state.timingMode !== 'log' || state.cprRound > 0) && (
         <div>
           <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
           <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
-            <StatRow label="CPR Rounds" value={state.cprRound} />
-            <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
-            <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+            {state.cprRound > 0 ? (
+              <>
+                <StatRow label="CPR Rounds" value={state.cprRound} />
+                <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+                <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+              </>
+            ) : (
+              <div className="p-4 text-neutral-300 italic text-sm">No CPR rounds recorded</div>
+            )}
           </div>
         </div>
       )}

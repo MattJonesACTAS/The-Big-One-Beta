@@ -84,7 +84,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   {
     id: 'adrenalineAlert', type: 'positioned', x: 28.05, y: 83.32,
     pages: [{ title: 'Medication Timer', description: 'When you log adrenaline or amiodarone, a timer will appear on the home screen to help you keep track of when the next dose is due.' }],
-    condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && !sf
+    condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.some((t: any) => t.name.startsWith('Adrenaline push')) && !sf
   },
   {
     id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4,
