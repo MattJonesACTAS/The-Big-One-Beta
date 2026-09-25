@@ -667,7 +667,6 @@ export default function App() {
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
   const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
-  const summaryScrollPositionRef = useRef<number | null>(null);
 
   // Correct timer drift when tab becomes visible again
   useEffect(() => {
@@ -735,8 +734,6 @@ export default function App() {
     // Live Summary overlay: each of its four "info" nodes is anchored to a
     // different section spread across that scroll, so each scrolls its own
     // section to the centre of the screen and locks that container in place.
-    // Skipped when a scroll-restore from an edit is pending (below) - that
-    // takes priority over re-centring on the tutorial's own target section.
     const sectionForNode: Record<number, string> = {
       9: 'arrestSummary',
       10: 'vitalSigns',
@@ -745,9 +742,7 @@ export default function App() {
     };
     const section = sectionForNode[tutorialNodeIndex];
     if (section) {
-      if (summaryScrollPositionRef.current === null) {
-        document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
       if (container) {
         const prevOverflow = container.style.overflowY;
@@ -761,38 +756,6 @@ export default function App() {
       }
     }
   }, [tutorialMode, tutorialNodeIndex, state.currentOverlay, isCaseClosed]);
-
-  // Restores the Summary overlay's scroll position after an edit completes,
-  // so the person lands back on the same part of the Tx log rather than the
-  // top, and can see the change take effect where they were looking. Applies
-  // in both normal use and tutorial mode. Waits a frame before setting
-  // scrollTop, since the overlay has only just (re)mounted via its key-based
-  // remount and the Tx log's content needs to have actually laid out first
-  // for scrollTop to land correctly. Consumes the stored position as soon as
-  // it's read (not after the frame), so the check above that skips the
-  // tutorial's own scrollIntoView takes effect on this same render, not one
-  // render late.
-  useEffect(() => {
-    if (state.currentOverlay === 'summary' && summaryScrollPositionRef.current !== null) {
-      const position = summaryScrollPositionRef.current;
-      summaryScrollPositionRef.current = null;
-      console.log('[EDIT SCROLL TRACE] effect fired, scheduling restore to', position);
-      const frame = requestAnimationFrame(() => {
-        const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
-        console.log('[EDIT SCROLL TRACE] rAF fired', {
-          foundContainer: !!container,
-          targetPosition: position,
-          scrollHeightBefore: container?.scrollHeight,
-          scrollTopBefore: container?.scrollTop
-        });
-        if (container) container.scrollTop = position;
-        console.log('[EDIT SCROLL TRACE] after assignment', {
-          scrollTopAfter: container?.scrollTop
-        });
-      });
-      return () => cancelAnimationFrame(frame);
-    }
-  }, [state.currentOverlay]);
 
 
   // Capture the patient weight as it was when the tutorial started, so we know
@@ -1439,13 +1402,6 @@ export default function App() {
   };
 
   const handleEditTreatment = (idx: number) => {
-    const container = document.querySelector('[data-scroll-container="summary"]');
-    summaryScrollPositionRef.current = container ? container.scrollTop : null;
-    console.log('[EDIT SCROLL TRACE] captured', {
-      foundContainer: !!container,
-      capturedScrollTop: summaryScrollPositionRef.current,
-      containerScrollHeight: container?.scrollHeight
-    });
     setEditingTreatmentIndex(idx);
     setState(prev => ({ ...prev, currentOverlay: 'treatment' }));
   };
@@ -1467,8 +1423,9 @@ export default function App() {
       // Editing is only ever reachable from the Summary overlay's Tx log, so
       // returning there (rather than the previous behaviour of going all the
       // way back to the home screen) lets the person see the change land in
-      // the log immediately. Scroll position is restored separately below,
-      // once the overlay has actually remounted.
+      // the log immediately. The Summary overlay itself stays mounted
+      // throughout the whole edit flow (see its render site), so its scroll
+      // position is preserved automatically - nothing to restore here.
       return { ...prev, treatments: renumberTreatments(updated), currentOverlay: 'summary' };
     });
     setEditingTreatmentIndex(null);
@@ -1993,7 +1950,34 @@ export default function App() {
               </div>
             </div>
             <AnimatePresence>
-              {state.currentOverlay && state.currentOverlay !== 'tutorial' && (
+              {(state.currentOverlay === 'summary' || (state.currentOverlay === 'treatment' && editingTreatmentIndex !== null)) && (
+                <Overlay
+                  key="summary"
+                  type="summary"
+                  onClose={() => { setState(p => ({ ...p, currentOverlay: null })); setEditingTreatmentIndex(null); }}
+                  addTreatment={addTreatment}
+                  state={state}
+                  pharmaSummary={pharmaSummary}
+                  isShockForced={isShockForced}
+                  toggleChecklistItem={toggleChecklistItem}
+                  onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
+                  onDeleteTreatment={deleteTreatment}
+                  onMoveTreatment={moveTreatment}
+                  onEditTreatment={handleEditTreatment}
+                  editingTreatmentIndex={editingTreatmentIndex}
+                  onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                />
+              )}
+            </AnimatePresence>
+            {/* Editing a treatment opens this same 'treatment' overlay type, on
+                top of the Summary overlay above rather than in place of it -
+                the Summary overlay above keeps its fixed key="summary" and
+                stays mounted throughout, so its scroll position is preserved
+                automatically (nothing unmounted, nothing to restore) and the
+                person lands back on exactly the same part of the log once
+                editing finishes. */}
+            <AnimatePresence>
+              {state.currentOverlay && state.currentOverlay !== 'tutorial' && state.currentOverlay !== 'summary' && (
                 <Overlay
                   key={state.currentOverlay}
                   type={state.currentOverlay as OverlayType}
@@ -2152,7 +2136,31 @@ export default function App() {
           </div>
 
           <AnimatePresence>
-            {state.currentOverlay && state.currentOverlay !== 'tutorial' && (
+            {(state.currentOverlay === 'summary' || (state.currentOverlay === 'treatment' && editingTreatmentIndex !== null)) && (
+              <Overlay
+                key="summary"
+                type="summary"
+                onClose={() => { setState(p => ({ ...p, currentOverlay: null })); setEditingTreatmentIndex(null); }}
+                addTreatment={addTreatment}
+                state={state}
+                pharmaSummary={pharmaSummary}
+                isShockForced={isShockForced}
+                toggleChecklistItem={toggleChecklistItem}
+                onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
+                onDeleteTreatment={deleteTreatment}
+                onMoveTreatment={moveTreatment}
+                onEditTreatment={handleEditTreatment}
+                editingTreatmentIndex={editingTreatmentIndex}
+                onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+              />
+            )}
+          </AnimatePresence>
+          {/* See the equivalent block above (elapsed-mode layout) for why this
+              is split into two AnimatePresence blocks: the Summary overlay
+              keeps a fixed key="summary" so an edit's Tx-selection overlay
+              can render on top of it without ever unmounting it. */}
+          <AnimatePresence>
+            {state.currentOverlay && state.currentOverlay !== 'tutorial' && state.currentOverlay !== 'summary' && (
               <Overlay 
                 key={state.currentOverlay}
                 type={state.currentOverlay as OverlayType} 
