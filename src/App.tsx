@@ -46,6 +46,8 @@ const INITIAL_STATE: AppState = {
   rhythmCheckOvertime: 0, // Counts up from 0 to 6 after rhythm check hits 0:00
   rhythmCheckPaused: false, // When true, rhythm check stays frozen even while running
   cprRound: 1,
+  adrenalineWipedAt: null,
+  amiodaroneWipedAt: null,
   treatments: [],
   currentOverlay: null,
   catchupElapsed: 0,
@@ -1116,6 +1118,30 @@ export default function App() {
       // code sheet counts them.
       const isLogModeRoundComplete = timingMode === 'log' && isShockOrDisarm && !isROSC;
       const shouldResetTimer = isROSC || (isShockOrDisarm && wasRhythmCheckPaused);
+
+      // When entering ROSC, if the adrenaline/amiodarone timer was already
+      // overdue at that moment, mark it as "wiped" so it stays hidden and
+      // doesn't resume as a stale overdue timer if the patient later
+      // rearrests. If it wasn't yet overdue, it isn't wiped - hiding it
+      // during ROSC is handled purely by isROSCMode below, so it naturally
+      // reappears, still correctly counting, once ROSC ends.
+      let adrenalineWipedAt = prev.adrenalineWipedAt;
+      let amiodaroneWipedAt = prev.amiodaroneWipedAt;
+      if (isROSC) {
+        const adrDoses = prev.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (prev.adrenalineWipedAt ?? -1));
+        const lastAdr = adrDoses[adrDoses.length - 1];
+        if (lastAdr && !lastAdr.prior && (240 - (prev.elapsedSeconds - lastAdr.elapsed)) <= 0) {
+          adrenalineWipedAt = prev.elapsedSeconds;
+        }
+        const allAmioDoses = prev.treatments.filter(t => t.name.includes('Amiodarone'));
+        if (allAmioDoses.length < 2) {
+          const amioDoses = allAmioDoses.filter(t => t.elapsed > (prev.amiodaroneWipedAt ?? -1));
+          const lastAmio = amioDoses[amioDoses.length - 1];
+          if (lastAmio && !lastAmio.prior && (300 - (prev.elapsedSeconds - lastAmio.elapsed)) <= 0) {
+            amiodaroneWipedAt = prev.elapsedSeconds;
+          }
+        }
+      }
       
       // Auto-add OPA before BVM
       const newTreatments = [...prev.treatments];
@@ -1152,7 +1178,9 @@ export default function App() {
         // Enter ROSC mode when ROSC logged, exit when any shock/disarm or rearrest logged
         isROSCMode: isROSC ? true : (isShockOrDisarm || isRearrest) ? false : prev.isROSCMode,
         // Clear ROSC checklist when ROSC is logged again (new ROSC event)
-        roscChecked: isROSC ? [] : prev.roscChecked
+        roscChecked: isROSC ? [] : prev.roscChecked,
+        adrenalineWipedAt,
+        amiodaroneWipedAt
       };
     });
 
@@ -1290,7 +1318,10 @@ export default function App() {
   };
 
   const adrenalineStatus = useMemo(() => {
-    const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose);
+    if (state.isROSCMode) {
+      return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
+    }
+    const adrTreatments = state.treatments.filter(t => t.name.includes('Adrenaline push') && !t.customDose && t.elapsed > (state.adrenalineWipedAt ?? -1));
     const lastAdr = adrTreatments[adrTreatments.length - 1];
 
     if (!lastAdr) {
@@ -1319,9 +1350,12 @@ export default function App() {
       const flashRed = timeUntilNext <= 30; // Flash red when 30s or less
       return { text: `Next adrenaline: ${timeStr}`, show: true, isDue: false, countdown: timeUntilNext, flashRed };
     }
-  }, [state.treatments, state.elapsedSeconds, tutorialMode]);
+  }, [state.treatments, state.elapsedSeconds, state.isROSCMode, state.adrenalineWipedAt, tutorialMode]);
 
   const amiodaroneStatus = useMemo(() => {
+    if (state.isROSCMode) {
+      return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
+    }
     const allAmioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
 
     // Protocol: first amiodarone dose starts the 5-min timer, second (final) dose clears it.
@@ -1332,7 +1366,7 @@ export default function App() {
       return { text: '', show: false, isDue: false, countdown: 0, flashRed: false };
     }
 
-    const amioTreatments = allAmioTreatments;
+    const amioTreatments = allAmioTreatments.filter(t => t.elapsed > (state.amiodaroneWipedAt ?? -1));
     const lastAmio = amioTreatments[amioTreatments.length - 1];
     
     if (!lastAmio) {
@@ -1361,7 +1395,7 @@ export default function App() {
       const flashRed = timeUntilNext <= 30; // Flash red when 30s or less
       return { text: `Next amiodarone: ${timeStr}`, show: true, isDue: false, countdown: timeUntilNext, flashRed };
     }
-  }, [state.treatments, state.elapsedSeconds, tutorialMode]);
+  }, [state.treatments, state.elapsedSeconds, state.isROSCMode, state.amiodaroneWipedAt, tutorialMode]);
 
 
   const pharmaSummary = useMemo(() => computePharmaSummary(state.treatments), [state.treatments]);
