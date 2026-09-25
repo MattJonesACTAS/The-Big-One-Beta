@@ -693,25 +693,36 @@ export default function App() {
     });
   }, [timingMode, rhythmInterval]);
 
-  // The Case Summary screen is the only scrollable page in the app - the
-  // tutorial's node markers are positioned relative to the viewport (fixed),
-  // not the scroll position, so without this the marker over Export PDF
-  // would drift out of alignment with the actual button if the page had
-  // been scrolled. Export PDF sits near the top, so scrolling to top keeps
-  // them aligned.
-  useEffect(() => {
-    if (tutorialMode && tutorialNodeIndex === 16) {
-      caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [tutorialMode, tutorialNodeIndex]);
-
-  // The live Summary overlay is also scrollable, and its own four "info"
-  // nodes each need to be anchored over a different section spread across
-  // that scroll - so each one scrolls its own section to the centre of the
-  // screen when it becomes active, keeping the marker aligned with it.
+  // Both the Case Summary page and the live Summary overlay are scrollable,
+  // but the tutorial's node markers are positioned relative to the viewport
+  // (fixed), not the scroll position. A one-time scroll-into-view isn't
+  // enough on its own - if the user then scrolls manually, the marker would
+  // drift out of alignment with its target again. So for every node anchored
+  // to a specific piece of scrollable content, this scrolls that content
+  // into view AND locks scrolling on its container for as long as the node
+  // stays active, so the marker can't be knocked out of alignment.
   useEffect(() => {
     if (!tutorialMode) return;
+
+    // Case Summary page: Export PDF and Close Case sit side by side near the
+    // top, so both nodes scroll (and lock) to the top of that page.
+    if (tutorialNodeIndex === 16 || tutorialNodeIndex === 17) {
+      caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const el = caseSummaryScrollRef.current;
+      const prevBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const prevOverflow = el?.style.overflowY;
+      if (el) el.style.overflowY = 'hidden';
+      return () => {
+        document.body.style.overflow = prevBodyOverflow;
+        if (el) el.style.overflowY = prevOverflow ?? '';
+      };
+    }
+
+    // Live Summary overlay: each of its four "info" nodes is anchored to a
+    // different section spread across that scroll, so each scrolls its own
+    // section to the centre of the screen and locks that container in place.
     const sectionForNode: Record<number, string> = {
       9: 'arrestSummary',
       10: 'vitalSigns',
@@ -721,25 +732,15 @@ export default function App() {
     const section = sectionForNode[tutorialNodeIndex];
     if (section) {
       document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const container = document.querySelector('[data-tutorial-scroll-container="summary"]') as HTMLElement | null;
+      if (container) {
+        const prevOverflow = container.style.overflowY;
+        container.style.overflowY = 'hidden';
+        return () => { container.style.overflowY = prevOverflow; };
+      }
     }
   }, [tutorialMode, tutorialNodeIndex]);
 
-
-  // Temporary diagnostic: logs once per relevant change (not every second)
-  // to trace why the weight-change and end-case flashes might not be
-  // appearing as expected.
-  useEffect(() => {
-    if (!tutorialMode) return;
-    console.log('[FLASH TRACE]', {
-      tutorialScreenIndex: tutorialScreen.index,
-      tutorialNodeIndex,
-      showRecalibrateMenu,
-      showWeightChange,
-      patientWeight: state.patientWeight,
-      tutorialInitialWeight: tutorialInitialWeightRef.current,
-      currentOverlay: state.currentOverlay
-    });
-  }, [tutorialMode, tutorialScreen.index, tutorialNodeIndex, showRecalibrateMenu, showWeightChange, state.patientWeight, state.currentOverlay]);
 
   // Capture the patient weight as it was when the tutorial started, so we know
   // once it's actually been changed (used to stop the recalibrate/weight flash).
@@ -780,7 +781,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-elapsed-btn');
     }
     
-    // Node 9 (recalibrate) complete - flash Recalibrate button (index 3 = waiting for weight change)
+    // Node 9 (recalibrate, array index 3) complete - flash Recalibrate button,
     // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
     // Both stop as soon as the weight actually changes, even before the node is dismissed.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
@@ -795,14 +796,14 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-weight');
     }
 
-    // Node 11 (addTxBtn) complete - flash Add Tx button (index 6 = waiting for treatment screen)
+    // Node 11 (addTxBtn, array index 5) complete - flash Add Tx button
     if (tutorialMode && tutorialScreen.index === 6 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
-    // Node 12 (addTxSubmenu) complete - flash Adrenaline and dose buttons (index 7)
+    // Node 12 (addTxSubmenu, array index 6) complete - flash Adrenaline and dose buttons
     if (tutorialMode && tutorialScreen.index === 7) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
@@ -811,15 +812,15 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-dose');
     }
 
-    // Node 14 (summaryBtn) complete - flash Summary button (index 9 = waiting for summary overlay)
+    // Node 14 (summaryBtn, array index 8) complete - flash Summary button
     if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 18 (treatmentLogInfo) complete - flash the Adrenaline push row's
-    // menu button (index 13), until the entry is actually edited, moved or deleted
+    // Node 18 (treatmentLogInfo, array index 12) complete - flash the Adrenaline
+    // push row, until the entry is actually edited, moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
       || state.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
     if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === 'summary' && !adrenalineHandled) {
@@ -828,22 +829,22 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-adrenaline-tx');
     }
 
-    // Node 19 (closeOverlay) complete - flash summary close button (index 14 = waiting on summary)
+    // Node 19 (closeOverlay, array index 13) complete - flash summary close button
     if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 20 (endCase) complete - flash End Case button (index 15 = waiting on home)
+    // Node 20 (endCase, array index 14) complete - flash End Case button
     if (tutorialMode && tutorialScreen.index === 15 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-end');
     } else {
       document.body.classList.remove('tutorial-flash-end');
     }
 
-    // Tutorial done - flash Close Case button
-    if (tutorialMode && tutorialScreen.complete) {
+    // Node 24 (delete, array index 17, the last node) complete - tutorial done, flash Close Case button
+    if (tutorialMode && tutorialScreen.index === 18) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
@@ -3333,7 +3334,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
       transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.8 }}
       className="absolute inset-0 bg-white z-50 flex flex-col"
     >
-      <div className="flex-1 overflow-y-auto">
+      <div data-tutorial-scroll-container="summary" className="flex-1 overflow-y-auto">
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
