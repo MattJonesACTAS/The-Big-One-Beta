@@ -756,18 +756,27 @@ export default function App() {
   // Temporary diagnostic: logs once per relevant change (not every second)
   // to trace why the recalibrate/weight flash still isn't appearing despite
   // the index===4 condition and node-advancement mechanism both checking out.
+  // Checks the class after a tick, since this effect is declared before the
+  // one that actually sets it - reading classList synchronously here would
+  // always see last render's (stale) value, not this one's.
   useEffect(() => {
     if (!tutorialMode) return;
-    console.log('[RECALIBRATE FLASH TRACE]', {
+    const snapshot = {
       tutorialScreenIndex: tutorialScreen.index,
       tutorialNodeIndex,
       showRecalibrateMenu,
       showWeightChange,
       patientWeight: state.patientWeight,
       tutorialInitialWeight: tutorialInitialWeightRef.current,
-      weightUnchanged: state.patientWeight === tutorialInitialWeightRef.current,
-      bodyHasFlashClass: document.body.classList.contains('tutorial-flash-recalibrate')
-    });
+      weightUnchanged: state.patientWeight === tutorialInitialWeightRef.current
+    };
+    const timer = setTimeout(() => {
+      console.log('[RECALIBRATE FLASH TRACE]', {
+        ...snapshot,
+        bodyHasFlashClass: document.body.classList.contains('tutorial-flash-recalibrate')
+      });
+    }, 0);
+    return () => clearTimeout(timer);
   }, [tutorialMode, tutorialScreen.index, tutorialNodeIndex, showRecalibrateMenu, showWeightChange, state.patientWeight]);
 
   // Inject tutorial Elapsed Time button flash CSS
