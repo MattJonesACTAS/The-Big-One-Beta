@@ -700,9 +700,27 @@ export default function App() {
   // been scrolled. Export PDF sits near the top, so scrolling to top keeps
   // them aligned.
   useEffect(() => {
-    if (tutorialMode && tutorialNodeIndex === 13) {
+    if (tutorialMode && tutorialNodeIndex === 16) {
       caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [tutorialMode, tutorialNodeIndex]);
+
+  // The live Summary overlay is also scrollable, and its own four "info"
+  // nodes each need to be anchored over a different section spread across
+  // that scroll - so each one scrolls its own section to the centre of the
+  // screen when it becomes active, keeping the marker aligned with it.
+  useEffect(() => {
+    if (!tutorialMode) return;
+    const sectionForNode: Record<number, string> = {
+      9: 'arrestSummary',
+      10: 'vitalSigns',
+      11: 'pharmaSummary',
+      12: 'treatmentLog'
+    };
+    const section = sectionForNode[tutorialNodeIndex];
+    if (section) {
+      document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [tutorialMode, tutorialNodeIndex]);
 
@@ -762,7 +780,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-elapsed-btn');
     }
     
-    // Node 8 (recalibrate) complete - flash Recalibrate button (index 3 = waiting for weight change)
+    // Node 9 (recalibrate) complete - flash Recalibrate button (index 3 = waiting for weight change)
     // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
     // Both stop as soon as the weight actually changes, even before the node is dismissed.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
@@ -800,25 +818,25 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-summary');
     }
 
-    // Node 15 (summaryInfo) complete - flash the Adrenaline push row's menu
-    // button (index 10), until the entry is actually edited, moved or deleted
+    // Node 18 (treatmentLogInfo) complete - flash the Adrenaline push row's
+    // menu button (index 13), until the entry is actually edited, moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
       || state.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
-    if (tutorialMode && tutorialScreen.index === 10 && state.currentOverlay === 'summary' && !adrenalineHandled) {
+    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === 'summary' && !adrenalineHandled) {
       document.body.classList.add('tutorial-flash-adrenaline-tx');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline-tx');
     }
 
-    // Node 16 (closeOverlay) complete - flash summary close button (index 11 = waiting on summary)
-    if (tutorialMode && tutorialScreen.index === 11 && state.currentOverlay === 'summary') {
+    // Node 19 (closeOverlay) complete - flash summary close button (index 14 = waiting on summary)
+    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
-    // Node 17 (endCase) complete - flash End Case button (index 12 = waiting on home)
-    if (tutorialMode && tutorialScreen.index === 12 && state.currentOverlay === null) {
+    // Node 20 (endCase) complete - flash End Case button (index 15 = waiting on home)
+    if (tutorialMode && tutorialScreen.index === 15 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-end');
     } else {
       document.body.classList.remove('tutorial-flash-end');
@@ -3702,6 +3720,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
                   onPointerUp={isReorderingThis ? handleDragPointerUp : undefined}
                   onPointerCancel={isReorderingThis ? handleDragPointerUp : undefined}
                   style={isReorderingThis ? { touchAction: 'none' } : undefined}
+                  data-tx={tx.name.startsWith('Adrenaline push') ? 'adrenaline-push' : undefined}
                   className={`grid ${gridCols} px-4 py-4 items-center gap-1 transition-colors ${
                     isReorderingThis ? 'bg-blue-50 cursor-grab active:cursor-grabbing' : ''
                   }`}
@@ -3717,7 +3736,6 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
                             setPendingDelete(realIndex);
                           }
                         }}
-                        data-tx={tx.name.startsWith('Adrenaline push') ? 'adrenaline-push' : undefined}
                         className={`-ml-1.5 w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full transition-colors ${
                           isReorderingThis
                             ? 'bg-emerald-500 text-white'
@@ -3951,10 +3969,16 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
 function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
-      <ArrestSummarySection state={state} showRecordingDuration />
-      <VitalSignsSection vitals={state.vitals} />
-      <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
-      <div>
+      <div data-tutorial-section="arrestSummary">
+        <ArrestSummarySection state={state} showRecordingDuration />
+      </div>
+      <div data-tutorial-section="vitalSigns">
+        <VitalSignsSection vitals={state.vitals} />
+      </div>
+      <div data-tutorial-section="pharmaSummary">
+        <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
+      </div>
+      <div data-tutorial-section="treatmentLog">
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={onDelete} onMove={onMove} onEdit={onEdit} />
       </div>

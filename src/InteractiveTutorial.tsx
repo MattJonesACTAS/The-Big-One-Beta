@@ -654,7 +654,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'rhythmCheckTiming',
       elements: [
-        { id: 'timingLog',     x: 50, y: 38.0, number: 3, title: 'No Timer Mode',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses. Use this mode for big jobs that aren't arrests, like Prehospital Emergency Anaesthesia (PHEA).\n\nThis option can also be useful if you are acting as scribe during a simulation." },
+        { id: 'timingLog',     x: 50, y: 38.0, number: 3, title: 'No Timer Mode',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses.\n\nUse this mode for big jobs that aren't arrests, like Prehospital Emergency Anaesthesia (PHEA).\n\nThis option can also be useful if you are acting as scribe during a simulation." },
         { id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
       ],
     },

@@ -32,10 +32,6 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
       {
         title: 'Elapsed Timer',
         description: "Earlier we chose 'Time keeping assistance' as our app mode.\n\nNow we have the elapsed case time available right in front of us, mirroring the monitor's.\n\nThis can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient."
-      },
-      {
-        title: 'No Timer Option',
-        description: "If you had selected the 'No timer' option instead, the app would only help you keep a log of interventions you apply during the case.\n\nIt would not assist you to keep track of rhythm checks."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -45,7 +41,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [
       {
         title: 'Rhythm Check Countdown',
-        description: "This shows the countdown to your next rhythm check, calculated from your chosen odds/evens interval.\n\nThe ring fills as you approach the next check, and both the ring and the number will turn red once it's due - the app will prompt you automatically at that point."
+        description: "This shows the countdown to your next rhythm check.\n\nWhen the counter reaches 0:00, the app will ask you what happened at that rhythm check. This feature has been disabled in the tutorial for simplicity."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -87,7 +83,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   // --- Home with medication alerts ---
   {
     id: 'adrenalineAlert', type: 'positioned', x: 28.05, y: 83.32,
-    pages: [{ title: 'Medication Alerts', description: 'When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due.' }],
+    pages: [{ title: 'Medication Timer', description: 'When you log adrenaline or amiodarone, a timer will appear on the home screen to help you keep track of when the next dose is due.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && !sf
   },
   {
@@ -97,20 +93,38 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Summary overlay ---
   {
-    id: 'summaryInfo', type: 'positioned', x: 50, y: 50,
+    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 50,
     pages: [
       {
         title: 'Arrest Summary',
         description: 'The top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms.'
-      },
+      }
+    ],
+    condition: (s) => s.currentOverlay === 'summary'
+  },
+  {
+    id: 'vitalSignsInfo', type: 'positioned', x: 50, y: 50,
+    pages: [
       {
         title: 'Vital Signs Survey',
         description: "Next, we have the vital signs survey.\n\nAny vital signs entered via the VSS tab will appear here for quick reference during the case and at handover."
-      },
+      }
+    ],
+    condition: (s) => s.currentOverlay === 'summary'
+  },
+  {
+    id: 'pharmaSummaryInfo', type: 'positioned', x: 50, y: 50,
+    pages: [
       {
         title: 'Pharma Summary',
         description: 'Next, we have the pharmacological summary, which lists all logged medications with a cumulative tally of the total dose given of each drug.'
-      },
+      }
+    ],
+    condition: (s) => s.currentOverlay === 'summary'
+  },
+  {
+    id: 'treatmentLogInfo', type: 'positioned', x: 50, y: 50,
+    pages: [
       {
         title: 'Treatment Log',
         description: "At the bottom we have a chronological record of all logged interventions.\n\nTimestamps show the time of day and how long ago each Tx was logged."
