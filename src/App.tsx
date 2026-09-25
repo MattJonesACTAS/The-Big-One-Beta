@@ -4324,8 +4324,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           { name: 'Disarm - PEA', color: 'blue' },
           state.isROSCMode
             ? { name: 'Rearrest', color: 'orange' }
-            : { name: 'Disarm - ROSC', color: 'emerald' },
-          ...(isShockForced ? [{ name: 'Rhythm check delayed' }] : [])
+            : { name: 'Disarm - ROSC', color: 'emerald' }
         ]} 
         onSelect={addTreatment}
       />
