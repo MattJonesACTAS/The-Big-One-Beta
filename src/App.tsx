@@ -667,6 +667,7 @@ export default function App() {
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
   const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
+  const summaryScrollPositionRef = useRef<number | null>(null);
 
   // Correct timer drift when tab becomes visible again
   useEffect(() => {
@@ -743,7 +744,7 @@ export default function App() {
     const section = sectionForNode[tutorialNodeIndex];
     if (section) {
       document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const container = document.querySelector('[data-tutorial-scroll-container="summary"]') as HTMLElement | null;
+      const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
       if (container) {
         const prevOverflow = container.style.overflowY;
         const prevTouchAction = container.style.touchAction;
@@ -756,6 +757,20 @@ export default function App() {
       }
     }
   }, [tutorialMode, tutorialNodeIndex, state.currentOverlay, isCaseClosed]);
+
+  // Restores the Summary overlay's scroll position after an edit completes,
+  // so the person lands back on the same part of the Tx log rather than the
+  // top, and can see the change take effect where they were looking. Applies
+  // in both normal use and tutorial mode. Consumes the stored position once
+  // used, so a later, unrelated open of the Summary overlay isn't affected.
+  useEffect(() => {
+    if (state.currentOverlay === 'summary' && summaryScrollPositionRef.current !== null) {
+      const position = summaryScrollPositionRef.current;
+      summaryScrollPositionRef.current = null;
+      const container = document.querySelector('[data-scroll-container="summary"]');
+      if (container) container.scrollTop = position;
+    }
+  }, [state.currentOverlay]);
 
 
   // Capture the patient weight as it was when the tutorial started, so we know
@@ -1402,6 +1417,8 @@ export default function App() {
   };
 
   const handleEditTreatment = (idx: number) => {
+    const container = document.querySelector('[data-scroll-container="summary"]');
+    summaryScrollPositionRef.current = container ? container.scrollTop : null;
     setEditingTreatmentIndex(idx);
     setState(prev => ({ ...prev, currentOverlay: 'treatment' }));
   };
@@ -1420,7 +1437,12 @@ export default function App() {
       const original = updated[editingTreatmentIndex];
       const { customDose: _oldCustomDose, ...rest } = original;
       updated[editingTreatmentIndex] = { ...rest, name, edited: true, ...(options?.customDose ? { customDose: true } : {}) };
-      return { ...prev, treatments: renumberTreatments(updated), currentOverlay: null };
+      // Editing is only ever reachable from the Summary overlay's Tx log, so
+      // returning there (rather than the previous behaviour of going all the
+      // way back to the home screen) lets the person see the change land in
+      // the log immediately. Scroll position is restored separately below,
+      // once the overlay has actually remounted.
+      return { ...prev, treatments: renumberTreatments(updated), currentOverlay: 'summary' };
     });
     setEditingTreatmentIndex(null);
   };
@@ -3408,7 +3430,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
       transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.8 }}
       className="absolute inset-0 bg-white z-50 flex flex-col"
     >
-      <div data-tutorial-scroll-container="summary" className="flex-1 overflow-y-auto">
+      <div data-scroll-container="summary" className="flex-1 overflow-y-auto">
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}

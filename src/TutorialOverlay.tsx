@@ -156,12 +156,12 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => !s.running
   },
   {
-    id: 'export', type: 'positioned', x: 27.23, y: 14.45,
+    id: 'export', type: 'positioned', x: 27.23, y: 16.45,
     pages: [{ title: 'Export PDF', description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.' }],
     condition: (s) => !s.running
   },
   {
-    id: 'delete', type: 'positioned', x: 73.46, y: 14.45,
+    id: 'delete', type: 'positioned', x: 73.46, y: 16.45,
     pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved.\n\nClose the case to finish the tutorial and we'll see you at The Big One!" }],
     condition: (s) => !s.running
   }
