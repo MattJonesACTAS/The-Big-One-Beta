@@ -776,9 +776,19 @@ export default function App() {
     if (state.currentOverlay === 'summary' && summaryScrollPositionRef.current !== null) {
       const position = summaryScrollPositionRef.current;
       summaryScrollPositionRef.current = null;
+      console.log('[EDIT SCROLL TRACE] effect fired, scheduling restore to', position);
       const frame = requestAnimationFrame(() => {
         const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
+        console.log('[EDIT SCROLL TRACE] rAF fired', {
+          foundContainer: !!container,
+          targetPosition: position,
+          scrollHeightBefore: container?.scrollHeight,
+          scrollTopBefore: container?.scrollTop
+        });
         if (container) container.scrollTop = position;
+        console.log('[EDIT SCROLL TRACE] after assignment', {
+          scrollTopAfter: container?.scrollTop
+        });
       });
       return () => cancelAnimationFrame(frame);
     }
@@ -1431,6 +1441,11 @@ export default function App() {
   const handleEditTreatment = (idx: number) => {
     const container = document.querySelector('[data-scroll-container="summary"]');
     summaryScrollPositionRef.current = container ? container.scrollTop : null;
+    console.log('[EDIT SCROLL TRACE] captured', {
+      foundContainer: !!container,
+      capturedScrollTop: summaryScrollPositionRef.current,
+      containerScrollHeight: container?.scrollHeight
+    });
     setEditingTreatmentIndex(idx);
     setState(prev => ({ ...prev, currentOverlay: 'treatment' }));
   };
