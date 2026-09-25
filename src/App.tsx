@@ -905,7 +905,7 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-end');
       document.body.classList.remove('tutorial-flash-close');
     };
-  }, [tutorialMode, tutorialScreen, state.treatments.length, state.currentOverlay, state.patientWeight, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
+  }, [tutorialMode, tutorialScreen, state.treatments, state.currentOverlay, state.patientWeight, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {

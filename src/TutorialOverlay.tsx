@@ -93,7 +93,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Summary overlay ---
   {
-    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 50,
+    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 35,
     pages: [
       {
         title: 'Arrest Summary',
@@ -123,7 +123,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'treatmentLogInfo', type: 'positioned', x: 50, y: 50,
+    id: 'treatmentLogInfo', type: 'positioned', x: 50, y: 52,
     pages: [
       {
         title: 'Treatment Log',
