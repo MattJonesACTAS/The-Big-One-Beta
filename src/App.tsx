@@ -288,6 +288,30 @@ const formatRecordingDuration = (seconds: number): string => {
   return `${totalMins}min, ${secs.toString().padStart(2, '0')}s`;
 };
 
+// The browser's print dialog / "Save as PDF" suggests document.title as the
+// default filename, so this briefly renames the page to the desired export
+// name right before printing, then restores the real title afterwards -
+// afterprint fires once the print/save dialog is actually dismissed, with a
+// timed fallback in case a particular browser doesn't fire it reliably.
+const exportCasePdf = () => {
+  const originalTitle = document.title;
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yy = String(now.getFullYear()).slice(-2);
+  document.title = `Case Summary - ${dd}/${mm}/${yy}`;
+  let restored = false;
+  const restoreTitle = () => {
+    if (restored) return;
+    restored = true;
+    document.title = originalTitle;
+    window.removeEventListener('afterprint', restoreTitle);
+  };
+  window.addEventListener('afterprint', restoreTitle);
+  window.print();
+  setTimeout(restoreTitle, 2000);
+};
+
 const getLocalTime = (date?: Date) => {
   const d = date || new Date();
   return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -1797,7 +1821,7 @@ export default function App() {
 
         <div className="grid grid-cols-2 gap-4">
           <button 
-            onClick={() => window.print()}
+            onClick={exportCasePdf}
             className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold btn-base border border-emerald-100"
           >
             <FileText size={20} /> Export PDF
@@ -2534,7 +2558,7 @@ export default function App() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <button
-                        onClick={() => window.print()}
+                        onClick={exportCasePdf}
                         className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold btn-base border border-emerald-100"
                       >
                         <FileText size={20} /> Export PDF
