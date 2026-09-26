@@ -109,7 +109,12 @@
       box-shadow: none !important;
     }
     
-    .border {
+    /* Arrest Summary and Pharma Summary use border-x/border-b (not the plain
+       .border class other boxes use), so without also covering those, their
+       borders stayed at their original, barely-visible light colour while
+       every other box's got darkened for print - this is what actually
+       made them look thinner/fainter, not a real difference in width. */
+    .border, .border-x, .border-t, .border-b, .border-l, .border-r {
       border-color: #ddd !important;
     }
   }

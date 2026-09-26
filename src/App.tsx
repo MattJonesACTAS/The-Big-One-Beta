@@ -293,13 +293,24 @@ const formatRecordingDuration = (seconds: number): string => {
 // name right before printing, then restores the real title afterwards -
 // afterprint fires once the print/save dialog is actually dismissed, with a
 // timed fallback in case a particular browser doesn't fire it reliably.
+// For on-screen/PDF display specifically - unlike the filename above, slashes
+// are fine here since this isn't constrained by filesystem rules.
+const formatDisplayDate = (date: Date) => {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
 const exportCasePdf = () => {
   const originalTitle = document.title;
   const now = new Date();
   const dd = String(now.getDate()).padStart(2, '0');
   const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const yy = String(now.getFullYear()).slice(-2);
-  document.title = `Case Summary - ${dd}/${mm}/${yy}`;
+  const yyyy = now.getFullYear();
+  // Hyphens, not slashes: "/" isn't valid in filenames on any OS, so the
+  // browser would silently strip or mangle it when suggesting a save name.
+  document.title = `Case Summary - ${yyyy}-${mm}-${dd}`;
   let restored = false;
   const restoreTitle = () => {
     if (restored) return;
@@ -1811,12 +1822,13 @@ export default function App() {
     return (
       <div ref={caseSummaryScrollRef} className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-2">
+          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-8">
             <span className="w-6 h-px bg-emerald-300" />
             The Big One
             <span className="w-6 h-px bg-emerald-300" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
+          <p className="text-neutral-400 text-sm font-medium mt-1">{formatDisplayDate(new Date())}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -2548,12 +2560,13 @@ export default function App() {
                 <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto">
                   <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 pb-24">
                     <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-2">
+          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-8">
             <span className="w-6 h-px bg-emerald-300" />
             The Big One
             <span className="w-6 h-px bg-emerald-300" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
+          <p className="text-neutral-400 text-sm font-medium mt-1">{formatDisplayDate(new Date())}</p>
         </div>
 
                     <div className="grid grid-cols-2 gap-4">
