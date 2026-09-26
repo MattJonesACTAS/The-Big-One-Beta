@@ -1786,7 +1786,14 @@ export default function App() {
   if (isCaseClosed) {
     return (
       <div ref={caseSummaryScrollRef} className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
-        <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-2">
+            <span className="w-6 h-px bg-emerald-300" />
+            The Big One
+            <span className="w-6 h-px bg-emerald-300" />
+          </div>
+          <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <button 
@@ -2516,7 +2523,14 @@ export default function App() {
               {viewingPreviousCase && (
                 <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto">
                   <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 pb-24">
-                    <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
+                    <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-2">
+            <span className="w-6 h-px bg-emerald-300" />
+            The Big One
+            <span className="w-6 h-px bg-emerald-300" />
+          </div>
+          <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
+        </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <button

@@ -80,7 +80,7 @@
          wider canvas. zoom (not transform:scale) is used deliberately,
          since it affects layout/pagination, keeping everything correctly
          proportioned rather than just visually stretched. */
-      zoom: 1.4;
+      zoom: 1.8;
     }
 
     /* Keep important text black/dark for printing */
@@ -90,6 +90,14 @@
 
     .bg-emerald-50 {
       background-color: #f0fdf4 !important;
+      print-color-adjust: exact;
+    }
+
+    /* Vital Signs' banner uses sky (not emerald) - without this, it loses
+       its background colour on print while the other section banners,
+       which all happen to use emerald, don't. */
+    .bg-sky-50 {
+      background-color: #f0f9ff !important;
       print-color-adjust: exact;
     }
 
