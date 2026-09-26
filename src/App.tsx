@@ -1435,13 +1435,19 @@ export default function App() {
       const original = updated[editingTreatmentIndex];
       const { customDose: _oldCustomDose, ...rest } = original;
       updated[editingTreatmentIndex] = { ...rest, name, edited: true, ...(options?.customDose ? { customDose: true } : {}) };
-      // Editing is only ever reachable from the Summary overlay's Tx log, so
-      // returning there (rather than the previous behaviour of going all the
-      // way back to the home screen) lets the person see the change land in
-      // the log immediately. The Summary overlay itself stays mounted
-      // throughout the whole edit flow (see its render site), so its scroll
-      // position is preserved automatically - nothing to restore here.
-      return { ...prev, treatments: renumberTreatments(updated), currentOverlay: 'summary' };
+      // Editing is reachable from two different places depending on timing
+      // mode: elapsed mode's Summary overlay, or log mode's inline running
+      // summary (which IS the home screen there, not an overlay). In
+      // elapsed mode, returning to the Summary overlay (rather than the
+      // previous behaviour of going all the way back to the home screen)
+      // lets the person see the change land in the log immediately - that
+      // overlay stays mounted throughout the whole edit flow (see its render
+      // site), so its scroll position is preserved automatically. In log
+      // mode there's no separate overlay to return to at all - the inline
+      // summary never unmounted in the first place, so going back to the
+      // plain home screen (null) already shows it exactly as it was, scroll
+      // position included.
+      return { ...prev, treatments: renumberTreatments(updated), currentOverlay: timingMode === 'log' ? null : 'summary' };
     });
     setEditingTreatmentIndex(null);
   };
@@ -1964,35 +1970,16 @@ export default function App() {
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
               </div>
             </div>
+            {/* Unlike elapsed mode, log mode's running summary is the inline
+                content above, not an overlay - it never unmounts regardless
+                of what opens on top of it, so its scroll position is already
+                naturally preserved with no special handling needed. This is
+                a single block (not split into a persistent "summary" layer
+                like elapsed mode's equivalent) because there's no separate
+                summary overlay to keep alive here - nothing in log mode
+                ever sets currentOverlay to 'summary' at all. */}
             <AnimatePresence>
-              {(state.currentOverlay === 'summary' || (state.currentOverlay === 'treatment' && editingTreatmentIndex !== null)) && (
-                <Overlay
-                  key="summary"
-                  type="summary"
-                  onClose={() => { setState(p => ({ ...p, currentOverlay: null })); setEditingTreatmentIndex(null); }}
-                  addTreatment={addTreatment}
-                  state={state}
-                  pharmaSummary={pharmaSummary}
-                  isShockForced={isShockForced}
-                  toggleChecklistItem={toggleChecklistItem}
-                  onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
-                  onDeleteTreatment={deleteTreatment}
-                  onMoveTreatment={moveTreatment}
-                  onEditTreatment={handleEditTreatment}
-                  editingTreatmentIndex={editingTreatmentIndex}
-                  onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
-                />
-              )}
-            </AnimatePresence>
-            {/* Editing a treatment opens this same 'treatment' overlay type, on
-                top of the Summary overlay above rather than in place of it -
-                the Summary overlay above keeps its fixed key="summary" and
-                stays mounted throughout, so its scroll position is preserved
-                automatically (nothing unmounted, nothing to restore) and the
-                person lands back on exactly the same part of the log once
-                editing finishes. */}
-            <AnimatePresence>
-              {state.currentOverlay && state.currentOverlay !== 'tutorial' && state.currentOverlay !== 'summary' && (
+              {state.currentOverlay && state.currentOverlay !== 'tutorial' && (
                 <Overlay
                   key={state.currentOverlay}
                   type={state.currentOverlay as OverlayType}
@@ -2170,10 +2157,14 @@ export default function App() {
               />
             )}
           </AnimatePresence>
-          {/* See the equivalent block above (elapsed-mode layout) for why this
-              is split into two AnimatePresence blocks: the Summary overlay
-              keeps a fixed key="summary" so an edit's Tx-selection overlay
-              can render on top of it without ever unmounting it. */}
+          {/* Split into two AnimatePresence blocks (unlike log mode's single
+              block above, which needs no such split - see its own comment):
+              the Summary overlay keeps a fixed key="summary" so it stays
+              mounted the entire time an edit's Tx-selection overlay is open
+              on top of it, preserving its scroll position automatically.
+              This one genuinely needs it, since elapsed mode's running
+              summary IS an overlay - unlike log mode's, which is inline on
+              the home screen and never unmounts regardless. */}
           <AnimatePresence>
             {state.currentOverlay && state.currentOverlay !== 'tutorial' && state.currentOverlay !== 'summary' && (
               <Overlay 
