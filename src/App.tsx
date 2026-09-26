@@ -4177,6 +4177,15 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   const [selectedCustomUnit, setSelectedCustomUnit] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(isShockForced ? 'rhythmCheck' : null);
   const [customInputValues, setCustomInputValues] = useState<Record<string, string>>({});
+
+  // The useState initializer above only runs once at mount, so if this menu
+  // was already open (e.g. mid-edit) when a rhythm check became forced,
+  // expandedSection would stay at whatever it was before - collapsed - with
+  // no way to expand it, since the toggle itself is also disabled below.
+  // This keeps it in sync whenever isShockForced actually changes.
+  useEffect(() => {
+    if (isShockForced) setExpandedSection('rhythmCheck');
+  }, [isShockForced]);
   
   const handleMedClick = (med: string) => {
     if (DOSE_CONFIG[med]) {
@@ -4558,7 +4567,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         color="pink" 
         sectionId="rhythmCheck"
         expandedSection={expandedSection}
-        onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
+        onToggle={(id) => { if (!isShockForced) setExpandedSection(expandedSection === id ? null : id); }}
+        showChevron={!isShockForced}
         items={[
           { name: 'Shock - VF', color: 'red' },
           { name: 'Shock - pVT', color: 'red' },
@@ -4647,7 +4657,8 @@ function TxSection({
   initiallyExpanded = false,
   sectionId,
   expandedSection,
-  onToggle
+  onToggle,
+  showChevron = true
 }: { 
   title: string;
   color: string;
@@ -4657,6 +4668,7 @@ function TxSection({
   sectionId?: string;
   expandedSection?: string | null;
   onToggle?: (id: string) => void;
+  showChevron?: boolean;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   // Tracks which failable items (ETT, IV access, etc.) are currently staged
@@ -4699,7 +4711,7 @@ function TxSection({
         className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${colorMap[color]}`}
       >
         <span>{title}</span>
-        <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />
+        {showChevron && <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />}
       </div>
       <motion.div 
         initial={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
