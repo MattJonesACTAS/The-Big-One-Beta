@@ -121,7 +121,20 @@
        in-between page break, which @page would handle if it's supported. */
     .min-h-screen {
       min-height: auto !important;
-      padding: 45px !important;
+      padding: 24px !important;
+    }
+
+    /* space-y-6's gap is rem-based, so it scaled to ~43px under the 1.8x
+       root font-size above - stacked several times within the header +
+       Case Details + Arrest Summary group, that's what pushed the group
+       past one page's height despite break-inside-avoid (which can only
+       prevent a break where there's room to - it can't stop content taller
+       than the page from being forced to split). Scoped to this specific
+       group via .break-inside-avoid so no other spacing on the page is
+       affected. */
+    .break-inside-avoid > :not(:last-child),
+    .break-inside-avoid .space-y-6 > :not(:last-child) {
+      margin-block-end: 12px !important;
     }
 
     /* Keep important text black/dark for printing */
