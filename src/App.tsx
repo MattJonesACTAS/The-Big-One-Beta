@@ -3659,7 +3659,7 @@ function ROSCSelection({ checkedItems, onToggle, patientType, patientWeight }: {
 function PHEASelection({ checkedItems, onToggle }: { checkedItems: string[], onToggle: (label: string) => void }) {
   return (
     <div className="h-full pb-10">
-      <SectionGroup title="PREPARATION" color="purple" items={['Adequate hands and skills mix?', 'Assign roles', 'C-spine immobilisation required?', 'Optimise patient position', 'Optimise environment', 'Optimise equipment placement']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="PREPARATION" color="purple" items={['Adequate hands and skills mix?', { label: 'Assign roles', subItems: ['Team leader', 'Primary airway', 'Airway assistant', 'Primary drugs & access', 'Drugs & access assistant', 'Gofer'] }, 'C-spine immobilisation required?', 'Optimise patient position', 'Optimise environment', 'Optimise equipment placement', 'Consider preparing extrication if resources allow']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="PRE-OXYGENATION" color="purple" items={['Nasal prongs 15L/min']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="MONITORING" color="purple" items={['ECG', 'BP — cycling', 'SpO2', 'EtCO2']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="DRUGS & ACCESS EQUIPMENT" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication/s drawn up']} checkedItems={checkedItems} onToggle={onToggle} />
