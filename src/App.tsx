@@ -217,7 +217,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
       { dose: '0.8mg', population: 'adult', indication: 'Suspected narcotic OD' },
       { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose increments' },
       { dose: '0.01mg/kg', population: 'paed', indication: 'Suspected narcotic OD', calculated: true },
-      { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: fast push', calculated: true },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'Suspected narcotic OD - ICP', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   },
