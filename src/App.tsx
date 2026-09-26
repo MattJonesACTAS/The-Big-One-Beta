@@ -1823,14 +1823,14 @@ export default function App() {
       <div ref={caseSummaryScrollRef} className="min-h-screen bg-neutral-200 p-6 overflow-y-auto pb-24">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
         <div className="space-y-6 break-inside-avoid">
-        <div className="text-center">
-          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-6">
+        <div className="text-center space-y-6">
+          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-emerald-300" />
             The Big One
             <span className="w-6 h-px bg-emerald-300" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
-          <p className="text-neutral-400 text-sm font-medium mt-1">{formatDisplayDate(new Date())}</p>
+          <p className="text-neutral-400 text-sm font-medium">{formatDisplayDate(new Date())}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -2565,14 +2565,14 @@ export default function App() {
                   <div className="min-h-screen p-6 pb-24">
                   <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
                     <div className="space-y-6 break-inside-avoid">
-                    <div className="text-center">
-          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-6">
+                    <div className="text-center space-y-6">
+          <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-emerald-300" />
             The Big One
             <span className="w-6 h-px bg-emerald-300" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
-          <p className="text-neutral-400 text-sm font-medium mt-1">{formatDisplayDate(new Date())}</p>
+          <p className="text-neutral-400 text-sm font-medium">{formatDisplayDate(new Date())}</p>
         </div>
 
                     <div className="grid grid-cols-2 gap-4">

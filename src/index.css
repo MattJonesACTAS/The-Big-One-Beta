@@ -1,6 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&family=Roboto:wght@700&display=swap');
 @import "tailwindcss";
 
+/* Guarantees every printed page - not just the first/last - gets a
+   consistent margin, so the grey backdrop shows at the top and bottom of
+   each page regardless of where content happens to break. */
+@page {
+  margin: 12mm;
+}
+
 @theme {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -52,6 +59,15 @@
   }
   
   @media print {
+    /* The @page margin area (and any leftover space below content on the
+       last page) is painted from the root element's background, not from
+       any individual div's - setting it here is what actually makes grey
+       appear at the top/bottom of every page, including past where the
+       card's own content ends. */
+    html, body {
+      background: #e5e5e5 !important;
+    }
+
     .btn-base, 
     button, 
     .fixed, 
