@@ -214,10 +214,10 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
   },
   'Naloxone': {
     doses: [
-      { dose: '0.8mg', population: 'adult', indication: '1st dose IM / 2nd dose IM' },
-      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose IV increments, fast push' },
-      { dose: '0.01mg/kg', population: 'paed', indication: 'IM', calculated: true },
-      { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: IV fast push', calculated: true },
+      { dose: '0.8mg', population: 'adult', indication: '1st dose / 2nd dose' },
+      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose increments, fast push' },
+      { dose: '0.01mg/kg', population: 'paed', calculated: true },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: fast push', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   },
