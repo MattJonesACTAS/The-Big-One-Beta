@@ -3992,7 +3992,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">PHARMA SUMMARY</div>
         <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
           {Object.keys(pharmaSummary).length === 0 ? (
-            <div className="p-4 text-neutral-300 italic text-sm">No medications given</div>
+            <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
           ) : (
             Object.entries(pharmaSummary).map(([name, info]) => (
               <StatRow key={name} label={name} value={info.display} />
@@ -4107,7 +4107,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
       <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">PHARMA SUMMARY</div>
       <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
         {!hasContent ? (
-          <div className="p-4 text-neutral-300 italic text-sm">No medications given</div>
+          <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
         ) : (
           <>
             {nonInfusionEntries.map(([name, info]) => (
