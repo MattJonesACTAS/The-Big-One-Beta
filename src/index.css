@@ -131,6 +131,17 @@
     .border, .border-x, .border-t, .border-b, .border-l, .border-r {
       border-color: #ddd !important;
     }
+
+    /* Without this, a box whose content spans a page break just gets cut
+       off mid-border, with no bottom edge on the first page or top edge on
+       the next - box-decoration-break makes each page fragment render as if
+       it were a complete, independently-rounded box (border, background and
+       radius all reapplied at the break), rather than one shape sliced in
+       half. Covers the outer summary card and each individual section box. */
+    .rounded-xl, .rounded-3xl {
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+    }
   }
 }
 
