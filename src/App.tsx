@@ -258,14 +258,19 @@ const formatTimeHMM = (seconds: number) => {
 // For "App recording for" specifically - once a case runs an hour or more,
 // hr/min reads more naturally than a large minute count (matches the same
 // threshold-switch pattern used for mcg->mg and mL->L in the Pharma Summary).
+// Below that threshold, minutes aren't zero-padded either (6min, not 06min) -
+// this has its own inline formatting rather than delegating to formatTimeHMM
+// for that case, since formatTimeHMM's zero-padded minutes are still wanted
+// for the Ago column it's shared with.
 const formatRecordingDuration = (seconds: number): string => {
   const totalMins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
   if (totalMins >= 60) {
     const hrs = Math.floor(totalMins / 60);
     const mins = totalMins % 60;
     return `${hrs}hr, ${mins}min`;
   }
-  return formatTimeHMM(seconds);
+  return `${totalMins}min, ${secs.toString().padStart(2, '0')}s`;
 };
 
 const getLocalTime = (date?: Date) => {
