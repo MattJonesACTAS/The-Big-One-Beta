@@ -69,7 +69,7 @@ const INITIAL_STATE: AppState = {
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
   'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam (Kepra)', 'Lignocaine',
-  'Magnesium', 'Midazolam push', 'Morph/midaz infusion', 'Normal saline', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
+  'Magnesium', 'Midazolam push', 'Morph/midaz infusion', 'Naloxone', 'Normal saline', 'Ondansetron', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
 type DoseOption = {
@@ -209,6 +209,23 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
   'Levetiracetam (Kepra)': {
     doses: [
       { dose: '40mg/kg', population: 'both', indication: 'Seizure', calculated: true },
+      { dose: 'Other', population: 'both' }
+    ]
+  },
+  'Naloxone': {
+    doses: [
+      { dose: '0.8mg', population: 'adult', indication: '1st dose IM - repeat at 5 minutes if required' },
+      { dose: '0.8mg', population: 'adult', indication: '2nd dose IM' },
+      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose IV increments, fast push - may repeat up to 3 times (max 2mg total)' },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'IM - repeat after 2-5 min if no effect (max 3x calculated dose)', calculated: true },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: IV fast push (max 3x calculated dose)', calculated: true },
+      { dose: 'Other', population: 'both' }
+    ]
+  },
+  'Ondansetron': {
+    doses: [
+      { dose: '8mg', population: 'adult', indication: 'Antiemetic - IV slowly over 2 minutes' },
+      { dose: '0.1mg/kg', population: 'paed', indication: 'Antiemetic - IV slowly over 2 minutes (max 4mg) - repeat once after approx. 10 minutes if required', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   }
@@ -1859,7 +1876,7 @@ export default function App() {
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.2</span></h1>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.3</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. The Big One tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
@@ -2455,7 +2472,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One v1.2</p>
+                    <p>The Big One v1.3</p>
                     <p>ACTAS CMG v1.1.0.2</p>
                     <p>Last reviewed July 2026</p>
                   </div>
@@ -4220,6 +4237,17 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         cleanDose = formatCalciumDose(cleanDose, state.patientWeight);
       }
       
+      // For Ondansetron paed, cap at 4mg
+      if (selectedMed === 'Ondansetron' && dose.includes('/kg')) {
+        const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
+        const mgMatch = cleanDose.match(/([\d.]+)mg/);
+        if (mgMatch) {
+          const calculated = parseFloat(mgMatch[1]);
+          const capped = Math.min(calculated, 4);
+          cleanDose = `${capped}mg`;
+        }
+      }
+      
       // For Amiodarone paed, apply max dose caps
       if (selectedMed === 'Amiodarone' && state.patientType === 'paed') {
         const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
@@ -4338,6 +4366,12 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         const calculatedMg = Math.min(10 * weight, 1000);
         const doseDisplay = calculatedMg >= 1000 ? `1g` : `${calculatedMg}mg`;
         return `${doseDisplay} (10mg/kg)`;
+      }
+      
+      // Ondansetron paed: cap display at 4mg
+      if (selectedMed === 'Ondansetron' && doseOpt.dose.includes('/kg')) {
+        const calculatedMg = Math.min(Math.round(0.1 * weight * 10) / 10, 4);
+        return `${calculatedMg}mg (0.1mg/kg${(0.1 * weight) > 4 ? ' - 4mg max' : ''})`;
       }
       
       // Amiodarone paed: cap display at 300mg for arrest, 150mg for VT with output
