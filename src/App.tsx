@@ -3659,11 +3659,11 @@ function ROSCSelection({ checkedItems, onToggle, patientType, patientWeight }: {
 function PHEASelection({ checkedItems, onToggle }: { checkedItems: string[], onToggle: (label: string) => void }) {
   return (
     <div className="h-full pb-10">
-      <SectionGroup title="PREPARATION" color="purple" items={['Adequate hands and skills mix?', { label: 'Assign roles', subItems: ['Team leader', 'Airway primary', 'Airway assistant', 'Drugs & access primary', 'Drugs & access assistant', 'Gofer'] }, 'C-spine immobilisation required?', 'Optimise patient position', 'Optimise environment', 'Optimise equipment placement', 'Consider preparing extrication if resources allow']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="PRE-OXYGENATION" color="purple" items={['Nasal prongs 15L/min']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="INITIAL TEAM BRIEF" color="purple" items={['Adequate hands and skills mix?', { label: 'Optimise patient position', subItems: ['Consider relocating patient now to optimal location', 'Apply C-spine immobilisation if required'] }, { label: 'Assign roles', subItems: ['Team leader', 'Airway primary', 'Airway assistant', 'Drugs & access primary', 'Drugs & access assistant', 'Gofer'] }, 'Prepare extrication now if resources allow']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="SCENE OPTIMISATION" color="purple" items={['Optimise environment', 'Optimise equipment placement']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="MONITORING" color="purple" items={['ECG', 'BP — cycling', 'SpO2', 'EtCO2']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="DRUGS & ACCESS EQUIPMENT" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication/s drawn up']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="AIRWAY EQUIPMENT AND BRIEF" color="purple" items={['Sufficient oxygen available?', 'Suction', 'OPA/NPA', 'LMA', 'BVM', 'Airtraq', 'ETT', 'Syringe', 'Securing method', 'Laryngoscope checked', 'FONA scalpel', 'External laryngeal manipulation discussed', 'Fall back plan discussed']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="DRUGS & ACCESS" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication/s drawn up']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="AIRWAY" color="purple" items={['Sufficient oxygen available?', 'Pre-oxygenation applied?', 'Suction', 'OPA/NPA', 'LMA', 'BVM', 'Airtraq', 'ETT', 'Syringe', 'Securing method', 'Laryngoscope checked', 'FONA scalpel', 'External laryngeal manipulation discussed', 'Fall back plan discussed']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup 
         title="POST-INTUBATION" 
         color="darkPurple" 
