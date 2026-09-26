@@ -1694,6 +1694,13 @@ export default function App() {
       patientWeight: parsedWeight || (tutorialMode ? 70 : null),
       patientType: weightType || (tutorialMode ? 'adult' : null),
       patientAge: (weightType === 'paed' && paedWeightMethod === 'age' && paedAgeLabel) ? paedAgeLabel : null,
+      // Without these two, INITIAL_STATE's defaults (both null) would silently
+      // overwrite the mode the person actually chose, and the separate effect
+      // that normally keeps state.timingMode in sync with this local variable
+      // wouldn't catch it - that effect only fires when the local timingMode/
+      // rhythmInterval themselves change, and they don't change here.
+      timingMode,
+      rhythmInterval,
     });
     
     // Reset all UI states for clean new case
