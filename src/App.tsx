@@ -1820,7 +1820,8 @@ export default function App() {
 
   if (isCaseClosed) {
     return (
-      <div ref={caseSummaryScrollRef} className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 overflow-y-auto pb-24">
+      <div ref={caseSummaryScrollRef} className="min-h-screen bg-neutral-200 p-6 overflow-y-auto pb-24">
+      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-8">
             <span className="w-6 h-px bg-emerald-300" />
@@ -1857,6 +1858,7 @@ export default function App() {
           <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
           <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} isSummary={true} />
         </div>
+      </div>
 
         {showCloseWarning && (
            <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
@@ -2557,8 +2559,9 @@ export default function App() {
               )}
 
               {viewingPreviousCase && (
-                <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto">
-                  <div className="min-h-screen bg-white p-6 max-w-2xl mx-auto space-y-6 pb-24">
+                <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto">
+                  <div className="min-h-screen p-6 pb-24">
+                  <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
                     <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase mb-8">
             <span className="w-6 h-px bg-emerald-300" />
@@ -2603,6 +2606,7 @@ export default function App() {
                         isSummary={true}
                       />
                     </div>
+                  </div>
                   </div>
                 </div>
               )}

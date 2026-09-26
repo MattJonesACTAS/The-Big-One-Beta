@@ -101,6 +101,20 @@
       print-color-adjust: exact;
     }
 
+    /* Case Details' banner uses neutral (not emerald/sky) - same gap as
+       above, applied to a third color that was still missing its own rule. */
+    .bg-neutral-50 {
+      background-color: #fafafa !important;
+      print-color-adjust: exact;
+    }
+
+    /* The page backdrop behind the summary card - without this it would
+       print as plain white, losing the card effect entirely. */
+    .bg-neutral-200 {
+      background-color: #e5e5e5 !important;
+      print-color-adjust: exact;
+    }
+
     .divide-y > * {
       border-color: #eee !important;
     }
