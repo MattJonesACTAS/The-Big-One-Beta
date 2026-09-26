@@ -214,17 +214,17 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
   },
   'Naloxone': {
     doses: [
-      { dose: '0.8mg', population: 'adult', indication: '1st dose / 2nd dose' },
-      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose increments, fast push' },
-      { dose: '0.01mg/kg', population: 'paed', calculated: true },
+      { dose: '0.8mg', population: 'adult', indication: 'Suspected narcotic OD' },
+      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose increments' },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'Suspected narcotic OD', calculated: true },
       { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: fast push', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   },
   'Ondansetron': {
     doses: [
-      { dose: '8mg', population: 'adult', indication: 'Antiemetic' },
-      { dose: '0.1mg/kg', population: 'paed', indication: 'Antiemetic', calculated: true },
+      { dose: '8mg', population: 'adult', indication: 'Nausea/vomiting' },
+      { dose: '0.1mg/kg', population: 'paed', indication: 'Nausea/vomiting', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   }
