@@ -1856,8 +1856,8 @@ export default function App() {
 
         <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
         
-        <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
+        <div className="rounded-xl border border-neutral-100">
+          <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
           <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} isSummary={true} />
         </div>
       </div>
@@ -2039,8 +2039,8 @@ export default function App() {
               <ArrestSummarySection state={state} showRecordingDuration />
               <VitalSignsSection vitals={state.vitals} />
               <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} />
-              <div className="rounded-xl overflow-hidden border border-neutral-100">
-                <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
+              <div className="rounded-xl border border-neutral-100">
+                <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
               </div>
             </div>
@@ -2601,8 +2601,8 @@ export default function App() {
                       activeInfusions={INFUSION_DRUGS.filter(d => viewingPreviousCase.treatments.some(t => t.name.startsWith(d)))}
                     />
 
-                    <div className="rounded-xl overflow-hidden border border-neutral-100">
-                      <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
+                    <div className="rounded-xl border border-neutral-100">
+                      <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                       <TreatmentLog
                         treatments={viewingPreviousCase.treatments}
                         elapsedSeconds={viewingPreviousCase.elapsedSeconds}
@@ -3916,7 +3916,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
     : 'grid-cols-[1.9fr_1fr_1.1fr]';
 
   return (
-    <div className="bg-white">
+    <div className="bg-white rounded-b-xl">
       <div className={`grid ${gridCols} gap-1 bg-neutral-100 border-b border-neutral-200 px-4 py-3`}>
         <div className={`text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left ${onDelete ? 'pl-5' : ''}`}>Treatment</div>
         <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Logged at</div>
@@ -4031,7 +4031,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
   return (
     <div className="space-y-6">
       {patientLabel && (
-        <div className="rounded-xl overflow-hidden border border-neutral-100">
+        <div className="rounded-xl border border-neutral-100">
           <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider text-center">PATIENT</div>
           <div className="bg-white px-4 py-3">
             <span className="text-[17px] font-bold text-neutral-900 text-center block">{patientLabel}</span>
@@ -4076,8 +4076,9 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'Temp',    value: v.temp, unit: '°C'     },
   ].filter(r => r.value !== '');
   return (
-    <div className="rounded-xl overflow-hidden border border-neutral-100">
-      <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center">VITAL SIGNS</div>
+    <div className="rounded-xl border border-neutral-100">
+      <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">VITAL SIGNS</div>
+      <div className="bg-white rounded-b-xl">
       {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
         <div key={label} className={`flex items-center justify-between px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
           <span className="text-[14px] font-semibold text-neutral-500">{label}</span>
@@ -4088,6 +4089,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
       )) : (
         <div className="p-4 text-neutral-300 italic text-sm">No vital signs recorded</div>
       )}
+      </div>
     </div>
   );
 }
@@ -4108,9 +4110,9 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
   return (
     <div className="space-y-6">
       {(patientTypeLabel || showRecordingDuration) && (
-        <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-sm tracking-wider text-center">CASE DETAILS</div>
-          <div className="bg-white px-4 py-3 flex items-start justify-between gap-3">
+        <div className="rounded-xl border border-neutral-100">
+          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">CASE DETAILS</div>
+          <div className="bg-white px-4 py-3 flex items-start justify-between gap-3 rounded-b-xl">
           {patientTypeLabel && (
             <div>
               <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">Patient settings</div>
@@ -4136,9 +4138,9 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
         </div>
       )}
       {(state.timingMode !== 'log' || state.cprRound > 0) && (
-        <div className="rounded-xl overflow-hidden border border-neutral-100">
-          <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
-          <div className="bg-white divide-y divide-neutral-50">
+        <div className="rounded-xl border border-neutral-100">
+          <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">ARREST SUMMARY</div>
+          <div className="bg-white divide-y divide-neutral-50 rounded-b-xl">
             {state.cprRound > 0 ? (
               <>
                 <StatRow label="CPR Rounds" value={state.cprRound} />
@@ -4165,9 +4167,9 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
   const hasContent = nonInfusionEntries.length > 0 || (activeInfusions && activeInfusions.length > 0);
 
   return (
-    <div className="rounded-xl overflow-hidden border border-neutral-100">
-      <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center">PHARMA SUMMARY</div>
-      <div className="bg-white divide-y divide-neutral-50 min-h-[60px]">
+    <div className="rounded-xl border border-neutral-100">
+      <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">PHARMA SUMMARY</div>
+      <div className="bg-white divide-y divide-neutral-50 min-h-[60px] rounded-b-xl">
         {!hasContent ? (
           <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
         ) : (
@@ -4217,8 +4219,8 @@ function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpda
       <div data-tutorial-section="pharmaSummary">
         <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
       </div>
-      <div data-tutorial-section="treatmentLog" className="rounded-xl overflow-hidden border border-neutral-100">
-        <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center">TREATMENT LOG</div>
+      <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
+        <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={onDelete} onMove={onMove} onEdit={onEdit} />
       </div>
     </div>
