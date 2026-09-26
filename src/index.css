@@ -73,6 +73,14 @@
     .min-h-screen {
       min-height: auto !important;
       padding: 20px !important;
+      /* Content here is sized for a phone screen, but print/PDF export
+         renders at a fixed physical page width regardless of the device
+         actually viewing it - without this, the same pixel sizes end up
+         looking small and surrounded by empty space once put on that
+         wider canvas. zoom (not transform:scale) is used deliberately,
+         since it affects layout/pagination, keeping everything correctly
+         proportioned rather than just visually stretched. */
+      zoom: 1.4;
     }
 
     /* Keep important text black/dark for printing */
