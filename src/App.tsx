@@ -4027,7 +4027,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
           </span>
         </div>
       )) : (
-        <div className="px-4 py-3 text-[14px] text-neutral-400 italic">No vital signs recorded.</div>
+        <div className="p-4 text-neutral-300 italic text-sm">No vital signs recorded</div>
       )}
     </div>
   );
