@@ -214,18 +214,17 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
   },
   'Naloxone': {
     doses: [
-      { dose: '0.8mg', population: 'adult', indication: '1st dose IM - repeat at 5 minutes if required' },
-      { dose: '0.8mg', population: 'adult', indication: '2nd dose IM' },
-      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose IV increments, fast push - may repeat up to 3 times (max 2mg total)' },
-      { dose: '0.01mg/kg', population: 'paed', indication: 'IM - repeat after 2-5 min if no effect (max 3x calculated dose)', calculated: true },
-      { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: IV fast push (max 3x calculated dose)', calculated: true },
+      { dose: '0.8mg', population: 'adult', indication: '1st dose IM / 2nd dose IM' },
+      { dose: '0.4mg', population: 'adult', indication: 'ICP: 2nd+ dose IV increments, fast push' },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'IM', calculated: true },
+      { dose: '0.01mg/kg', population: 'paed', indication: 'ICP: IV fast push', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   },
   'Ondansetron': {
     doses: [
-      { dose: '8mg', population: 'adult', indication: 'Antiemetic - IV slowly over 2 minutes' },
-      { dose: '0.1mg/kg', population: 'paed', indication: 'Antiemetic - IV slowly over 2 minutes (max 4mg) - repeat once after approx. 10 minutes if required', calculated: true },
+      { dose: '8mg', population: 'adult', indication: 'Antiemetic' },
+      { dose: '0.1mg/kg', population: 'paed', indication: 'Antiemetic', calculated: true },
       { dose: 'Other', population: 'both' }
     ]
   }
