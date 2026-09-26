@@ -101,14 +101,27 @@
     /* The handful of places using an arbitrary pixel value (text-[Npx])
        instead of a rem-based Tailwind size don't scale with the above, so
        they need their own explicit bump to the same ~1.4x factor. */
+    /* Every distinct arbitrary pixel size actually used across the summary's
+       components (StatRow, TreatmentLog, VitalSignsSection, ArrestSummarySection,
+       PharmaSummarySection) - missing any of these is what caused inconsistent
+       sizing between boxes, since some text scaled via font-size and some didn't. */
     .text-\[11px\] { font-size: 15px !important; }
     .text-\[12px\] { font-size: 17px !important; }
+    .text-\[13px\] { font-size: 18px !important; }
     .text-\[14px\] { font-size: 20px !important; }
     .text-\[15px\] { font-size: 21px !important; }
+    .text-\[16px\] { font-size: 22px !important; }
     .text-\[17px\] { font-size: 24px !important; }
 
+    /* @page margin (above) is the standards-correct way to do this, but
+       mobile print/PDF paths don't reliably respect it - this content-level
+       padding is a fallback that's guaranteed to render regardless, since
+       it's just normal box-model padding rather than a paged-media feature.
+       It only reaches the very top/bottom of the whole card, not every
+       in-between page break, which @page would handle if it's supported. */
     .min-h-screen {
       min-height: auto !important;
+      padding: 45px !important;
     }
 
     /* Keep important text black/dark for printing */
