@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -685,6 +686,13 @@ export default function App() {
   const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
   const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
   const [viewingPreviousCase, setViewingPreviousCase] = useState<AppState | null>(null);
+  // While a saved case is open, flag <body> so print CSS can hide #root
+  // (the welcome/catchup screen behind the viewer) and print only the
+  // portalled viewer.
+  useEffect(() => {
+    document.body.classList.toggle('viewing-previous-case', !!viewingPreviousCase);
+    return () => document.body.classList.remove('viewing-previous-case');
+  }, [viewingPreviousCase]);
   const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
@@ -2559,7 +2567,12 @@ export default function App() {
                 </div>
               )}
 
-              {viewingPreviousCase && (
+              {/* Portalled to <body> so the viewer is no longer a descendant of
+                  the Catchup modal's .fixed wrapper - print CSS hides every
+                  .fixed element, and a display:none ancestor hides all of its
+                  descendants regardless of their own display value, which is
+                  what made the saved-case PDF blank. */}
+              {viewingPreviousCase && createPortal(
                 <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto previous-case-modal">
                   <div className="min-h-screen p-6 pb-24">
                   <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-6 space-y-6">
@@ -2611,7 +2624,8 @@ export default function App() {
                     </div>
                   </div>
                   </div>
-                </div>
+                </div>,
+                document.body
               )}
 
               {!catchupTxMode && catchupStep === 2 && (

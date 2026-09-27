@@ -92,6 +92,13 @@
       inset: auto !important;
     }
 
+    /* The viewer is portalled to <body>, outside #root. While it's open,
+       hide #root entirely so only the saved case prints - not the
+       welcome/catchup screen sitting behind it. */
+    body.viewing-previous-case > #root {
+      display: none !important;
+    }
+
     body {
       overflow: visible !important;
       height: auto !important;
