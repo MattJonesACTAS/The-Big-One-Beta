@@ -290,6 +290,19 @@ const formatRecordingDuration = (seconds: number): string => {
   return `${totalMins}min, ${secs.toString().padStart(2, '0')}s`;
 };
 
+// Case duration, shown on a closed case (this run's summary, or a saved
+// case being viewed) - from Elapsed Time's own final value, i.e. the case's
+// actual timed duration, not wall-clock time since the app/monitor was
+// opened (which starts before Elapsed Time does, during setup, and is what
+// "App recording for" used to show). Log mode never tracks Elapsed Time, so
+// its closed summary falls back to that same wall-clock figure instead -
+// still in this format, just under the "App recording for" label.
+const formatDurationHM = (seconds: number): string => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  return `${hrs}h, ${mins}m`;
+};
+
 // The browser's print dialog / "Save as PDF" suggests document.title as the
 // default filename, so this briefly renames the page to the desired export
 // name right before printing, then restores the real title afterwards -
@@ -2002,7 +2015,7 @@ export default function App() {
           </button>
         </div>
 
-        <ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary />
+        <ArrestSummarySection state={state} showRecordingDuration showFinalDuration alwaysShowArrestSummary />
         </div>
 
         <VitalSignsSection vitals={state.vitals} />
@@ -2743,7 +2756,7 @@ export default function App() {
                       </button>
                     </div>
 
-                    <ArrestSummarySection state={viewingPreviousCase} showRecordingDuration alwaysShowArrestSummary />
+                    <ArrestSummarySection state={viewingPreviousCase} showRecordingDuration showFinalDuration alwaysShowArrestSummary />
                     </div>
 
                     <VitalSignsSection vitals={viewingPreviousCase.vitals} />
@@ -4249,7 +4262,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
   );
 }
 
-function ArrestSummarySection({ state, showRecordingDuration, alwaysShowArrestSummary }: { state: AppState, showRecordingDuration?: boolean, alwaysShowArrestSummary?: boolean }) {
+function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration, alwaysShowArrestSummary }: { state: AppState, showRecordingDuration?: boolean, showFinalDuration?: boolean, alwaysShowArrestSummary?: boolean }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
   const isPaedWithAge = state.patientType === 'paed' && !!state.patientAge;
@@ -4283,9 +4296,15 @@ function ArrestSummarySection({ state, showRecordingDuration, alwaysShowArrestSu
           )}
           {showRecordingDuration && (
             <div className="text-right">
-              <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">App recording for</div>
+              <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">
+                {showFinalDuration && state.timingMode !== 'log' ? 'Case duration' : 'App recording for'}
+              </div>
               <div className="text-[15px] font-bold text-neutral-800 tabular-nums">
-                {state.caseOpenedAt ? formatRecordingDuration(Math.floor(((state.caseClosedAt ?? Date.now()) - state.caseOpenedAt) / 1000)) : '—'}
+                {showFinalDuration
+                  ? (state.timingMode === 'log'
+                      ? (state.caseOpenedAt ? formatDurationHM(Math.floor(((state.caseClosedAt ?? Date.now()) - state.caseOpenedAt) / 1000)) : '—')
+                      : formatDurationHM(state.elapsedSeconds))
+                  : state.caseOpenedAt ? formatRecordingDuration(Math.floor(((state.caseClosedAt ?? Date.now()) - state.caseOpenedAt) / 1000)) : '—'}
               </div>
             </div>
           )}
