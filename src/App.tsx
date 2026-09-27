@@ -102,9 +102,8 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
     doses: [
       { dose: '300mg', population: 'adult', indication: 'VF/pVT cardiac arrest' },
       { dose: '150mg', population: 'adult', indication: 'VT/AF/atrial flutter with output / VF/pVT cardiac arrest (repeat)' },
-      { dose: '5mg/kg', population: 'paed', indication: 'VF/pVT cardiac arrest', calculated: true },
+      { dose: '5mg/kg', population: 'paed', indication: 'VF/pVT cardiac arrest / VT with output', calculated: true },
       { dose: '2.5mg/kg', population: 'paed', indication: 'VF/pVT cardiac arrest (repeat)', calculated: true },
-      { dose: '5mg/kg', population: 'paed', indication: 'VT with output', calculated: true },
       { dose: 'Other', population: 'both' }
     ] 
   },
@@ -4840,10 +4839,16 @@ function TxSection({
                   </button>
                   <button
                     onClick={() => setMarkedUnsuccessful(prev => ({ ...prev, [itemName]: !prev[itemName] }))}
-                    className={`flex-shrink-0 px-3 rounded-xl font-bold text-xs btn-base ${isUnsuccessful ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}
+                    className={`flex-shrink-0 relative w-16 h-9 rounded-full transition-colors duration-200 btn-base ${isUnsuccessful ? 'bg-red-200' : 'bg-emerald-200'}`}
+                    role="switch"
+                    aria-checked={!isUnsuccessful}
                     aria-label={`Mark ${displayName} as ${isUnsuccessful ? 'successful' : 'unsuccessful'}`}
                   >
-                    {isUnsuccessful ? 'Unsuccessful' : 'Successful'}
+                    <span
+                      className={`absolute top-1 left-1 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center transition-transform duration-200 ${isUnsuccessful ? 'translate-x-7' : 'translate-x-0'}`}
+                    >
+                      {isUnsuccessful ? <X size={16} className="text-red-600" strokeWidth={3} /> : <Check size={16} className="text-emerald-600" strokeWidth={3} />}
+                    </span>
                   </button>
                 </div>
               );
