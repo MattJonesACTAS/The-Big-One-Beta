@@ -29,7 +29,8 @@ import {
   Hand,
   User,
   Check,
-  MoreVertical
+  MoreVertical,
+  Hourglass
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
 import InteractiveTutorial from './InteractiveTutorial';
@@ -2254,26 +2255,27 @@ export default function App() {
                   long the check is overdue; tapping reopens the rhythm check
                   popup. No automatic re-prompt - this ring is the reminder. */}
               {state.rhythmCheckDelayedAt != null && !state.isROSCMode && timingMode !== 'log' ? (
-                <button
-                  onClick={resumeDelayedRhythmCheck}
-                  className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center"
-                  data-button="rhythm-check-now"
-                >
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
-                    <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-red-500" />
-                  </svg>
-                  <div className="z-10 flex flex-col items-center translate-y-2 sm:translate-y-3">
-                    <span className="font-bold tabular-nums tracking-tighter leading-none text-6xl sm:text-[100px] text-red-600">
-                      +{formatTime(Math.max(0, state.elapsedSeconds - state.rhythmCheckDelayedAt))}
-                    </span>
-                    <span className="uppercase tracking-widest font-bold text-[13px] sm:text-[16px] text-red-600 mt-2 sm:mt-4">
-                      Rhythm check delayed
-                    </span>
-                    <span className="mt-3 sm:mt-5 px-5 py-2 sm:px-7 sm:py-3 rounded-full bg-red-600 text-white font-bold text-[15px] sm:text-[20px]">
-                      Rhythm check now
+                <>
+                  <button
+                    onClick={resumeDelayedRhythmCheck}
+                    className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center"
+                    data-button="rhythm-check-now"
+                  >
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
+                      <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-rose-500" />
+                    </svg>
+                    <span className="z-10 text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-rose-600 text-center">RHYTHM<br />CHECK<br />NOW</span>
+                  </button>
+                  {/* How long the check has been delayed - its own pale red card just
+                      below the ring. Single line so it clears the drug timer cards
+                      on small phones. */}
+                  <div className="absolute top-full mt-3 sm:mt-5 px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-red-100 flex items-baseline gap-2 whitespace-nowrap">
+                    <span className="text-[12px] sm:text-[15px] font-bold tracking-widest uppercase text-red-800">Delayed</span>
+                    <span className="text-[17px] sm:text-[22px] font-bold tabular-nums leading-none text-red-800">
+                      {formatTime(Math.max(0, state.elapsedSeconds - state.rhythmCheckDelayedAt))}
                     </span>
                   </div>
-                </button>
+                </>
               ) : state.isROSCMode ? (
                 <button
                   onClick={() => {
@@ -4833,11 +4835,12 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       {/* Delay rhythm check - deliberately set apart from the outcomes above
           so it isn't mistaken for one of them */}
       {isShockForced && onDelayRhythmCheck && (
-        <div className="px-4 mt-10">
+        <div className="px-3 pt-8 pb-2">
           <button
             onClick={onDelayRhythmCheck}
-            className="w-full py-4 rounded-2xl border-2 border-neutral-300 bg-white text-neutral-700 text-base sm:text-lg font-bold btn-base"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-sm btn-base hover:bg-amber-100"
           >
+            <Hourglass size={18} strokeWidth={2.5} />
             Delay rhythm check
           </button>
         </div>
