@@ -1095,6 +1095,15 @@ export default function App() {
   }, []);
 
   const playBeep = () => {
+    // Pulse alongside the beep, so a phone that's face-down or too quiet to
+    // hear still gets a physical warning. Vibration API is Android-only -
+    // iOS Safari has no equivalent for web apps, so this silently does
+    // nothing there rather than failing.
+    try {
+      navigator.vibrate?.(100);
+    } catch (err) {
+      // Non-fatal - the audible beep below is unaffected either way.
+    }
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
