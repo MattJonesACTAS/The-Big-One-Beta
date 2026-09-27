@@ -157,7 +157,13 @@
        overshoots in opposite directions - force the page to end right
        after it unconditionally. Vital Signs then always starts fresh on
        its own page regardless of exactly how much room was left over. */
-    .break-inside-avoid {
+    /* Scoped to .has-arrest-summary specifically (not all of
+       .break-inside-avoid): Arrest Summary itself is conditionally hidden
+       for non-arrest cases (PHEA only, no CPR rounds) - forcing a break
+       after a group that's missing it would waste roughly half a page for
+       exactly those cases, for no reason, since there'd be nothing at risk
+       of splitting awkwardly in the first place. */
+    .has-arrest-summary {
       break-after: page !important;
       page-break-after: always !important;
     }

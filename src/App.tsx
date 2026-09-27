@@ -1822,7 +1822,7 @@ export default function App() {
     return (
       <div ref={caseSummaryScrollRef} className="min-h-screen bg-neutral-200 p-6 overflow-y-auto pb-24">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
-        <div className="space-y-6 break-inside-avoid">
+        <div className={`space-y-6 break-inside-avoid${(state.timingMode !== 'log' || state.cprRound > 0) ? ' has-arrest-summary' : ''}`}>
         <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-emerald-300" />
@@ -2564,7 +2564,7 @@ export default function App() {
                 <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto">
                   <div className="min-h-screen p-6 pb-24">
                   <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
-                    <div className="space-y-6 break-inside-avoid">
+                    <div className={`space-y-6 break-inside-avoid${(viewingPreviousCase.timingMode !== 'log' || viewingPreviousCase.cprRound > 0) ? ' has-arrest-summary' : ''}`}>
                     <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-emerald-300" />
