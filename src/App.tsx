@@ -297,6 +297,12 @@ const formatRecordingDuration = (seconds: number): string => {
 // "App recording for" used to show). Log mode never tracks Elapsed Time, so
 // its closed summary falls back to that same wall-clock figure instead -
 // still in this format, just under the "App recording for" label.
+const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
+  log: 'Record keeping only',
+  minimal: 'Time keeping only',
+  elapsed: 'Time and record keeping',
+};
+
 const formatDurationHM = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -721,7 +727,7 @@ export default function App() {
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
-  const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | null>(() => state.timingMode);
+  const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | 'minimal' | null>(() => state.timingMode);
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
   const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
   const [isCaseClosed, setIsCaseClosed] = useState(() => {
@@ -753,7 +759,7 @@ export default function App() {
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [showRecalibrateMenu, setShowRecalibrateMenu] = useState(false);
   const [showModeChange, setShowModeChange] = useState(false);
-  const [pendingModeChangeFrom, setPendingModeChangeFrom] = useState<'elapsed' | 'log' | null>(null);
+  const [pendingModeChangeFrom, setPendingModeChangeFrom] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
   const [stagedElapsedSeconds, setStagedElapsedSeconds] = useState(0);
   const [elapsedManuallyEdited, setElapsedManuallyEdited] = useState(false);
   const [stagedRhythmInterval, setStagedRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds'>('evens');
@@ -1253,8 +1259,8 @@ export default function App() {
 
             // Handle rhythm check reaching 0:00
             if (countdown <= 0) {
-              if (timingMode === 'elapsed' && rhythmInterval) {
-                // Elapsed mode: fire overlay immediately at rhythm check time, no overtime phase
+              if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
+                // Elapsed/minimal mode: fire overlay immediately at rhythm check time, no overtime phase
                 if (countdown === 0) {
                   if (!showCatchup && !tutorialMode) {
                     nextOverlay = 'treatment';
@@ -1425,7 +1431,7 @@ export default function App() {
   // reopened from an already-delayed check.
   const allowRhythmCheckDelay =
     isShockForced && !rearrested && !tutorialMode &&
-    timingMode === 'elapsed' && !!rhythmInterval &&
+    (timingMode === 'elapsed' || timingMode === 'minimal') && !!rhythmInterval &&
     state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
 
   const addTreatment = (name: string, options?: { customDose?: boolean }) => {
@@ -1584,7 +1590,7 @@ export default function App() {
       setRearrested(false);
       if (name === 'Disarm - ROSC') {
         // ROSC again — go straight back to ROSC mode, no interval picker needed
-      } else if (timingMode === 'elapsed') {
+      } else if (timingMode === 'elapsed' || timingMode === 'minimal') {
         const patterns: Array<'evens' | 'odds' | 'half-evens' | 'half-odds'> = ['evens', 'odds', 'half-evens', 'half-odds'];
         let bestDelta = -1;
         let bestTarget = state.elapsedSeconds;
@@ -1841,7 +1847,7 @@ export default function App() {
     
     // Calculate rhythm check target based on timing mode
     let rhythmCheckTarget: number;
-    if (timingMode === 'elapsed' && rhythmInterval) {
+    if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
       rhythmCheckTarget = calcNextIntervalTarget(adjustedElapsed, rhythmInterval);
     } else {
       // Log mode doesn't act on this value at all (rhythm-check tracking is
@@ -2115,8 +2121,8 @@ export default function App() {
         </div>
       )}
       {/* Top Controls */}
-      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-2' : timingMode === 'elapsed' ? 'grid-cols-2' : 'grid-cols-3'}`}>
-        {timingMode !== 'log' && timingMode !== 'elapsed' && (
+      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+        {timingMode !== 'log' && timingMode !== 'elapsed' && timingMode !== 'minimal' && (
           <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
             {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
             {(state.running && !state.rhythmCheckPaused) ? 'Pause' : 'Play'}
@@ -2244,13 +2250,13 @@ export default function App() {
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
           {/* Corner Cards */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
-            {timingMode !== 'elapsed' && (
+            {timingMode !== 'elapsed' && timingMode !== 'minimal' && (
               <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
                 <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
                 <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">{formatTime(state.elapsedSeconds)}</span>
               </div>
             )}
-            {timingMode === 'elapsed' && !state.isROSCMode && (
+            {(timingMode === 'elapsed' || timingMode === 'minimal') && !state.isROSCMode && (
               <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
                 <span className="text-[12px] sm:text-[14px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Elapsed Time</span>
                 <span className="text-[25px] sm:text-[47px] font-bold tabular-nums leading-none text-neutral-400">
@@ -2357,7 +2363,7 @@ export default function App() {
                       ? 1 - Math.max(0, (state.frozenCountdown || 0) / 120)
                       : state.rhythmCheckOvertime > 0 
                         ? 1 - (state.rhythmCheckOvertime / 6)
-                        : timingMode === 'elapsed' && rhythmInterval
+                        : (timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval
                           ? (() => {
                               // Progress ring fills from previous interval boundary to next
                               const intervalMap: Record<string, { period: number; offset: number }> = {
@@ -3138,8 +3144,8 @@ export default function App() {
                         </div>
                       </div>
                       <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'log' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        <div>No timer</div>
-                        <div className="font-medium">(record keeping only)</div>
+                        <div>Record keeping only</div>
+                        <div className="font-medium">(full Tx log, no timers)</div>
                       </div>
                     </button>
 
@@ -3169,8 +3175,44 @@ export default function App() {
                         </div>
                       </div>
                       <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'elapsed' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        <div>Time keeping assistance</div>
-                        <div className="font-medium">(odds/evens method)</div>
+                        <div>Time and record keeping</div>
+                        <div className="font-medium">(full Tx log & timers)</div>
+                      </div>
+                    </button>
+
+                    {/* Time keeping only - same rhythm-check timer as "Time and
+                        record keeping", but Add Tx is limited to adrenaline,
+                        amiodarone and rhythm check outcomes (see
+                        TreatmentSelection). Shares that mode's timer engine
+                        entirely: every timingMode === 'elapsed' check that
+                        governs timer behaviour (as opposed to what Add Tx
+                        offers) also matches 'minimal'. */}
+                    <button
+                      onClick={() => setTimingMode('minimal')}
+                      disabled={showInteractiveTutorial}
+                      className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'minimal' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
+                    >
+                      <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
+                        <div className="relative w-[100px] h-[100px] flex items-center justify-center">
+                          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
+                            <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5"
+                              strokeLinecap="round"
+                              strokeDasharray="276.5"
+                              strokeDashoffset={276.5 * (1 - ((demoTick % 120) / 120))}
+                            />
+                          </svg>
+                          <div className="flex flex-col items-center z-10">
+                            <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">
+                              {`${Math.floor((120 - (demoTick % 120)) / 60)}:${String((120 - (demoTick % 120)) % 60).padStart(2,'0')}`}
+                            </span>
+                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'minimal' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
+                        <div>Time keeping only</div>
+                        <div className="font-medium">(adrenaline, amiodarone & rhythm check timers only)</div>
                       </div>
                     </button>
 
@@ -3180,7 +3222,7 @@ export default function App() {
                     <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(3)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
                       onClick={() => {
-                        if (timingMode === 'elapsed') setCatchupStep(7);
+                        if (timingMode === 'elapsed' || timingMode === 'minimal') setCatchupStep(7);
                         else if (timingMode === 'log') handleCatchupStart();
                       }}
                       disabled={!timingMode}
@@ -3230,7 +3272,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Recalibrate</h2>
-            {timingMode === 'elapsed' && (
+            {(timingMode === 'elapsed' || timingMode === 'minimal') && (
             <button
               onClick={() => {
                 setShowRecalibrateMenu(false);
@@ -3273,7 +3315,7 @@ export default function App() {
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Change timing mode</div>
-              <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode === 'elapsed' ? 'Elapsed Time' : 'Tx Log Only'}</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode ? TIMING_MODE_LABELS[timingMode] : '—'}</div>
             </button>
             <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
               Cancel
@@ -3442,7 +3484,24 @@ export default function App() {
                 }}
                 className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'log' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
               >
-                Tx Log Only
+                {TIMING_MODE_LABELS.log}
+              </button>
+              <button
+                disabled={timingMode === 'minimal'}
+                onClick={() => {
+                  setPendingModeChangeFrom(timingMode);
+                  setTimingMode('minimal');
+                  const startingInterval = rhythmInterval || 'evens';
+                  if (!rhythmInterval) setRhythmInterval(startingInterval);
+                  setStagedElapsedSeconds(state.elapsedSeconds);
+                  setStagedRhythmInterval(startingInterval);
+                  setElapsedManuallyEdited(false);
+                  setShowModeChange(false);
+                  setShowElapsedRecalibrate(true);
+                }}
+                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'minimal' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
+              >
+                {TIMING_MODE_LABELS.minimal}
               </button>
               <button
                 disabled={timingMode === 'elapsed'}
@@ -3459,7 +3518,7 @@ export default function App() {
                 }}
                 className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'elapsed' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
               >
-                Elapsed Time
+                {TIMING_MODE_LABELS.elapsed}
               </button>
             </div>
             <button onClick={() => setShowModeChange(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
@@ -4876,16 +4935,23 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
 
       {!isShockForced && (
         <>
+          {/* "Time keeping only" trims Add Tx to just adrenaline, amiodarone
+              and rhythm check outcomes (the latter always available above,
+              unaffected by this) - the whole point of the mode is fewer
+              things to log, not a relabelled version of the full list.
+              Airway and Other Tx are dropped entirely; the custom-text box
+              below stays, as a deliberate exception. */}
           <TxSection 
             title="Medications" 
             color="emerald" 
-            items={MEDICATIONS} 
+            items={state.timingMode === 'minimal' ? ['Adrenaline push', 'Amiodarone'] : MEDICATIONS} 
             onSelect={handleMedClick}
             sectionId="medications"
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
           />
           
+          {state.timingMode !== 'minimal' && (
           <TxSection 
             title="Airway" 
             color="blue" 
@@ -4903,7 +4969,9 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
           />
+          )}
           
+          {state.timingMode !== 'minimal' && (
           <TxSection 
             title="Other Tx" 
             color="neutral" 
@@ -4918,6 +4986,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             expandedSection={expandedSection}
             onToggle={(id) => setExpandedSection(expandedSection === id ? null : id)}
           />
+          )}
           
           <div className="py-3 px-2 border-t border-neutral-100 bg-neutral-50 mb-4">
             <div className="flex gap-2 w-full">

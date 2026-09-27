@@ -48,7 +48,7 @@ export interface AppState {
   roscChecked: string[];
   pheaChecked: string[];
   isROSCMode: boolean;
-  timingMode: 'elapsed' | 'log' | null;
+  timingMode: 'elapsed' | 'log' | 'minimal' | null;
   rhythmInterval: 'evens' | 'odds' | 'half-evens' | 'half-odds' | null;
   vitals: {
     hr: string; rr: string; gcs: string;
