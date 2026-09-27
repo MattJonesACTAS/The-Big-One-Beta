@@ -1820,7 +1820,7 @@ export default function App() {
   if (isCaseClosed) {
     return (
       <div ref={caseSummaryScrollRef} className="min-h-screen bg-neutral-200 p-6 overflow-y-auto pb-24">
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
+      <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-6 space-y-6">
         <div className="space-y-6 break-inside-avoid has-arrest-summary">
         <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
@@ -1832,16 +1832,16 @@ export default function App() {
           <p className="text-neutral-400 text-sm font-medium">{formatDisplayDate(new Date())}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2">
           <button 
             onClick={exportCasePdf}
-            className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold btn-base border border-emerald-100"
+            className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
           >
             <FileText size={20} /> Export PDF
           </button>
           <button 
             onClick={() => setShowCloseWarning(true)}
-            className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold btn-base border border-red-100"
+            className="flex items-center justify-center gap-1 bg-red-50 text-red-700 py-3 px-2 rounded-xl font-bold btn-base border border-red-100"
             data-button="close-case"
           >
             <Trash2 size={20} /> Close Case
@@ -2562,7 +2562,7 @@ export default function App() {
               {viewingPreviousCase && (
                 <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto">
                   <div className="min-h-screen p-6 pb-24">
-                  <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
+                  <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-6 space-y-6">
                     <div className="space-y-6 break-inside-avoid has-arrest-summary">
                     <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
@@ -2574,16 +2574,16 @@ export default function App() {
           <p className="text-neutral-400 text-sm font-medium">{formatDisplayDate(new Date())}</p>
         </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={exportCasePdf}
-                        className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold btn-base border border-emerald-100"
+                        className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
                       >
                         <FileText size={20} /> Export PDF
                       </button>
                       <button
                         onClick={() => { setViewingPreviousCase(null); setShowPreviousCasesList(true); }}
-                        className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold btn-base border border-red-100"
+                        className="flex items-center justify-center gap-1 bg-red-50 text-red-700 py-3 px-2 rounded-xl font-bold btn-base border border-red-100"
                       >
                         Back
                       </button>
