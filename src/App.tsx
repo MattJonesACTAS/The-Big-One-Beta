@@ -20,8 +20,6 @@ import {
   AlertTriangle,
   XCircle,
   X,
-  Clock,
-  Zap,
   ShieldCheck,
   Stethoscope,
   Sliders,
@@ -30,7 +28,10 @@ import {
   User,
   Check,
   MoreVertical,
-  Grid2x2,
+  ChevronLeft,
+  ChevronRight,
+  Clipboard,
+  Timer,
   Hourglass
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
@@ -729,6 +730,39 @@ export default function App() {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | 'minimal' | null>(() => state.timingMode);
+
+  // Timing Method carousel (catchup step 6): one option on screen at a time,
+  // swiped/paged through rather than three stacked cards. carouselIndex is
+  // the single source of truth for which card is showing; timingMode is
+  // kept in sync with it via goToTimingOption, so all the existing
+  // timingMode-driven logic elsewhere (tick loop, Add Tx, etc.) needs no
+  // changes at all - only how this one screen presents the choice changes.
+  const TIMING_OPTIONS: Array<{ mode: 'log' | 'minimal' | 'elapsed'; label: string; subtitle: string }> = [
+    { mode: 'log', label: 'Record keeping only', subtitle: 'Full Tx log, no timers' },
+    { mode: 'minimal', label: 'Time keeping only', subtitle: 'Adrenaline, amiodarone & rhythm check timers only' },
+    { mode: 'elapsed', label: 'Time and record keeping', subtitle: 'Full Tx log & timers' },
+  ];
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselDir, setCarouselDir] = useState(0);
+  const goToTimingOption = (nextIndex: number, dir: number) => {
+    const clamped = (nextIndex + TIMING_OPTIONS.length) % TIMING_OPTIONS.length;
+    setCarouselDir(dir);
+    setCarouselIndex(clamped);
+    setTimingMode(TIMING_OPTIONS[clamped].mode);
+  };
+  // On arriving at this screen, show whichever card matches the mode already
+  // chosen (e.g. returning via Back), or default to the first card.
+  useEffect(() => {
+    if (!showCatchup || catchupTxMode || catchupStep !== 6) return;
+    const idx = TIMING_OPTIONS.findIndex(o => o.mode === timingMode);
+    if (idx >= 0) {
+      setCarouselIndex(idx);
+    } else {
+      setCarouselIndex(0);
+      setTimingMode('log');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catchupStep]);
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
   const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
   const [isCaseClosed, setIsCaseClosed] = useState(() => {
@@ -3121,59 +3155,94 @@ export default function App() {
 
               {!catchupTxMode && catchupStep === 6 && (
                 <div className="space-y-6 px-4 max-w-md mx-auto text-center">
-                  <h2 className="text-xl font-bold text-neutral-900" style={{ maxWidth: 320, margin: '0 auto' }}>
-                    Do you want reminders for rhythm checks and medication redoses?
-                  </h2>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
+                    <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
+                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* No - resolves straight to Record keeping only, no second question */}
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => setTimingMode('log')}
+                      onClick={() => goToTimingOption(carouselIndex - 1, -1)}
                       disabled={showInteractiveTutorial}
-                      className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${timingMode === 'log' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                      className="flex-shrink-0 p-2 text-neutral-400 hover:text-neutral-600 btn-base"
+                      aria-label="Previous option"
                     >
-                      <FileText size={28} className={timingMode === 'log' ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
-                      <span className="font-bold text-lg text-neutral-900">No</span>
+                      <ChevronLeft size={28} />
                     </button>
 
-                    {/* Yes - reveals "how much to log"; defaults to Everything
-                        the first time it's picked, without overwriting an
-                        already-made Essentials/Everything choice if they tap
-                        back onto Yes after adjusting it below. */}
+                    {/* Single card at a time, swiped or paged through - not
+                        three stacked options. drag="x" handles a real swipe;
+                        the arrow buttons and dots below are the fallback for
+                        anyone not swiping. Whichever card is on screen IS
+                        the current choice (kept in sync via
+                        goToTimingOption), so there's no separate "confirm"
+                        tap on the card itself. */}
+                    <div className="flex-1 overflow-hidden" style={{ minHeight: 260 }}>
+                      <AnimatePresence initial={false} custom={carouselDir} mode="wait">
+                        <motion.div
+                          key={carouselIndex}
+                          custom={carouselDir}
+                          variants={{
+                            enter: (dir: number) => ({ x: dir > 0 ? 260 : -260, opacity: 0 }),
+                            center: { x: 0, opacity: 1 },
+                            exit: (dir: number) => ({ x: dir > 0 ? -260 : 260, opacity: 0 }),
+                          }}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                          drag="x"
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.6}
+                          onDragEnd={(_e, info) => {
+                            if (info.offset.x < -60) goToTimingOption(carouselIndex + 1, 1);
+                            else if (info.offset.x > 60) goToTimingOption(carouselIndex - 1, -1);
+                          }}
+                          className="rounded-3xl border-2 border-emerald-500 bg-emerald-50 py-10 px-4 flex flex-col items-center gap-4 select-none cursor-grab active:cursor-grabbing"
+                        >
+                          {TIMING_OPTIONS[carouselIndex].mode === 'log' && (
+                            <Clipboard size={56} strokeWidth={1.5} className="text-neutral-700" />
+                          )}
+                          {TIMING_OPTIONS[carouselIndex].mode === 'minimal' && (
+                            <Timer size={56} strokeWidth={1.5} className="text-emerald-600" />
+                          )}
+                          {TIMING_OPTIONS[carouselIndex].mode === 'elapsed' && (
+                            <div className="relative w-14 h-14 flex items-center justify-center">
+                              <Clipboard size={56} strokeWidth={1.5} className="text-neutral-700" />
+                              <div className="absolute -bottom-2 -right-3 bg-emerald-50 rounded-full p-0.5">
+                                <Timer size={26} strokeWidth={2} className="text-emerald-600" />
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-xl text-neutral-900">{TIMING_OPTIONS[carouselIndex].label}</div>
+                            <div className="text-sm text-neutral-500 mt-1">{TIMING_OPTIONS[carouselIndex].subtitle}</div>
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+
                     <button
-                      onClick={() => setTimingMode(m => (m === 'elapsed' || m === 'minimal') ? m : 'elapsed')}
+                      onClick={() => goToTimingOption(carouselIndex + 1, 1)}
                       disabled={showInteractiveTutorial}
                       data-tutorial="elapsed-btn"
-                      className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${(timingMode === 'elapsed' || timingMode === 'minimal') ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                      className="flex-shrink-0 p-2 text-neutral-400 hover:text-neutral-600 btn-base"
+                      aria-label="Next option"
                     >
-                      <Clock size={28} className={(timingMode === 'elapsed' || timingMode === 'minimal') ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
-                      <span className="font-bold text-lg text-neutral-900">Yes</span>
+                      <ChevronRight size={28} />
                     </button>
                   </div>
 
-                  {(timingMode === 'elapsed' || timingMode === 'minimal') && (
-                    <div className="space-y-4">
-                      <h2 className="text-lg font-bold text-neutral-900">How much do you want logged?</h2>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setTimingMode('minimal')}
-                          disabled={showInteractiveTutorial}
-                          className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${timingMode === 'minimal' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
-                        >
-                          <Zap size={26} className={timingMode === 'minimal' ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
-                          <span className="font-bold text-base text-neutral-900">Essentials</span>
-                        </button>
-                        <button
-                          onClick={() => setTimingMode('elapsed')}
-                          disabled={showInteractiveTutorial}
-                          className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${timingMode === 'elapsed' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
-                        >
-                          <Grid2x2 size={26} className={timingMode === 'elapsed' ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
-                          <span className="font-bold text-base text-neutral-900">Everything</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex justify-center gap-2">
+                    {TIMING_OPTIONS.map((opt, i) => (
+                      <button
+                        key={opt.mode}
+                        onClick={() => goToTimingOption(i, i > carouselIndex ? 1 : -1)}
+                        aria-label={opt.label}
+                        className={`w-2.5 h-2.5 rounded-full transition-colors ${i === carouselIndex ? 'bg-emerald-500' : 'bg-neutral-300'}`}
+                      />
+                    ))}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(2)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
