@@ -30,6 +30,7 @@ import {
   User,
   Check,
   MoreVertical,
+  Grid2x2,
   Hourglass
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
@@ -2967,7 +2968,7 @@ export default function App() {
                       Back
                     </button>
                     <button
-                      onClick={() => weightInput && setCatchupStep(3)}
+                      onClick={() => weightInput && setCatchupStep(6)}
                       disabled={!weightInput || (showInteractiveTutorial && !catchupNodeCleared)}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         weightInput && !(showInteractiveTutorial && !catchupNodeCleared)
@@ -3047,7 +3048,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => { setCatchupStep(6); setTimingMode(null); }} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
                     <button
                       onClick={() => rhythmInterval && setCatchupStep(4)}
                       disabled={!rhythmInterval}
@@ -3102,13 +3103,16 @@ export default function App() {
                       <Plus size={16} /> Full Tx list
                     </button>
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                      <button onClick={() => setCatchupStep(6)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                       <button
-                        onClick={() => { setCatchupStep(6); setTimingMode(null); }}
+                        onClick={() => {
+                          if (timingMode === 'elapsed' || timingMode === 'minimal') setCatchupStep(7);
+                          else if (timingMode === 'log') handleCatchupStart();
+                        }}
                         disabled={showInteractiveTutorial && !catchupNodeCleared}
                         className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && !catchupNodeCleared ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
                       >
-                        Next
+                        {timingMode === 'log' ? 'Start Case' : 'Next'}
                       </button>
                     </div>
                   </div>
@@ -3116,119 +3120,69 @@ export default function App() {
               )}
 
               {!catchupTxMode && catchupStep === 6 && (
-                <div className="space-y-5 px-4 max-w-md mx-auto">
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
-                    <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
-                  </div>
+                <div className="space-y-6 px-4 max-w-md mx-auto text-center">
+                  <h2 className="text-xl font-bold text-neutral-900" style={{ maxWidth: 320, margin: '0 auto' }}>
+                    Do you want reminders for rhythm checks and medication redoses?
+                  </h2>
 
-                  <div className="flex flex-col gap-3">
-
-                    {/* Record keeping only */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* No - resolves straight to Record keeping only, no second question */}
                     <button
                       onClick={() => setTimingMode('log')}
                       disabled={showInteractiveTutorial}
-                      className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'log' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
+                      className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${timingMode === 'log' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                     >
-                      <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-                        <div className="w-full max-w-[220px] rounded-xl border border-neutral-200 overflow-hidden text-left bg-white shadow-sm">
-                          <div className="bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 tracking-widest uppercase">Treatment Log</div>
-                          <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1 border-b border-neutral-100">
-                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">Treatment</span>
-                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-center">Logged at</span>
-                            <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</span>
-                          </div>
-                          <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1">
-                            <span className="text-[11px] text-neutral-400 italic">No entries yet</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'log' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        <div>Record keeping only</div>
-                        <div className="font-medium">(full Tx log, no timers)</div>
-                      </div>
+                      <FileText size={28} className={timingMode === 'log' ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
+                      <span className="font-bold text-lg text-neutral-900">No</span>
                     </button>
 
-                    {/* Elapsed time */}
+                    {/* Yes - reveals "how much to log"; defaults to Everything
+                        the first time it's picked, without overwriting an
+                        already-made Essentials/Everything choice if they tap
+                        back onto Yes after adjusting it below. */}
                     <button
-                      onClick={() => setTimingMode('elapsed')}
-                      disabled={showInteractiveTutorial && !timingNodesComplete}
-                      data-tutorial="elapsed-btn"
-                      className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'elapsed' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
-                    >
-                      <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-                        <div className="relative w-[100px] h-[100px] flex items-center justify-center">
-                          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
-                            <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5"
-                              strokeLinecap="round"
-                              strokeDasharray="276.5"
-                              strokeDashoffset={276.5 * (1 - ((demoTick % 120) / 120))}
-                            />
-                          </svg>
-                          <div className="flex flex-col items-center z-10">
-                            <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">
-                              {`${Math.floor((120 - (demoTick % 120)) / 60)}:${String((120 - (demoTick % 120)) % 60).padStart(2,'0')}`}
-                            </span>
-                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'elapsed' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        <div>Time and record keeping</div>
-                        <div className="font-medium">(full Tx log & timers)</div>
-                      </div>
-                    </button>
-
-                    {/* Time keeping only - same rhythm-check timer as "Time and
-                        record keeping", but Add Tx is limited to adrenaline,
-                        amiodarone and rhythm check outcomes (see
-                        TreatmentSelection). Shares that mode's timer engine
-                        entirely: every timingMode === 'elapsed' check that
-                        governs timer behaviour (as opposed to what Add Tx
-                        offers) also matches 'minimal'. */}
-                    <button
-                      onClick={() => setTimingMode('minimal')}
+                      onClick={() => setTimingMode(m => (m === 'elapsed' || m === 'minimal') ? m : 'elapsed')}
                       disabled={showInteractiveTutorial}
-                      className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 ${timingMode === 'minimal' ? 'border-emerald-500' : 'border-neutral-200 hover:border-neutral-300'}`}
+                      data-tutorial="elapsed-btn"
+                      className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${(timingMode === 'elapsed' || timingMode === 'minimal') ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                     >
-                      <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-                        <div className="relative w-[100px] h-[100px] flex items-center justify-center">
-                          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
-                            <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5"
-                              strokeLinecap="round"
-                              strokeDasharray="276.5"
-                              strokeDashoffset={276.5 * (1 - ((demoTick % 120) / 120))}
-                            />
-                          </svg>
-                          <div className="flex flex-col items-center z-10">
-                            <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">
-                              {`${Math.floor((120 - (demoTick % 120)) / 60)}:${String((120 - (demoTick % 120)) % 60).padStart(2,'0')}`}
-                            </span>
-                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`py-2.5 text-sm font-bold text-center border-t border-neutral-200 ${timingMode === 'minimal' ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-700'}`}>
-                        <div>Time keeping only</div>
-                        <div className="font-medium">(adrenaline, amiodarone & rhythm check timers only)</div>
-                      </div>
+                      <Clock size={28} className={(timingMode === 'elapsed' || timingMode === 'minimal') ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
+                      <span className="font-bold text-lg text-neutral-900">Yes</span>
                     </button>
-
                   </div>
 
+                  {(timingMode === 'elapsed' || timingMode === 'minimal') && (
+                    <div className="space-y-4">
+                      <h2 className="text-lg font-bold text-neutral-900">How much do you want logged?</h2>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          onClick={() => setTimingMode('minimal')}
+                          disabled={showInteractiveTutorial}
+                          className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${timingMode === 'minimal' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                        >
+                          <Zap size={26} className={timingMode === 'minimal' ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
+                          <span className="font-bold text-base text-neutral-900">Essentials</span>
+                        </button>
+                        <button
+                          onClick={() => setTimingMode('elapsed')}
+                          disabled={showInteractiveTutorial}
+                          className={`rounded-2xl border-2 transition-all duration-200 py-7 flex flex-col items-center gap-2 ${timingMode === 'elapsed' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                        >
+                          <Grid2x2 size={26} className={timingMode === 'elapsed' ? 'text-emerald-600' : 'text-neutral-400'} strokeWidth={2} />
+                          <span className="font-bold text-base text-neutral-900">Everything</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(3)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
+                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(2)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
-                      onClick={() => {
-                        if (timingMode === 'elapsed' || timingMode === 'minimal') setCatchupStep(7);
-                        else if (timingMode === 'log') handleCatchupStart();
-                      }}
+                      onClick={() => setCatchupStep(3)}
                       disabled={!timingMode}
                       className={`py-4 rounded-xl font-bold transition-all ${timingMode ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
                     >
-                      {timingMode === 'log' ? 'Start Case' : 'Next'}
+                      Next
                     </button>
                   </div>
                 </div>
