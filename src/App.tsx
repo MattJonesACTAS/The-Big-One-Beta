@@ -2273,7 +2273,7 @@ export default function App() {
                       below the ring. Single line so it clears the drug timer cards
                       on small phones. */}
                   <div className="absolute top-full mt-3 sm:mt-5 px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-red-100 flex items-baseline gap-2 whitespace-nowrap">
-                    <span className="text-[15px] sm:text-[19px] font-bold tracking-widest uppercase text-red-800">Delayed</span>
+                    <span className="text-[13px] sm:text-[16px] font-semibold tracking-wide uppercase text-red-800">Delayed</span>
                     <span className="text-[15px] sm:text-[19px] font-bold tabular-nums leading-none text-red-800">
                       {formatTime(Math.max(0, state.elapsedSeconds - state.rhythmCheckDelayedAt))}
                     </span>
