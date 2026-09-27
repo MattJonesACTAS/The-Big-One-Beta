@@ -121,20 +121,45 @@
        in-between page break, which @page would handle if it's supported. */
     .min-h-screen {
       min-height: auto !important;
-      padding: 24px !important;
+      padding: 36px !important;
     }
 
-    /* space-y-6's gap is rem-based, so it scaled to ~43px under the 1.8x
-       root font-size above - stacked several times within the header +
-       Case Details + Arrest Summary group, that's what pushed the group
-       past one page's height despite break-inside-avoid (which can only
-       prevent a break where there's room to - it can't stop content taller
-       than the page from being forced to split). Scoped to this specific
-       group via .break-inside-avoid so no other spacing on the page is
-       affected. */
+    /* The header + Case Details + Arrest Summary group (.break-inside-avoid)
+       always has the same bounded shape - a fixed set of rows, never
+       dependent on how much data a case has, unlike Treatment Log. So rather
+       than leaving its total height to emerge from rem-based Tailwind
+       classes interacting with the global 1.8x root font-size above (which
+       is what made the last two attempts overshoot in opposite directions -
+       impossible to predict exactly without live rendering), every font-size
+       and spacing value used inside it is pinned to an explicit pixel number
+       here (base value x1.8, the same visual scale as everything else),
+       scoped narrowly so nothing outside this group is affected. */
     .break-inside-avoid > :not(:last-child),
     .break-inside-avoid .space-y-6 > :not(:last-child) {
-      margin-block-end: 12px !important;
+      margin-block-end: 43px !important;
+    }
+    .break-inside-avoid .text-xs { font-size: 22px !important; }
+    .break-inside-avoid .text-4xl { font-size: 65px !important; }
+    .break-inside-avoid .text-sm { font-size: 25px !important; }
+    .break-inside-avoid .gap-3 { gap: 22px !important; }
+    .break-inside-avoid .gap-4 { gap: 29px !important; }
+    .break-inside-avoid .mb-1 { margin-bottom: 7px !important; }
+    .break-inside-avoid .px-4 { padding-left: 29px !important; padding-right: 29px !important; }
+    .break-inside-avoid .py-3 { padding-top: 22px !important; padding-bottom: 22px !important; }
+    .break-inside-avoid .p-2 { padding: 14px !important; }
+    .break-inside-avoid .px-3 { padding-left: 22px !important; padding-right: 22px !important; }
+    .break-inside-avoid .p-4 { padding: 29px !important; }
+    .break-inside-avoid .w-6 { width: 43px !important; }
+
+    /* This group's content is fixed and bounded (same rows every case), so
+       rather than continuing to fine-tune its height to just barely
+       consume exactly one page - fragile, and the source of the last two
+       overshoots in opposite directions - force the page to end right
+       after it unconditionally. Vital Signs then always starts fresh on
+       its own page regardless of exactly how much room was left over. */
+    .break-inside-avoid {
+      break-after: page !important;
+      page-break-after: always !important;
     }
 
     /* Keep important text black/dark for printing */
