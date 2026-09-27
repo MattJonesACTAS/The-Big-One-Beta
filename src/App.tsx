@@ -1822,7 +1822,7 @@ export default function App() {
     return (
       <div ref={caseSummaryScrollRef} className="min-h-screen bg-neutral-200 p-6 overflow-y-auto pb-24">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
-        <div className={`space-y-6 break-inside-avoid${(state.timingMode !== 'log' || state.cprRound > 0) ? ' has-arrest-summary' : ''}`}>
+        <div className="space-y-6 break-inside-avoid has-arrest-summary">
         <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-emerald-300" />
@@ -1849,7 +1849,7 @@ export default function App() {
           </button>
         </div>
 
-        <ArrestSummarySection state={state} showRecordingDuration />
+        <ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary />
         </div>
 
         <VitalSignsSection vitals={state.vitals} />
@@ -2564,7 +2564,7 @@ export default function App() {
                 <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto">
                   <div className="min-h-screen p-6 pb-24">
                   <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-8 space-y-6">
-                    <div className={`space-y-6 break-inside-avoid${(viewingPreviousCase.timingMode !== 'log' || viewingPreviousCase.cprRound > 0) ? ' has-arrest-summary' : ''}`}>
+                    <div className="space-y-6 break-inside-avoid has-arrest-summary">
                     <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-3 text-emerald-600 font-bold text-xs tracking-[0.2em] uppercase">
             <span className="w-6 h-px bg-emerald-300" />
@@ -2590,7 +2590,7 @@ export default function App() {
                       </button>
                     </div>
 
-                    <ArrestSummarySection state={viewingPreviousCase} showRecordingDuration />
+                    <ArrestSummarySection state={viewingPreviousCase} showRecordingDuration alwaysShowArrestSummary />
                     </div>
 
                     <VitalSignsSection vitals={viewingPreviousCase.vitals} />
@@ -4094,7 +4094,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
   );
 }
 
-function ArrestSummarySection({ state, showRecordingDuration }: { state: AppState, showRecordingDuration?: boolean }) {
+function ArrestSummarySection({ state, showRecordingDuration, alwaysShowArrestSummary }: { state: AppState, showRecordingDuration?: boolean, alwaysShowArrestSummary?: boolean }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
   const isPaedWithAge = state.patientType === 'paed' && !!state.patientAge;
@@ -4137,7 +4137,7 @@ function ArrestSummarySection({ state, showRecordingDuration }: { state: AppStat
           </div>
         </div>
       )}
-      {(state.timingMode !== 'log' || state.cprRound > 0) && (
+      {(state.timingMode !== 'log' || state.cprRound > 0 || alwaysShowArrestSummary) && (
         <div className="rounded-xl border border-neutral-100">
           <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">ARREST SUMMARY</div>
           <div className="bg-white divide-y divide-neutral-50 rounded-b-xl">
@@ -4211,7 +4211,7 @@ function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpda
   return (
     <div className="space-y-6 pb-20">
       <div data-tutorial-section="arrestSummary">
-        <ArrestSummarySection state={state} showRecordingDuration />
+        <ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary />
       </div>
       <div data-tutorial-section="vitalSigns">
         <VitalSignsSection vitals={state.vitals} />
