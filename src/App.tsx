@@ -295,6 +295,13 @@ const formatRecordingDuration = (seconds: number): string => {
 // timed fallback in case a particular browser doesn't fire it reliably.
 // For on-screen/PDF display specifically - unlike the filename above, slashes
 // are fine here since this isn't constrained by filesystem rules.
+// Every case date (header and PDF filename) is the date the case was closed,
+// never the date it's being viewed/exported. If a case has no recorded close
+// time (e.g. archived before caseClosedAt existed), say so rather than
+// substituting today's date.
+const formatCaseDate = (closedAt: number | null) =>
+  closedAt ? formatDisplayDate(new Date(closedAt)) : 'Date not recorded';
+
 const formatDisplayDate = (date: Date) => {
   const dd = String(date.getDate()).padStart(2, '0');
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -302,15 +309,19 @@ const formatDisplayDate = (date: Date) => {
   return `${dd}/${mm}/${yyyy}`;
 };
 
-const exportCasePdf = () => {
+const exportCasePdf = (closedAt: number | null) => {
   const originalTitle = document.title;
-  const now = new Date();
-  const dd = String(now.getDate()).padStart(2, '0');
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const yyyy = now.getFullYear();
-  // Hyphens, not slashes: "/" isn't valid in filenames on any OS, so the
-  // browser would silently strip or mangle it when suggesting a save name.
-  document.title = `Case Summary - ${yyyy}-${mm}-${dd}`;
+  if (closedAt) {
+    const closed = new Date(closedAt);
+    const dd = String(closed.getDate()).padStart(2, '0');
+    const mm = String(closed.getMonth() + 1).padStart(2, '0');
+    const yyyy = closed.getFullYear();
+    // Hyphens, not slashes: "/" isn't valid in filenames on any OS, so the
+    // browser would silently strip or mangle it when suggesting a save name.
+    document.title = `Case Summary - ${yyyy}-${mm}-${dd}`;
+  } else {
+    document.title = 'Case Summary';
+  }
   let restored = false;
   const restoreTitle = () => {
     if (restored) return;
@@ -1837,12 +1848,12 @@ export default function App() {
             <span className="w-6 h-px bg-emerald-300" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
-          <p className="text-neutral-400 text-sm font-medium">{formatDisplayDate(new Date())}</p>
+          <p className="text-neutral-400 text-sm font-medium">{formatCaseDate(state.caseClosedAt)}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <button 
-            onClick={exportCasePdf}
+            onClick={() => exportCasePdf(state.caseClosedAt)}
             className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
           >
             <FileText size={20} /> Export PDF
@@ -2584,12 +2595,12 @@ export default function App() {
             <span className="w-6 h-px bg-emerald-300" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900">Case Summary</h1>
-          <p className="text-neutral-400 text-sm font-medium">{formatDisplayDate(new Date())}</p>
+          <p className="text-neutral-400 text-sm font-medium">{formatCaseDate(viewingPreviousCase.caseClosedAt)}</p>
         </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={exportCasePdf}
+                        onClick={() => exportCasePdf(viewingPreviousCase.caseClosedAt)}
                         className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
                       >
                         <FileText size={20} /> Export PDF
