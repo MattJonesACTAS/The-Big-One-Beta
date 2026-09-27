@@ -2264,7 +2264,10 @@ export default function App() {
                     <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
                       <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-rose-500" />
                     </svg>
-                    <span className="z-10 text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-rose-600 text-center">RHYTHM<br />CHECK<br />NOW</span>
+                    {/* Nudged down 4px: on-device (Roboto) the block sat ~2px high, and the
+                        short "NOW" line leaves extra white space beneath it, so
+                        a little more than the measured 2px balances it by eye. */}
+                    <span className="z-10 translate-y-[4px] sm:translate-y-[6px] text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-rose-600 text-center">RHYTHM<br />CHECK<br />NOW</span>
                   </button>
                   {/* How long the check has been delayed - its own pale red card just
                       below the ring. Single line so it clears the drug timer cards
