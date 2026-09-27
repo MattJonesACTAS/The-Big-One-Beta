@@ -4835,15 +4835,21 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         onSelect={addTreatment}
       />
 
-      {/* Delay rhythm check - deliberately set apart from the outcomes above
-          so it isn't mistaken for one of them */}
+      {/* Delay rhythm check - same size/position as the Rhythm Check buttons
+          above (matches their p-3/rounded-xl/text-sm styling and grid gap
+          exactly), but with one blank button-height slot between it and
+          Disarm - ROSC / Rearrest so it can't be hit by accident reaching
+          for that button. */}
       {isShockForced && onDelayRhythmCheck && (
-        <div className="px-3 pt-8 pb-2">
+        <div className="bg-white p-3 pt-0 grid grid-cols-1 gap-2">
+          <div aria-hidden="true" className="w-full p-3 rounded-xl text-sm font-bold invisible">
+            spacer
+          </div>
           <button
             onClick={onDelayRhythmCheck}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-sm btn-base hover:bg-amber-100"
+            className="w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center gap-2"
           >
-            <Hourglass size={18} strokeWidth={2.5} />
+            <Hourglass size={16} strokeWidth={2.5} />
             Delay rhythm check
           </button>
         </div>
