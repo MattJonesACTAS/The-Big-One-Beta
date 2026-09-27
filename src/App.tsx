@@ -4847,7 +4847,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           </div>
           <button
             onClick={onDelayRhythmCheck}
-            className="w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center gap-2"
+            className="w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2"
           >
             <Hourglass size={16} strokeWidth={2.5} />
             Delay rhythm check
