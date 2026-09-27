@@ -2267,14 +2267,14 @@ export default function App() {
                     {/* Nudged down 4px: on-device (Roboto) the block sat ~2px high, and the
                         short "NOW" line leaves extra white space beneath it, so
                         a little more than the measured 2px balances it by eye. */}
-                    <span className="z-10 translate-y-[4px] sm:translate-y-[6px] text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-rose-600 text-center">RHYTHM<br />CHECK<br />NOW</span>
+                    <span className="z-10 translate-y-[5px] sm:translate-y-[7px] text-[36px] sm:text-[60px] font-bold tracking-tighter leading-none text-rose-600 text-center">RHYTHM<br />CHECK<br />NOW</span>
                   </button>
                   {/* How long the check has been delayed - its own pale red card just
                       below the ring. Single line so it clears the drug timer cards
                       on small phones. */}
                   <div className="absolute top-full mt-3 sm:mt-5 px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-red-100 flex items-baseline gap-2 whitespace-nowrap">
-                    <span className="text-[12px] sm:text-[15px] font-bold tracking-widest uppercase text-red-800">Delayed</span>
-                    <span className="text-[17px] sm:text-[22px] font-bold tabular-nums leading-none text-red-800">
+                    <span className="text-[15px] sm:text-[19px] font-bold tracking-widest uppercase text-red-800">Delayed</span>
+                    <span className="text-[15px] sm:text-[19px] font-bold tabular-nums leading-none text-red-800">
                       {formatTime(Math.max(0, state.elapsedSeconds - state.rhythmCheckDelayedAt))}
                     </span>
                   </div>
