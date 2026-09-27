@@ -47,6 +47,7 @@ const INITIAL_STATE: AppState = {
   rhythmCheckTarget: 120, // 2 minutes
   rhythmCheckOvertime: 0, // Counts up from 0 to 6 after rhythm check hits 0:00
   rhythmCheckPaused: false, // When true, rhythm check stays frozen even while running
+  rhythmCheckDelayedAt: null, // Elapsed second a delayed rhythm check fell due (null = not delayed)
   cprRound: 1,
   adrenalineWipedAt: null,
   amiodaroneWipedAt: null,
@@ -774,6 +775,10 @@ export default function App() {
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt10 = useRef<boolean>(false);
   const previousCountdown = useRef<number | null>(null);
+  // Elapsed second the most recent timer-forced rhythm check fell due. The
+  // tick advances rhythmCheckTarget the moment the popup fires, so this is
+  // the only record of the original due time if the check is then delayed.
+  const rhythmCheckDueAtRef = useRef<number | null>(null);
   
   // Tutorial mode state
   const [tutorialMode, setTutorialMode] = useState(false);
@@ -1212,8 +1217,10 @@ export default function App() {
           let nextOvertime = prev.rhythmCheckOvertime;
           let nextPaused = prev.rhythmCheckPaused;
           
-          // Only update rhythm check if not paused
-          if (!prev.rhythmCheckPaused && timingMode !== 'log') {
+          // Only update rhythm check if not paused, and not held by a delayed
+          // rhythm check (no beeps, no new forced popup, no round increment
+          // until the delayed check is actually done)
+          if (!prev.rhythmCheckPaused && prev.rhythmCheckDelayedAt == null && timingMode !== 'log') {
             const countdown = prev.rhythmCheckTarget - newElapsed;
 
             // Auto-close overlay ONCE at 10s (not in tutorial)
@@ -1238,6 +1245,7 @@ export default function App() {
                   if (!showCatchup && !tutorialMode) {
                     nextOverlay = 'treatment';
                     setIsShockForced(true);
+                    rhythmCheckDueAtRef.current = newElapsed;
                   }
                   nextTarget = calcNextIntervalTarget(newElapsed, rhythmInterval);
                   nextRound += 1;
@@ -1287,6 +1295,9 @@ export default function App() {
 
   const togglePause = () => {
     setState(prev => {
+      // A delayed rhythm check is already holding the timer; pausing on top
+      // of that would re-anchor it when unpaused and lose the delay.
+      if (prev.rhythmCheckDelayedAt != null) return prev;
       // Toggle rhythm check pause, but keep elapsed timer running
       if (!prev.rhythmCheckPaused) {
         // Pausing rhythm check - freeze the countdown by capturing current value
@@ -1351,6 +1362,58 @@ export default function App() {
     }
   };
 
+  // Delay rhythm check - chosen from the forced rhythm check popup. Logs
+  // "Rhythm check delayed" at this moment, closes the popup so the rest of
+  // the app stays usable, and holds the rhythm check timer (see the tick):
+  // the central ring switches to an overdue count-up with a "Rhythm check
+  // now" tap target. The CPR round the timer added when the popup fired is
+  // taken back off, and re-added when the check is actually done.
+  const delayRhythmCheck = () => {
+    const now = new Date();
+    const dueAt = rhythmCheckDueAtRef.current ?? state.elapsedSeconds;
+    const name = 'Rhythm check delayed';
+    const priorCount = state.treatments.filter(t => getTreatmentIdentity(t.name) === getTreatmentIdentity(name)).length;
+    const displayName = priorCount > 0 ? insertTreatmentNumber(name, getTreatmentIdentity(name), priorCount + 1) : name;
+    setState(prev => {
+      const heldRound = Math.max(1, prev.cprRound - 1);
+      const entry: Treatment = {
+        name: displayName,
+        elapsed: prev.elapsedSeconds,
+        round: heldRound,
+        clock: getLocalTime(now),
+        clockSeconds: getLocalTimeWithSeconds(now),
+        loggedAt: now.getTime()
+      };
+      return {
+        ...prev,
+        treatments: [...prev.treatments, entry],
+        cprRound: heldRound,
+        rhythmCheckDelayedAt: dueAt,
+        rhythmCheckTarget: dueAt,
+        rhythmCheckOvertime: 0,
+        currentOverlay: null
+      };
+    });
+    setIsShockForced(false);
+  };
+
+  // "Rhythm check now" from the delayed ring: reopen the forced rhythm check
+  // popup. The delay itself stays in place until an outcome is logged (see
+  // addTreatment), so the check is logged at the time it's actually done.
+  const resumeDelayedRhythmCheck = () => {
+    setState(prev => ({ ...prev, currentOverlay: 'treatment' }));
+    setIsShockForced(true);
+  };
+
+  // "Delay rhythm check" is only offered on a timer-forced rhythm check in
+  // elapsed mode - not after a rearrest (the arrest has only just restarted),
+  // not in the tutorial, not while editing, and not when the popup was
+  // reopened from an already-delayed check.
+  const allowRhythmCheckDelay =
+    isShockForced && !rearrested && !tutorialMode &&
+    timingMode === 'elapsed' && !!rhythmInterval &&
+    state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
+
   const addTreatment = (name: string, options?: { customDose?: boolean }) => {
     const now = new Date();
 
@@ -1362,10 +1425,14 @@ export default function App() {
     const priorCount = state.treatments.filter(t => getTreatmentIdentity(t.name) === identity).length;
     const displayName = priorCount > 0 ? insertTreatmentNumber(name, identity, priorCount + 1) : name;
 
+    // An outcome for a delayed rhythm check is logged in the new round, the
+    // same as an outcome chosen straight from the timer-forced popup (where
+    // the timer has already moved the round on).
+    const resolvingDelayForRound = !catchupTxMode && state.rhythmCheckDelayedAt != null && (name.includes('Shock') || name.includes('Disarm'));
     const treatment: Treatment = {
       name: displayName,
       elapsed: state.elapsedSeconds,
-      round: state.cprRound,
+      round: resolvingDelayForRound ? state.cprRound + 1 : state.cprRound,
       clock: getLocalTime(now),
       clockSeconds: getLocalTimeWithSeconds(now),
       loggedAt: now.getTime(),
@@ -1386,6 +1453,11 @@ export default function App() {
     // continues executing.
     const isShockOrDisarmForReset = name.includes('Shock') || name.includes('Disarm');
     const isROSCForReset = name === 'Disarm - ROSC';
+    // Any rhythm check outcome logged while a check is delayed - from the
+    // "Rhythm check now" popup or straight from Add Tx - is that delayed
+    // check, done now: it restores the held CPR round and re-anchors the
+    // interval the same way a rearrest does (below).
+    const resolvingDelay = !catchupTxMode && state.rhythmCheckDelayedAt != null && isShockOrDisarmForReset;
     // When a shock/disarm is logged early (before the timer would have hit
     // zero on its own), automatically switch to whichever of
     // evens/odds/half-evens/half-odds puts the next check closest to - but
@@ -1450,7 +1522,8 @@ export default function App() {
       return {
         ...prev,
         treatments: newTreatments,
-        cprRound: (isOutOfTurn || isLogModeRoundComplete) ? prev.cprRound + 1 : prev.cprRound,
+        cprRound: (isOutOfTurn || isLogModeRoundComplete || resolvingDelay) ? prev.cprRound + 1 : prev.cprRound,
+        rhythmCheckDelayedAt: resolvingDelay ? null : prev.rhythmCheckDelayedAt,
         currentOverlay: isRearrest ? 'treatment' : null,
         // Reset rhythm check to 2:00 for ROSC, or when unpausing via other shock/disarm,
         // or to the auto-selected pattern's target when logged early
@@ -1493,7 +1566,7 @@ export default function App() {
     // not over 2:00" logic applies directly. Applied silently here, no
     // acknowledgment modal - unlike a plain early shock, a rearrest already
     // has plenty happening on screen and doesn't need an extra prompt.
-    if (rearrested && (name.includes('Shock') || name.includes('Disarm'))) {
+    if ((rearrested || resolvingDelay) && (name.includes('Shock') || name.includes('Disarm'))) {
       setRearrested(false);
       if (name === 'Disarm - ROSC') {
         // ROSC again — go straight back to ROSC mode, no interval picker needed
@@ -2141,6 +2214,7 @@ export default function App() {
                   state={state}
                   pharmaSummary={pharmaSummary}
                   isShockForced={isShockForced}
+                  onDelayRhythmCheck={allowRhythmCheckDelay ? delayRhythmCheck : undefined}
                   toggleChecklistItem={toggleChecklistItem}
                   onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
                   onDeleteTreatment={deleteTreatment}
@@ -2176,8 +2250,31 @@ export default function App() {
           <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
             <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
 
-              {/* ROSC Mode - full circle is tap target */}
-              {state.isROSCMode ? (
+              {/* Delayed rhythm check - full circle is tap target. Counts up how
+                  long the check is overdue; tapping reopens the rhythm check
+                  popup. No automatic re-prompt - this ring is the reminder. */}
+              {state.rhythmCheckDelayedAt != null && !state.isROSCMode && timingMode !== 'log' ? (
+                <button
+                  onClick={resumeDelayedRhythmCheck}
+                  className="absolute inset-0 w-full h-full rounded-full btn-base flex flex-col items-center justify-center"
+                  data-button="rhythm-check-now"
+                >
+                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
+                    <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-red-500" />
+                  </svg>
+                  <div className="z-10 flex flex-col items-center translate-y-2 sm:translate-y-3">
+                    <span className="font-bold tabular-nums tracking-tighter leading-none text-6xl sm:text-[100px] text-red-600">
+                      +{formatTime(Math.max(0, state.elapsedSeconds - state.rhythmCheckDelayedAt))}
+                    </span>
+                    <span className="uppercase tracking-widest font-bold text-[13px] sm:text-[16px] text-red-600 mt-2 sm:mt-4">
+                      Rhythm check delayed
+                    </span>
+                    <span className="mt-3 sm:mt-5 px-5 py-2 sm:px-7 sm:py-3 rounded-full bg-red-600 text-white font-bold text-[15px] sm:text-[20px]">
+                      Rhythm check now
+                    </span>
+                  </div>
+                </button>
+              ) : state.isROSCMode ? (
                 <button
                   onClick={() => {
                     setState(prev => ({
@@ -2282,7 +2379,7 @@ export default function App() {
                   (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && !state.rhythmCheckPaused ? 'text-red-600' :
                   'text-neutral-400'
                 }`}>
-                  Next Check
+                  Rhythm Check
                 </div>
               </div>
               </>
@@ -2328,6 +2425,7 @@ export default function App() {
                 state={state}
                 pharmaSummary={pharmaSummary}
                 isShockForced={isShockForced}
+                onDelayRhythmCheck={allowRhythmCheckDelay ? delayRhythmCheck : undefined}
                 toggleChecklistItem={toggleChecklistItem}
                 onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
                 onDeleteTreatment={deleteTreatment}
@@ -3048,7 +3146,7 @@ export default function App() {
                             <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">
                               {`${Math.floor((120 - (demoTick % 120)) / 60)}:${String((120 - (demoTick % 120)) % 60).padStart(2,'0')}`}
                             </span>
-                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Next Check</span>
+                            <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
                           </div>
                         </div>
                       </div>
@@ -3582,7 +3680,7 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -3590,6 +3688,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   isShockForced: boolean,
+  onDelayRhythmCheck?: () => void,
   toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
   onVitalsChange: (v: AppState['vitals']) => void,
   onDeleteTreatment?: (idx: number) => void,
@@ -3627,7 +3726,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
                 correcting an existing, already-logged entry. Without this,
                 a rhythm check timer hitting 0:00 mid-edit would suddenly
                 collapse this menu down to just the shock/disarm buttons. */}
-            <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={editingTreatmentIndex != null ? false : isShockForced} />
+            <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={editingTreatmentIndex != null ? false : isShockForced} onDelayRhythmCheck={editingTreatmentIndex != null ? undefined : onDelayRhythmCheck} />
           </>
         )}
       </div>
@@ -4303,7 +4402,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false }: 
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll }: { addTreatment: (n: string, options?: { customDose?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, onDelayRhythmCheck }: { addTreatment: (n: string, options?: { customDose?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, onDelayRhythmCheck?: () => void }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -4730,6 +4829,19 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         ]} 
         onSelect={addTreatment}
       />
+
+      {/* Delay rhythm check - deliberately set apart from the outcomes above
+          so it isn't mistaken for one of them */}
+      {isShockForced && onDelayRhythmCheck && (
+        <div className="px-4 mt-10">
+          <button
+            onClick={onDelayRhythmCheck}
+            className="w-full py-4 rounded-2xl border-2 border-neutral-300 bg-white text-neutral-700 text-base sm:text-lg font-bold btn-base"
+          >
+            Delay rhythm check
+          </button>
+        </div>
+      )}
 
       {!isShockForced && (
         <>

@@ -27,6 +27,11 @@ export interface AppState {
   rhythmCheckTarget: number;
   rhythmCheckPaused: boolean;
   rhythmCheckOvertime: number;
+  // Set while a rhythm check has been delayed: the elapsed second the check
+  // fell due. The central ring shows how far overdue it is and the rhythm
+  // check timer is held until the check is actually done. null/absent = not
+  // delayed.
+  rhythmCheckDelayedAt?: number | null;
   frozenCountdown?: number;
   cprRound: number;
   adrenalineWipedAt: number | null;
