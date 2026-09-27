@@ -1095,15 +1095,6 @@ export default function App() {
   }, []);
 
   const playBeep = () => {
-    // Pulse alongside the beep, so a phone that's face-down or too quiet to
-    // hear still gets a physical warning. Vibration API is Android-only -
-    // iOS Safari has no equivalent for web apps, so this silently does
-    // nothing there rather than failing.
-    try {
-      navigator.vibrate?.(100);
-    } catch (err) {
-      // Non-fatal - the audible beep below is unaffected either way.
-    }
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
@@ -1247,14 +1238,14 @@ export default function App() {
             const countdown = prev.rhythmCheckTarget - newElapsed;
 
             // Auto-close overlay ONCE at 10s (not in tutorial)
-            if (countdown === 10 && !hasAutoClosedAt10.current && !tutorialMode) {
+            if (countdown === 20 && !hasAutoClosedAt10.current && !tutorialMode) {
               nextOverlay = null;
               hasAutoClosedAt10.current = true;
             }
 
             // Beep logic: beep each second from 10s to 5s in both modes
-            const beepStart = 10;
-            const beepEnd = 5;
+            const beepStart = 20;
+            const beepEnd = 14;
             if (countdown <= beepStart && countdown > beepEnd && lastBeepSecond.current !== newElapsed) {
               playBeep();
               lastBeepSecond.current = newElapsed;
@@ -2359,7 +2350,7 @@ export default function App() {
                   className={
                     state.rhythmCheckPaused ? 'text-emerald-500' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-500' :
-                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-500' : 'text-emerald-500'
+                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 20 ? 'text-red-500' : 'text-emerald-500'
                   }
                   animate={{ 
                     strokeDashoffset: state.rhythmCheckPaused
@@ -2391,7 +2382,7 @@ export default function App() {
                   className={`font-bold tabular-nums tracking-tighter leading-none text-7xl sm:text-[120px] ${
                     state.rhythmCheckPaused ? 'text-neutral-900' :
                     state.rhythmCheckOvertime > 0 ? 'text-red-600' :
-                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 ? 'text-red-600' : 'text-neutral-900'
+                    (state.rhythmCheckTarget - state.elapsedSeconds) <= 20 ? 'text-red-600' : 'text-neutral-900'
                   }`}
                 >
                   {state.rhythmCheckPaused 
@@ -2403,7 +2394,7 @@ export default function App() {
                 </div>
                 <div className={`uppercase tracking-widest font-bold mt-4 sm:mt-8 text-[14px] sm:text-[18px] ${
                   state.rhythmCheckOvertime > 0 ? 'text-red-600 flash-red' :
-                  (state.rhythmCheckTarget - state.elapsedSeconds) <= 10 && !state.rhythmCheckPaused ? 'text-red-600' :
+                  (state.rhythmCheckTarget - state.elapsedSeconds) <= 20 && !state.rhythmCheckPaused ? 'text-red-600' :
                   'text-neutral-400'
                 }`}>
                   Rhythm Check
