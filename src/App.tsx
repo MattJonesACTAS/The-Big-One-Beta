@@ -2560,7 +2560,7 @@ export default function App() {
               )}
 
               {viewingPreviousCase && (
-                <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto">
+                <div className="fixed inset-0 bg-neutral-200 z-[2000] overflow-y-auto previous-case-modal">
                   <div className="min-h-screen p-6 pb-24">
                   <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-neutral-200 shadow-2xl p-6 space-y-6">
                     <div className="space-y-6 break-inside-avoid has-arrest-summary">

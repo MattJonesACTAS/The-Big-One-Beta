@@ -79,6 +79,19 @@
       display: none !important;
     }
 
+    /* The Previous Cases viewer is itself a full-screen overlay (.fixed),
+       which the generic rule above would otherwise hide entirely - along
+       with the actual content inside it, producing a blank PDF. Restoring
+       display isn't enough on its own though: position:fixed is relative to
+       the viewport, not the page flow, so it also needs to become a normal,
+       in-flow element to paginate correctly across multiple printed pages
+       rather than being clipped to one viewport-sized page. */
+    .previous-case-modal {
+      display: block !important;
+      position: static !important;
+      inset: auto !important;
+    }
+
     body {
       overflow: visible !important;
       height: auto !important;
