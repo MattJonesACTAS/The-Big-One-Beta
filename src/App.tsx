@@ -30,6 +30,7 @@ import {
   MoreVertical,
   NotebookPen,
   Timer,
+  Minus,
   Hourglass
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
@@ -305,6 +306,22 @@ const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
 
 // Order the App Mode cards are stacked in, top to bottom.
 const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['log', 'minimal', 'elapsed'];
+
+// Pros and cons revealed under whichever App Mode card is selected.
+const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[] }> = {
+  log: {
+    pros: ['Log every Tx', 'Case sheet assistance', 'Non-cardiac arrest cases', 'Scribe on sims'],
+    cons: ['No assistance tracking rhythm checks or medication redosing intervals'],
+  },
+  minimal: {
+    pros: ['Tracks rhythm checks and medication redosing intervals', 'Minimal distraction'],
+    cons: ['No case sheet assistance'],
+  },
+  elapsed: {
+    pros: ['Full app capability'],
+    cons: ['Maximum difficulty to use'],
+  },
+};
 
 const formatDurationHM = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -3123,42 +3140,84 @@ export default function App() {
               )}
 
               {!catchupTxMode && catchupStep === 6 && (
-                <div className="space-y-6 px-4 max-w-md mx-auto text-center">
+                <div className="space-y-6 px-4 pb-1 max-w-md mx-auto text-center max-h-[calc(100dvh-6rem)] overflow-y-auto overflow-x-hidden">
                   <h2 className="text-2xl font-bold text-neutral-900">Select App Mode</h2>
 
-                  {/* Three stacked landscape cards - tap one to choose it.
-                      Nothing is pre-selected, so Next stays disabled until a
-                      mode has been picked on purpose. timingMode is the only
-                      state involved; everything downstream reads it exactly
-                      as before. */}
+                  {/* Three stacked landscape cards. Tap one to choose it: it
+                      highlights and expands to show what that mode does and
+                      doesn't do. Nothing is pre-selected, so Next stays
+                      disabled until a mode has been picked on purpose.
+                      timingMode is the only state involved; everything
+                      downstream reads it exactly as before. The max-height /
+                      scroll on this container is a safety net so the Back and
+                      Next buttons stay reachable on a short screen once a card
+                      has expanded. */}
                   <div className="flex flex-col gap-3 -mx-2">
                     {TIMING_MODE_ORDER.map(mode => {
                       const selected = timingMode === mode;
+                      const details = TIMING_MODE_DETAILS[mode];
                       return (
-                        <button
+                        <div
                           key={mode}
-                          onClick={() => setTimingMode(mode)}
-                          disabled={mode === 'elapsed' ? (showInteractiveTutorial && !timingNodesComplete) : showInteractiveTutorial}
-                          data-tutorial={mode === 'elapsed' ? 'elapsed-btn' : undefined}
-                          className={`w-full h-[84px] rounded-2xl border-2 px-4 flex items-center gap-4 text-left transition-all duration-200 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                          className={`rounded-2xl border-2 overflow-hidden transition-colors duration-200 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                         >
-                          <div className="w-[84px] flex-shrink-0 flex items-center justify-center">
-                            {mode === 'log' && (
-                              <NotebookPen size={40} strokeWidth={1.5} className="text-neutral-700" />
+                          <button
+                            onClick={() => setTimingMode(mode)}
+                            disabled={mode === 'elapsed' ? (showInteractiveTutorial && !timingNodesComplete) : showInteractiveTutorial}
+                            data-tutorial={mode === 'elapsed' ? 'elapsed-btn' : undefined}
+                            aria-expanded={selected}
+                            className="w-full h-[80px] px-4 flex items-center gap-4 text-left"
+                          >
+                            <div className="w-[84px] flex-shrink-0 flex items-center justify-center">
+                              {mode === 'log' && (
+                                <NotebookPen size={40} strokeWidth={1.5} className="text-neutral-700" />
+                              )}
+                              {mode === 'minimal' && (
+                                <Timer size={40} strokeWidth={1.5} className="text-emerald-600" />
+                              )}
+                              {mode === 'elapsed' && (
+                                <div className="flex items-center gap-1.5">
+                                  <NotebookPen size={28} strokeWidth={1.5} className="text-neutral-700" />
+                                  <Plus size={12} strokeWidth={2.5} className="text-neutral-400" />
+                                  <Timer size={28} strokeWidth={1.5} className="text-emerald-600" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="font-bold text-lg text-neutral-900">{TIMING_MODE_LABELS[mode]}</div>
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {selected && (
+                              <motion.div
+                                key="details"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: 'easeOut' }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
+                                  <ul className="space-y-1.5">
+                                    {details.pros.map(t => (
+                                      <li key={t} className="flex items-start gap-2">
+                                        <Plus size={14} strokeWidth={3} className="text-emerald-600 flex-shrink-0 mt-[3px]" />
+                                        <span>{t}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  <ul className="space-y-1.5">
+                                    {details.cons.map(t => (
+                                      <li key={t} className="flex items-start gap-2">
+                                        <Minus size={14} strokeWidth={3} className="text-red-500 flex-shrink-0 mt-[3px]" />
+                                        <span>{t}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </motion.div>
                             )}
-                            {mode === 'minimal' && (
-                              <Timer size={40} strokeWidth={1.5} className="text-emerald-600" />
-                            )}
-                            {mode === 'elapsed' && (
-                              <div className="flex items-center gap-1.5">
-                                <NotebookPen size={28} strokeWidth={1.5} className="text-neutral-700" />
-                                <Plus size={12} strokeWidth={2.5} className="text-neutral-400" />
-                                <Timer size={28} strokeWidth={1.5} className="text-emerald-600" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="font-bold text-lg text-neutral-900">{TIMING_MODE_LABELS[mode]}</div>
-                        </button>
+                          </AnimatePresence>
+                        </div>
                       );
                     })}
                   </div>
