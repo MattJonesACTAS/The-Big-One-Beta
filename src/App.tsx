@@ -3271,7 +3271,10 @@ export default function App() {
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                                className="overflow-hidden"
+                                // Tapping anywhere in the opened-up part closes it too, not just
+                                // the title row above - that's where a thumb naturally lands
+                                onClick={() => setExpandedMode(null)}
+                                className="overflow-hidden cursor-pointer"
                               >
                                 <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
                                   <ul className="space-y-1.5">
