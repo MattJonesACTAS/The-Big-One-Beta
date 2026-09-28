@@ -304,32 +304,33 @@ const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
   elapsed: 'Tx log & timers',
 };
 
-// Order the App Mode cards are stacked in, top to bottom.
-const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['log', 'minimal', 'elapsed'];
+// Order the App Mode cards are stacked in: easiest to use at the top, hardest
+// at the bottom (matches the difficulty levels in TIMING_MODE_DETAILS).
+const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['minimal', 'log', 'elapsed'];
 
 // Pros and cons revealed under whichever App Mode card is selected, plus how
-// distracting / hard to use the mode is (1 = lowest, 3 = highest), which is
-// drawn as a low-to-high meter rather than written out.
-const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[]; distraction: 1 | 2 | 3 }> = {
+// difficult the mode is to use (1 = easiest, 3 = hardest), which is drawn as a
+// low-to-high meter rather than written out.
+const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[]; difficulty: 1 | 2 | 3 }> = {
   log: {
     pros: ['Case sheet assistance', 'Handover assistance', 'Non-cardiac arrest cases', 'Scribe on sims'],
     cons: ['No rhythm check timer', 'No medication redosing timers'],
-    distraction: 2,
+    difficulty: 2,
   },
   minimal: {
     pros: ['Rhythm check timer', 'Medication redosing timers'],
-    cons: ['No case sheet assistance'],
-    distraction: 1,
+    cons: ['No case sheet assistance', 'No handover assistance'],
+    difficulty: 1,
   },
   elapsed: {
-    pros: ['Full app capability'],
+    pros: ['Rhythm check timer', 'Medication redosing timers', 'Case sheet assistance', 'Handover assistance'],
     cons: [],
-    distraction: 3,
+    difficulty: 3,
   },
 };
 
-const DISTRACTION_LABELS = ['low', 'medium', 'high'] as const;
-const DISTRACTION_COLOURS = ['bg-emerald-500', 'bg-amber-400', 'bg-red-500'] as const;
+const DIFFICULTY_LABELS = ['low', 'medium', 'high'] as const;
+const DIFFICULTY_COLOURS = ['bg-emerald-500', 'bg-amber-400', 'bg-red-500'] as const;
 
 const formatDurationHM = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -3241,15 +3242,15 @@ export default function App() {
                                   <div
                                     className="pt-3 border-t border-emerald-200"
                                     role="img"
-                                    aria-label={`Potential distraction: ${DISTRACTION_LABELS[details.distraction - 1]}`}
+                                    aria-label={`Difficulty: ${DIFFICULTY_LABELS[details.difficulty - 1]}`}
                                   >
-                                    <div className="text-xs font-semibold text-neutral-500 mb-1.5">Potential distraction</div>
+                                    <div className="text-xs font-semibold text-neutral-500 mb-1.5">Difficulty</div>
                                     <div className="flex gap-1">
                                       {[1, 2, 3].map(n => (
                                         <div
                                           key={n}
-                                          data-filled={n <= details.distraction}
-                                          className={`h-2 flex-1 rounded-full ${n <= details.distraction ? DISTRACTION_COLOURS[details.distraction - 1] : 'bg-neutral-200'}`}
+                                          data-filled={n <= details.difficulty}
+                                          className={`h-2 flex-1 rounded-full ${n <= details.difficulty ? DIFFICULTY_COLOURS[details.difficulty - 1] : 'bg-neutral-200'}`}
                                         />
                                       ))}
                                     </div>
