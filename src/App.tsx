@@ -797,6 +797,9 @@ export default function App() {
   const [elapsedManuallyEdited, setElapsedManuallyEdited] = useState(false);
   const [stagedRhythmInterval, setStagedRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds'>('evens');
   const [showWeightChange, setShowWeightChange] = useState(false);
+  // Set while the weight prompt is open because the person is leaving Timers
+  // only (which never asked for one) - the mode change carries on once saved.
+  const [pendingWeightForMode, setPendingWeightForMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [newWeightInput, setNewWeightInput] = useState('');
   const [newPatientType, setNewPatientType] = useState<'adult' | 'paed' | null>(null);
   const [newPaedWeightMethod, setNewPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
@@ -1428,7 +1431,9 @@ export default function App() {
     const priorCount = state.treatments.filter(t => getTreatmentIdentity(t.name) === getTreatmentIdentity(name)).length;
     const displayName = priorCount > 0 ? insertTreatmentNumber(name, getTreatmentIdentity(name), priorCount + 1) : name;
     setState(prev => {
-      const heldRound = Math.max(1, prev.cprRound - 1);
+      // Back to the round before the one the timer just started (which is 0
+      // before the first check, hence no floor of 1)
+      const heldRound = Math.max(0, prev.cprRound - 1);
       const entry: Treatment = {
         name: displayName,
         elapsed: prev.elapsedSeconds,
@@ -1467,8 +1472,14 @@ export default function App() {
     (timingMode === 'elapsed' || timingMode === 'minimal') && !!rhythmInterval &&
     state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
 
-  const addTreatment = (name: string, options?: { customDose?: boolean }) => {
+  const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
+    // Shock and Disarm outcomes move the rhythm check timers. Timers only has
+    // no shock/disarm to pick, so its plain "Rhythm check" (No ROSC) is flagged
+    // to be treated the same way, and gets all of it: an early check restarts
+    // the countdown, a rearrest re-picks the interval, a delayed check is
+    // resolved, and so on.
+    const isRhythmOutcomeName = !!options?.rhythmOutcome || name.includes('Shock') || name.includes('Disarm');
 
     // First time a given treatment type is logged, leave it unnumbered.
     // Every subsequent log of that same type gets numbered (#2, #3, ...).
@@ -1481,7 +1492,7 @@ export default function App() {
     // An outcome for a delayed rhythm check is logged in the new round, the
     // same as an outcome chosen straight from the timer-forced popup (where
     // the timer has already moved the round on).
-    const resolvingDelayForRound = !catchupTxMode && state.rhythmCheckDelayedAt != null && (name.includes('Shock') || name.includes('Disarm'));
+    const resolvingDelayForRound = !catchupTxMode && state.rhythmCheckDelayedAt != null && isRhythmOutcomeName;
     const treatment: Treatment = {
       name: displayName,
       elapsed: state.elapsedSeconds,
@@ -1504,7 +1515,7 @@ export default function App() {
     // React and doesn't run synchronously, so anything only decided inside it
     // (like which ref to set) isn't available yet by the time this function
     // continues executing.
-    const isShockOrDisarmForReset = name.includes('Shock') || name.includes('Disarm');
+    const isShockOrDisarmForReset = isRhythmOutcomeName;
     const isROSCForReset = name === 'Disarm - ROSC';
     // Any rhythm check outcome logged while a check is delayed - from the
     // "Rhythm check now" popup or straight from Add Tx - is that delayed
@@ -1542,7 +1553,7 @@ export default function App() {
     }
 
     setState(prev => {
-      const isShockOrDisarm = name.includes('Shock') || name.includes('Disarm');
+      const isShockOrDisarm = isRhythmOutcomeName;
       const isROSC = name === 'Disarm - ROSC';
       const isRearrest = name === 'Rearrest';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
@@ -1619,7 +1630,7 @@ export default function App() {
     // not over 2:00" logic applies directly. Applied silently here, no
     // acknowledgment modal - unlike a plain early shock, a rearrest already
     // has plenty happening on screen and doesn't need an extra prompt.
-    if ((rearrested || resolvingDelay) && (name.includes('Shock') || name.includes('Disarm'))) {
+    if ((rearrested || resolvingDelay) && isRhythmOutcomeName) {
       setRearrested(false);
       if (name === 'Disarm - ROSC') {
         // ROSC again — go straight back to ROSC mode, no interval picker needed
@@ -1648,14 +1659,14 @@ export default function App() {
     }
     
     // Show notification with treatment name
-    if (name !== 'Disarm - ROSC') {
+    if (name !== 'Disarm - ROSC' && !name.startsWith('Mode changed')) {
       loggedTreatmentRef.current = name;
       setShowLoggedNotification(true);
       setTimeout(() => setShowLoggedNotification(false), 2000);
     }
     
     // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
-    if (name.includes('Shock') || name.includes('Disarm')) {
+    if (isRhythmOutcomeName) {
       setHasShownForcedShock(false);
       previousCountdown.current = null; // Reset countdown tracking
     }
@@ -1782,23 +1793,22 @@ export default function App() {
     if (state.isROSCMode) {
       return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
     }
-    const allAmioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
-
     // Protocol: first amiodarone dose starts the 5-min timer, second (final) dose clears it.
     // We can't rely on dose string matching because cleanDoseForLog strips mg/kg to just
     // the calculated value (e.g. "5mg/kg (42mg)" -> "Amiodarone 42mg").
     // So we use count: 1 dose = show timer, 2+ doses = hide permanently.
+    const allAmioTreatments = state.treatments.filter(t => t.name.includes('Amiodarone'));
     if (allAmioTreatments.length >= 2) {
       return { text: '', show: false, isDue: false, countdown: 0, flashRed: false };
     }
 
     const amioTreatments = allAmioTreatments.filter(t => t.elapsed > (state.amiodaroneWipedAt ?? -1));
     const lastAmio = amioTreatments[amioTreatments.length - 1];
-    
+
     if (!lastAmio) {
       return { text: "", show: false, isDue: false, countdown: 0, flashRed: false };
     }
-    
+
     if (lastAmio.prior) {
       if (tutorialMode) return { text: '', show: false, isDue: false, countdown: 0, flashRed: false };
       return { text: "Next amiodarone: unknown", show: true, isDue: false, countdown: 0, flashRed: false };
@@ -1855,7 +1865,7 @@ export default function App() {
     let adjustedElapsed = catchupElapsed.hrs * 3600 + catchupElapsed.mins * 60 + catchupElapsed.secs;
     
     // Use override weight if provided, otherwise use weightInput state
-    const finalWeight = overrideWeight || weightInput;
+    const finalWeight = timingMode === 'minimal' ? '' : (overrideWeight || weightInput);
     
     // Parse weight, checking for valid number or ">100" special case
     let parsedWeight: any = null;
@@ -1892,6 +1902,9 @@ export default function App() {
     const baseClock = new Date(startClockTime);
 
     const pushPrior = (name: string) => {
+      // Timers only skips the catch-up page (and has no weight, so no doses),
+      // so anything left over from before switching to it is left out.
+      if (timingMode === 'minimal') return;
       initialTxs.push({
         name,
         elapsed: 0,
@@ -1936,7 +1949,7 @@ export default function App() {
     }
     
     // Include any treatments added via the Full Tx list button
-    const extraPriorTxs = state.treatments.filter(t => t.prior);
+    const extraPriorTxs = timingMode === 'minimal' ? [] : state.treatments.filter(t => t.prior);
     const allInitialTxs = [...extraPriorTxs, ...initialTxs];
 
     setState({
@@ -1947,12 +1960,12 @@ export default function App() {
       pausedTime: adjustedElapsed * 1000,
       elapsedSeconds: adjustedElapsed,
       rhythmCheckTarget: rhythmCheckTarget,
-      cprRound: priorCounts.shock + priorCounts.disarm,
+      cprRound: timingMode === 'minimal' ? 0 : priorCounts.shock + priorCounts.disarm,
       treatments: allInitialTxs,
       catchupElapsed: adjustedElapsed,
       startClockTime: startClockTime,
       patientWeight: parsedWeight || (tutorialMode ? 70 : null),
-      patientType: weightType || (tutorialMode ? 'adult' : null),
+      patientType: timingMode === 'minimal' ? null : (weightType || (tutorialMode ? 'adult' : null)),
       patientAge: (weightType === 'paed' && paedWeightMethod === 'age' && paedAgeLabel) ? paedAgeLabel : null,
       // Without these two, INITIAL_STATE's defaults (both null) would silently
       // overwrite the mode the person actually chose, and the separate effect
@@ -2021,6 +2034,46 @@ export default function App() {
     });
     setIsCaseClosed(true);
     setShowEndWarning(false);
+  };
+
+  // Switching mode part-way through a case. The switch is timestamped in the Tx
+  // log. Leaving Timers only asks for the patient's weight first (it never had
+  // one), and backing out of that leaves the mode as it was. There is no
+  // "treatments already applied" page here: whatever was done is already in
+  // the log.
+  const beginModeChange = (target: 'log' | 'minimal' | 'elapsed') => {
+    if (target === 'log') {
+      // No timer to recalibrate, so it takes effect straight away
+      setTimingMode('log');
+      setShowModeChange(false);
+      addTreatment(`Mode changed: ${TIMING_MODE_LABELS.log}`);
+      return;
+    }
+    // The timer modes go via the recalibrate step; the log entry is added when
+    // that's confirmed (and dropped if it's cancelled)
+    setPendingModeChangeFrom(timingMode);
+    setTimingMode(target);
+    const startingInterval = rhythmInterval || 'evens';
+    if (!rhythmInterval) setRhythmInterval(startingInterval);
+    setStagedElapsedSeconds(state.elapsedSeconds);
+    setStagedRhythmInterval(startingInterval);
+    setElapsedManuallyEdited(false);
+    setShowModeChange(false);
+    setShowElapsedRecalibrate(true);
+  };
+
+  const requestModeChange = (target: 'log' | 'minimal' | 'elapsed') => {
+    if (target !== 'minimal' && state.patientWeight == null) {
+      setNewWeightInput('');
+      setNewPatientType('adult');
+      setNewPaedWeightMethod('weight');
+      setNewPaedAgeLabel(null);
+      setPendingWeightForMode(target);
+      setShowModeChange(false);
+      setShowWeightChange(true);
+      return;
+    }
+    beginModeChange(target);
   };
 
   if (isCaseClosed) {
@@ -2591,8 +2644,8 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      <div className={`grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : 'grid-cols-2'}`}>
-        {timingMode !== 'log' && (
+      <div className={`grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        {timingMode !== 'log' && timingMode !== 'minimal' && (
           <button 
             onClick={() => {
               if (isShockForced) return;
@@ -2687,7 +2740,7 @@ export default function App() {
                   <div className="space-y-3 pt-2">
                     <button 
                       onClick={() => {
-                        setCatchupStep(2);
+                        setCatchupStep(6);
                         setUseManualEntry(true);
                       }} 
                       className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white p-5 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
@@ -2993,14 +3046,14 @@ export default function App() {
                   {/* Navigation Buttons */}
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button 
-                      onClick={() => setCatchupStep(1)} 
+                      onClick={() => setCatchupStep(showInteractiveTutorial ? 1 : 6)} 
                       disabled={showInteractiveTutorial}
                       className={`py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'bg-neutral-100 text-neutral-300 cursor-default' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
                     >
                       Back
                     </button>
                     <button
-                      onClick={() => weightInput && setCatchupStep(6)}
+                      onClick={() => weightInput && setCatchupStep(showInteractiveTutorial ? 6 : 3)}
                       disabled={!weightInput || (showInteractiveTutorial && !catchupNodeCleared)}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         weightInput && !(showInteractiveTutorial && !catchupNodeCleared)
@@ -3080,7 +3133,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => setCatchupStep(3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
+                    <button onClick={() => setCatchupStep(timingMode === 'minimal' ? 6 : 3)} className="bg-neutral-100 text-neutral-700 py-4 rounded-xl font-bold hover:bg-neutral-200 transition-colors">Back</button>
                     <button
                       onClick={() => rhythmInterval && setCatchupStep(4)}
                       disabled={!rhythmInterval}
@@ -3135,7 +3188,7 @@ export default function App() {
                       <Plus size={16} /> Full Tx list
                     </button>
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => setCatchupStep(6)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                      <button onClick={() => setCatchupStep(showInteractiveTutorial ? 6 : 2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                       <button
                         onClick={() => {
                           if (timingMode === 'elapsed' || timingMode === 'minimal') setCatchupStep(7);
@@ -3269,9 +3322,9 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(2)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
+                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(showInteractiveTutorial ? 2 : 1)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
-                      onClick={() => setCatchupStep(3)}
+                      onClick={() => setCatchupStep(timingMode === 'minimal' ? 7 : showInteractiveTutorial ? 3 : 2)}
                       disabled={!timingMode}
                       className={`py-4 rounded-xl font-bold transition-all ${timingMode ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
                     >
@@ -3334,6 +3387,7 @@ export default function App() {
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check</div>
             </button>
             )}
+            {timingMode !== 'minimal' && (
             <button
               onClick={() => {
                 setNewWeightInput(String(state.patientWeight ?? ''));
@@ -3354,6 +3408,7 @@ export default function App() {
               <div className="text-base">Change patient weight</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {state.patientWeight}kg</div>
             </button>
+            )}
             <button
               onClick={() => {
                 setShowRecalibrateMenu(false);
@@ -3374,7 +3429,7 @@ export default function App() {
       {showWeightChange && (
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
-            <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Weight</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 text-center">{pendingWeightForMode ? 'Enter Patient Weight' : 'Change Weight'}</h2>
 
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -3488,13 +3543,14 @@ export default function App() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowWeightChange(false)} className="p-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
+              <button onClick={() => { setPendingWeightForMode(null); setShowWeightChange(false); }} className="p-3 rounded-xl bg-neutral-100 font-bold text-neutral-700">Cancel</button>
               <button
                 onClick={() => {
                   const w = parseFloat(newWeightInput);
                   if (!isNaN(w) && w > 0) {
-                    if (w !== state.patientWeight) {
-                      addTreatment(`Weight changed: ${state.patientWeight ?? '?'}kg → ${w}kg`);
+                    // No "changed" entry for a first weight: there was nothing to change from
+                    if (state.patientWeight != null && w !== state.patientWeight) {
+                      addTreatment(`Weight changed: ${state.patientWeight}kg → ${w}kg`);
                     }
                     setState(prev => ({
                       ...prev,
@@ -3504,6 +3560,11 @@ export default function App() {
                     }));
                   }
                   setShowWeightChange(false);
+                  if (pendingWeightForMode) {
+                    const target = pendingWeightForMode;
+                    setPendingWeightForMode(null);
+                    beginModeChange(target);
+                  }
                 }}
                 disabled={!newWeightInput}
                 className="p-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-40"
@@ -3523,50 +3584,16 @@ export default function App() {
               <p className="text-neutral-500 text-sm">How do you want to keep track of rhythm checks from now on?</p>
             </div>
             <div className="flex flex-col gap-3">
-              <button
-                disabled={timingMode === 'log'}
-                onClick={() => {
-                  setTimingMode('log');
-                  setShowModeChange(false);
-                }}
-                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'log' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
-              >
-                {TIMING_MODE_LABELS.log}
-              </button>
-              <button
-                disabled={timingMode === 'minimal'}
-                onClick={() => {
-                  setPendingModeChangeFrom(timingMode);
-                  setTimingMode('minimal');
-                  const startingInterval = rhythmInterval || 'evens';
-                  if (!rhythmInterval) setRhythmInterval(startingInterval);
-                  setStagedElapsedSeconds(state.elapsedSeconds);
-                  setStagedRhythmInterval(startingInterval);
-                  setElapsedManuallyEdited(false);
-                  setShowModeChange(false);
-                  setShowElapsedRecalibrate(true);
-                }}
-                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'minimal' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
-              >
-                {TIMING_MODE_LABELS.minimal}
-              </button>
-              <button
-                disabled={timingMode === 'elapsed'}
-                onClick={() => {
-                  setPendingModeChangeFrom(timingMode);
-                  setTimingMode('elapsed');
-                  const startingInterval = rhythmInterval || 'evens';
-                  if (!rhythmInterval) setRhythmInterval(startingInterval);
-                  setStagedElapsedSeconds(state.elapsedSeconds);
-                  setStagedRhythmInterval(startingInterval);
-                  setElapsedManuallyEdited(false);
-                  setShowModeChange(false);
-                  setShowElapsedRecalibrate(true);
-                }}
-                className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === 'elapsed' ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
-              >
-                {TIMING_MODE_LABELS.elapsed}
-              </button>
+              {(['log', 'minimal', 'elapsed'] as const).map(mode => (
+                <button
+                  key={mode}
+                  disabled={timingMode === mode}
+                  onClick={() => requestModeChange(mode)}
+                  className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === mode ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
+                >
+                  {TIMING_MODE_LABELS[mode]}
+                </button>
+              ))}
             </div>
             <button onClick={() => setShowModeChange(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
               Cancel
@@ -3651,6 +3678,9 @@ export default function App() {
                     rhythmCheckOvertime: 0
                   }));
                   setShowElapsedRecalibrate(false);
+                  if (pendingModeChangeFrom !== null && timingMode) {
+                    addTreatment(`Mode changed: ${TIMING_MODE_LABELS[timingMode]}`);
+                  }
                   setPendingModeChangeFrom(null);
                 }}
                 className="bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
@@ -3808,7 +3838,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
-  addTreatment: (n: string, options?: { customDose?: boolean }) => void,
+  addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void,
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   isShockForced: boolean,
@@ -3837,7 +3867,9 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
-        {type === 'treatment' && (
+        {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
+          <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} />
+        ) : (
           <>
             {editingTreatmentIndex != null && state.treatments[editingTreatmentIndex] && (
               <div className="bg-emerald-50 text-emerald-800 px-4 py-3 text-center font-bold text-sm border-b border-emerald-100">
@@ -3852,9 +3884,99 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
                 collapse this menu down to just the shock/disarm buttons. */}
             <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={editingTreatmentIndex != null ? false : isShockForced} onDelayRhythmCheck={editingTreatmentIndex != null ? undefined : onDelayRhythmCheck} />
           </>
-        )}
+        ))}
       </div>
     </motion.div>
+  );
+}
+
+// Add Tx and the forced rhythm check popup for Timers only. Everything here is
+// logged in the background exactly as in the other modes (so it shows in the
+// Tx log if the mode is switched, and in the closed case); the only
+// difference is what there is to pick from: No ROSC / ROSC for a rhythm check,
+// and the two drugs that have timers.
+function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythmCheck }: {
+  state: AppState;
+  isShockForced: boolean;
+  addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void;
+  onDelayRhythmCheck?: () => void;
+}) {
+  // No ROSC is logged as a plain "Rhythm check": Timers only never learns
+  // whether it was a shock or a disarm, but it still has to move the timers
+  // the way a shock or disarm does, hence the flag.
+  const noRosc = () => addTreatment('Rhythm check', { rhythmOutcome: true });
+  const rosc = () => addTreatment('Disarm - ROSC');
+
+  if (isShockForced) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse flex-shrink-0">
+          RHYTHM CHECK
+        </div>
+        {/* The two outcomes sit in the middle of the space below the header.
+            (min-h-full rather than justify-center on the scroller itself, so
+            a short screen scrolls from the top instead of clipping it.)
+            ROSC is last, with a full gap above it, so it isn't hit by
+            accident reaching for the far more common No ROSC. */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="min-h-full flex flex-col justify-center gap-6 p-6">
+            <button
+              onClick={noRosc}
+              className="w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-red-50 text-red-700 border-2 border-red-100"
+            >
+              No ROSC
+            </button>
+            <button
+              onClick={rosc}
+              className="w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-emerald-50 text-emerald-700 border-2 border-emerald-100"
+            >
+              ROSC
+            </button>
+          </div>
+        </div>
+        {onDelayRhythmCheck && (
+          <div className="flex-shrink-0 px-6 pb-6">
+            <button
+              onClick={onDelayRhythmCheck}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-base btn-base hover:bg-amber-100"
+            >
+              <Hourglass size={20} strokeWidth={2.5} />
+              Delay rhythm check
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full overflow-y-auto pb-4">
+      <TxSection
+        title="Rhythm Check"
+        color="pink"
+        sectionId="rhythmCheck"
+        expandedSection="rhythmCheck"
+        onToggle={() => {}}
+        showChevron={false}
+        items={state.isROSCMode
+          ? [{ name: 'Rearrest', color: 'orange' }]
+          : [
+              { name: 'Rhythm check', displayName: 'No ROSC', color: 'red' },
+              { name: 'Disarm - ROSC', displayName: 'ROSC', color: 'emerald' }
+            ]}
+        onSelect={(n) => (n === 'Rhythm check' ? noRosc() : addTreatment(n))}
+      />
+      <TxSection
+        title="Medications"
+        color="emerald"
+        sectionId="medications"
+        expandedSection="medications"
+        onToggle={() => {}}
+        showChevron={false}
+        items={[{ name: 'Adrenaline push', displayName: 'Adrenaline' }, { name: 'Amiodarone' }]}
+        onSelect={(n) => addTreatment(n)}
+      />
+    </div>
   );
 }
 
@@ -4401,7 +4523,7 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
             </div>
           )}
           {showRecordingDuration && (
-            <div className="text-right">
+            <div className={patientTypeLabel ? 'text-right' : 'text-left'}>
               <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1">
                 {showFinalDuration && state.timingMode !== 'log' ? 'Case duration' : 'App recording for'}
               </div>
@@ -4424,8 +4546,12 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
             {state.cprRound > 0 ? (
               <>
                 <StatRow label="CPR Rounds" value={state.cprRound} />
-                <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
-                <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+                {(state.timingMode !== 'minimal' || shockCount > 0) && (
+                  <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+                )}
+                {(state.timingMode !== 'minimal' || disarmCount > 0) && (
+                  <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+                )}
               </>
             ) : (
               <div className="p-4 text-neutral-300 italic text-sm">No CPR rounds recorded</div>
