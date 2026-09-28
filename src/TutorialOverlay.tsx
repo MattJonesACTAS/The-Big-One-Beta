@@ -15,6 +15,10 @@ interface GlobalNode {
   x?: number;
   y?: number;
   displayNumber?: number;
+  // Optional: CSS selector of the element this marker points at. When it's found
+  // the marker sits on it (so it follows the real layout on any screen size);
+  // otherwise it falls back to the x/y percentages.
+  anchor?: string;
   pages: NodePage[];
   condition?: (appState: any, isShockForced?: boolean, initialPatientWeight?: number | null) => boolean;
 }
@@ -156,12 +160,12 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => !s.running
   },
   {
-    id: 'export', type: 'positioned', x: 27.23, y: 15.45,
+    id: 'export', type: 'positioned', x: 27.23, y: 15.45, anchor: '[data-button="export-pdf"]',
     pages: [{ title: 'Export PDF', description: 'Here you can export the case summary and Tx log to a PDF, which you can then download or email for later review.' }],
     condition: (s) => !s.running
   },
   {
-    id: 'delete', type: 'positioned', x: 73.46, y: 15.45,
+    id: 'delete', type: 'positioned', x: 73.46, y: 15.45, anchor: '[data-button="close-case"]',
     pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved.\n\nClose the case to finish the tutorial and we'll see you at The Big One!" }],
     condition: (s) => !s.running
   }
@@ -172,9 +176,10 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
 // silently produce a duplicate or skipped number again. Only 'positioned'
 // nodes get a visible number (popups like homeIntro don't).
 // BASE_TUTORIAL_NUMBER is the last number used by InteractiveTutorial.tsx's
-// catchup-flow nodes (Patient Type=1 ... Enter Current Elapsed Time=6) — this
-// picks up right after that.
-const BASE_TUTORIAL_NUMBER = 6;
+// catchup-flow nodes (App Mode=1, Patient Type=2, Previous Treatments=3,
+// Rhythm Check Timing=4, Enter Current Elapsed Time=5) — this picks up right
+// after that.
+const BASE_TUTORIAL_NUMBER = 5;
 let positionedCount = 0;
 const ALL_NODES: GlobalNode[] = RAW_NODES.map(node => {
   if (node.type !== 'positioned') return node;
@@ -213,6 +218,26 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   };
 
   const currentNode = tutorialDone ? null : ALL_NODES[globalNodeIndex];
+
+  // Where an anchored marker actually is on screen right now (see GlobalNode.anchor)
+  const [anchorPos, setAnchorPos] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const selector = currentNode?.type === 'positioned' ? currentNode.anchor : undefined;
+    if (!selector) { setAnchorPos(null); return; }
+    let frame = 0;
+    const follow = () => {
+      const el = document.querySelector(selector);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const x = r.left + r.width / 2;
+        const y = r.top + r.height / 2;
+        setAnchorPos(prev => (prev && Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) ? prev : { x, y });
+      }
+      frame = requestAnimationFrame(follow);
+    };
+    follow();
+    return () => { cancelAnimationFrame(frame); setAnchorPos(null); };
+  }, [currentNode?.id]);
 
   const inRhythmCheckWindow = appState.running && isShockForced;
 
@@ -282,7 +307,8 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
           onClick={handleNodeClick}
           style={{
             position: 'absolute',
-            left: `${currentNode.x}%`, top: `${currentNode.y}%`,
+            left: anchorPos ? `${anchorPos.x}px` : `${currentNode.x}%`,
+            top: anchorPos ? `${anchorPos.y}px` : `${currentNode.y}%`,
             transform: 'translate(-50%, -50%)',
             width: '50px', height: '50px',
             cursor: 'pointer', zIndex: 10001, pointerEvents: 'auto',

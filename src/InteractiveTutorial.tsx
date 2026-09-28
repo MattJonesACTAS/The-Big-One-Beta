@@ -605,6 +605,9 @@ interface InteractiveTutorialProps {
   onTimingNodesComplete?: () => void;
   onCatchupNodeStatusChange?: (screen: string, cleared: boolean) => void;
   catchupStep?: number;
+  // Set (to the chosen mode's name) while the "you've chosen ..." page is showing
+  modeIntroLabel?: string | null;
+  onModeIntroNext?: () => void;
 }
 
 // The two notes that used to sit on the mode page, kept word for word. They
@@ -617,12 +620,11 @@ const PARKED_MODE_PAGE_NOTES = [
 { id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
 ];
 
-const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep }) => {
+const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
-  const [timingIntroDismissed, setTimingIntroDismissed] = useState(false);
 
   const screens: TutorialScreens = {
     intro1: {
@@ -634,12 +636,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     intro2: {
       title: 'Navigating the Tutorial',
       image: '',
-      nextScreen: 'intro3',
-      elements: [],
-    },
-    intro3: {
-      title: 'Getting Started',
-      image: '',
       nextScreen: 'timingMethod',
       elements: [],
     },
@@ -648,7 +644,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'patientType', x: 50, y: 50, number: 1, title: 'Patient Type', description: "First you will need to select either adult or paediatric mode, then the patient's weight.\n\nMake any selection you like, then we'll move onto the next page." },
+        { id: 'patientType', x: 50, y: 50, number: 2, title: 'Patient Type', description: "First you will need to select either adult or paediatric mode, then the patient's weight.\n\nMake any selection you like, then we'll move onto the next page." },
       ],
     },
     previousTreatments: {
@@ -656,19 +652,19 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'previousTx', x: 50, y: 50, number: 2, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.\n\nAdd a couple of treatments then move onto the next page." },
+        { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.\n\nAdd a couple of treatments then move onto the next page." },
       ],
     },
     timingMethod: {
-      title: 'Time Keeping',
+      title: 'App Mode',
       image: '',
       // This page is now where each app mode's own tutorial is chosen (the
       // intro leads straight here), so it no longer steps on to the next
       // screen by itself - the real Next button on the page does that.
       nextScreen: null,
       elements: [
-        // Instruction only. Placeholder wording - to be replaced.
-        { id: 'modeChoice', x: 50, y: 24, number: 3, title: 'App Mode', description: "Choose the app mode you'd like to learn about.\n\nTap a mode to see what it does, then press Next to start its tutorial." },
+        // The old Getting Started page and the App Mode instruction, combined.
+        { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started', description: "On opening The Big One, you'll need to choose a mode.\n\nSelect the mode you'd like to learn how to use.\n\nIt's best to learn them from top to bottom." },
       ],
     },
     rhythmCheckTiming: {
@@ -676,7 +672,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'enterElapsedTime',
       elements: [
-        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 5, title: 'Rhythm Check Timing', description: "You will need to enter which minute intervals the rhythm checks are occurring.\n\nChoose an option to continue." },
+        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "You will need to enter which minute intervals the rhythm checks are occurring.\n\nChoose an option to continue." },
       ],
     },
     enterElapsedTime: {
@@ -684,7 +680,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'home1', // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'enterElapsedTime', x: 50, y: 50, number: 6, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.\n\nEnter any time you like to move forward." },
+        { id: 'enterElapsedTime', x: 50, y: 50, number: 5, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.\n\nEnter any time you like to move forward." },
       ],
     },
     home1: {
@@ -862,7 +858,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       {currentScreen === 'caseSummary' && <StaticCaseSummary />}
       
       {/* Intro pages: dark overlay over the live catchup behind */}
-      {(currentScreen === 'intro1' || currentScreen === 'intro2' || currentScreen === 'intro3') && (
+      {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -884,14 +880,11 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
               {currentScreen === 'intro1' && 'Welcome!'}
               {currentScreen === 'intro2' && 'Navigating the Tutorial'}
-              {currentScreen === 'intro3' && 'Getting Started'}
             </h2>
             {renderIntroDescription(
               currentScreen === 'intro1'
                 ? "The Big One is a cognitive aid for use during cardiac arrests or any other big job.\n\nIt is designed to assist you to keep track of:\n\n• Rhythm check intervals\n\n• Medication re-dosing intervals\n\n• The times events occurred, making case sheets easy and accurate\n\nBy offloading this cognitive load, you can focus on situational awareness and team leadership."
-                : currentScreen === 'intro2'
-                ? "In this tutorial you'll see red numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
-                : "On opening The Big One, you'll need to calibrate the app to the current case.\n\nLet's get started."
+                : "In this tutorial you'll see red numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
             )}
             <button
               onClick={handleNext}
@@ -914,8 +907,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         </div>
       )}
 
-      {/* Timing Method intro: hovering slide over the real catchup screen, shown once before the three numbered options */}
-      {currentScreen === 'timingMethod' && !timingIntroDismissed && (
+      {/* Once a mode has been chosen on the mode page: what comes next. Same look as the intro pages. */}
+      {modeIntroLabel && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -936,11 +929,11 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              Time Keeping
+              Calibration
             </h2>
-            {renderIntroDescription("Next you can choose whether the app provides you with a rhythm check countdown or not.")}
+            {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
             <button
-              onClick={() => setTimingIntroDismissed(true)}
+              onClick={onModeIntroNext}
               style={{
                 width: '100%',
                 padding: '12px',

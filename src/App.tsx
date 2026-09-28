@@ -843,6 +843,8 @@ export default function App() {
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
   // Tutorial only: the mode whose tutorial hasn't been written yet, if one was picked
   const [tutorialNotReadyMode, setTutorialNotReadyMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
+  // Tutorial only: the mode just chosen on the mode page, while the "you've chosen ..." page is showing
+  const [tutorialModeIntro, setTutorialModeIntro] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
@@ -2097,6 +2099,7 @@ export default function App() {
           <button 
             onClick={() => exportCasePdf(state.caseClosedAt)}
             className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
+            data-button="export-pdf"
           >
             <FileText size={20} /> Export PDF
           </button>
@@ -2170,7 +2173,16 @@ export default function App() {
           onClose={() => {
             setShowInteractiveTutorial(false);
             setTimingNodesComplete(false);
+            setTutorialModeIntro(null);
             setTutorialMode(true);
+          }}
+          modeIntroLabel={tutorialModeIntro ? TIMING_MODE_LABELS[tutorialModeIntro] : null}
+          onModeIntroNext={() => {
+            const chosen = tutorialModeIntro;
+            setTutorialModeIntro(null);
+            // Only the Tx log & timers tutorial exists so far; the others say so
+            if (chosen === 'elapsed') setCatchupStep(2);
+            else if (chosen) setTutorialNotReadyMode(chosen);
           }}
           onTimingNodesComplete={() => setTimingNodesComplete(true)}
           onCatchupNodeStatusChange={(_screen, cleared) => { console.log('[TUTORIAL DEBUG] App.tsx received:', _screen, cleared); setCatchupNodeCleared(cleared); }}
@@ -3341,10 +3353,11 @@ export default function App() {
                     <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(1)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
                       onClick={() => {
-                        // In the tutorial this page is where a mode's tutorial is picked.
-                        // Only the Tx log & timers one exists so far; the others say so.
-                        if (showInteractiveTutorial && timingMode !== 'elapsed') {
-                          setTutorialNotReadyMode(timingMode);
+                        // In the tutorial this page is where a mode's tutorial is picked:
+                        // a "you've chosen ..." page comes first (see the InteractiveTutorial
+                        // props below), then that mode's tutorial.
+                        if (showInteractiveTutorial) {
+                          setTutorialModeIntro(timingMode);
                           return;
                         }
                         setCatchupStep(timingMode === 'minimal' ? 7 : 2);
