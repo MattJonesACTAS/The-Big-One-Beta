@@ -841,6 +841,8 @@ export default function App() {
   const tutorialInitialWeightRef = useRef<number | null>(null);
   const [showInteractiveTutorial, setShowInteractiveTutorial] = useState(false);
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
+  // Tutorial only: the mode whose tutorial hasn't been written yet, if one was picked
+  const [tutorialNotReadyMode, setTutorialNotReadyMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
@@ -2175,6 +2177,17 @@ export default function App() {
         />
       )}
 
+      {/* Tutorial: shown when a mode whose tutorial hasn't been written yet is picked */}
+      {tutorialNotReadyMode && (
+        <div className="fixed inset-0 bg-black/70 z-[10001] flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Coming soon</h2>
+            <p className="text-neutral-500 mb-8">The {TIMING_MODE_LABELS[tutorialNotReadyMode]} tutorial hasn't been written yet.</p>
+            <button onClick={() => setTutorialNotReadyMode(null)} className="w-full bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">Back to modes</button>
+          </div>
+        </div>
+      )}
+
       {/* Disclaimer Modal */}
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
@@ -2750,7 +2763,7 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setShowCatchup(true);
-                        setCatchupStep(2);
+                        setCatchupStep(6);
                         setTimingMode(null);
                         setTimingNodesComplete(false);
                         setShowInteractiveTutorial(true);
@@ -3046,14 +3059,14 @@ export default function App() {
                   {/* Navigation Buttons */}
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button 
-                      onClick={() => setCatchupStep(showInteractiveTutorial ? 1 : 6)} 
+                      onClick={() => setCatchupStep(6)} 
                       disabled={showInteractiveTutorial}
                       className={`py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'bg-neutral-100 text-neutral-300 cursor-default' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
                     >
                       Back
                     </button>
                     <button
-                      onClick={() => weightInput && setCatchupStep(showInteractiveTutorial ? 6 : 3)}
+                      onClick={() => weightInput && setCatchupStep(3)}
                       disabled={!weightInput || (showInteractiveTutorial && !catchupNodeCleared)}
                       className={`py-4 rounded-xl font-bold transition-all ${
                         weightInput && !(showInteractiveTutorial && !catchupNodeCleared)
@@ -3188,7 +3201,7 @@ export default function App() {
                       <Plus size={16} /> Full Tx list
                     </button>
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button onClick={() => setCatchupStep(showInteractiveTutorial ? 6 : 2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                      <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                       <button
                         onClick={() => {
                           if (timingMode === 'elapsed' || timingMode === 'minimal') setCatchupStep(7);
@@ -3240,7 +3253,7 @@ export default function App() {
                                 setExpandedMode(mode);
                               }
                             }}
-                            disabled={mode === 'elapsed' ? (showInteractiveTutorial && !timingNodesComplete) : showInteractiveTutorial}
+                            disabled={showInteractiveTutorial && !timingNodesComplete}
                             data-tutorial={mode === 'elapsed' ? 'elapsed-btn' : undefined}
                             aria-expanded={expanded}
                             className="w-full h-[80px] px-4 flex items-center gap-4 text-left"
@@ -3325,9 +3338,17 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(showInteractiveTutorial ? 2 : 1)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
+                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(1)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
                     <button
-                      onClick={() => setCatchupStep(timingMode === 'minimal' ? 7 : showInteractiveTutorial ? 3 : 2)}
+                      onClick={() => {
+                        // In the tutorial this page is where a mode's tutorial is picked.
+                        // Only the Tx log & timers one exists so far; the others say so.
+                        if (showInteractiveTutorial && timingMode !== 'elapsed') {
+                          setTutorialNotReadyMode(timingMode);
+                          return;
+                        }
+                        setCatchupStep(timingMode === 'minimal' ? 7 : 2);
+                      }}
                       disabled={!timingMode}
                       className={`py-4 rounded-xl font-bold transition-all ${timingMode ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
                     >

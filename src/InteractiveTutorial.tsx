@@ -607,6 +607,16 @@ interface InteractiveTutorialProps {
   catchupStep?: number;
 }
 
+// The two notes that used to sit on the mode page, kept word for word. They
+// aren't shown at the moment: the mode page is now where each mode's own
+// tutorial is picked, and these describe only the old two-mode choice ("No
+// Timer Mode" / "Time Keeping Assistance Mode"). Kept here until it's decided
+// where their wording belongs.
+const PARKED_MODE_PAGE_NOTES = [
+{ id: 'timingLog',     x: 50, y: 38.0, number: 3, title: 'No Timer Mode',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses.\n\nUse this mode for big jobs that aren't arrests, like Prehospital Emergency Anaesthesia (PHEA).\n\nThis option can also be useful if you are acting as scribe during a simulation." },
+{ id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
+];
+
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
@@ -630,7 +640,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     intro3: {
       title: 'Getting Started',
       image: '',
-      nextScreen: 'patientDetails',
+      nextScreen: 'timingMethod',
       elements: [],
     },
     patientDetails: {
@@ -652,10 +662,13 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     timingMethod: {
       title: 'Time Keeping',
       image: '',
-      nextScreen: 'rhythmCheckTiming',
+      // This page is now where each app mode's own tutorial is chosen (the
+      // intro leads straight here), so it no longer steps on to the next
+      // screen by itself - the real Next button on the page does that.
+      nextScreen: null,
       elements: [
-        { id: 'timingLog',     x: 50, y: 38.0, number: 3, title: 'No Timer Mode',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses.\n\nUse this mode for big jobs that aren't arrests, like Prehospital Emergency Anaesthesia (PHEA).\n\nThis option can also be useful if you are acting as scribe during a simulation." },
-        { id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
+        // Instruction only. Placeholder wording - to be replaced.
+        { id: 'modeChoice', x: 50, y: 24, number: 3, title: 'App Mode', description: "Choose the app mode you'd like to learn about.\n\nTap a mode to see what it does, then press Next to start its tutorial." },
       ],
     },
     rhythmCheckTiming: {
