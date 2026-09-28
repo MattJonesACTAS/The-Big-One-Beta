@@ -848,6 +848,12 @@ export default function App() {
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
+  // Raw array indices of the rhythm-check walkthrough's 8 popups (see the
+  // comment above them in TutorialOverlay.tsx). 'timer' is array index 2, so
+  // the walkthrough runs from index 3 to index 10.
+  const RHYTHM_DEMO_START = 3;
+  const RHYTHM_DEMO_END = 10;
+  const tutorialRhythmDemoActive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START && tutorialNodeIndex <= RHYTHM_DEMO_END;
   const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
 
   // Correct timer drift when tab becomes visible again
@@ -889,7 +895,7 @@ export default function App() {
 
     // Case Summary page: Export PDF and Close Case sit side by side near the
     // top, so both nodes scroll (and lock) to the top of that page.
-    if (tutorialNodeIndex === 16 || tutorialNodeIndex === 17) {
+    if (tutorialNodeIndex === 24 || tutorialNodeIndex === 25) {
       caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const el = caseSummaryScrollRef.current;
@@ -917,7 +923,7 @@ export default function App() {
     // banner, which sits below Case Details / Arrest Summary / Vital Signs /
     // Pharma Summary - scroll it to the centre of the screen and lock, same
     // reasoning as the two nodes above.
-    if (tutorialNodeIndex === 15) {
+    if (tutorialNodeIndex === 23) {
       document.querySelector('[data-tutorial-anchor="closed-treatment-log-banner"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const el = caseSummaryScrollRef.current;
       const prevBodyOverflow = document.body.style.overflow;
@@ -944,10 +950,10 @@ export default function App() {
     // different section spread across that scroll, so each scrolls its own
     // section to the centre of the screen and locks that container in place.
     const sectionForNode: Record<number, string> = {
-      9: 'arrestSummary',
-      10: 'vitalSigns',
-      11: 'pharmaSummary',
-      12: 'treatmentLog'
+      17: 'arrestSummary',
+      18: 'vitalSigns',
+      19: 'pharmaSummary',
+      20: 'treatmentLog'
     };
     const section = sectionForNode[tutorialNodeIndex];
     if (section) {
@@ -965,6 +971,22 @@ export default function App() {
       }
     }
   }, [tutorialMode, tutorialNodeIndex, state.currentOverlay, isCaseClosed]);
+
+  // Rhythm check walkthrough: fast-forward the countdown at the three points
+  // that start it running for real. First, entering the walkthrough itself
+  // (jump to 0:20, matching what the real auto-close-at-20 would have left
+  // on screen). Then, at the start of each of the two "let's try that again"
+  // popups (jump to 0:03, so the real timer counts the last few seconds down
+  // and the real popup fires on its own - nothing else here is simulated).
+  useEffect(() => {
+    if (!tutorialMode) return;
+    if (tutorialNodeIndex === RHYTHM_DEMO_START) {
+      setState(prev => ({ ...prev, currentOverlay: null, rhythmCheckTarget: prev.elapsedSeconds + 20 }));
+    } else if (tutorialNodeIndex === RHYTHM_DEMO_START + 1 || tutorialNodeIndex === RHYTHM_DEMO_START + 3) {
+      setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 3 }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialMode, tutorialNodeIndex]);
 
 
   // Capture the patient weight as it was when the tutorial started, so we know
@@ -1036,26 +1058,26 @@ export default function App() {
     // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
     // Both stop as soon as the weight actually changes, even before the node is dismissed.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
-    if (tutorialMode && tutorialScreen.index === 4 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 12 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
       document.body.classList.add('tutorial-flash-recalibrate');
     } else {
       document.body.classList.remove('tutorial-flash-recalibrate');
     }
-    if (tutorialMode && tutorialScreen.index === 4 && showRecalibrateMenu && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 12 && showRecalibrateMenu && weightUnchanged) {
       document.body.classList.add('tutorial-flash-weight');
     } else {
       document.body.classList.remove('tutorial-flash-weight');
     }
 
     // Node 11 (addTxBtn, array index 5) complete - flash Add Tx button
-    if (tutorialMode && tutorialScreen.index === 6 && state.currentOverlay === null) {
+    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
     // Node 12 (addTxSubmenu, array index 6) complete - flash Adrenaline and dose buttons
-    if (tutorialMode && tutorialScreen.index === 7) {
+    if (tutorialMode && tutorialScreen.index === 15) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -1064,7 +1086,7 @@ export default function App() {
     }
 
     // Node 14 (summaryBtn, array index 8) complete - flash Summary button
-    if (tutorialMode && tutorialScreen.index === 9 && state.currentOverlay === null) {
+    if (tutorialMode && tutorialScreen.index === 17 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
@@ -1074,28 +1096,28 @@ export default function App() {
     // push row, until the entry is actually edited, moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
       || state.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
-    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === 'summary' && !adrenalineHandled) {
+    if (tutorialMode && tutorialScreen.index === 21 && state.currentOverlay === 'summary' && !adrenalineHandled) {
       document.body.classList.add('tutorial-flash-adrenaline-tx');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline-tx');
     }
 
     // Node 19 (closeOverlay, array index 13) complete - flash summary close button
-    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === 'summary') {
+    if (tutorialMode && tutorialScreen.index === 22 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
     // Node 20 (endCase, array index 14) complete - flash End Case button
-    if (tutorialMode && tutorialScreen.index === 15 && state.currentOverlay === null) {
+    if (tutorialMode && tutorialScreen.index === 23 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-end');
     } else {
       document.body.classList.remove('tutorial-flash-end');
     }
 
     // Node 24 (delete, array index 17, the last node) complete - tutorial done, flash Close Case button
-    if (tutorialMode && tutorialScreen.index === 18) {
+    if (tutorialMode && tutorialScreen.index === 26) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');
@@ -1329,7 +1351,7 @@ export default function App() {
               if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
                 // Elapsed/minimal mode: fire overlay immediately at rhythm check time, no overtime phase
                 if (countdown === 0) {
-                  if (!showCatchup && !tutorialMode) {
+                  if (!showCatchup && (!tutorialMode || tutorialRhythmDemoActive)) {
                     nextOverlay = 'treatment';
                     setIsShockForced(true);
                     rhythmCheckDueAtRef.current = newElapsed;
@@ -1378,7 +1400,7 @@ export default function App() {
       }, 500);
     }
     return () => clearInterval(interval);
-  }, [state.running, timingMode, rhythmInterval, tutorialMode, showCatchup]);
+  }, [state.running, timingMode, rhythmInterval, tutorialMode, tutorialRhythmDemoActive, showCatchup]);
 
   const togglePause = () => {
     setState(prev => {
@@ -1499,7 +1521,7 @@ export default function App() {
   // not in the tutorial, not while editing, and not when the popup was
   // reopened from an already-delayed check.
   const allowRhythmCheckDelay =
-    isShockForced && !rearrested && !tutorialMode &&
+    isShockForced && !rearrested && (!tutorialMode || tutorialRhythmDemoActive) &&
     (timingMode === 'elapsed' || timingMode === 'minimal') && !!rhythmInterval &&
     state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
 
@@ -2268,12 +2290,13 @@ export default function App() {
         )}
         <button 
           onClick={() => setShowRecalibrateMenu(true)} 
+          disabled={tutorialRhythmDemoActive}
           data-button="recalibrate"
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
         >
           <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
-        <button onClick={() => setShowEndWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="end-case">
+        <button onClick={() => setShowEndWarning(true)} disabled={tutorialRhythmDemoActive} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="end-case">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> End Case
         </button>
       </div>
@@ -2289,7 +2312,7 @@ export default function App() {
               currentOverlay: p.currentOverlay === 'reversibles' ? null : 'reversibles'
             }));
           }}
-          disabled={isShockForced}
+          disabled={isShockForced || tutorialRhythmDemoActive}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${
             state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' :
             !state.reversiblesChecklistOpened ? 'bg-red-600 text-white animate-pulse' :
@@ -2304,7 +2327,7 @@ export default function App() {
             setRoscButtonFlashing(false);
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'rosc' ? null : 'rosc' }))
           }}
-          disabled={isShockForced}
+          disabled={isShockForced || tutorialRhythmDemoActive}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${
             state.currentOverlay === 'rosc' ? 'bg-red-100 text-red-800' : 
             roscButtonFlashing ? 'bg-red-600 text-white animate-pulse' :
@@ -2318,7 +2341,7 @@ export default function App() {
             if (isShockForced) return;
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'phea' ? null : 'phea' }))
           }}
-          disabled={isShockForced}
+          disabled={isShockForced || tutorialRhythmDemoActive}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${state.currentOverlay === 'phea' ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'phea' ? 'Close' : 'PHEA'}
@@ -2328,7 +2351,7 @@ export default function App() {
             if (isShockForced) return;
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'vitals' ? null : 'vitals' }))
           }}
-          disabled={isShockForced}
+          disabled={isShockForced || tutorialRhythmDemoActive}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${state.currentOverlay === 'vitals' ? 'bg-red-100 text-red-800' : 'bg-sky-100 text-sky-700'} ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
           {state.currentOverlay === 'vitals' ? 'Close' : 'VSS'}
@@ -2704,7 +2727,7 @@ export default function App() {
               if (isShockForced) return;
               setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'summary' ? null : 'summary' }))
             }}
-            disabled={isShockForced}
+            disabled={isShockForced || tutorialRhythmDemoActive}
             className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
             data-button="summary"
           >
@@ -2735,7 +2758,7 @@ export default function App() {
             if (isShockForced) return;
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'treatment' ? null : 'treatment' }))
           }}
-          disabled={isShockForced}
+          disabled={isShockForced || tutorialRhythmDemoActive}
           className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'treatment' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
           data-button="add-tx"
         >

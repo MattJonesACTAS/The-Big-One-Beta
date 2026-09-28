@@ -45,10 +45,85 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [
       {
         title: 'Rhythm Check Countdown',
-        description: "This shows the countdown to your next rhythm check.\n\nWhen the counter reaches 0:00, the app will ask you what happened at that rhythm check.\n\nThis feature has been disabled in the tutorial for simplicity."
+        description: "This shows the countdown to your next rhythm check.\n\nWhen the counter reaches 0:00, the app will ask you what happened at that rhythm check."
+      },
+      {
+        title: "Let's See It In Action",
+        description: "Now let's see how a rhythm check actually works.\n\nThe timer is about to jump ahead so you don't have to wait for it."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
+  },
+  // --- Rhythm check walkthrough: a full worked example, forced back to home
+  // at 0:20 and the popup at 0:00 exactly as it works for real. Nothing here
+  // is a numbered node - each one is a plain popup that appears the moment
+  // its condition is met, the same way the Home Page welcome message does.
+  // App.tsx fast-forwards the countdown at three points (entering this
+  // node's index, and the two "let's try again" points below) - everything
+  // else is the real timer and the real popup running unmodified.
+  {
+    id: 'rhythmDemoForcedHome', type: 'popup',
+    pages: [{
+      title: 'Rhythm Check Time',
+      description: "The app has forced you back to the home screen at 0:20, because it's time for a rhythm check.\n\nWatch the countdown - it's about to reach 0:00."
+    }],
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
+  },
+  {
+    id: 'rhythmDemoFirstPopup', type: 'popup',
+    pages: [{
+      title: 'Select The Outcome',
+      description: "This is the rhythm check popup. Every time it appears, you need to tell the app what happened.\n\nThere are three kinds of outcome: a shock or disarm (red and blue), ROSC (green), and Delay rhythm check (amber) - we'll come back to Delay shortly.\n\nChoose any red or blue option to continue."
+    }],
+    condition: (s, sf) => sf === true
+  },
+  {
+    id: 'rhythmDemoAfterFirst', type: 'popup',
+    pages: [{
+      title: 'Well Done',
+      description: "Let's do that again, but this time choose 'Delay rhythm check' instead."
+    }],
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
+  },
+  {
+    id: 'rhythmDemoDelayPopup', type: 'popup',
+    pages: [{
+      title: 'Delaying A Rhythm Check',
+      description: "Sometimes a rhythm check falls due in the middle of something else - an ETT placement, for example - and there isn't a safe moment to stop for it.\n\n'Delay rhythm check' logs that and lets you carry on, without forcing a choice right now.\n\nChoose 'Delay rhythm check' to continue."
+    }],
+    condition: (s, sf) => sf === true
+  },
+  {
+    id: 'rhythmDemoRhythmCheckNow', type: 'popup',
+    pages: [{
+      title: 'Rhythm Check Now',
+      description: "The ring now shows 'Rhythm check now' and how long the check has been delayed.\n\nWhen you're ready, press it. The rhythm check popup will reappear, and once you log an outcome the interval automatically updates to match, the same as it would with an odds/evens change.\n\nPress the ring to continue."
+    }],
+    condition: (s) => s.rhythmCheckDelayedAt != null && s.currentOverlay === null
+  },
+  {
+    id: 'rhythmDemoRoscPopup', type: 'popup',
+    pages: [{
+      title: 'Return Of Spontaneous Circulation',
+      description: "Choose 'ROSC' this time."
+    }],
+    condition: (s, sf) => sf === true
+  },
+  {
+    id: 'rhythmDemoRoscMode', type: 'popup',
+    pages: [{
+      title: 'ROSC Mode',
+      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop, since neither applies with a pulse.\n\nIf the patient rearrests, pressing the ring - or 'Rearrest' from Add Tx - brings the rhythm check popup straight back and picks up the timers again.\n\nPress 'Rearrest' to continue."
+    }],
+    condition: (s) => s.isROSCMode === true && s.currentOverlay === null
+  },
+  {
+    id: 'rhythmDemoLastPopup', type: 'popup',
+    pages: [{
+      title: "You've Seen It All",
+      description: "That's every option the rhythm check popup offers.\n\nChoose whichever you like to finish up, then we'll carry on with the rest of the tutorial."
+    }],
+    condition: (s, sf) => sf === true
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
@@ -239,7 +314,15 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     return () => { cancelAnimationFrame(frame); setAnchorPos(null); };
   }, [currentNode?.id]);
 
-  const inRhythmCheckWindow = appState.running && isShockForced;
+  // Four of the rhythm-check walkthrough's popups are specifically meant to
+  // show layered over the real forced popup (their own condition checks for
+  // isShockForced being true) - everything else keeps stepping aside while
+  // that window is open, as before.
+  const showsDuringRhythmCheck = currentNode?.id === 'rhythmDemoFirstPopup'
+    || currentNode?.id === 'rhythmDemoDelayPopup'
+    || currentNode?.id === 'rhythmDemoRoscPopup'
+    || currentNode?.id === 'rhythmDemoLastPopup';
+  const inRhythmCheckWindow = appState.running && isShockForced && !showsDuringRhythmCheck;
 
   const conditionMet = !inRhythmCheckWindow && currentNode
     ? (currentNode.condition ? currentNode.condition(appState, isShockForced, initialWeightRef.current) : true)
