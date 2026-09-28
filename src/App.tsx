@@ -913,6 +913,33 @@ export default function App() {
       };
     }
 
+    // Case Summary page: Final Case Data is anchored to the Treatment Log
+    // banner, which sits below Case Details / Arrest Summary / Vital Signs /
+    // Pharma Summary - scroll it to the centre of the screen and lock, same
+    // reasoning as the two nodes above.
+    if (tutorialNodeIndex === 15) {
+      document.querySelector('[data-tutorial-anchor="closed-treatment-log-banner"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const el = caseSummaryScrollRef.current;
+      const prevBodyOverflow = document.body.style.overflow;
+      const prevBodyTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      const prevOverflow = el?.style.overflowY;
+      const prevTouchAction = el?.style.touchAction;
+      if (el) {
+        el.style.overflowY = 'hidden';
+        el.style.touchAction = 'none';
+      }
+      return () => {
+        document.body.style.overflow = prevBodyOverflow;
+        document.body.style.touchAction = prevBodyTouchAction;
+        if (el) {
+          el.style.overflowY = prevOverflow ?? '';
+          el.style.touchAction = prevTouchAction ?? '';
+        }
+      };
+    }
+
     // Live Summary overlay: each of its four "info" nodes is anchored to a
     // different section spread across that scroll, so each scrolls its own
     // section to the centre of the screen and locks that container in place.
@@ -2119,8 +2146,8 @@ export default function App() {
 
         <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
         
-        <div data-tutorial-section="closedTreatmentLog" className="rounded-xl border border-neutral-100">
-          <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
+        <div className="rounded-xl border border-neutral-100">
+          <div data-tutorial-anchor="closed-treatment-log-banner" className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
           <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} isSummary={true} />
         </div>
       </div>
@@ -4579,7 +4606,7 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
       )}
       {(state.timingMode !== 'log' || state.cprRound > 0 || alwaysShowArrestSummary) && (
         <div className="rounded-xl border border-neutral-100">
-          <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">ARREST SUMMARY</div>
+          <div data-tutorial-anchor="arrest-summary-banner" className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">ARREST SUMMARY</div>
           <div className="bg-white divide-y divide-neutral-50 rounded-b-xl">
             {state.cprRound > 0 ? (
               <>

@@ -97,7 +97,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Summary overlay ---
   {
-    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 35, anchor: '[data-tutorial-section="arrestSummary"]',
+    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 35, anchor: '[data-tutorial-anchor="arrest-summary-banner"]',
     pages: [
       {
         title: 'Arrest Summary',
@@ -155,7 +155,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Case summary ---
   {
-    id: 'finalStats', type: 'positioned', x: 50, y: 61.64, anchor: '[data-tutorial-section="closedTreatmentLog"]',
+    id: 'finalStats', type: 'positioned', x: 50, y: 61.64, anchor: '[data-tutorial-anchor="closed-treatment-log-banner"]',
     pages: [{ title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute.' }],
     condition: (s) => !s.running
   },
