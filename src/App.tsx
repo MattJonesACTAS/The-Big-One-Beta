@@ -307,21 +307,29 @@ const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
 // Order the App Mode cards are stacked in, top to bottom.
 const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['log', 'minimal', 'elapsed'];
 
-// Pros and cons revealed under whichever App Mode card is selected.
-const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[] }> = {
+// Pros and cons revealed under whichever App Mode card is selected, plus how
+// distracting / hard to use the mode is (1 = lowest, 3 = highest), which is
+// drawn as a low-to-high meter rather than written out.
+const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[]; distraction: 1 | 2 | 3 }> = {
   log: {
-    pros: ['Log every Tx', 'Case sheet assistance', 'Non-cardiac arrest cases', 'Scribe on sims'],
-    cons: ['No rhythm check timer', 'No medication redosing timers', 'Medium potential distraction'],
+    pros: ['Case sheet assistance', 'Handover assistance', 'Non-cardiac arrest cases', 'Scribe on sims'],
+    cons: ['No rhythm check timer', 'No medication redosing timers'],
+    distraction: 2,
   },
   minimal: {
-    pros: ['Rhythm check timer', 'Medication redosing timers', 'Lowest potential distraction'],
+    pros: ['Rhythm check timer', 'Medication redosing timers'],
     cons: ['No case sheet assistance'],
+    distraction: 1,
   },
   elapsed: {
     pros: ['Full app capability'],
-    cons: ['Highest potential distraction'],
+    cons: [],
+    distraction: 3,
   },
 };
+
+const DISTRACTION_LABELS = ['low', 'medium', 'high'] as const;
+const DISTRACTION_COLOURS = ['bg-emerald-500', 'bg-amber-400', 'bg-red-500'] as const;
 
 const formatDurationHM = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -3220,14 +3228,36 @@ export default function App() {
                                       </li>
                                     ))}
                                   </ul>
-                                  <ul className="space-y-1.5">
-                                    {details.cons.map(t => (
-                                      <li key={t} className="flex items-start gap-2">
-                                        <Minus size={14} strokeWidth={3} className="text-red-500 flex-shrink-0 mt-[3px]" />
-                                        <span>{t}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  {details.cons.length > 0 && (
+                                    <ul className="space-y-1.5">
+                                      {details.cons.map(t => (
+                                        <li key={t} className="flex items-start gap-2">
+                                          <Minus size={14} strokeWidth={3} className="text-red-500 flex-shrink-0 mt-[3px]" />
+                                          <span>{t}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  <div
+                                    className="pt-3 border-t border-emerald-200"
+                                    role="img"
+                                    aria-label={`Potential distraction: ${DISTRACTION_LABELS[details.distraction - 1]}`}
+                                  >
+                                    <div className="text-xs font-semibold text-neutral-500 mb-1.5">Potential distraction</div>
+                                    <div className="flex gap-1">
+                                      {[1, 2, 3].map(n => (
+                                        <div
+                                          key={n}
+                                          data-filled={n <= details.distraction}
+                                          className={`h-2 flex-1 rounded-full ${n <= details.distraction ? DISTRACTION_COLOURS[details.distraction - 1] : 'bg-neutral-200'}`}
+                                        />
+                                      ))}
+                                    </div>
+                                    <div className="flex justify-between mt-1 text-[11px] font-medium text-neutral-400">
+                                      <span>Low</span>
+                                      <span>High</span>
+                                    </div>
+                                  </div>
                                 </div>
                               </motion.div>
                             )}
