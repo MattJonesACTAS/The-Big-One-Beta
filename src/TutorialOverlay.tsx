@@ -31,7 +31,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'elapsedCorner', type: 'positioned', x: 24, y: 24.5,
+    id: 'elapsedCorner', type: 'positioned', x: 24, y: 24.5, anchor: '[data-tutorial-anchor="elapsed-card"]',
     pages: [
       {
         title: 'Elapsed Timer',
@@ -41,7 +41,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'timer', type: 'positioned', x: 50, y: 52,
+    id: 'timer', type: 'positioned', x: 50, y: 52, anchor: '[data-tutorial-anchor="rhythm-ring"]',
     pages: [
       {
         title: 'Rhythm Check Countdown',
@@ -51,23 +51,23 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2,
+    id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
     pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change time keeping method\n\nChange the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'tabs', type: 'positioned', x: 50, y: 10.97,
+    id: 'tabs', type: 'positioned', x: 50, y: 10.97, anchor: '[data-tutorial-anchor="checklist-row"]',
     pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {
-    id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29,
+    id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29, anchor: '[data-button="add-tx"]',
     pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Treatment screen ---
   {
-    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 36.08,
+    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 36.08, anchor: '[data-tutorial-anchor="add-tx-submenu"]',
     pages: [
       {
         title: 'Add Tx Submenu',
@@ -86,18 +86,18 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Home with medication alerts ---
   {
-    id: 'adrenalineAlert', type: 'positioned', x: 28.05, y: 83.32,
+    id: 'adrenalineAlert', type: 'positioned', x: 28.05, y: 83.32, anchor: '[data-tutorial-anchor="adrenaline-timer"]',
     pages: [{ title: 'Medication Timer', description: 'When you log adrenaline or amiodarone, a timer will appear on the home screen to help you keep track of when the next dose is due.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.some((t: any) => t.name.startsWith('Adrenaline push')) && !sf
   },
   {
-    id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4,
+    id: 'summaryBtn', type: 'positioned', x: 26.6, y: 95.4, anchor: '[data-button="summary"]',
     pages: [{ title: 'Summary Button', description: "Next, let's have a look at the running case summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && s.treatments.length > 0 && !sf
   },
   // --- Summary overlay ---
   {
-    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 35,
+    id: 'arrestSummaryInfo', type: 'positioned', x: 50, y: 35, anchor: '[data-tutorial-section="arrestSummary"]',
     pages: [
       {
         title: 'Arrest Summary',
@@ -107,7 +107,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'vitalSignsInfo', type: 'positioned', x: 50, y: 50,
+    id: 'vitalSignsInfo', type: 'positioned', x: 50, y: 50, anchor: '[data-tutorial-section="vitalSigns"]',
     pages: [
       {
         title: 'Vital Signs Survey',
@@ -117,7 +117,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'pharmaSummaryInfo', type: 'positioned', x: 50, y: 50,
+    id: 'pharmaSummaryInfo', type: 'positioned', x: 50, y: 50, anchor: '[data-tutorial-section="pharmaSummary"]',
     pages: [
       {
         title: 'Pharma Summary',
@@ -127,7 +127,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'treatmentLogInfo', type: 'positioned', x: 50, y: 52,
+    id: 'treatmentLogInfo', type: 'positioned', x: 50, y: 52, anchor: '[data-tutorial-section="treatmentLog"]',
     pages: [
       {
         title: 'Treatment Log',
@@ -141,7 +141,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     condition: (s) => s.currentOverlay === 'summary'
   },
   {
-    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4,
+    id: 'closeOverlay', type: 'positioned', x: 26.6, y: 95.4, anchor: '[data-button="summary"]',
     pages: [{ title: 'Return to Home', description: 'Press the close button to return to the home page.' }],
     condition: (s) => s.currentOverlay === 'summary'
       && (!s.treatments.some(t => t.name.startsWith('Adrenaline push'))
@@ -149,13 +149,13 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   // --- Home after summary ---
   {
-    id: 'endCase', type: 'positioned', x: 75.22, y: 4.2,
+    id: 'endCase', type: 'positioned', x: 75.22, y: 4.2, anchor: '[data-button="end-case"]',
     pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case.\n\nLet's end the case and see the final summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Case summary ---
   {
-    id: 'finalStats', type: 'positioned', x: 50, y: 61.64,
+    id: 'finalStats', type: 'positioned', x: 50, y: 61.64, anchor: '[data-tutorial-section="closedTreatmentLog"]',
     pages: [{ title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute.' }],
     condition: (s) => !s.running
   },

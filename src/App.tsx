@@ -2119,7 +2119,7 @@ export default function App() {
 
         <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
         
-        <div className="rounded-xl border border-neutral-100">
+        <div data-tutorial-section="closedTreatmentLog" className="rounded-xl border border-neutral-100">
           <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
           <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} isSummary={true} />
         </div>
@@ -2252,7 +2252,7 @@ export default function App() {
       </div>
 
       {/* Top Quick Tools */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+      <div data-tutorial-anchor="checklist-row" className="grid grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
         <button 
           onClick={() => {
             if (isShockForced) return;
@@ -2368,7 +2368,7 @@ export default function App() {
               </div>
             )}
             {(timingMode === 'elapsed' || timingMode === 'minimal') && !state.isROSCMode && (
-              <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
+              <div data-tutorial-anchor="elapsed-card" className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
                 <span className="text-[12px] sm:text-[14px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Elapsed Time</span>
                 <span className="text-[25px] sm:text-[47px] font-bold tabular-nums leading-none text-neutral-400">
                   {formatTimeWithSeconds(state.elapsedSeconds)}
@@ -2379,7 +2379,7 @@ export default function App() {
 
           {/* Rhythm Check - Centered vertically and responsive size */}
           <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
-            <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
+            <div data-tutorial-anchor="rhythm-ring" className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
 
               {/* Delayed rhythm check - full circle is tap target. Counts up how
                   long the check is overdue; tapping reopens the rhythm check
@@ -2608,6 +2608,7 @@ export default function App() {
           <div className="flex gap-2 sm:gap-3 w-full max-w-[560px] justify-between mb-0">
             {/* Adrenaline Warning */}
             <div 
+              data-tutorial-anchor="adrenaline-timer"
               onClick={() => {
                 if (!adrenalineStatus.show || disregardAdrenaline === 'confirmed') return;
                 if (disregardAdrenaline === 'pending') {
@@ -5097,7 +5098,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   }
   
   return (
-    <div className={`w-full ${noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}`}>
+    <div data-tutorial-anchor="add-tx-submenu" className={`w-full ${noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}`}>
       {isShockForced && (
         <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse">
            RHYTHM CHECK: SELECT SHOCK STATUS
@@ -5279,6 +5280,7 @@ function TxSection({
   return (
     <div>
       <div 
+        data-tutorial-anchor="tx-section-header"
         onClick={handleToggle}
         className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${colorMap[color]}`}
       >
