@@ -311,15 +311,15 @@ const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['log', 'minimal
 const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[] }> = {
   log: {
     pros: ['Log every Tx', 'Case sheet assistance', 'Non-cardiac arrest cases', 'Scribe on sims'],
-    cons: ['No assistance tracking rhythm checks or medication redosing intervals'],
+    cons: ['No rhythm check timer', 'No medication redosing timers', 'Medium potential distraction'],
   },
   minimal: {
-    pros: ['Tracks rhythm checks and medication redosing intervals', 'Minimal distraction'],
+    pros: ['Rhythm check timer', 'Medication redosing timers', 'Lowest potential distraction'],
     cons: ['No case sheet assistance'],
   },
   elapsed: {
     pros: ['Full app capability'],
-    cons: ['Maximum difficulty to use'],
+    cons: ['Highest potential distraction'],
   },
 };
 
@@ -748,6 +748,9 @@ export default function App() {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | 'minimal' | null>(() => state.timingMode);
+  // Which App Mode card is currently expanded. Kept apart from timingMode so
+  // tapping the chosen card again can shrink it without un-choosing the mode.
+  const [expandedMode, setExpandedMode] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
 
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
   const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
@@ -3155,6 +3158,10 @@ export default function App() {
                   <div className="flex flex-col gap-3 -mx-2">
                     {TIMING_MODE_ORDER.map(mode => {
                       const selected = timingMode === mode;
+                      // Only ever expanded while it's also the chosen mode, so a
+                      // stale value left over from an earlier run can't show a
+                      // panel on a card that isn't selected.
+                      const expanded = selected && expandedMode === mode;
                       const details = TIMING_MODE_DETAILS[mode];
                       return (
                         <div
@@ -3162,13 +3169,21 @@ export default function App() {
                           className={`rounded-2xl border-2 overflow-hidden transition-colors duration-200 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                         >
                           <button
-                            onClick={() => setTimingMode(mode)}
+                            onClick={() => {
+                              if (selected) {
+                                // Already chosen: tapping again just shrinks or re-opens it
+                                setExpandedMode(expanded ? null : mode);
+                              } else {
+                                setTimingMode(mode);
+                                setExpandedMode(mode);
+                              }
+                            }}
                             disabled={mode === 'elapsed' ? (showInteractiveTutorial && !timingNodesComplete) : showInteractiveTutorial}
                             data-tutorial={mode === 'elapsed' ? 'elapsed-btn' : undefined}
-                            aria-expanded={selected}
+                            aria-expanded={expanded}
                             className="w-full h-[80px] px-4 flex items-center gap-4 text-left"
                           >
-                            <div className="w-[84px] flex-shrink-0 flex items-center justify-center">
+                            <div className="w-[88px] flex-shrink-0 flex items-center justify-center">
                               {mode === 'log' && (
                                 <NotebookPen size={40} strokeWidth={1.5} className="text-neutral-700" />
                               )}
@@ -3176,10 +3191,10 @@ export default function App() {
                                 <Timer size={40} strokeWidth={1.5} className="text-emerald-600" />
                               )}
                               {mode === 'elapsed' && (
-                                <div className="flex items-center gap-1.5">
-                                  <NotebookPen size={28} strokeWidth={1.5} className="text-neutral-700" />
-                                  <Plus size={12} strokeWidth={2.5} className="text-neutral-400" />
-                                  <Timer size={28} strokeWidth={1.5} className="text-emerald-600" />
+                                <div className="flex items-center gap-1">
+                                  <NotebookPen size={34} strokeWidth={1.75} className="text-neutral-700" />
+                                  <Plus size={10} strokeWidth={2.5} className="text-neutral-400" />
+                                  <Timer size={34} strokeWidth={1.75} className="text-emerald-600" />
                                 </div>
                               )}
                             </div>
@@ -3187,7 +3202,7 @@ export default function App() {
                           </button>
 
                           <AnimatePresence initial={false}>
-                            {selected && (
+                            {expanded && (
                               <motion.div
                                 key="details"
                                 initial={{ height: 0, opacity: 0 }}
