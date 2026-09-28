@@ -28,9 +28,7 @@ import {
   User,
   Check,
   MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  Clipboard,
+  NotebookPen,
   Timer,
   Hourglass
 } from 'lucide-react';
@@ -300,10 +298,13 @@ const formatRecordingDuration = (seconds: number): string => {
 // its closed summary falls back to that same wall-clock figure instead -
 // still in this format, just under the "App recording for" label.
 const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
-  log: 'Record keeping only',
-  minimal: 'Time keeping only',
-  elapsed: 'Time and record keeping',
+  log: 'Tx log only',
+  minimal: 'Timers only',
+  elapsed: 'Tx log & timers',
 };
+
+// Order the App Mode cards are stacked in, top to bottom.
+const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['log', 'minimal', 'elapsed'];
 
 const formatDurationHM = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -731,38 +732,6 @@ export default function App() {
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | 'minimal' | null>(() => state.timingMode);
 
-  // Timing Method carousel (catchup step 6): one option on screen at a time,
-  // swiped/paged through rather than three stacked cards. carouselIndex is
-  // the single source of truth for which card is showing; timingMode is
-  // kept in sync with it via goToTimingOption, so all the existing
-  // timingMode-driven logic elsewhere (tick loop, Add Tx, etc.) needs no
-  // changes at all - only how this one screen presents the choice changes.
-  const TIMING_OPTIONS: Array<{ mode: 'log' | 'minimal' | 'elapsed'; label: string; subtitle: string }> = [
-    { mode: 'log', label: 'Record keeping only', subtitle: 'Full Tx log, no timers' },
-    { mode: 'minimal', label: 'Time keeping only', subtitle: 'Adrenaline, amiodarone & rhythm check timers only' },
-    { mode: 'elapsed', label: 'Time and record keeping', subtitle: 'Full Tx log & timers' },
-  ];
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [carouselDir, setCarouselDir] = useState(0);
-  const goToTimingOption = (nextIndex: number, dir: number) => {
-    const clamped = (nextIndex + TIMING_OPTIONS.length) % TIMING_OPTIONS.length;
-    setCarouselDir(dir);
-    setCarouselIndex(clamped);
-    setTimingMode(TIMING_OPTIONS[clamped].mode);
-  };
-  // On arriving at this screen, show whichever card matches the mode already
-  // chosen (e.g. returning via Back), or default to the first card.
-  useEffect(() => {
-    if (!showCatchup || catchupTxMode || catchupStep !== 6) return;
-    const idx = TIMING_OPTIONS.findIndex(o => o.mode === timingMode);
-    if (idx >= 0) {
-      setCarouselIndex(idx);
-    } else {
-      setCarouselIndex(0);
-      setTimingMode('log');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catchupStep]);
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
   const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
   const [isCaseClosed, setIsCaseClosed] = useState(() => {
@@ -3155,93 +3124,43 @@ export default function App() {
 
               {!catchupTxMode && catchupStep === 6 && (
                 <div className="space-y-6 px-4 max-w-md mx-auto text-center">
-                  <div className="space-y-1">
-                    <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
-                    <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
-                  </div>
+                  <h2 className="text-2xl font-bold text-neutral-900">Select App Mode</h2>
 
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => goToTimingOption(carouselIndex - 1, -1)}
-                      disabled={showInteractiveTutorial}
-                      className="flex-shrink-0 p-2 text-neutral-400 hover:text-neutral-600 btn-base"
-                      aria-label="Previous option"
-                    >
-                      <ChevronLeft size={28} />
-                    </button>
-
-                    {/* Single card at a time, swiped or paged through - not
-                        three stacked options. drag="x" handles a real swipe;
-                        the arrow buttons and dots below are the fallback for
-                        anyone not swiping. Whichever card is on screen IS
-                        the current choice (kept in sync via
-                        goToTimingOption), so there's no separate "confirm"
-                        tap on the card itself. */}
-                    <div className="flex-1 overflow-hidden" style={{ minHeight: 260 }}>
-                      <AnimatePresence initial={false} custom={carouselDir} mode="wait">
-                        <motion.div
-                          key={carouselIndex}
-                          custom={carouselDir}
-                          variants={{
-                            enter: (dir: number) => ({ x: dir > 0 ? 260 : -260, opacity: 0 }),
-                            center: { x: 0, opacity: 1 },
-                            exit: (dir: number) => ({ x: dir > 0 ? -260 : 260, opacity: 0 }),
-                          }}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-                          drag="x"
-                          dragConstraints={{ left: 0, right: 0 }}
-                          dragElastic={0.6}
-                          onDragEnd={(_e, info) => {
-                            if (info.offset.x < -60) goToTimingOption(carouselIndex + 1, 1);
-                            else if (info.offset.x > 60) goToTimingOption(carouselIndex - 1, -1);
-                          }}
-                          className="rounded-3xl border-2 border-emerald-500 bg-emerald-50 py-10 px-4 flex flex-col items-center gap-4 select-none cursor-grab active:cursor-grabbing"
+                  {/* Three stacked landscape cards - tap one to choose it.
+                      Nothing is pre-selected, so Next stays disabled until a
+                      mode has been picked on purpose. timingMode is the only
+                      state involved; everything downstream reads it exactly
+                      as before. */}
+                  <div className="flex flex-col gap-3 -mx-2">
+                    {TIMING_MODE_ORDER.map(mode => {
+                      const selected = timingMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          onClick={() => setTimingMode(mode)}
+                          disabled={mode === 'elapsed' ? (showInteractiveTutorial && !timingNodesComplete) : showInteractiveTutorial}
+                          data-tutorial={mode === 'elapsed' ? 'elapsed-btn' : undefined}
+                          className={`w-full h-[84px] rounded-2xl border-2 px-4 flex items-center gap-4 text-left transition-all duration-200 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                         >
-                          {TIMING_OPTIONS[carouselIndex].mode === 'log' && (
-                            <Clipboard size={56} strokeWidth={1.5} className="text-neutral-700" />
-                          )}
-                          {TIMING_OPTIONS[carouselIndex].mode === 'minimal' && (
-                            <Timer size={56} strokeWidth={1.5} className="text-emerald-600" />
-                          )}
-                          {TIMING_OPTIONS[carouselIndex].mode === 'elapsed' && (
-                            <div className="relative w-14 h-14 flex items-center justify-center">
-                              <Clipboard size={56} strokeWidth={1.5} className="text-neutral-700" />
-                              <div className="absolute -bottom-2 -right-3 bg-emerald-50 rounded-full p-0.5">
-                                <Timer size={26} strokeWidth={2} className="text-emerald-600" />
+                          <div className="w-[84px] flex-shrink-0 flex items-center justify-center">
+                            {mode === 'log' && (
+                              <NotebookPen size={40} strokeWidth={1.5} className="text-neutral-700" />
+                            )}
+                            {mode === 'minimal' && (
+                              <Timer size={40} strokeWidth={1.5} className="text-emerald-600" />
+                            )}
+                            {mode === 'elapsed' && (
+                              <div className="flex items-center gap-1.5">
+                                <NotebookPen size={28} strokeWidth={1.5} className="text-neutral-700" />
+                                <Plus size={12} strokeWidth={2.5} className="text-neutral-400" />
+                                <Timer size={28} strokeWidth={1.5} className="text-emerald-600" />
                               </div>
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-bold text-xl text-neutral-900">{TIMING_OPTIONS[carouselIndex].label}</div>
-                            <div className="text-sm text-neutral-500 mt-1">{TIMING_OPTIONS[carouselIndex].subtitle}</div>
+                            )}
                           </div>
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
-
-                    <button
-                      onClick={() => goToTimingOption(carouselIndex + 1, 1)}
-                      disabled={showInteractiveTutorial}
-                      data-tutorial="elapsed-btn"
-                      className="flex-shrink-0 p-2 text-neutral-400 hover:text-neutral-600 btn-base"
-                      aria-label="Next option"
-                    >
-                      <ChevronRight size={28} />
-                    </button>
-                  </div>
-
-                  <div className="flex justify-center gap-2">
-                    {TIMING_OPTIONS.map((opt, i) => (
-                      <button
-                        key={opt.mode}
-                        onClick={() => goToTimingOption(i, i > carouselIndex ? 1 : -1)}
-                        aria-label={opt.label}
-                        className={`w-2.5 h-2.5 rounded-full transition-colors ${i === carouselIndex ? 'bg-emerald-500' : 'bg-neutral-300'}`}
-                      />
-                    ))}
+                          <div className="font-bold text-lg text-neutral-900">{TIMING_MODE_LABELS[mode]}</div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
@@ -4958,7 +4877,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
 
       {!isShockForced && (
         <>
-          {/* "Time keeping only" trims Add Tx to just adrenaline, amiodarone
+          {/* "Timers only" trims Add Tx to just adrenaline, amiodarone
               and rhythm check outcomes (the latter always available above,
               unaffected by this) - the whole point of the mode is fewer
               things to log, not a relabelled version of the full list.
