@@ -852,16 +852,32 @@ export default function App() {
   // comment above them in TutorialOverlay.tsx). 'timer' is array index 2, so
   // the walkthrough runs from index 3 to index 10.
   const RHYTHM_DEMO_START = 3;
-  const RHYTHM_DEMO_END = 10;
+  const RHYTHM_DEMO_END = 9;
   const tutorialRhythmDemoActive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START && tutorialNodeIndex <= RHYTHM_DEMO_END;
   // Which single outcome the walkthrough is currently asking for - every
   // other outcome (including Delay) is disabled while one of these is set,
   // so the buttons on screen match the instruction on top of them exactly.
-  const tutorialOutcomeRestriction: 'redblue' | 'rosc' | 'delay' | null =
-    tutorialNodeIndex === RHYTHM_DEMO_START + 1 ? 'redblue'
-    : tutorialNodeIndex === RHYTHM_DEMO_START + 3 ? 'delay'
-    : tutorialNodeIndex === RHYTHM_DEMO_START + 5 ? 'rosc'
-    : null;
+  //
+  // This is state, not a plain derived value keyed to tutorialNodeIndex,
+  // because dismissing the *explanatory slide* (its own "Got it") advances
+  // tutorialNodeIndex immediately - well before the real outcome has
+  // actually been chosen and the real popup has closed. A restriction tied
+  // directly to the index would clear the instant that slide closes,
+  // unlocking every button underneath for the brief window before the real
+  // click happens - exactly backwards. Instead: arm the restriction on
+  // *entering* the relevant index (same moment as the fast-forward
+  // mutations below), and only clear it once isShockForced itself goes
+  // false, i.e. once a real choice has actually been logged.
+  const [tutorialOutcomeRestriction, setTutorialOutcomeRestriction] = useState<'redblue' | 'rosc' | 'delay' | null>(null);
+  useEffect(() => {
+    if (!tutorialMode) return;
+    if (tutorialNodeIndex === RHYTHM_DEMO_START) setTutorialOutcomeRestriction('redblue');
+    else if (tutorialNodeIndex === RHYTHM_DEMO_START + 2) setTutorialOutcomeRestriction('delay');
+    else if (tutorialNodeIndex === RHYTHM_DEMO_START + 4) setTutorialOutcomeRestriction('rosc');
+  }, [tutorialMode, tutorialNodeIndex]);
+  useEffect(() => {
+    if (!isShockForced) setTutorialOutcomeRestriction(null);
+  }, [isShockForced]);
   const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
 
   // Correct timer drift when tab becomes visible again
@@ -903,7 +919,7 @@ export default function App() {
 
     // Case Summary page: Export PDF and Close Case sit side by side near the
     // top, so both nodes scroll (and lock) to the top of that page.
-    if (tutorialNodeIndex === 24 || tutorialNodeIndex === 25) {
+    if (tutorialNodeIndex === 23 || tutorialNodeIndex === 24) {
       caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const el = caseSummaryScrollRef.current;
@@ -931,7 +947,7 @@ export default function App() {
     // banner, which sits below Case Details / Arrest Summary / Vital Signs /
     // Pharma Summary - scroll it to the centre of the screen and lock, same
     // reasoning as the two nodes above.
-    if (tutorialNodeIndex === 23) {
+    if (tutorialNodeIndex === 22) {
       document.querySelector('[data-tutorial-anchor="closed-treatment-log-banner"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const el = caseSummaryScrollRef.current;
       const prevBodyOverflow = document.body.style.overflow;
@@ -958,10 +974,10 @@ export default function App() {
     // different section spread across that scroll, so each scrolls its own
     // section to the centre of the screen and locks that container in place.
     const sectionForNode: Record<number, string> = {
-      17: 'arrestSummary',
-      18: 'vitalSigns',
-      19: 'pharmaSummary',
-      20: 'treatmentLog'
+      16: 'arrestSummary',
+      17: 'vitalSigns',
+      18: 'pharmaSummary',
+      19: 'treatmentLog'
     };
     const section = sectionForNode[tutorialNodeIndex];
     if (section) {
@@ -990,7 +1006,7 @@ export default function App() {
     if (!tutorialMode) return;
     if (tutorialNodeIndex === RHYTHM_DEMO_START) {
       setState(prev => ({ ...prev, currentOverlay: null, rhythmCheckTarget: prev.elapsedSeconds + 20 }));
-    } else if (tutorialNodeIndex === RHYTHM_DEMO_START + 3) {
+    } else if (tutorialNodeIndex === RHYTHM_DEMO_START + 2) {
       // Second time round: jump straight to 0:04, no watch-then-animate -
       // that demonstration only needs to happen once.
       setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 4 }));
@@ -1014,7 +1030,7 @@ export default function App() {
   const rhythmDemoStateRef = useRef(state);
   useEffect(() => { rhythmDemoStateRef.current = state; }, [state]);
   useEffect(() => {
-    if (!tutorialMode || tutorialNodeIndex !== RHYTHM_DEMO_START + 1) return;
+    if (!tutorialMode || tutorialNodeIndex !== RHYTHM_DEMO_START) return;
     let rapidId: number | null = null;
     const watcherId = window.setInterval(() => {
       const s = rhythmDemoStateRef.current;
@@ -1108,26 +1124,26 @@ export default function App() {
     // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
     // Both stop as soon as the weight actually changes, even before the node is dismissed.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
-    if (tutorialMode && tutorialScreen.index === 12 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 11 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
       document.body.classList.add('tutorial-flash-recalibrate');
     } else {
       document.body.classList.remove('tutorial-flash-recalibrate');
     }
-    if (tutorialMode && tutorialScreen.index === 12 && showRecalibrateMenu && weightUnchanged) {
+    if (tutorialMode && tutorialScreen.index === 11 && showRecalibrateMenu && weightUnchanged) {
       document.body.classList.add('tutorial-flash-weight');
     } else {
       document.body.classList.remove('tutorial-flash-weight');
     }
 
     // Node 11 (addTxBtn, array index 5) complete - flash Add Tx button
-    if (tutorialMode && tutorialScreen.index === 14 && state.currentOverlay === null) {
+    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-add-tx');
     } else {
       document.body.classList.remove('tutorial-flash-add-tx');
     }
 
     // Node 12 (addTxSubmenu, array index 6) complete - flash Adrenaline and dose buttons
-    if (tutorialMode && tutorialScreen.index === 15) {
+    if (tutorialMode && tutorialScreen.index === 14) {
       document.body.classList.add('tutorial-flash-adrenaline');
       document.body.classList.add('tutorial-flash-dose');
     } else {
@@ -1136,7 +1152,7 @@ export default function App() {
     }
 
     // Node 14 (summaryBtn, array index 8) complete - flash Summary button
-    if (tutorialMode && tutorialScreen.index === 17 && state.currentOverlay === null) {
+    if (tutorialMode && tutorialScreen.index === 16 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-summary');
     } else {
       document.body.classList.remove('tutorial-flash-summary');
@@ -1146,28 +1162,28 @@ export default function App() {
     // push row, until the entry is actually edited, moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
       || state.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
-    if (tutorialMode && tutorialScreen.index === 21 && state.currentOverlay === 'summary' && !adrenalineHandled) {
+    if (tutorialMode && tutorialScreen.index === 20 && state.currentOverlay === 'summary' && !adrenalineHandled) {
       document.body.classList.add('tutorial-flash-adrenaline-tx');
     } else {
       document.body.classList.remove('tutorial-flash-adrenaline-tx');
     }
 
     // Node 19 (closeOverlay, array index 13) complete - flash summary close button
-    if (tutorialMode && tutorialScreen.index === 22 && state.currentOverlay === 'summary') {
+    if (tutorialMode && tutorialScreen.index === 21 && state.currentOverlay === 'summary') {
       document.body.classList.add('tutorial-flash-summary-close');
     } else {
       document.body.classList.remove('tutorial-flash-summary-close');
     }
 
     // Node 20 (endCase, array index 14) complete - flash End Case button
-    if (tutorialMode && tutorialScreen.index === 23 && state.currentOverlay === null) {
+    if (tutorialMode && tutorialScreen.index === 22 && state.currentOverlay === null) {
       document.body.classList.add('tutorial-flash-end');
     } else {
       document.body.classList.remove('tutorial-flash-end');
     }
 
     // Node 24 (delete, array index 17, the last node) complete - tutorial done, flash Close Case button
-    if (tutorialMode && tutorialScreen.index === 26) {
+    if (tutorialMode && tutorialScreen.index === 25) {
       document.body.classList.add('tutorial-flash-close');
     } else {
       document.body.classList.remove('tutorial-flash-close');

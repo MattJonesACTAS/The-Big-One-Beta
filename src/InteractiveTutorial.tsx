@@ -621,6 +621,8 @@ const PARKED_MODE_PAGE_NOTES = [
 ];
 
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext }) => {
+  const [modeIntroPage, setModeIntroPage] = useState(0);
+  useEffect(() => { setModeIntroPage(0); }, [modeIntroLabel]);
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
@@ -929,26 +931,54 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              Calibration
+              {modeIntroPage === 0 ? 'Calibration' : 'About This Mode'}
             </h2>
-            {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
-            <button
-              onClick={onModeIntroNext}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#10b981',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-              }}
-            >
-              Next
-            </button>
+            {modeIntroPage === 0 ? (
+              <>
+                {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
+                <button
+                  onClick={() => setModeIntroPage(1)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                  }}
+                >
+                  Next
+                </button>
+              </>
+            ) : (
+              // Placeholder: each mode's own strengths/weaknesses will live
+              // here eventually. For now this only ever shows the one moved
+              // over from the old Elapsed Timer note.
+              <>
+                {renderIntroDescription("This can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient.")}
+                <button
+                  onClick={onModeIntroNext}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                  }}
+                >
+                  Next
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

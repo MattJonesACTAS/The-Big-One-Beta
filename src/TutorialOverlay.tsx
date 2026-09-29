@@ -35,7 +35,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [
       {
         title: 'Elapsed Timer',
-        description: "Earlier we chose 'Time keeping assistance' as our app mode.\n\nNow we have the elapsed case time available right in front of us, mirroring the monitor's.\n\nThis can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient."
+        description: "Earlier we entered the monitor's elapsed case time.\n\nNow we have that same timer right in front of us, mirroring the monitor's."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -45,11 +45,11 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [
       {
         title: 'Rhythm Check Countdown',
-        description: "This shows a countdown to your next rhythm check.\n\nAt 0:20 the app will force you back to the home screen to prompt you to prepare."
+        description: "This shows a countdown to your next rhythm check.\n\nAt 0:20 the app will force you back to the home screen to prompt you to prepare the team for the next rhythm check."
       },
       {
         title: "Let's See It In Action",
-        description: "Now the timer is going to jump ahead so we can see what happens when the timer reaches 0:00."
+        description: "We're going to pretend that the timer has forced us back to the home screen at the 0:20 second mark so we can see what happens when the timer reaches 0:00."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -58,17 +58,12 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   // at 0:20 and the popup at 0:00 exactly as it works for real. Nothing here
   // is a numbered node - each one is a plain popup that appears the moment
   // its condition is met, the same way the Home Page welcome message does.
-  // App.tsx fast-forwards the countdown at three points (entering this
-  // node's index, and the two "let's try again" points below) - everything
-  // else is the real timer and the real popup running unmodified.
-  {
-    id: 'rhythmDemoForcedHome', type: 'popup',
-    pages: [{
-      title: 'Rhythm Check Time',
-      description: "Imagine the timer has reached 0:20 and you've now been forced back to the home screen."
-    }],
-    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
-  },
+  // App.tsx resets the countdown to 0:20 the instant this node is entered
+  // (i.e. the moment the "timer" node's last page is dismissed), and again
+  // to 0:04 at the "Well Done" node below - everything else, including the
+  // one visible fast-forward animation in between, is the real timer and
+  // the real popup running unmodified. Nothing here shows or activates
+  // anything until that real countdown genuinely reaches 0:00 on its own.
   {
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
