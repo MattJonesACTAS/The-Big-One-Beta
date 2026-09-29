@@ -45,11 +45,11 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [
       {
         title: 'Rhythm Check Countdown',
-        description: "This shows the countdown to your next rhythm check.\n\nWhen the counter reaches 0:00, the app will ask you what happened at that rhythm check."
+        description: "This shows a countdown to your next rhythm check.\n\nAt 0:20 the app will force you back to the home screen to prompt you to prepare."
       },
       {
         title: "Let's See It In Action",
-        description: "Now let's see how a rhythm check actually works.\n\nThe timer is about to jump ahead so you don't have to wait for it."
+        description: "Now the timer is going to jump ahead so we can see what happens when the timer reaches 0:00."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -65,7 +65,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoForcedHome', type: 'popup',
     pages: [{
       title: 'Rhythm Check Time',
-      description: "The app has forced you back to the home screen at 0:20, because it's time for a rhythm check.\n\nWatch the countdown - it's about to reach 0:00."
+      description: "Imagine the timer has reached 0:20 and you've now been forced back to the home screen."
     }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
@@ -73,7 +73,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
       title: 'Select The Outcome',
-      description: "This is the rhythm check popup. Every time it appears, you need to tell the app what happened.\n\nThere are three kinds of outcome: a shock or disarm (red and blue), ROSC (green), and Delay rhythm check (amber) - we'll come back to Delay shortly.\n\nChoose any red or blue option to continue."
+      description: "This is the rhythm check popup. Every time it appears, you need to tell the app what happened.\n\nThere are three kinds of outcome: a shock or disarm (red and blue), ROSC (green), and Delay rhythm check (amber) - we'll come back to Delay and ROSC shortly.\n\nChoose any red or blue option to continue."
     }],
     condition: (s, sf) => sf === true
   },
@@ -89,7 +89,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoDelayPopup', type: 'popup',
     pages: [{
       title: 'Delaying A Rhythm Check',
-      description: "Sometimes a rhythm check falls due in the middle of something else - an ETT placement, for example - and there isn't a safe moment to stop for it.\n\n'Delay rhythm check' logs that and lets you carry on, without forcing a choice right now.\n\nChoose 'Delay rhythm check' to continue."
+      description: "If a rhythm check is deliberately pushed back, choose 'Delay rhythm check'.\n\nChoose 'Delay rhythm check' to continue."
     }],
     condition: (s, sf) => sf === true
   },
@@ -97,15 +97,15 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoRhythmCheckNow', type: 'popup',
     pages: [{
       title: 'Rhythm Check Now',
-      description: "The ring now shows 'Rhythm check now' and how long the check has been delayed.\n\nWhen you're ready, press it. The rhythm check popup will reappear, and once you log an outcome the interval automatically updates to match, the same as it would with an odds/evens change.\n\nPress the ring to continue."
+      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button and the rhythm check popup will reappear and you can choose an outcome. The rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Rhythm check now' button to continue."
     }],
     condition: (s) => s.rhythmCheckDelayedAt != null && s.currentOverlay === null
   },
   {
     id: 'rhythmDemoRoscPopup', type: 'popup',
     pages: [{
-      title: 'Return Of Spontaneous Circulation',
-      description: "Choose 'ROSC' this time."
+      title: 'ROSC',
+      description: "Let's try the last remaining outcome, ROSC."
     }],
     condition: (s, sf) => sf === true
   },
@@ -113,7 +113,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoRoscMode', type: 'popup',
     pages: [{
       title: 'ROSC Mode',
-      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop, since neither applies with a pulse.\n\nIf the patient rearrests, pressing the ring - or 'Rearrest' from Add Tx - brings the rhythm check popup straight back and picks up the timers again.\n\nPress 'Rearrest' to continue."
+      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop, since neither applies with a pulse.\n\nIf the patient rearrests, press the central rearrest button. The rhythm check popup will reappear and the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Press if rearrest' button to continue."
     }],
     condition: (s) => s.isROSCMode === true && s.currentOverlay === null
   },

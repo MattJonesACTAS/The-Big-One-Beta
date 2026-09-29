@@ -854,6 +854,14 @@ export default function App() {
   const RHYTHM_DEMO_START = 3;
   const RHYTHM_DEMO_END = 10;
   const tutorialRhythmDemoActive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START && tutorialNodeIndex <= RHYTHM_DEMO_END;
+  // Which single outcome the walkthrough is currently asking for - every
+  // other outcome (including Delay) is disabled while one of these is set,
+  // so the buttons on screen match the instruction on top of them exactly.
+  const tutorialOutcomeRestriction: 'redblue' | 'rosc' | 'delay' | null =
+    tutorialNodeIndex === RHYTHM_DEMO_START + 1 ? 'redblue'
+    : tutorialNodeIndex === RHYTHM_DEMO_START + 3 ? 'delay'
+    : tutorialNodeIndex === RHYTHM_DEMO_START + 5 ? 'rosc'
+    : null;
   const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
 
   // Correct timer drift when tab becomes visible again
@@ -982,10 +990,52 @@ export default function App() {
     if (!tutorialMode) return;
     if (tutorialNodeIndex === RHYTHM_DEMO_START) {
       setState(prev => ({ ...prev, currentOverlay: null, rhythmCheckTarget: prev.elapsedSeconds + 20 }));
-    } else if (tutorialNodeIndex === RHYTHM_DEMO_START + 1 || tutorialNodeIndex === RHYTHM_DEMO_START + 3) {
-      setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 3 }));
+    } else if (tutorialNodeIndex === RHYTHM_DEMO_START + 3) {
+      // Second time round: jump straight to 0:04, no watch-then-animate -
+      // that demonstration only needs to happen once.
+      setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 4 }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialMode, tutorialNodeIndex]);
+
+  // First time round only: once the real countdown (running normally since
+  // RHYTHM_DEMO_START above) reaches 0:16, visibly fast-forward it down to
+  // 0:04 - a quick ticking-down animation, not an instant jump - then let it
+  // run normally again from there.
+  //
+  // This is a self-contained pair of plain intervals, deliberately NOT
+  // written as "watch state.rhythmCheckTarget in a useEffect": the animation
+  // itself writes to rhythmCheckTarget every 100ms, and a dependency on that
+  // same value would tear the effect down and re-run it on every one of its
+  // own ticks - clearing the interval a fraction of a second in, every time.
+  // Reading the latest state via a ref sidesteps that entirely: the outer
+  // effect is created once on arrival at this node and torn down once on
+  // leaving it, full stop.
+  const rhythmDemoStateRef = useRef(state);
+  useEffect(() => { rhythmDemoStateRef.current = state; }, [state]);
+  useEffect(() => {
+    if (!tutorialMode || tutorialNodeIndex !== RHYTHM_DEMO_START + 1) return;
+    let rapidId: number | null = null;
+    const watcherId = window.setInterval(() => {
+      const s = rhythmDemoStateRef.current;
+      const countdown = s.rhythmCheckTarget - s.elapsedSeconds;
+      if (countdown > 16) return;
+      window.clearInterval(watcherId);
+      let remaining = countdown - 4;
+      if (remaining <= 0) return;
+      rapidId = window.setInterval(() => {
+        remaining -= 1;
+        setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 4 + Math.max(remaining, 0) }));
+        if (remaining <= 0 && rapidId != null) {
+          window.clearInterval(rapidId);
+          rapidId = null;
+        }
+      }, 100);
+    }, 150);
+    return () => {
+      window.clearInterval(watcherId);
+      if (rapidId != null) window.clearInterval(rapidId);
+    };
   }, [tutorialMode, tutorialNodeIndex]);
 
 
@@ -2396,6 +2446,7 @@ export default function App() {
                   pharmaSummary={pharmaSummary}
                   isShockForced={isShockForced}
                   onDelayRhythmCheck={allowRhythmCheckDelay ? delayRhythmCheck : undefined}
+                  tutorialOutcomeRestriction={tutorialOutcomeRestriction}
                   toggleChecklistItem={toggleChecklistItem}
                   onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
                   onDeleteTreatment={deleteTreatment}
@@ -2611,6 +2662,7 @@ export default function App() {
                 pharmaSummary={pharmaSummary}
                 isShockForced={isShockForced}
                 onDelayRhythmCheck={allowRhythmCheckDelay ? delayRhythmCheck : undefined}
+                tutorialOutcomeRestriction={tutorialOutcomeRestriction}
                 toggleChecklistItem={toggleChecklistItem}
                 onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
                 onDeleteTreatment={deleteTreatment}
@@ -3922,7 +3974,7 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -3931,6 +3983,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   isShockForced: boolean,
   onDelayRhythmCheck?: () => void,
+  tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null,
   toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
   onVitalsChange: (v: AppState['vitals']) => void,
   onDeleteTreatment?: (idx: number) => void,
@@ -3970,7 +4023,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
                 correcting an existing, already-logged entry. Without this,
                 a rhythm check timer hitting 0:00 mid-edit would suddenly
                 collapse this menu down to just the shock/disarm buttons. */}
-            <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={editingTreatmentIndex != null ? false : isShockForced} onDelayRhythmCheck={editingTreatmentIndex != null ? undefined : onDelayRhythmCheck} />
+            <TreatmentSelection addTreatment={addTreatment} state={state} isShockForced={editingTreatmentIndex != null ? false : isShockForced} onDelayRhythmCheck={editingTreatmentIndex != null ? undefined : onDelayRhythmCheck} tutorialOutcomeRestriction={editingTreatmentIndex != null ? null : tutorialOutcomeRestriction} />
           </>
         ))}
       </div>
@@ -4746,7 +4799,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false }: 
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, onDelayRhythmCheck }: { addTreatment: (n: string, options?: { customDose?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, onDelayRhythmCheck?: () => void }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, onDelayRhythmCheck, tutorialOutcomeRestriction }: { addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -5172,6 +5225,12 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             : { name: 'Disarm - ROSC', color: 'emerald' }
         ]} 
         onSelect={addTreatment}
+        disabledItems={
+          tutorialOutcomeRestriction === 'redblue' ? ['Disarm - ROSC', 'Rearrest']
+          : tutorialOutcomeRestriction === 'rosc' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA']
+          : tutorialOutcomeRestriction === 'delay' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA', 'Disarm - ROSC', 'Rearrest']
+          : undefined
+        }
       />
 
       {/* Delay rhythm check - same size/position as the Rhythm Check buttons
@@ -5184,13 +5243,19 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           <div aria-hidden="true" className="w-full p-3 rounded-xl text-sm font-bold invisible">
             spacer
           </div>
-          <button
-            onClick={onDelayRhythmCheck}
-            className="w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2"
-          >
-            <Hourglass size={16} strokeWidth={2.5} />
-            Delay rhythm check
-          </button>
+          {(() => {
+            const delayDisabled = tutorialOutcomeRestriction != null && tutorialOutcomeRestriction !== 'delay';
+            return (
+              <button
+                onClick={() => { if (!delayDisabled) onDelayRhythmCheck(); }}
+                disabled={delayDisabled}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
+              >
+                <Hourglass size={16} strokeWidth={2.5} />
+                Delay rhythm check
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -5281,7 +5346,8 @@ function TxSection({
   sectionId,
   expandedSection,
   onToggle,
-  showChevron = true
+  showChevron = true,
+  disabledItems
 }: { 
   title: string;
   color: string;
@@ -5292,6 +5358,9 @@ function TxSection({
   expandedSection?: string | null;
   onToggle?: (id: string) => void;
   showChevron?: boolean;
+  // Item names to grey out and make unclickable - used by the rhythm-check
+  // walkthrough to restrict the popup to only the outcome it just instructed
+  disabledItems?: string[];
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   // Tracks which failable items (ETT, IV access, etc.) are currently staged
@@ -5352,13 +5421,15 @@ function TxSection({
             const textColorClass = itemColor ? (textColorMap[itemColor] ?? 'text-neutral-700') : 'text-neutral-700';
             const bgClass = itemColor === 'orange' ? 'bg-orange-50 hover:bg-orange-100' : 'bg-neutral-50 hover:bg-neutral-100';
             const isUnsuccessful = !!markedUnsuccessful[itemName];
+            const isDisabled = !!disabledItems?.includes(itemName);
 
             if (failable) {
               return (
                 <div key={itemName} className="flex items-stretch gap-2">
                   <button
-                    onClick={() => onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName)}
-                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass}`}
+                    onClick={() => { if (!isDisabled) onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName); }}
+                    disabled={isDisabled}
+                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                     data-medication={itemName}
                   >
                     {displayName}
@@ -5384,8 +5455,9 @@ function TxSection({
             return (
               <button 
                 key={itemName} 
-                onClick={() => onSelect(itemName)} 
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass}`}
+                onClick={() => { if (!isDisabled) onSelect(itemName); }} 
+                disabled={isDisabled}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                 data-medication={itemName}
               >
                 {displayName}
