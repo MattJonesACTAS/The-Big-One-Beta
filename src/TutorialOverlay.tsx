@@ -84,15 +84,15 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoDelayPopup', type: 'popup',
     pages: [{
       title: 'Delaying A Rhythm Check',
-      description: "If a rhythm check is deliberately pushed back, choose 'Delay rhythm check'.\n\nChoose 'Delay rhythm check' to continue."
+      description: "Choose this option if the rhythm check needs to be delayed.\n\nSelect 'Delay rhythm check' to continue."
     }],
     condition: (s, sf) => sf === true
   },
   {
     id: 'rhythmDemoRhythmCheckNow', type: 'popup',
     pages: [{
-      title: 'Rhythm Check Now',
-      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button and the rhythm check popup will reappear and you can choose an outcome. The rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Rhythm check now' button to continue."
+      title: 'Delayed Rhythm Check',
+      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button. The rhythm check popup will reappear and you can choose an outcome. The rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Rhythm check now' button to continue."
     }],
     condition: (s) => s.rhythmCheckDelayedAt != null && s.currentOverlay === null
   },
@@ -108,7 +108,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoRoscMode', type: 'popup',
     pages: [{
       title: 'ROSC Mode',
-      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop, since neither applies with a pulse.\n\nIf the patient rearrests, press the central rearrest button. The rhythm check popup will reappear and the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Press if rearrest' button to continue."
+      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button. The rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Press if rearrest' button to continue."
     }],
     condition: (s) => s.isROSCMode === true && s.currentOverlay === null
   },
@@ -116,7 +116,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoLastPopup', type: 'popup',
     pages: [{
       title: "You've Seen It All",
-      description: "That's every option the rhythm check popup offers.\n\nChoose whichever you like to finish up, then we'll carry on with the rest of the tutorial."
+      description: "That's every option the rhythm check popup offers.\n\nChoose any rhythm check outcome you like to finish up, then we'll carry on with the rest of the tutorial."
     }],
     condition: (s, sf) => sf === true
   },
@@ -127,13 +127,16 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   {
     id: 'tabs', type: 'positioned', x: 50, y: 10.97, anchor: '[data-tutorial-anchor="checklist-row"]',
-    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.' }],
+    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.\n\nOpen the 4H 4T checklist and tick one off to continue.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {
     id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29, anchor: '[data-button="add-tx"]',
     pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
-    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
+    // Doesn't show until the previous node's own instruction has actually
+    // been followed - a real tick on the reversibles (4H 4T) checklist, not
+    // just having read about it.
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf && s.reversiblesChecked.length > 0
   },
   // --- Treatment screen ---
   {

@@ -853,7 +853,14 @@ export default function App() {
   // the walkthrough runs from index 3 to index 10.
   const RHYTHM_DEMO_START = 3;
   const RHYTHM_DEMO_END = 9;
+  // Two different questions, so two flags:
+  //  - tutorialRhythmDemoActive: are we *inside* the walkthrough? Locks the
+  //    home screen's other buttons; ends when the walkthrough does.
+  //  - tutorialRhythmLive: has the walkthrough *started*? From then on the
+  //    real forced popup, the 0:20 return-to-home and Delay all work normally
+  //    for the rest of the tutorial instead of going back to being suppressed.
   const tutorialRhythmDemoActive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START && tutorialNodeIndex <= RHYTHM_DEMO_END;
+  const tutorialRhythmLive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START;
   // Which single outcome the walkthrough is currently asking for - every
   // other outcome (including Delay) is disabled while one of these is set,
   // so the buttons on screen match the instruction on top of them exactly.
@@ -1399,7 +1406,7 @@ export default function App() {
             const countdown = prev.rhythmCheckTarget - newElapsed;
 
             // Auto-close overlay ONCE at 10s (not in tutorial)
-            if (countdown === 20 && !hasAutoClosedAt10.current && !tutorialMode) {
+            if (countdown === 20 && !hasAutoClosedAt10.current && (!tutorialMode || tutorialRhythmLive)) {
               nextOverlay = null;
               hasAutoClosedAt10.current = true;
             }
@@ -1417,7 +1424,7 @@ export default function App() {
               if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
                 // Elapsed/minimal mode: fire overlay immediately at rhythm check time, no overtime phase
                 if (countdown === 0) {
-                  if (!showCatchup && (!tutorialMode || tutorialRhythmDemoActive)) {
+                  if (!showCatchup && (!tutorialMode || tutorialRhythmLive)) {
                     nextOverlay = 'treatment';
                     setIsShockForced(true);
                     rhythmCheckDueAtRef.current = newElapsed;
@@ -1466,7 +1473,7 @@ export default function App() {
       }, 500);
     }
     return () => clearInterval(interval);
-  }, [state.running, timingMode, rhythmInterval, tutorialMode, tutorialRhythmDemoActive, showCatchup]);
+  }, [state.running, timingMode, rhythmInterval, tutorialMode, tutorialRhythmLive, showCatchup]);
 
   const togglePause = () => {
     setState(prev => {
@@ -1587,7 +1594,7 @@ export default function App() {
   // not in the tutorial, not while editing, and not when the popup was
   // reopened from an already-delayed check.
   const allowRhythmCheckDelay =
-    isShockForced && !rearrested && (!tutorialMode || tutorialRhythmDemoActive) &&
+    isShockForced && !rearrested && (!tutorialMode || tutorialRhythmLive) &&
     (timingMode === 'elapsed' || timingMode === 'minimal') && !!rhythmInterval &&
     state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
 
@@ -5265,7 +5272,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               <button
                 onClick={() => { if (!delayDisabled) onDelayRhythmCheck(); }}
                 disabled={delayDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
               >
                 <Hourglass size={16} strokeWidth={2.5} />
                 Delay rhythm check
@@ -5445,7 +5452,7 @@ function TxSection({
                   <button
                     onClick={() => { if (!isDisabled) onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName); }}
                     disabled={isDisabled}
-                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
+                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                     data-medication={itemName}
                   >
                     {displayName}
@@ -5473,7 +5480,7 @@ function TxSection({
                 key={itemName} 
                 onClick={() => { if (!isDisabled) onSelect(itemName); }} 
                 disabled={isDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                 data-medication={itemName}
               >
                 {displayName}
