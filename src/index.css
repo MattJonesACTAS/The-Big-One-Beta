@@ -261,6 +261,11 @@
   50% { opacity: 0.3; }
 }
 
+/* Rhythm check walkthrough: the outcome(s) the learner is being asked to press */
+.tutorial-outcome-flash {
+  animation: adrenalineFlash 1.5s infinite;
+}
+
 body.tutorial-flash-adrenaline [data-medication="Adrenaline push"] {
   animation: adrenalineFlash 1.5s infinite;
 }

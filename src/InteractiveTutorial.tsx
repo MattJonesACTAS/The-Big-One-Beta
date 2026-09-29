@@ -931,11 +931,15 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              {modeIntroPage === 0 ? 'Calibration' : 'About This Mode'}
+              {modeIntroPage === 0 ? 'About This Mode' : 'Calibration'}
             </h2>
             {modeIntroPage === 0 ? (
+              // Shown straight after a mode is chosen. Placeholder: each
+              // mode's own strengths/weaknesses will live here eventually.
+              // For now this only ever shows the one moved over from the old
+              // Elapsed Timer note.
               <>
-                {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
+                {renderIntroDescription("This can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient.")}
                 <button
                   onClick={() => setModeIntroPage(1)}
                   style={{
@@ -955,11 +959,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                 </button>
               </>
             ) : (
-              // Placeholder: each mode's own strengths/weaknesses will live
-              // here eventually. For now this only ever shows the one moved
-              // over from the old Elapsed Timer note.
               <>
-                {renderIntroDescription("This can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient.")}
+                {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
                 <button
                   onClick={onModeIntroNext}
                   style={{

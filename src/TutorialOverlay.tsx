@@ -45,11 +45,11 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     pages: [
       {
         title: 'Rhythm Check Countdown',
-        description: "This shows a countdown to your next rhythm check.\n\nAt 0:20 the app will force you back to the home screen to prompt you to prepare the team for the next rhythm check."
+        description: "This shows a countdown to your next rhythm check.\n\nWhen the countdown reaches 0:20, the app will force you back to the home screen.\n\nThis is to prompt you to prepare the team for the next rhythm check."
       },
       {
         title: "Let's See It In Action",
-        description: "We're going to pretend that the timer has forced us back to the home screen at the 0:20 second mark so we can see what happens when the timer reaches 0:00."
+        description: "We're going to pretend that the timer has just reached 0:20 and we've been forced back to the home screen.\n\nLet's see what happens next."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -68,7 +68,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
       title: 'Select The Outcome',
-      description: "This is the rhythm check popup. Every time it appears, you need to tell the app what happened.\n\nThere are three kinds of outcome: a shock or disarm (red and blue), ROSC (green), and Delay rhythm check (amber) - we'll come back to Delay and ROSC shortly.\n\nChoose any red or blue option to continue."
+      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly.\n\nChoose any red or blue option to continue."
     }],
     condition: (s, sf) => sf === true
   },
@@ -92,7 +92,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoRhythmCheckNow', type: 'popup',
     pages: [{
       title: 'Delayed Rhythm Check',
-      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button. The rhythm check popup will reappear and you can choose an outcome. The rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Rhythm check now' button to continue."
+      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button.\n\nThe rhythm check popup will reappear and you can choose an outcome.\n\nThe rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Rhythm check now' button to continue."
     }],
     condition: (s) => s.rhythmCheckDelayedAt != null && s.currentOverlay === null
   },
@@ -108,7 +108,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
     id: 'rhythmDemoRoscMode', type: 'popup',
     pages: [{
       title: 'ROSC Mode',
-      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button. The rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Press if rearrest' button to continue."
+      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button.\n\nThe rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Press if rearrest' button to continue."
     }],
     condition: (s) => s.isROSCMode === true && s.currentOverlay === null
   },
@@ -127,7 +127,7 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   },
   {
     id: 'tabs', type: 'positioned', x: 50, y: 10.97, anchor: '[data-tutorial-anchor="checklist-row"]',
-    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red. That is a visual cue to encourage purposeful addressing of these early.\n\nOpen the 4H 4T checklist and tick one off to continue.' }],
+    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red.\n\nThat is a visual cue to encourage purposeful addressing of these early.\n\nOpen the 4H 4T checklist and tick one off to continue.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {

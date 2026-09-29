@@ -861,6 +861,23 @@ export default function App() {
   //    for the rest of the tutorial instead of going back to being suppressed.
   const tutorialRhythmDemoActive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START && tutorialNodeIndex <= RHYTHM_DEMO_END;
   const tutorialRhythmLive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START;
+  // The tick's own popup-at-0:00 and auto-close-at-0:20 are a third thing
+  // again. Inside the walkthrough they must NOT run on their own schedule:
+  // a learner who sits on a popup for two minutes would otherwise have it
+  // cleared by the *next* interval's 0:20 return-to-home, or get a second
+  // popup fired at them. The only countdowns that should fire the popup are
+  // the two scripted ones (entering the first outcome slide, and entering
+  // the delay slide). Everything goes back to normal once the walkthrough
+  // has genuinely finished - past its last slide AND its last real popup
+  // answered - and stays normal from then on.
+  const [tutorialRhythmDone, setTutorialRhythmDone] = useState(false);
+  useEffect(() => {
+    if (!tutorialMode) { setTutorialRhythmDone(false); return; }
+    if (tutorialNodeIndex > RHYTHM_DEMO_END && !isShockForced) setTutorialRhythmDone(true);
+  }, [tutorialMode, tutorialNodeIndex, isShockForced]);
+  const tutorialAutoCloseOK = !tutorialMode || tutorialRhythmDone;
+  const tutorialPopupAtZeroOK = !tutorialMode || tutorialRhythmDone
+    || ((tutorialNodeIndex === RHYTHM_DEMO_START || tutorialNodeIndex === RHYTHM_DEMO_START + 2) && !isShockForced);
   // Which single outcome the walkthrough is currently asking for - every
   // other outcome (including Delay) is disabled while one of these is set,
   // so the buttons on screen match the instruction on top of them exactly.
@@ -1406,7 +1423,7 @@ export default function App() {
             const countdown = prev.rhythmCheckTarget - newElapsed;
 
             // Auto-close overlay ONCE at 10s (not in tutorial)
-            if (countdown === 20 && !hasAutoClosedAt10.current && (!tutorialMode || tutorialRhythmLive)) {
+            if (countdown === 20 && !hasAutoClosedAt10.current && tutorialAutoCloseOK) {
               nextOverlay = null;
               hasAutoClosedAt10.current = true;
             }
@@ -1424,7 +1441,7 @@ export default function App() {
               if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
                 // Elapsed/minimal mode: fire overlay immediately at rhythm check time, no overtime phase
                 if (countdown === 0) {
-                  if (!showCatchup && (!tutorialMode || tutorialRhythmLive)) {
+                  if (!showCatchup && tutorialPopupAtZeroOK) {
                     nextOverlay = 'treatment';
                     setIsShockForced(true);
                     rhythmCheckDueAtRef.current = newElapsed;
@@ -1473,7 +1490,7 @@ export default function App() {
       }, 500);
     }
     return () => clearInterval(interval);
-  }, [state.running, timingMode, rhythmInterval, tutorialMode, tutorialRhythmLive, showCatchup]);
+  }, [state.running, timingMode, rhythmInterval, tutorialMode, tutorialAutoCloseOK, tutorialPopupAtZeroOK, showCatchup]);
 
   const togglePause = () => {
     setState(prev => {
@@ -5254,6 +5271,11 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           : tutorialOutcomeRestriction === 'delay' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA', 'Disarm - ROSC', 'Rearrest']
           : undefined
         }
+        flashItems={
+          tutorialOutcomeRestriction === 'redblue' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA']
+          : tutorialOutcomeRestriction === 'rosc' ? ['Disarm - ROSC', 'Rearrest']
+          : undefined
+        }
       />
 
       {/* Delay rhythm check - same size/position as the Rhythm Check buttons
@@ -5272,7 +5294,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               <button
                 onClick={() => { if (!delayDisabled) onDelayRhythmCheck(); }}
                 disabled={delayDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'delay' ? 'tutorial-outcome-flash' : ''}`}
+                style={delayDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
               >
                 <Hourglass size={16} strokeWidth={2.5} />
                 Delay rhythm check
@@ -5370,7 +5393,8 @@ function TxSection({
   expandedSection,
   onToggle,
   showChevron = true,
-  disabledItems
+  disabledItems,
+  flashItems
 }: { 
   title: string;
   color: string;
@@ -5384,6 +5408,9 @@ function TxSection({
   // Item names to grey out and make unclickable - used by the rhythm-check
   // walkthrough to restrict the popup to only the outcome it just instructed
   disabledItems?: string[];
+  // Item names that pulse to draw the eye to them (same pulse the rest of
+  // the tutorial uses for "press this next")
+  flashItems?: string[];
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   // Tracks which failable items (ETT, IV access, etc.) are currently staged
@@ -5445,6 +5472,7 @@ function TxSection({
             const bgClass = itemColor === 'orange' ? 'bg-orange-50 hover:bg-orange-100' : 'bg-neutral-50 hover:bg-neutral-100';
             const isUnsuccessful = !!markedUnsuccessful[itemName];
             const isDisabled = !!disabledItems?.includes(itemName);
+            const isFlashing = !!flashItems?.includes(itemName);
 
             if (failable) {
               return (
@@ -5452,7 +5480,8 @@ function TxSection({
                   <button
                     onClick={() => { if (!isDisabled) onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName); }}
                     disabled={isDisabled}
-                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
+                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''} ${isFlashing ? 'tutorial-outcome-flash' : ''}`}
+                    style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                     data-medication={itemName}
                   >
                     {displayName}
@@ -5480,7 +5509,8 @@ function TxSection({
                 key={itemName} 
                 onClick={() => { if (!isDisabled) onSelect(itemName); }} 
                 disabled={isDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''} ${isFlashing ? 'tutorial-outcome-flash' : ''}`}
+                style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                 data-medication={itemName}
               >
                 {displayName}
