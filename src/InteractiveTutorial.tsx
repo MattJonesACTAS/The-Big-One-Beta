@@ -611,9 +611,6 @@ interface InteractiveTutorialProps {
   // Set (to the chosen mode's name) while the "you've chosen ..." page is showing
   modeIntroLabel?: string | null;
   onModeIntroNext?: () => void;
-  // Set while the "About this mode" link on a mode card is open (before a mode is committed to)
-  modeAboutMode?: 'log' | 'minimal' | 'elapsed' | null;
-  onModeAboutClose?: () => void;
   // The mode being learned, so the setup screens number themselves to match its (shorter or longer) sequence
   mode?: 'log' | 'minimal' | 'elapsed' | null;
 }
@@ -653,23 +650,9 @@ const PARKED_MODE_PAGE_NOTES = [
 { id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
 ];
 
-const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, modeAboutMode, onModeAboutClose, mode }) => {
+const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, mode }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
-  const [aboutPage, setAboutPage] = useState(0);
-  useEffect(() => { setAboutPage(0); }, [modeAboutMode]);
-  // Single-page version: is there more below the fold? (drives the fade at the bottom)
-  const aboutScrollRef = useRef<HTMLDivElement>(null);
-  const [aboutMore, setAboutMore] = useState(false);
-  const checkAboutScroll = () => {
-    const el = aboutScrollRef.current;
-    if (el) setAboutMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
-  };
-  useEffect(() => {
-    if (!modeAboutMode) { setAboutMore(false); return; }
-    const t = window.setTimeout(checkAboutScroll, 50);
-    return () => window.clearTimeout(t);
-  }, [modeAboutMode]);
   // Which notes have been read on each page, so going Back to a page that was
   // already cleared doesn't make anyone read its notes again.
   const readByScreen = useRef<Record<string, string[]>>({});
@@ -993,11 +976,10 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         </div>
       )}
 
-      {/* Two things share this popup, in the same look as the intro pages:
-          - "About this mode": opened from the link on a mode card, before any
-            mode has been committed to (a plain slide, not a node).
-          - "Calibration": what comes next once a mode has been chosen. */}
-      {(modeAboutMode || modeIntroLabel) && (
+      {/* Once a mode has been chosen: what comes next. Same look as the intro pages.
+          ("Tell me more" on the mode cards is ModeAboutSlide, below, which the real
+          app's mode page uses as well.) */}
+      {modeIntroLabel && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -1018,95 +1000,28 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
             maxHeight: '100%',
             overflowY: 'auto',
-            ...(modeAboutMode && ABOUT_SINGLE_PAGE ? { display: 'flex', flexDirection: 'column' as const, overflowY: 'hidden' as const } : {}),
           }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px', flexShrink: 0 }}>
-              {modeAboutMode ? (ABOUT_SINGLE_PAGE ? 'Tell Me More' : MODE_ABOUT_PAGES[modeAboutMode][aboutPage].title) : 'Calibration'}
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
+              Calibration
             </h2>
-            {modeAboutMode ? (
-              ABOUT_SINGLE_PAGE ? (
-              <>
-                <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginBottom: '14px' }}>
-                  <div ref={aboutScrollRef} onScroll={checkAboutScroll} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                    {MODE_ABOUT_PAGES[modeAboutMode].map((pg, i, all) => (
-                      <div key={i} style={{ marginBottom: i < all.length - 1 ? '18px' : 0 }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 6px 0' }}>{pg.title}</h3>
-                        {renderPlainBullets(pg.text)}
-                      </div>
-                    ))}
-                  </div>
-                  {aboutMore && (
-                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '36px', pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(255,255,255,0), #ffffff)' }} />
-                  )}
-                </div>
-                <button
-                  onClick={onModeAboutClose}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#10b981',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                    flexShrink: 0,
-                  }}
-                >
-                  Got it
-                </button>
-              </>
-              ) : (
-              <>
-                <div style={{ marginBottom: '20px' }}>{renderPlainBullets(MODE_ABOUT_PAGES[modeAboutMode][aboutPage].text)}</div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
-                  {MODE_ABOUT_PAGES[modeAboutMode].map((_, i) => (
-                    <span key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === aboutPage ? '#10b981' : '#d1d5db' }} />
-                  ))}
-                </div>
-                <button
-                  onClick={() => (aboutPage < MODE_ABOUT_PAGES[modeAboutMode].length - 1 ? setAboutPage(aboutPage + 1) : onModeAboutClose?.())}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#10b981',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                  }}
-                >
-                  {aboutPage < MODE_ABOUT_PAGES[modeAboutMode].length - 1 ? 'Next' : 'Got it'}
-                </button>
-              </>
-              )
-            ) : (
-              <>
-                {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
-                <button
-                  onClick={onModeIntroNext}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#10b981',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                  }}
-                >
-                  Next
-                </button>
-              </>
-            )}
+            {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
+            <button
+              onClick={onModeIntroNext}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#10b981',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
@@ -1576,6 +1491,98 @@ function renderPlainBullets(text: string) {
         <li key={i} style={{ marginBottom: i < items.length - 1 ? '0.4em' : 0 }}>{renderWithItalics(t)}</li>
       ))}
     </ul>
+  );
+}
+
+// "Tell me more" on a mode card. Used by the mode page in the tutorial AND in
+// the real app, so it lives here as its own component. Opens over everything;
+// "Got it" just closes it, leaving the card as it was.
+export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'elapsed'; onClose: () => void }) {
+  const pages = MODE_ABOUT_PAGES[mode];
+  const [page, setPage] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  const check = () => {
+    const el = scrollRef.current;
+    if (el) setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+  };
+  useEffect(() => {
+    setPage(0);
+    const t = window.setTimeout(check, 50);
+    return () => window.clearTimeout(t);
+  }, [mode]);
+  const buttonStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#10b981',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+    flexShrink: 0,
+  };
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px',
+      zIndex: 10000,
+      pointerEvents: 'auto',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        padding: '24px',
+        maxWidth: '320px',
+        width: '85%',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        maxHeight: '100%',
+        overflowY: 'auto',
+        ...(ABOUT_SINGLE_PAGE ? { display: 'flex', flexDirection: 'column' as const, overflowY: 'hidden' as const } : {}),
+      }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px', flexShrink: 0 }}>
+          {ABOUT_SINGLE_PAGE ? 'Tell Me More' : pages[page].title}
+        </h2>
+        {ABOUT_SINGLE_PAGE ? (
+          <>
+            <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginBottom: '14px' }}>
+              <div ref={scrollRef} onScroll={check} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                {pages.map((pg, i, all) => (
+                  <div key={i} style={{ marginBottom: i < all.length - 1 ? '18px' : 0 }}>
+                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 6px 0' }}>{pg.title}</h3>
+                    {renderPlainBullets(pg.text)}
+                  </div>
+                ))}
+              </div>
+              {more && (
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '36px', pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(255,255,255,0), #ffffff)' }} />
+              )}
+            </div>
+            <button onClick={onClose} style={buttonStyle}>Got it</button>
+          </>
+        ) : (
+          <>
+            <div style={{ marginBottom: '20px' }}>{renderPlainBullets(pages[page].text)}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
+              {pages.map((_, i) => (
+                <span key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === page ? '#10b981' : '#d1d5db' }} />
+              ))}
+            </div>
+            <button onClick={() => (page < pages.length - 1 ? setPage(page + 1) : onClose())} style={buttonStyle}>
+              {page < pages.length - 1 ? 'Next' : 'Got it'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

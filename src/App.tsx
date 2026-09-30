@@ -30,11 +30,10 @@ import {
   MoreVertical,
   NotebookPen,
   Timer,
-  Minus,
   Hourglass
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
-import InteractiveTutorial from './InteractiveTutorial';
+import InteractiveTutorial, { ModeAboutSlide } from './InteractiveTutorial';
 import TutorialOverlay, { getTutorialNodes, TUTORIAL_FLASH_CLASSES } from './TutorialOverlay';
 
 // --- Constants ---
@@ -308,25 +307,14 @@ const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
 // at the bottom (matches the difficulty levels in TIMING_MODE_DETAILS).
 const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['minimal', 'log', 'elapsed'];
 
-// Pros and cons revealed under whichever App Mode card is selected, plus how
-// difficult the mode is to use (1 = easiest, 3 = hardest), which is drawn as a
-// low-to-high meter rather than written out.
-const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { pros: string[]; cons: string[]; difficulty: 1 | 2 | 3 }> = {
-  log: {
-    pros: ['Case sheet assistance', 'Handover assistance', 'Non-cardiac arrest cases', 'Scribe on sims'],
-    cons: ['No rhythm check timer', 'No medication redosing timers'],
-    difficulty: 2,
-  },
-  minimal: {
-    pros: ['Rhythm check timer', 'Medication redosing timers'],
-    cons: ['No case sheet assistance', 'No handover assistance'],
-    difficulty: 1,
-  },
-  elapsed: {
-    pros: ['Rhythm check timer', 'Medication redosing timers', 'Case sheet assistance', 'Handover assistance'],
-    cons: [],
-    difficulty: 3,
-  },
+// What's revealed under whichever App Mode card is selected: a one-line
+// description and how difficult the mode is to use (1 = easiest, 3 = hardest),
+// which is drawn as a low-to-high meter rather than written out. Anything
+// longer lives behind the card's "Tell me more" (ModeAboutSlide).
+const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { summary: string; difficulty: 1 | 2 | 3 }> = {
+  log: { summary: 'A detailed log of the case', difficulty: 2 },
+  minimal: { summary: 'Rhythm check and drug timers', difficulty: 1 },
+  elapsed: { summary: 'Timers plus a detailed log', difficulty: 3 },
 };
 
 const DIFFICULTY_LABELS = ['low', 'medium', 'high'] as const;
@@ -843,8 +831,8 @@ export default function App() {
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
   // Tutorial only: the mode just chosen on the mode page, while the "you've chosen ..." page is showing
   const [tutorialModeIntro, setTutorialModeIntro] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
-  // Tutorial only: which mode's "About this mode" slide is open (opened from the link on its card, before committing to it)
-  const [tutorialAboutMode, setTutorialAboutMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
+  // Which mode's "Tell me more" slide is open (opened from the link on its card on the mode page, before committing to it)
+  const [aboutMode, setAboutMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
@@ -917,7 +905,7 @@ export default function App() {
   const exitTutorialToWelcome = () => {
     setShowInteractiveTutorial(false);
     setTutorialModeIntro(null);
-    setTutorialAboutMode(null);
+    setAboutMode(null);
     setTimingNodesComplete(false);
     setCatchupNodeCleared(false);
     setTimingMode(null);
@@ -2286,6 +2274,8 @@ export default function App() {
   return (
     <div data-main-container style={{ height: 'calc(var(--vh, 1vh) * 100)' }} className="bg-neutral-100 flex flex-col p-4 max-w-2xl mx-auto overflow-hidden relative">
 
+      {aboutMode && <ModeAboutSlide mode={aboutMode} onClose={() => setAboutMode(null)} />}
+
       {/* Interactive Tutorial pre-screen */}
       {showInteractiveTutorial && (
         <InteractiveTutorial
@@ -2294,13 +2284,11 @@ export default function App() {
             setShowInteractiveTutorial(false);
             setTimingNodesComplete(false);
             setTutorialModeIntro(null);
-            setTutorialAboutMode(null);
+            setAboutMode(null);
             setTutorialMode(true);
           }}
           mode={timingMode}
           modeIntroLabel={tutorialModeIntro ? TIMING_MODE_LABELS[tutorialModeIntro] : null}
-          modeAboutMode={tutorialAboutMode}
-          onModeAboutClose={() => setTutorialAboutMode(null)}
           onModeIntroNext={() => {
             const chosen = tutorialModeIntro;
             setTutorialModeIntro(null);
@@ -3454,24 +3442,7 @@ export default function App() {
                                 className="overflow-hidden cursor-pointer"
                               >
                                 <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
-                                  <ul className="space-y-1.5">
-                                    {details.pros.map(t => (
-                                      <li key={t} className="flex items-start gap-2">
-                                        <Plus size={14} strokeWidth={3} className="text-emerald-600 flex-shrink-0 mt-[3px]" />
-                                        <span>{t}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  {details.cons.length > 0 && (
-                                    <ul className="space-y-1.5">
-                                      {details.cons.map(t => (
-                                        <li key={t} className="flex items-start gap-2">
-                                          <Minus size={14} strokeWidth={3} className="text-red-500 flex-shrink-0 mt-[3px]" />
-                                          <span>{t}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
+                                  <p>{details.summary}</p>
                                   <div
                                     className="pt-3 border-t border-emerald-200"
                                     role="img"
@@ -3492,16 +3463,14 @@ export default function App() {
                                       <span>High</span>
                                     </div>
                                   </div>
-                                  {/* Tutorial only: read about this mode before committing to it.
-                                      Plain text in the card's own colours - deliberately not a node. */}
-                                  {showInteractiveTutorial && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setTutorialAboutMode(mode); }}
-                                      className="block text-sm font-semibold text-emerald-700 underline underline-offset-2"
-                                    >
-                                      Tell me more ›
-                                    </button>
-                                  )}
+                                  {/* Read about this mode before committing to it. Plain text in
+                                      the card's own colours - deliberately not a node. */}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setAboutMode(mode); }}
+                                    className="block text-sm font-semibold text-emerald-700 underline underline-offset-2"
+                                  >
+                                    Tell me more ›
+                                  </button>
                                 </div>
                               </motion.div>
                             )}
