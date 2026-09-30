@@ -2298,7 +2298,7 @@ export default function App() {
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. The Big One tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
               <p><strong className="text-neutral-900">Clinical responsibility remains with the treating clinician.</strong> All patient assessment, treatment decisions, and medication administration remain the responsibility of the treating clinician(s). Users must apply their own professional judgement and follow current local clinical guidelines at all times.</p>
-              <p><strong className="text-neutral-900">Guideline alignment and verification.</strong> This application is configured to align with ACTAS Clinical Management Guidelines (CMG) v1.0.5.4. Users are responsible for verifying that information displayed by this application aligns with their service's current approved protocols.</p>
+              <p><strong className="text-neutral-900">Guideline alignment and verification.</strong> This application is configured to align with ACTAS Clinical Management Guidelines (CMG) v1.1.0.3. Users are responsible for verifying that information displayed by this application aligns with their service's current approved protocols.</p>
               <p><strong className="text-neutral-900">Independent application.</strong> This application is independently developed and is not affiliated with, endorsed by, or approved by any ambulance service, health authority, or regulatory body unless explicitly stated.</p>
             </div>
             <label className="flex items-start gap-3 mb-6 cursor-pointer">
@@ -2917,8 +2917,8 @@ export default function App() {
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
                     <p>The Big One v1.4</p>
-                    <p>ACTAS CMG v1.1.0.2</p>
-                    <p>Last reviewed July 2026</p>
+                    <p>ACTAS CMG v1.1.0.3</p>
+                    <p>Last reviewed October 2026</p>
                   </div>
                 </div>
               )}
