@@ -310,7 +310,7 @@ const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['minimal', 'log
 // What's revealed under whichever App Mode card is selected: a one-line
 // description and how difficult the mode is to use (1 = easiest, 3 = hardest),
 // which is drawn as a low-to-high meter rather than written out. Anything
-// longer lives behind the card's "Tell me more" (ModeAboutSlide).
+// longer lives behind the card's "Learn more" (ModeAboutSlide).
 const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { summary: string; difficulty: 1 | 2 | 3 }> = {
   log: { summary: 'A detailed log of the case', difficulty: 2 },
   minimal: { summary: 'Rhythm check and drug timers', difficulty: 1 },
@@ -831,7 +831,7 @@ export default function App() {
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
   // Tutorial only: the mode just chosen on the mode page, while the "you've chosen ..." page is showing
   const [tutorialModeIntro, setTutorialModeIntro] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
-  // Which mode's "Tell me more" slide is open (opened from the link on its card on the mode page, before committing to it)
+  // Which mode's "Learn more" slide is open (opened from the link on its card on the mode page, before committing to it)
   const [aboutMode, setAboutMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
@@ -1137,34 +1137,11 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [tutorialMode, tutorialScreen.index, tutorialNodeIndex, showRecalibrateMenu, showWeightChange, state.patientWeight]);
 
-  // Inject tutorial Elapsed Time button flash CSS
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.id = 'tutorial-elapsed-flash-style';
-    style.textContent = `
-      @keyframes tutorialElapsedFade {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.45; }
-      }
-      body.tutorial-flash-elapsed-btn [data-tutorial="elapsed-btn"] {
-        animation: tutorialElapsedFade 2s ease-in-out infinite;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => { document.getElementById('tutorial-elapsed-flash-style')?.remove(); };
-  }, []);
   useEffect(() => {
     console.log('Tutorial screen tracking:', tutorialScreen);
     console.log('Current overlay:', state.currentOverlay);
     console.log('Treatments length:', state.treatments.length);
 
-    // Tutorial: flash Elapsed Time button when all timing nodes explored
-    if (showInteractiveTutorial && timingNodesComplete) {
-      document.body.classList.add('tutorial-flash-elapsed-btn');
-    } else {
-      document.body.classList.remove('tutorial-flash-elapsed-btn');
-    }
-    
     // Every other pulse comes from the node the tutorial is currently waiting
     // on (see flashWhileCurrent in TutorialOverlay.tsx): the previous node has
     // been dismissed and this one appears once its instruction is followed, so
@@ -1182,7 +1159,6 @@ export default function App() {
     TUTORIAL_FLASH_CLASSES.forEach(c => document.body.classList.toggle(c, activeFlashes.includes(c)));
 
     return () => {
-      document.body.classList.remove('tutorial-flash-elapsed-btn');
       TUTORIAL_FLASH_CLASSES.forEach(c => document.body.classList.remove(c));
     };
   }, [tutorialMode, tutorialNodeId, tutorialNodeIndex, tutorialNodeList, state, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
@@ -3406,7 +3382,6 @@ export default function App() {
                               }
                             }}
                             disabled={showInteractiveTutorial && !timingNodesComplete}
-                            data-tutorial={mode === 'elapsed' ? 'elapsed-btn' : undefined}
                             aria-expanded={expanded}
                             className="w-full h-[80px] px-4 flex items-center gap-4 text-left"
                           >
@@ -3469,7 +3444,7 @@ export default function App() {
                                     onClick={(e) => { e.stopPropagation(); setAboutMode(mode); }}
                                     className="block text-sm font-semibold text-emerald-700 underline underline-offset-2"
                                   >
-                                    Tell me more ›
+                                    Learn more ›
                                   </button>
                                 </div>
                               </motion.div>

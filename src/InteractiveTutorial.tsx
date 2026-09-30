@@ -615,12 +615,12 @@ interface InteractiveTutorialProps {
   mode?: 'log' | 'minimal' | 'elapsed' | null;
 }
 
-// EXPERIMENT: true shows each mode's "Tell me more" as ONE scrollable page
+// EXPERIMENT: true shows each mode's "Learn more" as ONE scrollable page
 // (all three sections on it); false goes back to three separate pages
 // (What It Does / Limitations / When to Use It, with Next). Same text either way.
 const ABOUT_SINGLE_PAGE = true;
 
-// "Tell me more" on each mode card: three pages per mode - what it does, its
+// "Learn more" on each mode card: three pages per mode - what it does, its
 // limitations, and when to use it. Headings are the section names.
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
@@ -708,7 +708,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         // The old Getting Started page and the App Mode instruction, combined.
         { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started',
           description: "On opening The Big One, you'll need to choose one of three modes.\n\nEach mode has its own tutorial, and it's advised to complete them from top to bottom.\n\nOnce you've seen every mode, it will be up to you to choose which one works best for you.",
-          morePages: ["Each mode option has a 'Tell me more' button.\n\nClick on these to gain further insight into each mode's capabilities and when it might be most useful.", { title: "Give it a Go", text: "Choose a mode to begin its tutorial." }] },
+          morePages: ["Each mode option has a 'Learn more' button.\n\nClick on these to gain further insight into each mode's capabilities and when it might be most useful.", { title: "Give it a Go", text: "Choose a mode to begin its tutorial." }] },
       ],
     },
     rhythmCheckTiming: {
@@ -977,7 +977,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       )}
 
       {/* Once a mode has been chosen: what comes next. Same look as the intro pages.
-          ("Tell me more" on the mode cards is ModeAboutSlide, below, which the real
+          ("Learn more" on the mode cards is ModeAboutSlide, below, which the real
           app's mode page uses as well.) */}
       {modeIntroLabel && (
         <div style={{
@@ -1494,7 +1494,7 @@ function renderPlainBullets(text: string) {
   );
 }
 
-// "Tell me more" on a mode card. Used by the mode page in the tutorial AND in
+// "Learn more" on a mode card. Used by the mode page in the tutorial AND in
 // the real app, so it lives here as its own component. Opens over everything;
 // "Got it" just closes it, leaving the card as it was.
 export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'elapsed'; onClose: () => void }) {
@@ -1549,7 +1549,7 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
         ...(ABOUT_SINGLE_PAGE ? { display: 'flex', flexDirection: 'column' as const, overflowY: 'hidden' as const } : {}),
       }}>
         <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px', flexShrink: 0 }}>
-          {ABOUT_SINGLE_PAGE ? 'Tell Me More' : pages[page].title}
+          {ABOUT_SINGLE_PAGE ? 'Learn More' : pages[page].title}
         </h2>
         {ABOUT_SINGLE_PAGE ? (
           <>
