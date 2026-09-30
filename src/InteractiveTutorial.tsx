@@ -624,8 +624,8 @@ const ABOUT_SINGLE_PAGE = true;
 // limitations, and when to use it. Headings are the section names.
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
-    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job." },
-    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline and amiodarone." },
+    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job." },
+    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline, and amiodarone." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you only need the timers." },
   ],
   log: [
@@ -952,7 +952,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               currentScreen === 'intro1'
                 ? "The Big One is a cognitive aid for use during cardiac arrests or any other big job.\n\nIt is designed to assist you to keep track of:\n\n• Rhythm check intervals\n\n• Medication re-dosing intervals\n\n• The times events occurred, making case sheets easy and accurate\n\nBy offloading this cognitive load, you can focus on situational awareness and team leadership."
                 : currentScreen === 'introWhen'
-                ? "Imagine you're first on scene to a cardiac arrest or another complex job that will require multiple crews.\n\nYou perform the initial necessary interventions, then eventually more crews arrive.\n\nYou then take a step back, assume the role of Team Leader, assign roles to other crew members and go hands off for the rest of the case.\n\nThat is when The Big One can be used."
+                ? "Imagine you're first on scene to a cardiac arrest or another complex job that will require multiple crews.\n\nYou perform the initial necessary interventions, then eventually more crews arrive.\n\nYou then take a step back, assume the role of Team Leader, assign roles to other crew members, and go hands off for the rest of the case.\n\nThat is when The Big One can be used."
                 : "In this tutorial you'll see red numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
             )}
             <button

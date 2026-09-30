@@ -66,7 +66,7 @@ const ELAPSED_RAW: RawNode[] = [
       },
       {
         title: "Let's See It in Action",
-        description: "We're going to pretend that the timer has just reached 0:20 and we've been forced back to the home screen.\n\nLet's see what happens next."
+        description: "We're going to pretend that the timer has just reached 0:20, and we've been forced back to the home screen.\n\nLet's see what happens next."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -115,7 +115,7 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoRhythmCheckNow', type: 'popup',
     pages: [{
       title: 'Delayed Rhythm Check',
-      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button.\n\nThe rhythm check popup will reappear and you can choose an outcome.\n\nThe rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart."
+      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button.\n\nThe rhythm check popup will reappear, and you can choose an outcome.\n\nThe rhythm check schedule (odds/evens) will automatically update, and the rhythm check timer will restart."
     }, {
       title: 'Give it a Go',
       description: "Press the 'Rhythm check now' button to continue."
@@ -134,7 +134,7 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoRoscMode', type: 'popup',
     pages: [{
       title: 'ROSC Mode',
-      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button.\n\nThe rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart."
+      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button.\n\nThe rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update, and the rhythm check timer will restart."
     }, {
       title: 'Give it a Go',
       description: "Press the 'Press if rearrest' button to continue."
@@ -164,7 +164,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29, anchor: '[data-button="add-tx"]',
-    pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.' }, { title: 'Give it a Go', description: 'Press the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
+    pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.' }, { title: 'Give it a Go', description: 'Press the \'+ Add Tx\' button so we can log our first Tx.' }],
     // Doesn't show until the previous node's own instruction has actually
     // been followed - a real tick on the reversibles (4H 4T) checklist, not
     // just having read about it.
@@ -243,7 +243,7 @@ const ELAPSED_RAW: RawNode[] = [
       },
       {
         title: 'Editing Treatments',
-        description: "Treatments in the Tx log can be edited, reordered or deleted by pressing the button to the left of the treatment name.\n\n'Edit' lets you correct what was logged while keeping its original time and position in the log.\n\nFor example, you can change the drug you gave, the dose you gave, or change it to something else completely."
+        description: "Treatments in the Tx log can be edited, reordered, or deleted by pressing the button to the left of the treatment name.\n\n'Edit' lets you correct what was logged while keeping its original time and position in the log.\n\nFor example, you can change the drug you gave, the dose you gave, or change it to something else completely."
       },
       {
         title: 'Editing Treatments',
@@ -251,7 +251,7 @@ const ELAPSED_RAW: RawNode[] = [
       },
       {
         title: 'Give it a Go',
-        description: "Edit, reorder or delete the adrenaline push entry you logged earlier to continue."
+        description: "Edit, reorder, or delete the adrenaline push entry you logged earlier to continue."
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -282,7 +282,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'delete', type: 'positioned', x: 73.46, y: 15.45, anchor: '[data-button="close-case"]',
-    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved." }, { title: 'Give it a Go', description: "Close the case to finish the tutorial and we'll see you at The Big One!" }],
+    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved." }, { title: 'Give it a Go', description: "Close the case to finish the tutorial, and we'll see you at The Big One!" }],
     condition: (s) => !s.running
   }
 ];
@@ -366,10 +366,10 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('addTxBtn', {
     pages: [{
       title: 'Add Treatment Button',
-      description: "This opens the treatments (Tx) menu.\n\nIn this mode it only offers what the timers need: rhythm check outcomes, adrenaline and amiodarone."
+      description: "This opens the treatments (Tx) menu.\n\nIn this mode it only offers what the timers need: rhythm check outcomes, adrenaline, and amiodarone."
     }, {
       title: 'Give it a Go',
-      description: "Press the \u2018+ Add Tx\u2019 button so we can start an adrenaline timer."
+      description: "Press the '+ Add Tx' button so we can start an adrenaline timer."
     }]
   }),
   withOverrides('addTxSubmenu', {
@@ -391,7 +391,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('finalStats', {
     pages: [{
       title: 'Final Case Data',
-      description: "Although you didn't see a Tx log while you worked, this mode recorded the times you logged rhythm checks, adrenaline and amiodarone.\n\nHere they are, with times to the second."
+      description: "Although you didn't see a Tx log while you worked, this mode recorded the times you logged rhythm checks, adrenaline, and amiodarone.\n\nHere they are, with times to the second."
     }]
   }),
   nodeById('export'),
