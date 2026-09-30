@@ -627,12 +627,12 @@ const ABOUT_SINGLE_PAGE = true;
 // limitations, and when to use it. Headings are the section names.
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
-    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose and next amiodarone dose.\n\n• Is relatively self-sufficient and, if anything, reduces distractions on the job." },
-    { title: 'Limitations', text: "• Does not assist you in writing your case sheet beyond the times rhythm checks occurred and the times adrenaline and amiodarone were administered." },
+    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job." },
+    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline and amiodarone." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you only need the timers." },
   ],
   log: [
-    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies total doses given, useful at handover.\n\n• Provides a complete summary for case sheets." },
+    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, for case sheets." },
     { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting." },
     { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Arrests where you manage the timings yourself.\n\n• Scribing during a sim." },
   ],

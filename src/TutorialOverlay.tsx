@@ -52,7 +52,7 @@ const ELAPSED_RAW: RawNode[] = [
     pages: [
       {
         title: 'Elapsed Timer',
-        description: "Earlier we entered the monitor's elapsed case time.\n\nNow we have that same timer right in front of us, mirroring the monitor's."
+        description: "Earlier we entered the monitor's elapsed case time.\n\nNow we have that same timer right in front of us, matching the monitor's."
       }
     ],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
@@ -229,7 +229,7 @@ const ELAPSED_RAW: RawNode[] = [
     pages: [
       {
         title: 'Pharma Summary',
-        description: 'Next, we have the pharmacological summary, which lists all logged medications with a cumulative tally of the total dose given of each drug.'
+        description: 'Next, we have the pharmacological summary, which lists all logged medications with a cumulative tally of the total dose logged of each drug.'
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -391,7 +391,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('finalStats', {
     pages: [{
       title: 'Final Case Data',
-      description: "Although you didn't see a Tx log while you worked, this mode recorded the rhythm checks and medication administration times in the background.\n\nHere they are, with times to the second."
+      description: "Although you didn't see a Tx log while you worked, this mode recorded the times you logged rhythm checks, adrenaline and amiodarone.\n\nHere they are, with times to the second."
     }]
   }),
   nodeById('export'),
