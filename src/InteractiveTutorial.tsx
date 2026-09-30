@@ -632,13 +632,13 @@ const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; t
     { title: 'When to Use It', text: "• Cardiac arrest cases where you only need the timers." },
   ],
   log: [
-    { title: 'What It Does', text: "• Assists you to create a detailed log of the events of a case in real time.\n\n• Keeps a running tally of the total dose of each medication given, which can be useful at handover.\n\n• Provides a complete case summary at the end of the case, which will be invaluable when writing case sheets." },
-    { title: 'Limitations', text: "• Does not help you keep track of rhythm checks or medication redosing.\n\n• Requires repeated attention, which could act as a distraction." },
-    { title: 'When to Use It', text: "• Complex non-cardiac arrest cases (such as PHEA).\n\n• Arrests where you want to manage the timings yourself.\n\n• Recording events when scribing during a sim." },
+    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies total doses given, useful at handover.\n\n• Provides a complete summary for case sheets." },
+    { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting." },
+    { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Arrests where you manage the timings yourself.\n\n• Scribing during a sim." },
   ],
   elapsed: [
-    { title: 'What It Does', text: "• Combines all the capabilities of the 'Timers only' and 'Tx log only' modes.\n\n• Is a powerful tool that helps you keep track of rhythm check times and medication redosing, and create a detailed log of the case's events." },
-    { title: 'Limitations', text: "• Requires practice, as it is the most complex.\n\n• Like 'Tx log only', requires repeated attention, which could act as a distraction." },
+    { title: 'What It Does', text: "• Combines all the capabilities of 'Timers only' and 'Tx log only' modes." },
+    { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Like 'Tx log only', requires repeated attention." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
   ],
 };
@@ -1029,9 +1029,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                 <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginBottom: '14px' }}>
                   <div ref={aboutScrollRef} onScroll={checkAboutScroll} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                     {MODE_ABOUT_PAGES[modeAboutMode].map((pg, i, all) => (
-                      <div key={i} style={{ marginBottom: i < all.length - 1 ? '4px' : 0 }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 8px 0' }}>{pg.title}</h3>
-                        {renderIntroDescription(pg.text)}
+                      <div key={i} style={{ marginBottom: i < all.length - 1 ? '18px' : 0 }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 6px 0' }}>{pg.title}</h3>
+                        {renderPlainBullets(pg.text)}
                       </div>
                     ))}
                   </div>
@@ -1060,7 +1060,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               </>
               ) : (
               <>
-                {renderIntroDescription(MODE_ABOUT_PAGES[modeAboutMode][aboutPage].text)}
+                <div style={{ marginBottom: '20px' }}>{renderPlainBullets(MODE_ABOUT_PAGES[modeAboutMode][aboutPage].text)}</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
                   {MODE_ABOUT_PAGES[modeAboutMode].map((_, i) => (
                     <span key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === aboutPage ? '#10b981' : '#d1d5db' }} />
@@ -1565,6 +1565,19 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     </div>
   );
 };
+
+// Plain dot points under a subheading (no grey box), with a hanging indent so
+// wrapped lines line up under the text rather than under the dot.
+function renderPlainBullets(text: string) {
+  const items = text.split('\n\n').map(t => t.replace(/^•\s*/, ''));
+  return (
+    <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc', color: '#555', fontSize: '16px', lineHeight: '1.6', textAlign: 'left' }}>
+      {items.map((t, i) => (
+        <li key={i} style={{ marginBottom: i < items.length - 1 ? '0.4em' : 0 }}>{renderWithItalics(t)}</li>
+      ))}
+    </ul>
+  );
+}
 
 function renderWithItalics(text: string) {
   const parts = text.split('The Big One');
