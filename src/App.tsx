@@ -909,6 +909,29 @@ export default function App() {
   }, [isShockForced]);
   const caseSummaryScrollRef = useRef<HTMLDivElement>(null);
 
+  // Leaving the tutorial from its first setup page: back to the welcome page,
+  // with the tutorial and everything entered in it (mode, weight, interval,
+  // previous treatments) cleared so a real calibration starts from scratch.
+  const exitTutorialToWelcome = () => {
+    setShowInteractiveTutorial(false);
+    setTutorialModeIntro(null);
+    setTutorialAboutMode(null);
+    setTimingNodesComplete(false);
+    setCatchupNodeCleared(false);
+    setTimingMode(null);
+    setExpandedMode(null);
+    setRhythmInterval(null);
+    setWeightInput('');
+    setWeightType(null);
+    setPaedWeightMethod(null);
+    setPaedAgeLabel('');
+    setCatchupElapsed({ hrs: 0, mins: 0, secs: 0 });
+    setUseManualEntry(false);
+    setCatchupTxMode(false);
+    setState(INITIAL_STATE);
+    setCatchupStep(1);
+  };
+
   // Correct timer drift when tab becomes visible again
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1325,7 +1348,7 @@ export default function App() {
   }, [updateWaiting, onWelcomeScreen]);
 
   // Timer logic
-  // Demo tick for animated timers on timing mode selection screen
+  // Demo tick for animated timers on the mode selection screen
   useEffect(() => {
     if (catchupStep !== 6) return;
     const interval = window.setInterval(() => setDemoTick(t => t + 1), 1000);
@@ -1974,7 +1997,7 @@ export default function App() {
     const now = Date.now();
     const startClockTime = now - (adjustedElapsed * 1000);
     
-    // Calculate rhythm check target based on timing mode
+    // Calculate rhythm check target based on mode
     let rhythmCheckTarget: number;
     if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
       rhythmCheckTarget = calcNextIntervalTarget(adjustedElapsed, rhythmInterval);
@@ -3177,8 +3200,7 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button 
                       onClick={() => setCatchupStep(6)} 
-                      disabled={showInteractiveTutorial}
-                      className={`py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'bg-neutral-100 text-neutral-300 cursor-default' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
+                      className="py-4 rounded-xl font-bold transition-colors bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
                     >
                       Back
                     </button>
@@ -3458,7 +3480,7 @@ export default function App() {
                                       onClick={(e) => { e.stopPropagation(); setTutorialAboutMode(mode); }}
                                       className="block text-sm font-semibold text-emerald-700 underline underline-offset-2"
                                     >
-                                      About this mode ›
+                                      Tell me more ›
                                     </button>
                                   )}
                                 </div>
@@ -3471,7 +3493,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button disabled={showInteractiveTutorial} onClick={() => setCatchupStep(1)} className={`bg-neutral-100 py-4 rounded-xl font-bold transition-colors ${showInteractiveTutorial ? 'text-neutral-300 cursor-default' : 'text-neutral-700 hover:bg-neutral-200'}`}>Back</button>
+                    <button onClick={() => (showInteractiveTutorial ? exitTutorialToWelcome() : setCatchupStep(1))} className="bg-neutral-100 py-4 rounded-xl font-bold transition-colors text-neutral-700 hover:bg-neutral-200">Back</button>
                     <button
                       onClick={() => {
                         // In the tutorial this page is where a mode's tutorial is picked:
@@ -3574,7 +3596,7 @@ export default function App() {
               }}
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
-              <div className="text-base">Change timing mode</div>
+              <div className="text-base">Change mode</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode ? TIMING_MODE_LABELS[timingMode] : '—'}</div>
             </button>
             <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
@@ -3738,7 +3760,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
             <div className="text-center space-y-1">
-              <h2 className="text-2xl font-bold text-neutral-900">Change Timing Mode</h2>
+              <h2 className="text-2xl font-bold text-neutral-900">Change Mode</h2>
               <p className="text-neutral-500 text-sm">How do you want to keep track of rhythm checks from now on?</p>
             </div>
             <div className="flex flex-col gap-3">

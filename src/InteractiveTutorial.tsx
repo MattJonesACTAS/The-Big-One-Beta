@@ -3,7 +3,7 @@
  * Displays clickable nodes over app screenshots to guide users
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Pause, RefreshCw, XCircle, FileText, Plus, Trash2, ChevronDown } from 'lucide-react';
 
 // Static Home Screen Component - Exact replica using real app code
@@ -587,6 +587,8 @@ interface TutorialElement {
   number: number;
   title: string;
   description: string;
+  // Further pages after `description` (a multi-page note: Next, then Got it on the last)
+  morePages?: string[];
 }
 
 interface TutorialScreen {
@@ -628,12 +630,22 @@ const PARKED_MODE_PAGE_NOTES = [
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, modeAboutMode, onModeAboutClose, mode }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
+  // Which notes have been read on each page, so going Back to a page that was
+  // already cleared doesn't make anyone read its notes again.
+  const readByScreen = useRef<Record<string, string[]>>({});
   const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
+  const [explanationPage, setExplanationPage] = useState(0);
 
   const screens: TutorialScreens = {
     intro1: {
       title: 'Welcome',
+      image: '',
+      nextScreen: 'introWhen',
+      elements: [],
+    },
+    introWhen: {
+      title: 'When to Use The App',
       image: '',
       nextScreen: 'intro2',
       elements: [],
@@ -669,7 +681,9 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       nextScreen: null,
       elements: [
         // The old Getting Started page and the App Mode instruction, combined.
-        { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started', description: "On opening The Big One, you'll need to choose a mode.\n\nSelect the mode you'd like to learn how to use.\n\nIt's best to learn them from top to bottom." },
+        { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started',
+          description: "On opening The Big One, you'll need to choose one of three modes.\n\nEach mode has its own tutorial, and it's advised to complete them from top to bottom.\n\nOnce you've seen every mode, it will be up to you to choose which one works best for you.",
+          morePages: ["The 'Tell me more' button will provide further insight into each mode.\n\nChoose a mode to begin its tutorial."] },
       ],
     },
     rhythmCheckTiming: {
@@ -677,7 +691,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'enterElapsedTime',
       elements: [
-        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "You will need to enter which minute intervals the rhythm checks are occurring.\n\nChoose an option to continue." },
+        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "To keep track of when the next rhythm check is due, The Big One uses the 'odds/evens' method.\n\nTo calibrate the app, you will need to enter whether you are performing rhythm checks on odd minutes, even minutes, or halfway in between them.\n\nChoose an option to continue." },
       ],
     },
     enterElapsedTime: {
@@ -806,7 +820,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     const catchupLinkedScreens = ['patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime'];
     if (targetScreen && catchupLinkedScreens.includes(currentScreen) && currentScreen !== targetScreen) {
       setCurrentScreen(targetScreen);
-      setExploredElements(new Set());
+      setExploredElements(new Set(readByScreen.current[targetScreen] ?? []));
     }
   }, [catchupStep, currentScreen]);
 
@@ -829,19 +843,30 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
 
   const handleElementClick = (element: TutorialElement) => {
     setActiveExplanation(element);
-    setExploredElements(prev => new Set([...prev, element.id]));
+    setExplanationPage(0);
+    if (!element.morePages?.length) markRead(element.id);
     setShowingInfoBox(true);
   };
 
+  const markRead = (id: string) => {
+    readByScreen.current[currentScreen] = Array.from(new Set([...(readByScreen.current[currentScreen] ?? []), id]));
+    setExploredElements(prev => new Set([...prev, id]));
+  };
+
   const handleCloseExplanation = () => {
+    // Closing a multi-page note only counts as reading it from its last page
+    if (activeExplanation?.morePages?.length && explanationPage === activeExplanation.morePages.length) {
+      markRead(activeExplanation.id);
+    }
     setActiveExplanation(null);
     setShowingInfoBox(false);
+    setExplanationPage(0);
   };
 
   const handleNext = () => {
     if (currentScreenData.nextScreen) {
       setCurrentScreen(currentScreenData.nextScreen);
-      setExploredElements(new Set()); // Reset for next screen
+      setExploredElements(new Set(readByScreen.current[currentScreenData.nextScreen] ?? [])); // notes already read on that page stay read
     }
   };
 
@@ -852,12 +877,12 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
+      backgroundColor: ['intro1', 'introWhen', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'transparent' : '#1a1a1a',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      justifyContent: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
-      padding: ['intro1', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
+      alignItems: ['intro1', 'introWhen', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      justifyContent: ['intro1', 'introWhen', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? 'stretch' : 'center',
+      padding: ['intro1', 'introWhen', 'intro2', 'intro3', 'patientDetails', 'previousTreatments', 'timingMethod', 'rhythmCheckTiming', 'enterElapsedTime', 'home1', 'addTxMenu', 'adrenalineDose', 'home2', 'home2_summary', 'home2_close', 'summary', 'caseSummary'].includes(currentScreen) ? '0' : '20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       zIndex: 9999,
       overflowY: 'auto',
@@ -872,7 +897,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       {currentScreen === 'caseSummary' && <StaticCaseSummary />}
       
       {/* Intro pages: dark overlay over the live catchup behind */}
-      {(currentScreen === 'intro1' || currentScreen === 'intro2') && (
+      {(currentScreen === 'intro1' || currentScreen === 'introWhen' || currentScreen === 'intro2') && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -893,11 +918,14 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
               {currentScreen === 'intro1' && 'Welcome!'}
+              {currentScreen === 'introWhen' && 'When to Use The App'}
               {currentScreen === 'intro2' && 'Navigating the Tutorial'}
             </h2>
             {renderIntroDescription(
               currentScreen === 'intro1'
                 ? "The Big One is a cognitive aid for use during cardiac arrests or any other big job.\n\nIt is designed to assist you to keep track of:\n\n• Rhythm check intervals\n\n• Medication re-dosing intervals\n\n• The times events occurred, making case sheets easy and accurate\n\nBy offloading this cognitive load, you can focus on situational awareness and team leadership."
+                : currentScreen === 'introWhen'
+                ? "Imagine you're first on scene to a cardiac arrest or another complex job that will require multiple crews.\n\nYou perform the initial necessary interventions, then eventually more crews arrive.\n\nYou then take a step back, assume the role of Team Leader, assign roles to other crew members and go hands off for the rest of the case.\n\nThat is when The Big One can be used."
                 : "In this tutorial you'll see red numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
             )}
             <button
@@ -946,7 +974,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              {modeAboutMode ? 'About This Mode' : 'Calibration'}
+              {modeAboutMode ? 'Tell Me More' : 'Calibration'}
             </h2>
             {modeAboutMode ? (
               // Placeholder: each mode's own strengths/weaknesses will live
@@ -1328,7 +1356,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       )}
       
       {/* Regular Next button for non-special screens */}
-      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'patientDetails' && currentScreen !== 'previousTreatments' && currentScreen !== 'timingMethod' && currentScreen !== 'rhythmCheckTiming' && currentScreen !== 'enterElapsedTime' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
+      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'introWhen' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'patientDetails' && currentScreen !== 'previousTreatments' && currentScreen !== 'timingMethod' && currentScreen !== 'rhythmCheckTiming' && currentScreen !== 'enterElapsedTime' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
         <button
           onClick={handleNext}
           style={{
@@ -1421,10 +1449,19 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               textAlign: 'left',
               whiteSpace: 'pre-line',
             }}>
-              {activeExplanation.description}
+              {renderWithItalics(explanationPage === 0 ? activeExplanation.description : activeExplanation.morePages![explanationPage - 1])}
             </p>
+            {activeExplanation.morePages?.length ? (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
+                {[0, ...activeExplanation.morePages.map((_, i) => i + 1)].map(i => (
+                  <span key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === explanationPage ? '#10b981' : '#d1d5db' }} />
+                ))}
+              </div>
+            ) : null}
             <button
-              onClick={handleCloseExplanation}
+              onClick={() => (activeExplanation.morePages?.length && explanationPage < activeExplanation.morePages.length)
+                ? setExplanationPage(explanationPage + 1)
+                : handleCloseExplanation()}
               style={{
                 width: '100%',
                 backgroundColor: '#10b981',
@@ -1437,7 +1474,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                 cursor: 'pointer',
               }}
             >
-              Got it
+              {activeExplanation.morePages?.length && explanationPage < activeExplanation.morePages.length ? 'Next' : 'Got it'}
             </button>
           </div>
         </div>

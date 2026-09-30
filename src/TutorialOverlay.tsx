@@ -139,7 +139,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
-    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change time keeping method\n\nChange the patient's weight to move forward." }],
+    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change the app mode\n\nChange the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
@@ -326,7 +326,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
-      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change time keeping method"
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the app mode"
     }]
   }),
   // no patient weight in this mode, so nothing to wait for before checklists
@@ -356,7 +356,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('finalStats', {
     pages: [{
       title: 'Final Case Data',
-      description: "Although you didn't see a Tx log while you worked, this mode recorded the rhythm checks and medication doses in the background.\n\nHere they are, with times to the second."
+      description: "Although you didn't see a Tx log while you worked, this mode recorded the rhythm checks and medication administration times in the background.\n\nHere they are, with times to the second."
     }]
   }),
   nodeById('export'),
@@ -372,7 +372,7 @@ const LOG_NODES: RawNode[] = [
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
-      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Change the patient's weight\n\n• Change time keeping method\n\nChange the patient's weight to move forward."
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Change the patient's weight\n\n• Change the app mode\n\nChange the patient's weight to move forward."
     }]
   }),
   nodeById('tabs'),
