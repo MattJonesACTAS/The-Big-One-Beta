@@ -618,6 +618,26 @@ interface InteractiveTutorialProps {
   mode?: 'log' | 'minimal' | 'elapsed' | null;
 }
 
+// "Tell me more" on each mode card: three pages per mode - what it does, its
+// limitations, and when to use it. Headings are the section names.
+const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
+  minimal: [
+    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose and next amiodarone dose.\n\n• Is relatively self-sufficient and, if anything, reduces distractions on the job." },
+    { title: 'Limitations', text: "• Does not assist you in writing your case sheet beyond the times rhythm checks occurred and the times adrenaline and amiodarone were administered." },
+    { title: 'When to Use It', text: "• Cardiac arrest cases where you only need the timers." },
+  ],
+  log: [
+    { title: 'What It Does', text: "• Assists you to create a detailed log of the events of a case in real time.\n\n• Keeps a running tally of the total dose of each medication given, which can be useful at handover.\n\n• Provides a complete case summary at the end of the case, which will be invaluable when writing case sheets." },
+    { title: 'Limitations', text: "• Does not help you keep track of rhythm checks or medication redosing.\n\n• Requires repeated attention, which could act as a distraction." },
+    { title: 'When to Use It', text: "• Complex non-cardiac arrest cases (such as PHEA).\n\n• Arrests where you want to manage the timings yourself.\n\n• Recording events when scribing during a sim." },
+  ],
+  elapsed: [
+    { title: 'What It Does', text: "• Combines all the capabilities of the 'Timers only' and 'Tx log only' modes.\n\n• Is a powerful tool that helps you keep track of rhythm check times and medication redosing, and create a detailed log of the case's events." },
+    { title: 'Limitations', text: "• Requires practice, as it is the most complex.\n\n• Like 'Tx log only', requires repeated attention, which could act as a distraction." },
+    { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
+  ],
+};
+
 // The two notes that used to sit on the mode page, kept word for word. They
 // aren't shown at the moment: the mode page is now where each mode's own
 // tutorial is picked, and these describe only the old two-mode choice ("No
@@ -631,6 +651,8 @@ const PARKED_MODE_PAGE_NOTES = [
 const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, modeAboutMode, onModeAboutClose, mode }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
+  const [aboutPage, setAboutPage] = useState(0);
+  useEffect(() => { setAboutPage(0); }, [modeAboutMode]);
   // Which notes have been read on each page, so going Back to a page that was
   // already cleared doesn't make anyone read its notes again.
   const readByScreen = useRef<Record<string, string[]>>({});
@@ -977,20 +999,22 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             maxWidth: '320px',
             width: '85%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            maxHeight: '100%',
+            overflowY: 'auto',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              {modeAboutMode ? 'Tell Me More' : 'Calibration'}
+              {modeAboutMode ? MODE_ABOUT_PAGES[modeAboutMode][aboutPage].title : 'Calibration'}
             </h2>
             {modeAboutMode ? (
-              // Placeholder: each mode's own strengths/weaknesses will live
-              // here eventually. Only Tx log & timers has any so far - it's
-              // the text moved over from the old Elapsed Timer note.
               <>
-                {renderIntroDescription(modeAboutMode === 'elapsed'
-                  ? "This can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient."
-                  : "Coming soon.")}
+                {renderIntroDescription(MODE_ABOUT_PAGES[modeAboutMode][aboutPage].text)}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
+                  {MODE_ABOUT_PAGES[modeAboutMode].map((_, i) => (
+                    <span key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === aboutPage ? '#10b981' : '#d1d5db' }} />
+                  ))}
+                </div>
                 <button
-                  onClick={onModeAboutClose}
+                  onClick={() => (aboutPage < MODE_ABOUT_PAGES[modeAboutMode].length - 1 ? setAboutPage(aboutPage + 1) : onModeAboutClose?.())}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -1004,7 +1028,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                     boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
                   }}
                 >
-                  Got it
+                  {aboutPage < MODE_ABOUT_PAGES[modeAboutMode].length - 1 ? 'Next' : 'Got it'}
                 </button>
               </>
             ) : (
