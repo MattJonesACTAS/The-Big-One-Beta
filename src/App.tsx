@@ -2148,6 +2148,15 @@ export default function App() {
     });
     setIsCaseClosed(true);
     setShowEndWarning(false);
+    // The tutorial's own End Case step is when 'endCase'/'finalStats' is the
+    // current node - then the closing notes carry on as normal. Ending the
+    // case at any other point is leaving the tutorial: switch it off, so no
+    // stale note (e.g. "Delayed Rhythm Check") can appear over the closed
+    // case page. Close Case there resets the app as usual.
+    if (tutorialMode && tutorialNodeId !== 'endCase' && tutorialNodeId !== 'finalStats') {
+      setTutorialMode(false);
+      setTutorialNodeIndex(0);
+    }
   };
 
   // Switching mode part-way through a case. The switch is timestamped in the Tx
@@ -2353,7 +2362,7 @@ export default function App() {
         >
           <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
-        <button onClick={() => setShowEndWarning(true)} disabled={tutorialRhythmDemoActive} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="end-case">
+        <button onClick={() => setShowEndWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="end-case">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> End Case
         </button>
       </div>
