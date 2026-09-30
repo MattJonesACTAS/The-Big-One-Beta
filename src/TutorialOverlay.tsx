@@ -247,7 +247,7 @@ const ELAPSED_RAW: RawNode[] = [
       },
       {
         title: 'Editing Treatments',
-        description: "'Reorder' let's you shift a Tx to its correct position in the log.\n\nThis is useful if you realise that you missed logging something that happened earlier."
+        description: "'Reorder' lets you shift a Tx to its correct position in the log.\n\nThis is useful if you realise that you missed logging something that happened earlier."
       },
       {
         title: 'Give it a Go',

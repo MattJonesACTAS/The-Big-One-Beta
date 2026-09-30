@@ -71,7 +71,7 @@ const INITIAL_STATE: AppState = {
 
 const MEDICATIONS = [
   'Adrenaline push', 'Adrenaline infusion', 'Amiodarone', 
-  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam (Kepra)', 'Lignocaine',
+  'Atropine', 'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine push', 'Ketamine infusion', 'Levetiracetam (Keppra)', 'Lignocaine',
   'Magnesium', 'Midazolam push', 'Morph/midaz infusion', 'Naloxone', 'Normal saline', 'Ondansetron', 'Oxygen', 'Sodium bicarbonate', 'Suxamethonium'
 ];
 
@@ -137,7 +137,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
   },
   'Ketamine push': { 
     doses: [
-      { dose: '0.5mg/kg', population: 'both', indication: 'CPR induced consciousness', calculated: true },
+      { dose: '0.5mg/kg', population: 'both', indication: 'CPR-induced consciousness', calculated: true },
       { dose: '1mg/kg', population: 'adult', indication: 'Intubation induction with suxamethonium / Post-intubation analgosedation', calculated: true },
       { dose: '1mg/kg', population: 'paed', indication: 'Post-intubation analgosedation', calculated: true },
       { dose: '2mg/kg', population: 'adult', indication: 'Intubation when suxamethonium is contraindicated', calculated: true },
@@ -208,7 +208,7 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
       { dose: '30mg/30mL', population: 'adult', indication: 'Post-intubation analgosedation' },
     ]
   },
-  'Levetiracetam (Kepra)': {
+  'Levetiracetam (Keppra)': {
     doses: [
       { dose: '40mg/kg', population: 'both', indication: 'Seizure', calculated: true },
       { dose: 'Other', population: 'both' }
@@ -388,7 +388,7 @@ const getLocalTimeWithSeconds = (date?: Date) => {
 const KNOWN_MEDS = [
   'Adrenaline infusion', 'Adrenaline push', 'Amiodarone', 'Atropine',
   'Calcium', 'Glucose 10%', 'Heparin', 'Ketamine infusion', 'Ketamine push',
-  'Levetiracetam (Kepra)', 'Lignocaine', 'Magnesium', 'Midazolam push',
+  'Levetiracetam (Keppra)', 'Lignocaine', 'Magnesium', 'Midazolam push',
   'Morph/midaz infusion', 'Normal saline', 'Suxamethonium'
 ];
 
@@ -568,13 +568,23 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
 // key, so a case survives even if something (crash, tab discard, reload)
 // wipes the in-memory "closed case" view before the user exports/deletes it.
 const PREVIOUS_CASES_KEY = 'theBigOnePreviousCases';
+
+// A few names and checklist labels were respelled in a later version. Saved
+// data (a case in progress, or Previous Cases) is read through this, so a case
+// saved under the old spelling keeps matching its dose options and ticks.
+const LEGACY_TEXT: Array<[RegExp, string]> = [
+  [/Levetiracetam \(Kepra\)/g, 'Levetiracetam (Keppra)'],
+  [/"SpO2"/g, '"SpO₂"'],
+  [/"EtCO2"/g, '"EtCO₂"'],
+];
+const parseSaved = (raw: string) => JSON.parse(LEGACY_TEXT.reduce((text, [re, to]) => text.replace(re, to), raw));
 const MAX_PREVIOUS_CASES = 3;
 
 const loadPreviousCases = (): AppState[] => {
   try {
     const raw = localStorage.getItem(PREVIOUS_CASES_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    const parsed = parseSaved(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     console.error('Failed to load previous cases backup:', e);
@@ -709,7 +719,7 @@ export default function App() {
     const saved = localStorage.getItem('theBigOneState');
     if (saved) {
       try {
-        const loaded = JSON.parse(saved);
+        const loaded = parseSaved(saved);
         return {
           ...loaded,
           currentOverlay: null // Reset overlays on reload
@@ -725,7 +735,7 @@ export default function App() {
     const saved = localStorage.getItem('theBigOneState');
     if (!saved) return true; // No saved state = show catchup
     try {
-      const loaded = JSON.parse(saved);
+      const loaded = parseSaved(saved);
       if (loaded.running) return false; // Actively running -> home screen
       if (loaded.caseClosedAt) return false; // Closed but not deleted -> case summary screen
       return true; // Never started -> catchup
@@ -755,7 +765,7 @@ export default function App() {
     const saved = localStorage.getItem('theBigOneState');
     if (!saved) return false;
     try {
-      const loaded = JSON.parse(saved);
+      const loaded = parseSaved(saved);
       return !loaded.running && !!loaded.caseClosedAt;
     } catch (e) {
       return false;
@@ -2810,7 +2820,7 @@ export default function App() {
             }}
             className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-orange-500 text-white"
           >
-            Re-arrest
+            Rearrest
           </button>
         )}
         <button 
@@ -3074,7 +3084,7 @@ export default function App() {
                         <div className="text-center">
                           <div className="font-bold text-lg">Paediatric</div>
                           <div className={`text-xs mt-1 ${weightType === 'paed' ? 'text-pink-100' : 'text-neutral-400'}`}>
-                            24hrs - 11 yrs
+                            24 hrs – 11 yrs
                           </div>
                         </div>
                       </div>
@@ -3207,7 +3217,7 @@ export default function App() {
               {catchupStep === 4 && (
                 <div className="text-center space-y-6">
                   <h2 className="text-xl font-bold text-neutral-900 px-4">Enter Elapsed Time</h2>
-                  <p className="text-neutral-600 text-sm px-4">This is the time at the top right corner of the monitor</p>
+                  <p className="text-neutral-600 text-sm px-4">This is the time in the top-right corner of the monitor</p>
                   <ElapsedTimePicker value={catchupElapsed} onChange={setCatchupElapsed} />
                   
                   <div className="grid grid-cols-2 gap-3">
@@ -3527,7 +3537,7 @@ export default function App() {
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
               <div className="text-base">Recalibrate timer</div>
-              <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check</div>
+              <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check interval</div>
             </button>
             )}
             {timingMode !== 'minimal' && (
@@ -4274,14 +4284,14 @@ function PHEASelection({ checkedItems, onToggle }: { checkedItems: string[], onT
     <div className="h-full pb-10">
       <SectionGroup title="INITIAL TEAM BRIEF" color="purple" items={['Adequate hands and skills mix?', { label: 'Optimise patient position', subItems: ['Consider relocating patient now to optimal location', 'Apply C-spine immobilisation if required', 'If remaining on scene and resources allow, prepare extrication concurrently'] }, { label: 'Assign roles', subItems: ['Team leader', 'Airway primary', 'Airway assistant', 'Drugs & access primary', 'Drugs & access assistant', 'Gofer'] }]} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="SCENE OPTIMISATION" color="purple" items={['Optimise environment', 'Optimise equipment placement']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="MONITORING" color="purple" items={['ECG', 'BP — cycling', 'SpO2', 'EtCO2']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="MONITORING" color="purple" items={['ECG', 'BP — cycling', 'SpO₂', 'EtCO₂']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="DRUGS & ACCESS" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication/s drawn up']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="AIRWAY" color="purple" items={['Sufficient oxygen available?', 'Pre-oxygenation applied?', 'Suction', 'OPA/NPA', 'LMA', 'BVM', 'Airtraq', 'ETT', 'Syringe', 'Securing method', 'Laryngoscope checked', 'FONA scalpel', 'External laryngeal manipulation discussed', 'Fall back plan discussed']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="AIRWAY" color="purple" items={['Sufficient oxygen available?', 'Pre-oxygenation applied?', 'Suction', 'OPA/NPA', 'LMA', 'BVM', 'Airtraq', 'ETT', 'Syringe', 'Securing method', 'Laryngoscope checked', 'FONA scalpel', 'External laryngeal manipulation discussed', 'Fallback plan discussed']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup 
         title="POST-INTUBATION" 
         color="darkPurple" 
         items={[
-          { label: 'Confirm ETT placement', subItems: ['EtCO2', 'Visualise cords', 'Auscultation', 'Misting', 'Chest rise'] },
+          { label: 'Confirm ETT placement', subItems: ['EtCO₂', 'Visualise cords', 'Auscultation', 'Misting', 'Chest rise'] },
           'Colleague confirms placement',
           'Secure tube — Thomas block / tube tie',
           'Reassessment — ABCs and VSS',
@@ -5028,13 +5038,13 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         if (calcMatch) {
           const calculated = parseFloat(calcMatch[1]);
           const capped = Math.min(calculated, 150);
-          return `${capped}mg (1.5mg/kg${calculated > 150 ? ' — 150mg max' : ''})`;
+          return `${capped}mg (1.5mg/kg${calculated > 150 ? ' - 150mg max' : ''})`;
         }
         return base;
       }
 
       // Levetiracetam: 40mg/kg max 3000mg
-      if (selectedMed === 'Levetiracetam (Kepra)' && doseOpt.dose.includes('/kg')) {
+      if (selectedMed === 'Levetiracetam (Keppra)' && doseOpt.dose.includes('/kg')) {
         const base = calculateDose(doseOpt.dose, state.patientWeight);
         const calcMatch = base.match(/\(([\d.]+)(mg)\)/i);
         if (calcMatch) {
