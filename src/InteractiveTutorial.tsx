@@ -618,6 +618,11 @@ interface InteractiveTutorialProps {
   mode?: 'log' | 'minimal' | 'elapsed' | null;
 }
 
+// EXPERIMENT: true shows each mode's "Tell me more" as ONE scrollable page
+// (all three sections on it); false goes back to three separate pages
+// (What It Does / Limitations / When to Use It, with Next). Same text either way.
+const ABOUT_SINGLE_PAGE = true;
+
 // "Tell me more" on each mode card: three pages per mode - what it does, its
 // limitations, and when to use it. Headings are the section names.
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
@@ -653,6 +658,18 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [aboutPage, setAboutPage] = useState(0);
   useEffect(() => { setAboutPage(0); }, [modeAboutMode]);
+  // Single-page version: is there more below the fold? (drives the fade at the bottom)
+  const aboutScrollRef = useRef<HTMLDivElement>(null);
+  const [aboutMore, setAboutMore] = useState(false);
+  const checkAboutScroll = () => {
+    const el = aboutScrollRef.current;
+    if (el) setAboutMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+  };
+  useEffect(() => {
+    if (!modeAboutMode) { setAboutMore(false); return; }
+    const t = window.setTimeout(checkAboutScroll, 50);
+    return () => window.clearTimeout(t);
+  }, [modeAboutMode]);
   // Which notes have been read on each page, so going Back to a page that was
   // already cleared doesn't make anyone read its notes again.
   const readByScreen = useRef<Record<string, string[]>>({});
@@ -1001,11 +1018,47 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
             maxHeight: '100%',
             overflowY: 'auto',
+            ...(modeAboutMode && ABOUT_SINGLE_PAGE ? { display: 'flex', flexDirection: 'column' as const, overflowY: 'hidden' as const } : {}),
           }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              {modeAboutMode ? MODE_ABOUT_PAGES[modeAboutMode][aboutPage].title : 'Calibration'}
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px', flexShrink: 0 }}>
+              {modeAboutMode ? (ABOUT_SINGLE_PAGE ? 'Tell Me More' : MODE_ABOUT_PAGES[modeAboutMode][aboutPage].title) : 'Calibration'}
             </h2>
             {modeAboutMode ? (
+              ABOUT_SINGLE_PAGE ? (
+              <>
+                <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginBottom: '14px' }}>
+                  <div ref={aboutScrollRef} onScroll={checkAboutScroll} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                    {MODE_ABOUT_PAGES[modeAboutMode].map((pg, i, all) => (
+                      <div key={i} style={{ marginBottom: i < all.length - 1 ? '4px' : 0 }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 8px 0' }}>{pg.title}</h3>
+                        {renderIntroDescription(pg.text)}
+                      </div>
+                    ))}
+                  </div>
+                  {aboutMore && (
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '36px', pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(255,255,255,0), #ffffff)' }} />
+                  )}
+                </div>
+                <button
+                  onClick={onModeAboutClose}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                    flexShrink: 0,
+                  }}
+                >
+                  Got it
+                </button>
+              </>
+              ) : (
               <>
                 {renderIntroDescription(MODE_ABOUT_PAGES[modeAboutMode][aboutPage].text)}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
@@ -1031,6 +1084,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                   {aboutPage < MODE_ABOUT_PAGES[modeAboutMode].length - 1 ? 'Next' : 'Got it'}
                 </button>
               </>
+              )
             ) : (
               <>
                 {renderIntroDescription(`You've chosen '${modeIntroLabel}' mode.\n\nNext, you'll need to calibrate the app to the current case.`)}
