@@ -661,7 +661,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'patientType', x: 50, y: 50, number: 2, title: 'Patient Type', description: "First you will need to select either adult or paediatric mode, then the patient's weight.\n\nMake any selection you like, then we'll move onto the next page." },
+        { id: 'patientType', x: 50, y: 50, number: 2, title: 'Patient Type', description: "First you will need to select either adult or paediatric mode, then the patient's weight.",
+          morePages: ["Make any selection you like, then we'll move onto the next page."] },
       ],
     },
     previousTreatments: {
@@ -669,7 +670,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.\n\nAdd a couple of treatments then move onto the next page." },
+        { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.",
+          morePages: ["Add a couple of treatments then move onto the next page."] },
       ],
     },
     timingMethod: {
@@ -683,7 +685,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         // The old Getting Started page and the App Mode instruction, combined.
         { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started',
           description: "On opening The Big One, you'll need to choose one of three modes.\n\nEach mode has its own tutorial, and it's advised to complete them from top to bottom.\n\nOnce you've seen every mode, it will be up to you to choose which one works best for you.",
-          morePages: ["The 'Tell me more' button will provide further insight into each mode.\n\nChoose a mode to begin its tutorial."] },
+          morePages: ["The 'Tell me more' button will provide further insight into each mode.", "Choose a mode to begin its tutorial."] },
       ],
     },
     rhythmCheckTiming: {
@@ -691,7 +693,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'enterElapsedTime',
       elements: [
-        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "To keep track of when the next rhythm check is due, The Big One uses the 'odds/evens' method.\n\nTo calibrate the app, you will need to enter whether you are performing rhythm checks on odd minutes, even minutes, or halfway in between them.\n\nChoose an option to continue." },
+        { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "To keep track of when the next rhythm check is due, The Big One uses the 'odds/evens' method.\n\nTo calibrate the app, you will need to enter whether you are performing rhythm checks on odd minutes, even minutes, or halfway in between them.",
+          morePages: ["Choose an option to continue."] },
       ],
     },
     enterElapsedTime: {
@@ -699,7 +702,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       image: '',
       nextScreen: 'home1', // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'enterElapsedTime', x: 50, y: 50, number: 5, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.\n\nEnter any time you like to move forward." },
+        { id: 'enterElapsedTime', x: 50, y: 50, number: 5, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.",
+          morePages: ["Enter any time you like to move forward."] },
       ],
     },
     home1: {

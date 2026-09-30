@@ -898,6 +898,8 @@ export default function App() {
   // mutations below), and only clear it once isShockForced itself goes
   // false, i.e. once a real choice has actually been logged.
   const [tutorialOutcomeRestriction, setTutorialOutcomeRestriction] = useState<'redblue' | 'rosc' | 'delay' | null>(null);
+  // True only while the walkthrough's visible fast-forward is running, so the ring can keep up with it
+  const [tutorialFastForward, setTutorialFastForward] = useState(false);
   useEffect(() => {
     if (!tutorialMode) return;
     if (tutorialNodeId === 'rhythmDemoFirstPopup') setTutorialOutcomeRestriction('redblue');
@@ -1091,18 +1093,21 @@ export default function App() {
       window.clearInterval(watcherId);
       let remaining = countdown - 4;
       if (remaining <= 0) return;
+      setTutorialFastForward(true);
       rapidId = window.setInterval(() => {
         remaining -= 1;
         setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 4 + Math.max(remaining, 0) }));
         if (remaining <= 0 && rapidId != null) {
           window.clearInterval(rapidId);
           rapidId = null;
+          setTutorialFastForward(false);
         }
       }, 100);
     }, 150);
     return () => {
       window.clearInterval(watcherId);
       if (rapidId != null) window.clearInterval(rapidId);
+      setTutorialFastForward(false);
     };
   }, [tutorialMode, tutorialNodeId]);
 
@@ -2599,6 +2604,11 @@ export default function App() {
                       ? 1 - Math.max(0, (state.frozenCountdown || 0) / 120)
                       : state.rhythmCheckOvertime > 0 
                         ? 1 - (state.rhythmCheckOvertime / 6)
+                        : tutorialMode && (timingMode === 'elapsed' || timingMode === 'minimal')
+                          // In the tutorial the countdown is moved around (reset to 0:20, fast-forwarded), so the
+                          // ring follows the countdown itself. In normal use this is the same value as the
+                          // interval-grid calculation below, which is what the real app uses.
+                          ? Math.min(1, Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120))
                         : (timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval
                           ? (() => {
                               // Progress ring fills from previous interval boundary to next
@@ -2615,7 +2625,7 @@ export default function App() {
                           : 1 - Math.max(0, (state.rhythmCheckTarget - state.elapsedSeconds) / 120)
                   }}
                   style={{ strokeDasharray: 1 }}
-                  transition={{ duration: 0.5, ease: "linear" }}
+                  transition={{ duration: tutorialFastForward ? 0.1 : 0.5, ease: "linear" }}
                 />
               </svg>
               
@@ -4113,7 +4123,7 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
               onClick={() => { if (!noRoscOff) noRosc(); }}
               disabled={noRoscOff}
               style={noRoscOff ? dimmed : undefined}
-              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-red-50 text-red-700 border-2 border-red-100 ${noRoscOff ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'redblue' ? 'tutorial-outcome-flash' : ''}`}
+              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-red-50 text-red-700 border-2 border-red-100 ${noRoscOff ? 'cursor-not-allowed' : ''}`}
             >
               No ROSC
             </button>
@@ -4121,7 +4131,7 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
               onClick={() => { if (!roscOff) rosc(); }}
               disabled={roscOff}
               style={roscOff ? dimmed : undefined}
-              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-emerald-50 text-emerald-700 border-2 border-emerald-100 ${roscOff ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'rosc' ? 'tutorial-outcome-flash' : ''}`}
+              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-emerald-50 text-emerald-700 border-2 border-emerald-100 ${roscOff ? 'cursor-not-allowed' : ''}`}
             >
               ROSC
             </button>
@@ -4133,7 +4143,7 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
               onClick={() => { if (!delayOff) onDelayRhythmCheck(); }}
               disabled={delayOff}
               style={delayOff ? dimmed : undefined}
-              className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-base btn-base hover:bg-amber-100 ${delayOff ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'delay' ? 'tutorial-outcome-flash' : ''}`}
+              className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-base btn-base hover:bg-amber-100 ${delayOff ? 'cursor-not-allowed' : ''}`}
             >
               <Hourglass size={20} strokeWidth={2.5} />
               Delay rhythm check
@@ -5285,11 +5295,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           : tutorialOutcomeRestriction === 'delay' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA', 'Disarm - ROSC', 'Rearrest']
           : undefined
         }
-        flashItems={
-          tutorialOutcomeRestriction === 'redblue' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA']
-          : tutorialOutcomeRestriction === 'rosc' ? ['Disarm - ROSC', 'Rearrest']
-          : undefined
-        }
       />
 
       {/* Delay rhythm check - same size/position as the Rhythm Check buttons
@@ -5308,7 +5313,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               <button
                 onClick={() => { if (!delayDisabled) onDelayRhythmCheck(); }}
                 disabled={delayDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'delay' ? 'tutorial-outcome-flash' : ''}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
                 style={delayDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
               >
                 <Hourglass size={16} strokeWidth={2.5} />
@@ -5407,8 +5412,7 @@ function TxSection({
   expandedSection,
   onToggle,
   showChevron = true,
-  disabledItems,
-  flashItems
+  disabledItems
 }: { 
   title: string;
   color: string;
@@ -5422,9 +5426,6 @@ function TxSection({
   // Item names to grey out and make unclickable - used by the rhythm-check
   // walkthrough to restrict the popup to only the outcome it just instructed
   disabledItems?: string[];
-  // Item names that pulse to draw the eye to them (same pulse the rest of
-  // the tutorial uses for "press this next")
-  flashItems?: string[];
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   // Tracks which failable items (ETT, IV access, etc.) are currently staged
@@ -5486,7 +5487,6 @@ function TxSection({
             const bgClass = itemColor === 'orange' ? 'bg-orange-50 hover:bg-orange-100' : 'bg-neutral-50 hover:bg-neutral-100';
             const isUnsuccessful = !!markedUnsuccessful[itemName];
             const isDisabled = !!disabledItems?.includes(itemName);
-            const isFlashing = !!flashItems?.includes(itemName);
 
             if (failable) {
               return (
@@ -5494,7 +5494,7 @@ function TxSection({
                   <button
                     onClick={() => { if (!isDisabled) onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName); }}
                     disabled={isDisabled}
-                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''} ${isFlashing ? 'tutorial-outcome-flash' : ''}`}
+                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                     style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                     data-medication={itemName}
                   >
@@ -5523,7 +5523,7 @@ function TxSection({
                 key={itemName} 
                 onClick={() => { if (!isDisabled) onSelect(itemName); }} 
                 disabled={isDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''} ${isFlashing ? 'tutorial-outcome-flash' : ''}`}
+                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                 style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                 data-medication={itemName}
               >

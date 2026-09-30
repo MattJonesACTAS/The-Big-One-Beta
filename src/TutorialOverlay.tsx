@@ -85,7 +85,10 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
       title: 'Select The Outcome',
-      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly.\n\nChoose any red or blue option to continue."
+      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+    }, {
+      title: 'Select The Outcome',
+      description: "Choose any red or blue option to continue."
     }],
     condition: (s, sf) => sf === true
   },
@@ -101,7 +104,10 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoDelayPopup', type: 'popup',
     pages: [{
       title: 'Delaying A Rhythm Check',
-      description: "Choose this option if the rhythm check needs to be delayed.\n\nSelect 'Delay rhythm check' to continue."
+      description: "Choose this option if the rhythm check needs to be delayed."
+    }, {
+      title: 'Delaying A Rhythm Check',
+      description: "Select 'Delay rhythm check' to continue."
     }],
     condition: (s, sf) => sf === true
   },
@@ -109,7 +115,10 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoRhythmCheckNow', type: 'popup',
     pages: [{
       title: 'Delayed Rhythm Check',
-      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button.\n\nThe rhythm check popup will reappear and you can choose an outcome.\n\nThe rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Rhythm check now' button to continue."
+      description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button.\n\nThe rhythm check popup will reappear and you can choose an outcome.\n\nThe rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart."
+    }, {
+      title: 'Delayed Rhythm Check',
+      description: "Press the 'Rhythm check now' button to continue."
     }],
     condition: (s) => s.rhythmCheckDelayedAt != null && s.currentOverlay === null
   },
@@ -125,7 +134,10 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoRoscMode', type: 'popup',
     pages: [{
       title: 'ROSC Mode',
-      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button.\n\nThe rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart.\n\nPress the 'Press if rearrest' button to continue."
+      description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button.\n\nThe rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart."
+    }, {
+      title: 'ROSC Mode',
+      description: "Press the 'Press if rearrest' button to continue."
     }],
     condition: (s) => s.isROSCMode === true && s.currentOverlay === null
   },
@@ -133,23 +145,26 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoLastPopup', type: 'popup',
     pages: [{
       title: "You've Seen It All",
-      description: "That's every option the rhythm check popup offers.\n\nChoose any rhythm check outcome you like to finish up, then we'll carry on with the rest of the tutorial."
+      description: "That's every option the rhythm check popup offers."
+    }, {
+      title: "You've Seen It All",
+      description: "Choose any rhythm check outcome you like to finish up, then we'll carry on with the rest of the tutorial."
     }],
     condition: (s, sf) => sf === true
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
-    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change the app mode\n\nChange the patient's weight to move forward." }],
+    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Recalibrate Button', description: "Change the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
     id: 'tabs', type: 'positioned', x: 50, y: 10.97, anchor: '[data-tutorial-anchor="checklist-row"]',
-    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red.\n\nThat is a visual cue to encourage purposeful addressing of these early.\n\nOpen the 4H 4T checklist and tick one off to continue.' }],
+    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red.\n\nThat is a visual cue to encourage purposeful addressing of these early.' }, { title: 'Checklists', description: 'Open the 4H 4T checklist and tick one off to continue.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {
     id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29, anchor: '[data-button="add-tx"]',
-    pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.\n\nPress the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
+    pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.' }, { title: 'Add Treatment Button', description: 'Press the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
     // Doesn't show until the previous node's own instruction has actually
     // been followed - a real tick on the reversibles (4H 4T) checklist, not
     // just having read about it.
@@ -169,7 +184,10 @@ const ELAPSED_RAW: RawNode[] = [
       },
       {
         title: 'Medications',
-        description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based.\n\nLog an adrenaline push dose to progress."
+        description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based."
+      }, {
+        title: 'Medications',
+        description: "Log an adrenaline push dose to progress."
       }
     ],
     condition: (s, sf) => s.currentOverlay === 'treatment' && !sf
@@ -248,7 +266,7 @@ const ELAPSED_RAW: RawNode[] = [
   // --- Home after summary ---
   {
     id: 'endCase', type: 'positioned', x: 75.22, y: 4.2, anchor: '[data-button="end-case"]',
-    pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case.\n\nLet's end the case and see the final summary page." }],
+    pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case." }, { title: 'End Case Button', description: "Let's end the case and see the final summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Case summary ---
@@ -264,7 +282,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'delete', type: 'positioned', x: 73.46, y: 15.45, anchor: '[data-button="close-case"]',
-    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved.\n\nClose the case to finish the tutorial and we'll see you at The Big One!" }],
+    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved." }, { title: 'Close Case', description: "Close the case to finish the tutorial and we'll see you at The Big One!" }],
     condition: (s) => !s.running
   }
 ];
@@ -322,7 +340,10 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('rhythmDemoFirstPopup', {
     pages: [{
       title: 'Select The Outcome',
-      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly.\n\nChoose 'No ROSC' to continue."
+      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+    }, {
+      title: 'Select The Outcome',
+      description: "Choose 'No ROSC' to continue."
     }]
   }),
   nodeById('rhythmDemoAfterFirst'),
@@ -345,13 +366,19 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('addTxBtn', {
     pages: [{
       title: 'Add Treatment Button',
-      description: "This opens the treatments (Tx) menu.\n\nIn this mode it only offers what the timers need: rhythm check outcomes, adrenaline and amiodarone.\n\nPress the \u2018+ Add Tx\u2019 button so we can start an adrenaline timer."
+      description: "This opens the treatments (Tx) menu.\n\nIn this mode it only offers what the timers need: rhythm check outcomes, adrenaline and amiodarone."
+    }, {
+      title: 'Add Treatment Button',
+      description: "Press the \u2018+ Add Tx\u2019 button so we can start an adrenaline timer."
     }]
   }),
   withOverrides('addTxSubmenu', {
     pages: [{
       title: 'Add Tx Submenu',
-      description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (No ROSC and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode.\n\nPress 'Adrenaline' to start its timer."
+      description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (No ROSC and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode."
+    }, {
+      title: 'Add Tx Submenu',
+      description: "Press 'Adrenaline' to start its timer."
     }]
   }),
   withOverrides('adrenalineAlert', {
@@ -380,7 +407,10 @@ const LOG_NODES: RawNode[] = [
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
-      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Change the patient's weight\n\n• Change the app mode\n\nChange the patient's weight to move forward."
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Change the patient's weight\n\n• Change the app mode"
+    }, {
+      title: 'Recalibrate Button',
+      description: "Change the patient's weight to move forward."
     }]
   }),
   nodeById('tabs'),
