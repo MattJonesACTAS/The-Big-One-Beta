@@ -225,7 +225,15 @@ const ELAPSED_RAW: RawNode[] = [
       },
       {
         title: 'Editing Treatments',
-        description: "Treatments in the Tx log can be edited, reordered or deleted by pressing the button to the left of the treatment name.\n\n'Edit' lets you correct what was logged while keeping its original time and position in the log.\n\nFor example, you can change the drug you gave, the dose you gave, or change it to something else completely.\n\n'Reorder' let's you shift a Tx to its correct position in the log.\n\nThis is useful if you realise that you missed logging something that happened earlier.\n\nEdit, reorder or delete the adrenaline push entry you logged earlier to continue."
+        description: "Treatments in the Tx log can be edited, reordered or deleted by pressing the button to the left of the treatment name.\n\n'Edit' lets you correct what was logged while keeping its original time and position in the log.\n\nFor example, you can change the drug you gave, the dose you gave, or change it to something else completely."
+      },
+      {
+        title: 'Editing Treatments',
+        description: "'Reorder' let's you shift a Tx to its correct position in the log.\n\nThis is useful if you realise that you missed logging something that happened earlier."
+      },
+      {
+        title: 'Editing Treatments',
+        description: "Edit, reorder or delete the adrenaline push entry you logged earlier to continue."
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
