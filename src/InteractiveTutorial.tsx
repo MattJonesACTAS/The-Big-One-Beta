@@ -588,7 +588,8 @@ interface TutorialElement {
   title: string;
   description: string;
   // Further pages after `description` (a multi-page note: Next, then Got it on the last)
-  morePages?: string[];
+  // (an entry may be a plain string, or { title, text } to give that page its own heading)
+  morePages?: (string | { title: string; text: string })[];
 }
 
 interface TutorialScreen {
@@ -645,7 +646,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       elements: [],
     },
     introWhen: {
-      title: 'When to Use The App',
+      title: 'When to Use the App',
       image: '',
       nextScreen: 'intro2',
       elements: [],
@@ -662,7 +663,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
         { id: 'patientType', x: 50, y: 50, number: 2, title: 'Patient Type', description: "First you will need to select either adult or paediatric mode, then the patient's weight.",
-          morePages: ["Make any selection you like, then we'll move onto the next page."] },
+          morePages: [{ title: "Give it a Go", text: "Make any selection you like, then we'll move onto the next page." }] },
       ],
     },
     previousTreatments: {
@@ -671,7 +672,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
         { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.",
-          morePages: ["Add a couple of treatments then move onto the next page."] },
+          morePages: [{ title: "Give it a Go", text: "Add a couple of treatments then move onto the next page." }] },
       ],
     },
     timingMethod: {
@@ -685,7 +686,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         // The old Getting Started page and the App Mode instruction, combined.
         { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started',
           description: "On opening The Big One, you'll need to choose one of three modes.\n\nEach mode has its own tutorial, and it's advised to complete them from top to bottom.\n\nOnce you've seen every mode, it will be up to you to choose which one works best for you.",
-          morePages: ["The 'Tell me more' button will provide further insight into each mode.", "Choose a mode to begin its tutorial."] },
+          morePages: ["Each mode option has a 'Tell me more' button.\n\nClick on these to gain further insight into each mode's capabilities and when it might be most useful.", { title: "Give it a Go", text: "Choose a mode to begin its tutorial." }] },
       ],
     },
     rhythmCheckTiming: {
@@ -694,7 +695,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       nextScreen: 'enterElapsedTime',
       elements: [
         { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "To keep track of when the next rhythm check is due, The Big One uses the 'odds/evens' method.\n\nTo calibrate the app, you will need to enter whether you are performing rhythm checks on odd minutes, even minutes, or halfway in between them.",
-          morePages: ["Choose an option to continue."] },
+          morePages: [{ title: "Give it a Go", text: "Choose an option to continue." }] },
       ],
     },
     enterElapsedTime: {
@@ -703,7 +704,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       nextScreen: 'home1', // progression driven by real catchupStep, not by Next click
       elements: [
         { id: 'enterElapsedTime', x: 50, y: 50, number: 5, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.",
-          morePages: ["Enter any time you like to move forward."] },
+          morePages: [{ title: "Give it a Go", text: "Enter any time you like to move forward." }] },
       ],
     },
     home1: {
@@ -922,7 +923,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
               {currentScreen === 'intro1' && 'Welcome!'}
-              {currentScreen === 'introWhen' && 'When to Use The App'}
+              {currentScreen === 'introWhen' && 'When to Use the App'}
               {currentScreen === 'intro2' && 'Navigating the Tutorial'}
             </h2>
             {renderIntroDescription(
@@ -1443,7 +1444,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               color: '#1a1a1a',
               textAlign: 'center',
             }}>
-              {activeExplanation.title.charAt(0).toUpperCase() + activeExplanation.title.slice(1)}
+              {(() => { const pg = explanationPage > 0 ? activeExplanation.morePages![explanationPage - 1] : null; const t = (pg && typeof pg !== 'string' && pg.title) ? pg.title : activeExplanation.title; return t.charAt(0).toUpperCase() + t.slice(1); })()}
             </h3>
             <p style={{
               margin: '0 0 20px 0',
@@ -1453,7 +1454,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               textAlign: 'left',
               whiteSpace: 'pre-line',
             }}>
-              {renderWithItalics(explanationPage === 0 ? activeExplanation.description : activeExplanation.morePages![explanationPage - 1])}
+              {renderWithItalics(explanationPage === 0 ? activeExplanation.description : (() => { const pg = activeExplanation.morePages![explanationPage - 1]; return typeof pg === 'string' ? pg : pg.text; })())}
             </p>
             {activeExplanation.morePages?.length ? (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>

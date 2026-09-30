@@ -2239,7 +2239,7 @@ export default function App() {
            <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
              <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
-             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Close this case?</h2>
+             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Close This Case?</h2>
              <p className="text-neutral-500 mb-8">
                You will return to the welcome page. Only your most recent three cases are saved as a backup, found under 'View previous cases' on the welcome screen.
              </p>
@@ -2712,7 +2712,7 @@ export default function App() {
             <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
               <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
                 <AlertTriangle size={48} className="mx-auto text-amber-600 mb-4" />
-                <h2 className="text-2xl font-bold text-neutral-900 mb-4">Unscheduled rhythm check added.</h2>
+                <h2 className="text-2xl font-bold text-neutral-900 mb-4">Unscheduled Rhythm Check Added.</h2>
                 <p className="text-neutral-500 mb-2">2:00 countdown restarted.</p>
                 <p className="text-neutral-500 mb-8">Future rhythm checks changed to {patternSwitchNoticeRef.current}.</p>
                 <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
@@ -3313,7 +3313,7 @@ export default function App() {
 
               {!catchupTxMode && catchupStep === 3 && (
                 <div className="text-center space-y-5">
-                  <h2 className="text-xl font-bold text-neutral-900">What treatments have<br />you already applied?</h2>
+                  <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
                   <div className="space-y-3 py-3 px-2">
                     <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5">
                       <p className="text-xs font-bold uppercase tracking-wide text-red-900 text-center mb-2.5">Rhythm checks</p>
@@ -3533,7 +3533,7 @@ export default function App() {
       {showEndWarning && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">End this case?</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">End This Case?</h2>
             <p className="text-neutral-500 mb-8">This will end the timer and show the final summary.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowEndWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
@@ -3546,7 +3546,7 @@ export default function App() {
       {showPauseWarning && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Pause timer?</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Pause Timer?</h2>
             <p className="text-neutral-500 mb-8">The arrest timer will stop until you resume.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowPauseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
@@ -3885,7 +3885,7 @@ export default function App() {
       {showResetWarning && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Reset 2-minute cycle?</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Reset 2-Minute Cycle?</h2>
             <p className="text-neutral-500 mb-8">This resets the current rhythm check countdown to 2:00.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowResetWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>

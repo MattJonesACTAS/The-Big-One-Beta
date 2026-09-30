@@ -65,7 +65,7 @@ const ELAPSED_RAW: RawNode[] = [
         description: "This shows a countdown to your next rhythm check.\n\nWhen the countdown reaches 0:20, the app will force you back to the home screen.\n\nThis is to prompt you to prepare the team for the next rhythm check."
       },
       {
-        title: "Let's See It In Action",
+        title: "Let's See It in Action",
         description: "We're going to pretend that the timer has just reached 0:20 and we've been forced back to the home screen.\n\nLet's see what happens next."
       }
     ],
@@ -84,10 +84,10 @@ const ELAPSED_RAW: RawNode[] = [
   {
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
-      title: 'Select The Outcome',
+      title: 'Select the Outcome',
       description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
-      title: 'Select The Outcome',
+      title: 'Give it a Go',
       description: "Choose any red or blue option to continue."
     }],
     condition: (s, sf) => sf === true
@@ -103,10 +103,10 @@ const ELAPSED_RAW: RawNode[] = [
   {
     id: 'rhythmDemoDelayPopup', type: 'popup',
     pages: [{
-      title: 'Delaying A Rhythm Check',
+      title: 'Delaying a Rhythm Check',
       description: "Choose this option if the rhythm check needs to be delayed."
     }, {
-      title: 'Delaying A Rhythm Check',
+      title: 'Give it a Go',
       description: "Select 'Delay rhythm check' to continue."
     }],
     condition: (s, sf) => sf === true
@@ -117,7 +117,7 @@ const ELAPSED_RAW: RawNode[] = [
       title: 'Delayed Rhythm Check',
       description: "The rhythm check counter has been replaced with a 'Rhythm check now' button.\n\nOnce the team is ready for the rhythm check, press the button.\n\nThe rhythm check popup will reappear and you can choose an outcome.\n\nThe rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart."
     }, {
-      title: 'Delayed Rhythm Check',
+      title: 'Give it a Go',
       description: "Press the 'Rhythm check now' button to continue."
     }],
     condition: (s) => s.rhythmCheckDelayedAt != null && s.currentOverlay === null
@@ -136,7 +136,7 @@ const ELAPSED_RAW: RawNode[] = [
       title: 'ROSC Mode',
       description: "Once ROSC is logged, the app switches into ROSC mode: rhythm checks and drug timers stop.\n\nIf the patient rearrests, press the central rearrest button.\n\nThe rhythm check popup will reappear, the rhythm check schedule (odds/evens) will automatically update and the rhythm check timer will restart."
     }, {
-      title: 'ROSC Mode',
+      title: 'Give it a Go',
       description: "Press the 'Press if rearrest' button to continue."
     }],
     condition: (s) => s.isROSCMode === true && s.currentOverlay === null
@@ -147,24 +147,24 @@ const ELAPSED_RAW: RawNode[] = [
       title: "You've Seen It All",
       description: "That's every option the rhythm check popup offers."
     }, {
-      title: "You've Seen It All",
+      title: "Give it a Go",
       description: "Choose any rhythm check outcome you like to finish up, then we'll carry on with the rest of the tutorial."
     }],
     condition: (s, sf) => sf === true
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
-    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Recalibrate Button', description: "Change the patient's weight to move forward." }],
+    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Give it a Go', description: "Change the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
     id: 'tabs', type: 'positioned', x: 50, y: 10.97, anchor: '[data-tutorial-anchor="checklist-row"]',
-    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red.\n\nThat is a visual cue to encourage purposeful addressing of these early.' }, { title: 'Checklists', description: 'Open the 4H 4T checklist and tick one off to continue.' }],
+    pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\n• Vital signs survey\n\nYou will notice the reversibles checklist is already flashing red.\n\nThat is a visual cue to encourage purposeful addressing of these early.' }, { title: 'Give it a Go', description: 'Open the 4H 4T checklist and tick one off to continue.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
   {
     id: 'addTxBtn', type: 'positioned', x: 74.65, y: 95.29, anchor: '[data-button="add-tx"]',
-    pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.' }, { title: 'Add Treatment Button', description: 'Press the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
+    pages: [{ title: 'Add Treatment Button', description: 'This opens the treatments (Tx) menu for logging interventions in real time.' }, { title: 'Give it a Go', description: 'Press the \u2018+ Add Tx\u2019 button so we can log our first Tx.' }],
     // Doesn't show until the previous node's own instruction has actually
     // been followed - a real tick on the reversibles (4H 4T) checklist, not
     // just having read about it.
@@ -186,7 +186,7 @@ const ELAPSED_RAW: RawNode[] = [
         title: 'Medications',
         description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based."
       }, {
-        title: 'Medications',
+        title: 'Give it a Go',
         description: "Log an adrenaline push dose to progress."
       }
     ],
@@ -250,7 +250,7 @@ const ELAPSED_RAW: RawNode[] = [
         description: "'Reorder' let's you shift a Tx to its correct position in the log.\n\nThis is useful if you realise that you missed logging something that happened earlier."
       },
       {
-        title: 'Editing Treatments',
+        title: 'Give it a Go',
         description: "Edit, reorder or delete the adrenaline push entry you logged earlier to continue."
       }
     ],
@@ -266,7 +266,7 @@ const ELAPSED_RAW: RawNode[] = [
   // --- Home after summary ---
   {
     id: 'endCase', type: 'positioned', x: 75.22, y: 4.2, anchor: '[data-button="end-case"]',
-    pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case." }, { title: 'End Case Button', description: "Let's end the case and see the final summary page." }],
+    pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case." }, { title: 'Give it a Go', description: "Let's end the case and see the final summary page." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   // --- Case summary ---
@@ -282,7 +282,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'delete', type: 'positioned', x: 73.46, y: 15.45, anchor: '[data-button="close-case"]',
-    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved." }, { title: 'Close Case', description: "Close the case to finish the tutorial and we'll see you at The Big One!" }],
+    pages: [{ title: 'Close Case', description: "Once you've finished with this case, you can close the case which resets the app.\n\nThe three most recent closed cases are accessible on the opening screen if you want to look back on them later - but since this is just the tutorial, this particular case won't be saved." }, { title: 'Give it a Go', description: "Close the case to finish the tutorial and we'll see you at The Big One!" }],
     condition: (s) => !s.running
   }
 ];
@@ -339,10 +339,10 @@ const MINIMAL_NODES: RawNode[] = [
   nodeById('timer'),
   withOverrides('rhythmDemoFirstPopup', {
     pages: [{
-      title: 'Select The Outcome',
+      title: 'Select the Outcome',
       description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
-      title: 'Select The Outcome',
+      title: 'Give it a Go',
       description: "Choose 'No ROSC' to continue."
     }]
   }),
@@ -368,7 +368,7 @@ const MINIMAL_NODES: RawNode[] = [
       title: 'Add Treatment Button',
       description: "This opens the treatments (Tx) menu.\n\nIn this mode it only offers what the timers need: rhythm check outcomes, adrenaline and amiodarone."
     }, {
-      title: 'Add Treatment Button',
+      title: 'Give it a Go',
       description: "Press the \u2018+ Add Tx\u2019 button so we can start an adrenaline timer."
     }]
   }),
@@ -377,7 +377,7 @@ const MINIMAL_NODES: RawNode[] = [
       title: 'Add Tx Submenu',
       description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (No ROSC and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode."
     }, {
-      title: 'Add Tx Submenu',
+      title: 'Give it a Go',
       description: "Press 'Adrenaline' to start its timer."
     }]
   }),
@@ -409,7 +409,7 @@ const LOG_NODES: RawNode[] = [
       title: 'Recalibrate Button',
       description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Change the patient's weight\n\n• Change the app mode"
     }, {
-      title: 'Recalibrate Button',
+      title: 'Give it a Go',
       description: "Change the patient's weight to move forward."
     }]
   }),
