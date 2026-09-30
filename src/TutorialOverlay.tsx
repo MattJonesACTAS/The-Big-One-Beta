@@ -9,7 +9,18 @@ interface NodePage {
   description: string;
 }
 
-interface GlobalNode {
+export type TutorialMode = 'elapsed' | 'minimal' | 'log';
+
+// What the app hands each node's flashWhileCurrent so it can decide what to pulse
+export interface TutorialFlashContext {
+  state: any;
+  showRecalibrateMenu: boolean;
+  showWeightChange: boolean;
+  weightUnchanged: boolean;
+  adrenalineHandled: boolean;
+}
+
+export interface GlobalNode {
   id: string;
   type: 'popup' | 'positioned';
   x?: number;
@@ -21,9 +32,15 @@ interface GlobalNode {
   anchor?: string;
   pages: NodePage[];
   condition?: (appState: any, isShockForced?: boolean, initialPatientWeight?: number | null) => boolean;
+  // While this node is the one the tutorial is waiting on (i.e. the previous
+  // node has been dismissed and this one's condition isn't met yet), which
+  // body classes to switch on so the right button pulses. Returns class names.
+  flashWhileCurrent?: (ctx: TutorialFlashContext) => string[];
 }
 
-const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
+type RawNode = Omit<GlobalNode, 'displayNumber'>;
+
+const ELAPSED_RAW: RawNode[] = [
   // --- Home screen nodes ---
   {
     id: 'homeIntro', type: 'popup',
@@ -244,21 +261,175 @@ const RAW_NODES: Omit<GlobalNode, 'displayNumber'>[] = [
   }
 ];
 
+// Which button(s) pulse while the tutorial is waiting on each node. Attached
+// by id so the node text above stays exactly as written.
+const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
+  // recalibrate dismissed, waiting for the weight to actually change
+  tabs: (c) => {
+    if (!c.weightUnchanged) return [];
+    if (!c.showRecalibrateMenu && !c.showWeightChange) return ['tutorial-flash-recalibrate'];
+    if (c.showRecalibrateMenu) return ['tutorial-flash-weight'];
+    return [];
+  },
+  // Add Tx button dismissed, waiting for it to be pressed
+  addTxSubmenu: (c) => c.state.currentOverlay === null ? ['tutorial-flash-add-tx'] : [],
+  // submenu dismissed, waiting for adrenaline to be logged
+  adrenalineAlert: () => ['tutorial-flash-adrenaline', 'tutorial-flash-dose'],
+  // Summary button dismissed, waiting for it to be pressed
+  arrestSummaryInfo: (c) => c.state.currentOverlay === null ? ['tutorial-flash-summary'] : [],
+  // treatment log dismissed, waiting for the adrenaline entry to be edited
+  closeOverlay: (c) => (c.state.currentOverlay === 'summary' && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : [],
+  // Return to Home dismissed, waiting for the summary to be closed
+  endCase: (c) => c.state.currentOverlay === 'summary' ? ['tutorial-flash-summary-close'] : [],
+  // End Case dismissed, waiting for it to be pressed
+  finalStats: (c) => c.state.currentOverlay === null ? ['tutorial-flash-end'] : [],
+};
+
+export const TUTORIAL_FLASH_CLASSES = [
+  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx',
+  'tutorial-flash-adrenaline', 'tutorial-flash-dose', 'tutorial-flash-summary',
+  'tutorial-flash-adrenaline-tx', 'tutorial-flash-summary-close', 'tutorial-flash-end',
+  'tutorial-flash-close',
+];
+
+const ELAPSED_NODES: RawNode[] = ELAPSED_RAW.map(n => FLASH[n.id] ? { ...n, flashWhileCurrent: FLASH[n.id] } : n);
+const nodeById = (id: string): RawNode => {
+  const n = ELAPSED_NODES.find(x => x.id === id);
+  if (!n) throw new Error(`tutorial node ${id} not found`);
+  return n;
+};
+const withOverrides = (id: string, overrides: Partial<RawNode>): RawNode => ({ ...nodeById(id), ...overrides });
+
+const ADRENALINE_LOGGED = (s: any) => s.treatments.some((t: any) => t.name.startsWith('Adrenaline push'));
+const ADRENALINE_HANDLED = (s: any) => !ADRENALINE_LOGGED(s)
+  || s.treatments.some((t: any) => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
+
+// --- Timers only: the same timers and the same rhythm check walkthrough as
+// Tx log & timers, but no Summary button/overlay, no dose picker, no weight,
+// and only rhythm check outcomes + adrenaline/amiodarone in Add Tx.
+const MINIMAL_NODES: RawNode[] = [
+  nodeById('homeIntro'),
+  nodeById('elapsedCorner'),
+  nodeById('timer'),
+  withOverrides('rhythmDemoFirstPopup', {
+    pages: [{
+      title: 'Select The Outcome',
+      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly.\n\nChoose 'No ROSC' to continue."
+    }]
+  }),
+  nodeById('rhythmDemoAfterFirst'),
+  nodeById('rhythmDemoDelayPopup'),
+  nodeById('rhythmDemoRhythmCheckNow'),
+  nodeById('rhythmDemoRoscPopup'),
+  nodeById('rhythmDemoRoscMode'),
+  nodeById('rhythmDemoLastPopup'),
+  withOverrides('recalibrate', {
+    pages: [{
+      title: 'Recalibrate Button',
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change time keeping method"
+    }]
+  }),
+  // no patient weight in this mode, so nothing to wait for before checklists
+  withOverrides('tabs', {
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf,
+    flashWhileCurrent: undefined
+  }),
+  withOverrides('addTxBtn', {
+    pages: [{
+      title: 'Add Treatment Button',
+      description: "This opens the treatments (Tx) menu.\n\nIn this mode it only offers what the timers need: rhythm check outcomes, adrenaline and amiodarone.\n\nPress the \u2018+ Add Tx\u2019 button so we can start an adrenaline timer."
+    }]
+  }),
+  withOverrides('addTxSubmenu', {
+    pages: [{
+      title: 'Add Tx Submenu',
+      description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (No ROSC and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode.\n\nPress 'Adrenaline' to start its timer."
+    }]
+  }),
+  withOverrides('adrenalineAlert', {
+    pages: [{
+      title: 'Medication Timer',
+      description: 'When you press adrenaline or amiodarone, a timer will appear on the home screen to help you keep track of when the next dose is due.'
+    }]
+  }),
+  withOverrides('endCase', { flashWhileCurrent: undefined }),
+  withOverrides('finalStats', {
+    pages: [{
+      title: 'Final Case Data',
+      description: "Although you didn't see a Tx log while you worked, this mode recorded the rhythm checks and medication doses in the background.\n\nHere they are, with times to the second."
+    }]
+  }),
+  nodeById('export'),
+  nodeById('delete'),
+];
+
+// --- Tx log only: no timers at all, and the home page *is* the running
+// summary (no Summary button or overlay), so the summary sections are shown
+// right there on the home page.
+const LOG_HOME = (s: any, sf?: boolean) => s.running && s.currentOverlay === null && !sf;
+const LOG_NODES: RawNode[] = [
+  nodeById('homeIntro'),
+  withOverrides('recalibrate', {
+    pages: [{
+      title: 'Recalibrate Button',
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Change the patient's weight\n\n• Change time keeping method\n\nChange the patient's weight to move forward."
+    }]
+  }),
+  nodeById('tabs'),
+  nodeById('addTxBtn'),
+  nodeById('addTxSubmenu'),
+  withOverrides('arrestSummaryInfo', {
+    pages: [{
+      title: 'Arrest Summary',
+      description: 'In this mode, the home page is the running case summary.\n\nThe top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms.'
+    }],
+    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_LOGGED(s),
+    // waiting for adrenaline to be logged
+    flashWhileCurrent: () => ['tutorial-flash-adrenaline', 'tutorial-flash-dose']
+  }),
+  withOverrides('vitalSignsInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
+  withOverrides('pharmaSummaryInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
+  withOverrides('treatmentLogInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
+  withOverrides('endCase', {
+    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s),
+    // waiting for the adrenaline entry to be edited
+    flashWhileCurrent: (c) => (c.state.currentOverlay === null && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : []
+  }),
+  nodeById('finalStats'),
+  nodeById('export'),
+  nodeById('delete'),
+];
+
+const RAW_BY_MODE: Record<TutorialMode, RawNode[]> = {
+  elapsed: ELAPSED_NODES,
+  minimal: MINIMAL_NODES,
+  log: LOG_NODES,
+};
+
+// The last number used by InteractiveTutorial.tsx's setup-flow nodes for each
+// mode (elapsed: App Mode 1, Patient Type 2, Previous Treatments 3, Rhythm
+// Check Timing 4, Elapsed Time 5; Timers only: App Mode 1, Rhythm Check
+// Timing 2, Elapsed Time 3; Tx log only: App Mode 1, Patient Type 2,
+// Previous Treatments 3). The live nodes pick up right after it.
+const BASE_NUMBER: Record<TutorialMode, number> = { elapsed: 5, minimal: 3, log: 3 };
+
 // displayNumber is derived automatically from array position rather than
 // hand-typed on each node, so adding/removing/reordering a node can never
-// silently produce a duplicate or skipped number again. Only 'positioned'
-// nodes get a visible number (popups like homeIntro don't).
-// BASE_TUTORIAL_NUMBER is the last number used by InteractiveTutorial.tsx's
-// catchup-flow nodes (App Mode=1, Patient Type=2, Previous Treatments=3,
-// Rhythm Check Timing=4, Enter Current Elapsed Time=5) — this picks up right
-// after that.
-const BASE_TUTORIAL_NUMBER = 5;
-let positionedCount = 0;
-const ALL_NODES: GlobalNode[] = RAW_NODES.map(node => {
-  if (node.type !== 'positioned') return node;
-  positionedCount += 1;
-  return { ...node, displayNumber: BASE_TUTORIAL_NUMBER + positionedCount };
-});
+// silently produce a duplicate or skipped number. Only 'positioned' nodes
+// get a visible number (popups don't).
+const nodeCache: Partial<Record<TutorialMode, GlobalNode[]>> = {};
+export function getTutorialNodes(mode: TutorialMode): GlobalNode[] {
+  const cached = nodeCache[mode];
+  if (cached) return cached;
+  let count = 0;
+  const built: GlobalNode[] = RAW_BY_MODE[mode].map(node => {
+    if (node.type !== 'positioned') return node;
+    count += 1;
+    return { ...node, displayNumber: BASE_NUMBER[mode] + count };
+  });
+  nodeCache[mode] = built;
+  return built;
+}
 
 interface Props {
   appState: any;
@@ -267,9 +438,11 @@ interface Props {
   onNodeChange?: (globalNodeIndex: number, tutorialDone: boolean) => void;
   isCaseClosed?: boolean;
   globalNodeIndex?: number;
+  mode?: TutorialMode;
 }
 
-export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0 }: Props) {
+export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed' }: Props) {
+  const ALL_NODES = getTutorialNodes(mode);
   const [internalNodeIndex, setInternalNodeIndex] = useState(externalNodeIndex);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [activePopup, setActivePopup] = useState<GlobalNode | null>(null);

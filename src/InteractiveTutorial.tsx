@@ -608,6 +608,11 @@ interface InteractiveTutorialProps {
   // Set (to the chosen mode's name) while the "you've chosen ..." page is showing
   modeIntroLabel?: string | null;
   onModeIntroNext?: () => void;
+  // Set while the "About this mode" link on a mode card is open (before a mode is committed to)
+  modeAboutMode?: 'log' | 'minimal' | 'elapsed' | null;
+  onModeAboutClose?: () => void;
+  // The mode being learned, so the setup screens number themselves to match its (shorter or longer) sequence
+  mode?: 'log' | 'minimal' | 'elapsed' | null;
 }
 
 // The two notes that used to sit on the mode page, kept word for word. They
@@ -620,9 +625,7 @@ const PARKED_MODE_PAGE_NOTES = [
 { id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
 ];
 
-const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext }) => {
-  const [modeIntroPage, setModeIntroPage] = useState(0);
-  useEffect(() => { setModeIntroPage(0); }, [modeIntroLabel]);
+const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, modeAboutMode, onModeAboutClose, mode }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   const [showingInfoBox, setShowingInfoBox] = useState(false);
@@ -760,7 +763,16 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     },
   };
 
-  const currentScreenData = screens[currentScreen];
+  // The setup screens are numbered as they appear in the chosen mode's own
+  // sequence. Tx log & timers and Tx log only match the numbers written on
+  // the nodes above; Timers only skips patient details and previous
+  // treatments, so its interval and elapsed-time screens are 2 and 3.
+  const NUMBER_OVERRIDES: Record<string, number> = mode === 'minimal' ? { rhythmCheckTiming: 2, enterElapsedTime: 3 } : {};
+  const rawScreenData = screens[currentScreen];
+  const currentScreenData = {
+    ...rawScreenData,
+    elements: rawScreenData.elements.map(el => NUMBER_OVERRIDES[el.id] != null ? { ...el, number: NUMBER_OVERRIDES[el.id] } : el),
+  };
   const requiredElements = new Set(currentScreenData.elements.map(el => el.id));
   const allExplored = Array.from(requiredElements).every(id => exploredElements.has(id));
 
@@ -909,8 +921,11 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
         </div>
       )}
 
-      {/* Once a mode has been chosen on the mode page: what comes next. Same look as the intro pages. */}
-      {modeIntroLabel && (
+      {/* Two things share this popup, in the same look as the intro pages:
+          - "About this mode": opened from the link on a mode card, before any
+            mode has been committed to (a plain slide, not a node).
+          - "Calibration": what comes next once a mode has been chosen. */}
+      {(modeAboutMode || modeIntroLabel) && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -931,17 +946,18 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
-              {modeIntroPage === 0 ? 'About This Mode' : 'Calibration'}
+              {modeAboutMode ? 'About This Mode' : 'Calibration'}
             </h2>
-            {modeIntroPage === 0 ? (
-              // Shown straight after a mode is chosen. Placeholder: each
-              // mode's own strengths/weaknesses will live here eventually.
-              // For now this only ever shows the one moved over from the old
-              // Elapsed Timer note.
+            {modeAboutMode ? (
+              // Placeholder: each mode's own strengths/weaknesses will live
+              // here eventually. Only Tx log & timers has any so far - it's
+              // the text moved over from the old Elapsed Timer note.
               <>
-                {renderIntroDescription("This can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient.")}
+                {renderIntroDescription(modeAboutMode === 'elapsed'
+                  ? "This can be particularly useful when:\n\n• You're working in cramped spaces where equipment positioning is tight\n\n• You're extricating with the Corpuls running and the monitor is packaged with the patient."
+                  : "Coming soon.")}
                 <button
-                  onClick={() => setModeIntroPage(1)}
+                  onClick={onModeAboutClose}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -955,7 +971,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                     boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
                   }}
                 >
-                  Next
+                  Got it
                 </button>
               </>
             ) : (

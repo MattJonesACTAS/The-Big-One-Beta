@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { AppState, Treatment, OverlayType } from './types';
 import InteractiveTutorial from './InteractiveTutorial';
-import TutorialOverlay from './TutorialOverlay';
+import TutorialOverlay, { getTutorialNodes, TUTORIAL_FLASH_CLASSES } from './TutorialOverlay';
 
 // --- Constants ---
 const INITIAL_STATE: AppState = {
@@ -841,26 +841,30 @@ export default function App() {
   const tutorialInitialWeightRef = useRef<number | null>(null);
   const [showInteractiveTutorial, setShowInteractiveTutorial] = useState(false);
   const [timingNodesComplete, setTimingNodesComplete] = useState(false);
-  // Tutorial only: the mode whose tutorial hasn't been written yet, if one was picked
-  const [tutorialNotReadyMode, setTutorialNotReadyMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   // Tutorial only: the mode just chosen on the mode page, while the "you've chosen ..." page is showing
   const [tutorialModeIntro, setTutorialModeIntro] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
+  // Tutorial only: which mode's "About this mode" slide is open (opened from the link on its card, before committing to it)
+  const [tutorialAboutMode, setTutorialAboutMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
-  // Raw array indices of the rhythm-check walkthrough's 8 popups (see the
-  // comment above them in TutorialOverlay.tsx). 'timer' is array index 2, so
-  // the walkthrough runs from index 3 to index 10.
-  const RHYTHM_DEMO_START = 3;
-  const RHYTHM_DEMO_END = 9;
+  // Which nodes this tutorial is showing and which one it is on. Everything
+  // below refers to nodes by their id, so each mode can have its own list
+  // without any position ever needing renumbering.
+  const tutorialNodeList = useMemo(() => getTutorialNodes(timingMode ?? 'elapsed'), [timingMode]);
+  const tutorialNodeId = tutorialNodeIndex >= tutorialNodeList.length ? 'done' : tutorialNodeList[tutorialNodeIndex].id;
+  // The rhythm check walkthrough only exists in the modes that have timers
+  const demoStartIdx = tutorialNodeList.findIndex(n => n.id === 'rhythmDemoFirstPopup');
+  const demoEndIdx = tutorialNodeList.findIndex(n => n.id === 'rhythmDemoLastPopup');
+  const hasRhythmDemo = demoStartIdx >= 0;
   // Two different questions, so two flags:
   //  - tutorialRhythmDemoActive: are we *inside* the walkthrough? Locks the
   //    home screen's other buttons; ends when the walkthrough does.
   //  - tutorialRhythmLive: has the walkthrough *started*? From then on the
   //    real forced popup, the 0:20 return-to-home and Delay all work normally
   //    for the rest of the tutorial instead of going back to being suppressed.
-  const tutorialRhythmDemoActive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START && tutorialNodeIndex <= RHYTHM_DEMO_END;
-  const tutorialRhythmLive = tutorialMode && tutorialNodeIndex >= RHYTHM_DEMO_START;
+  const tutorialRhythmDemoActive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx && tutorialNodeIndex <= demoEndIdx;
+  const tutorialRhythmLive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx;
   // The tick's own popup-at-0:00 and auto-close-at-0:20 are a third thing
   // again. Inside the walkthrough they must NOT run on their own schedule:
   // a learner who sits on a popup for two minutes would otherwise have it
@@ -873,11 +877,12 @@ export default function App() {
   const [tutorialRhythmDone, setTutorialRhythmDone] = useState(false);
   useEffect(() => {
     if (!tutorialMode) { setTutorialRhythmDone(false); return; }
-    if (tutorialNodeIndex > RHYTHM_DEMO_END && !isShockForced) setTutorialRhythmDone(true);
-  }, [tutorialMode, tutorialNodeIndex, isShockForced]);
-  const tutorialAutoCloseOK = !tutorialMode || tutorialRhythmDone;
-  const tutorialPopupAtZeroOK = !tutorialMode || tutorialRhythmDone
-    || ((tutorialNodeIndex === RHYTHM_DEMO_START || tutorialNodeIndex === RHYTHM_DEMO_START + 2) && !isShockForced);
+    if (hasRhythmDemo && tutorialNodeIndex > demoEndIdx && !isShockForced) setTutorialRhythmDone(true);
+  }, [tutorialMode, tutorialNodeIndex, isShockForced, hasRhythmDemo, demoEndIdx]);
+  // (A mode with no walkthrough, i.e. no timers, has nothing to hold back.)
+  const tutorialAutoCloseOK = !tutorialMode || !hasRhythmDemo || tutorialRhythmDone;
+  const tutorialPopupAtZeroOK = !tutorialMode || !hasRhythmDemo || tutorialRhythmDone
+    || ((tutorialNodeId === 'rhythmDemoFirstPopup' || tutorialNodeId === 'rhythmDemoDelayPopup') && !isShockForced);
   // Which single outcome the walkthrough is currently asking for - every
   // other outcome (including Delay) is disabled while one of these is set,
   // so the buttons on screen match the instruction on top of them exactly.
@@ -895,10 +900,10 @@ export default function App() {
   const [tutorialOutcomeRestriction, setTutorialOutcomeRestriction] = useState<'redblue' | 'rosc' | 'delay' | null>(null);
   useEffect(() => {
     if (!tutorialMode) return;
-    if (tutorialNodeIndex === RHYTHM_DEMO_START) setTutorialOutcomeRestriction('redblue');
-    else if (tutorialNodeIndex === RHYTHM_DEMO_START + 2) setTutorialOutcomeRestriction('delay');
-    else if (tutorialNodeIndex === RHYTHM_DEMO_START + 4) setTutorialOutcomeRestriction('rosc');
-  }, [tutorialMode, tutorialNodeIndex]);
+    if (tutorialNodeId === 'rhythmDemoFirstPopup') setTutorialOutcomeRestriction('redblue');
+    else if (tutorialNodeId === 'rhythmDemoDelayPopup') setTutorialOutcomeRestriction('delay');
+    else if (tutorialNodeId === 'rhythmDemoRoscPopup') setTutorialOutcomeRestriction('rosc');
+  }, [tutorialMode, tutorialNodeId]);
   useEffect(() => {
     if (!isShockForced) setTutorialOutcomeRestriction(null);
   }, [isShockForced]);
@@ -943,7 +948,7 @@ export default function App() {
 
     // Case Summary page: Export PDF and Close Case sit side by side near the
     // top, so both nodes scroll (and lock) to the top of that page.
-    if (tutorialNodeIndex === 23 || tutorialNodeIndex === 24) {
+    if (tutorialNodeId === 'export' || tutorialNodeId === 'delete') {
       caseSummaryScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const el = caseSummaryScrollRef.current;
@@ -971,7 +976,7 @@ export default function App() {
     // banner, which sits below Case Details / Arrest Summary / Vital Signs /
     // Pharma Summary - scroll it to the centre of the screen and lock, same
     // reasoning as the two nodes above.
-    if (tutorialNodeIndex === 22) {
+    if (tutorialNodeId === 'finalStats') {
       document.querySelector('[data-tutorial-anchor="closed-treatment-log-banner"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const el = caseSummaryScrollRef.current;
       const prevBodyOverflow = document.body.style.overflow;
@@ -997,13 +1002,13 @@ export default function App() {
     // Live Summary overlay: each of its four "info" nodes is anchored to a
     // different section spread across that scroll, so each scrolls its own
     // section to the centre of the screen and locks that container in place.
-    const sectionForNode: Record<number, string> = {
-      16: 'arrestSummary',
-      17: 'vitalSigns',
-      18: 'pharmaSummary',
-      19: 'treatmentLog'
+    const sectionForNode: Record<string, string> = {
+      arrestSummaryInfo: 'arrestSummary',
+      vitalSignsInfo: 'vitalSigns',
+      pharmaSummaryInfo: 'pharmaSummary',
+      treatmentLogInfo: 'treatmentLog'
     };
-    const section = sectionForNode[tutorialNodeIndex];
+    const section = sectionForNode[tutorialNodeId];
     if (section) {
       document.querySelector(`[data-tutorial-section="${section}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const container = document.querySelector('[data-scroll-container="summary"]') as HTMLElement | null;
@@ -1018,7 +1023,7 @@ export default function App() {
         };
       }
     }
-  }, [tutorialMode, tutorialNodeIndex, state.currentOverlay, isCaseClosed]);
+  }, [tutorialMode, tutorialNodeId, state.currentOverlay, isCaseClosed]);
 
   // Rhythm check walkthrough: fast-forward the countdown at the three points
   // that start it running for real. First, entering the walkthrough itself
@@ -1028,18 +1033,18 @@ export default function App() {
   // and the real popup fires on its own - nothing else here is simulated).
   useEffect(() => {
     if (!tutorialMode) return;
-    if (tutorialNodeIndex === RHYTHM_DEMO_START) {
+    if (tutorialNodeId === 'rhythmDemoFirstPopup') {
       setState(prev => ({ ...prev, currentOverlay: null, rhythmCheckTarget: prev.elapsedSeconds + 20 }));
-    } else if (tutorialNodeIndex === RHYTHM_DEMO_START + 2) {
+    } else if (tutorialNodeId === 'rhythmDemoDelayPopup') {
       // Second time round: jump straight to 0:04, no watch-then-animate -
       // that demonstration only needs to happen once.
       setState(prev => ({ ...prev, rhythmCheckTarget: prev.elapsedSeconds + 4 }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tutorialMode, tutorialNodeIndex]);
+  }, [tutorialMode, tutorialNodeId]);
 
   // First time round only: once the real countdown (running normally since
-  // RHYTHM_DEMO_START above) reaches 0:16, visibly fast-forward it down to
+  // the walkthrough's first outcome slide) reaches 0:16, visibly fast-forward it down to
   // 0:04 - a quick ticking-down animation, not an instant jump - then let it
   // run normally again from there.
   //
@@ -1054,7 +1059,7 @@ export default function App() {
   const rhythmDemoStateRef = useRef(state);
   useEffect(() => { rhythmDemoStateRef.current = state; }, [state]);
   useEffect(() => {
-    if (!tutorialMode || tutorialNodeIndex !== RHYTHM_DEMO_START) return;
+    if (!tutorialMode || tutorialNodeId !== 'rhythmDemoFirstPopup') return;
     let rapidId: number | null = null;
     const watcherId = window.setInterval(() => {
       const s = rhythmDemoStateRef.current;
@@ -1076,7 +1081,7 @@ export default function App() {
       window.clearInterval(watcherId);
       if (rapidId != null) window.clearInterval(rapidId);
     };
-  }, [tutorialMode, tutorialNodeIndex]);
+  }, [tutorialMode, tutorialNodeId]);
 
 
   // Capture the patient weight as it was when the tutorial started, so we know
@@ -1144,89 +1149,27 @@ export default function App() {
       document.body.classList.remove('tutorial-flash-elapsed-btn');
     }
     
-    // Node 9 (recalibrate, array index 3) complete - flash Recalibrate button,
-    // then, once the Recalibrate menu is open, flash the Change Patient Weight button instead.
-    // Both stop as soon as the weight actually changes, even before the node is dismissed.
+    // Every other pulse comes from the node the tutorial is currently waiting
+    // on (see flashWhileCurrent in TutorialOverlay.tsx): the previous node has
+    // been dismissed and this one appears once its instruction is followed, so
+    // that instruction's button pulses until then. Once the last node is done,
+    // the Close Case button pulses.
     const weightUnchanged = state.patientWeight === tutorialInitialWeightRef.current;
-    if (tutorialMode && tutorialScreen.index === 11 && !showRecalibrateMenu && !showWeightChange && weightUnchanged) {
-      document.body.classList.add('tutorial-flash-recalibrate');
-    } else {
-      document.body.classList.remove('tutorial-flash-recalibrate');
-    }
-    if (tutorialMode && tutorialScreen.index === 11 && showRecalibrateMenu && weightUnchanged) {
-      document.body.classList.add('tutorial-flash-weight');
-    } else {
-      document.body.classList.remove('tutorial-flash-weight');
-    }
-
-    // Node 11 (addTxBtn, array index 5) complete - flash Add Tx button
-    if (tutorialMode && tutorialScreen.index === 13 && state.currentOverlay === null) {
-      document.body.classList.add('tutorial-flash-add-tx');
-    } else {
-      document.body.classList.remove('tutorial-flash-add-tx');
-    }
-
-    // Node 12 (addTxSubmenu, array index 6) complete - flash Adrenaline and dose buttons
-    if (tutorialMode && tutorialScreen.index === 14) {
-      document.body.classList.add('tutorial-flash-adrenaline');
-      document.body.classList.add('tutorial-flash-dose');
-    } else {
-      document.body.classList.remove('tutorial-flash-adrenaline');
-      document.body.classList.remove('tutorial-flash-dose');
-    }
-
-    // Node 14 (summaryBtn, array index 8) complete - flash Summary button
-    if (tutorialMode && tutorialScreen.index === 16 && state.currentOverlay === null) {
-      document.body.classList.add('tutorial-flash-summary');
-    } else {
-      document.body.classList.remove('tutorial-flash-summary');
-    }
-
-    // Node 18 (treatmentLogInfo, array index 12) complete - flash the Adrenaline
-    // push row, until the entry is actually edited, moved or deleted
     const adrenalineHandled = !state.treatments.some(t => t.name.startsWith('Adrenaline push'))
       || state.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
-    if (tutorialMode && tutorialScreen.index === 20 && state.currentOverlay === 'summary' && !adrenalineHandled) {
-      document.body.classList.add('tutorial-flash-adrenaline-tx');
-    } else {
-      document.body.classList.remove('tutorial-flash-adrenaline-tx');
+    let activeFlashes: string[] = [];
+    if (tutorialMode) {
+      activeFlashes = tutorialNodeId === 'done'
+        ? ['tutorial-flash-close']
+        : (tutorialNodeList[tutorialNodeIndex]?.flashWhileCurrent?.({ state, showRecalibrateMenu, showWeightChange, weightUnchanged, adrenalineHandled }) ?? []);
     }
+    TUTORIAL_FLASH_CLASSES.forEach(c => document.body.classList.toggle(c, activeFlashes.includes(c)));
 
-    // Node 19 (closeOverlay, array index 13) complete - flash summary close button
-    if (tutorialMode && tutorialScreen.index === 21 && state.currentOverlay === 'summary') {
-      document.body.classList.add('tutorial-flash-summary-close');
-    } else {
-      document.body.classList.remove('tutorial-flash-summary-close');
-    }
-
-    // Node 20 (endCase, array index 14) complete - flash End Case button
-    if (tutorialMode && tutorialScreen.index === 22 && state.currentOverlay === null) {
-      document.body.classList.add('tutorial-flash-end');
-    } else {
-      document.body.classList.remove('tutorial-flash-end');
-    }
-
-    // Node 24 (delete, array index 17, the last node) complete - tutorial done, flash Close Case button
-    if (tutorialMode && tutorialScreen.index === 25) {
-      document.body.classList.add('tutorial-flash-close');
-    } else {
-      document.body.classList.remove('tutorial-flash-close');
-    }
-    
     return () => {
       document.body.classList.remove('tutorial-flash-elapsed-btn');
-      document.body.classList.remove('tutorial-flash-recalibrate');
-      document.body.classList.remove('tutorial-flash-weight');
-      document.body.classList.remove('tutorial-flash-add-tx');
-      document.body.classList.remove('tutorial-flash-adrenaline');
-      document.body.classList.remove('tutorial-flash-dose');
-      document.body.classList.remove('tutorial-flash-summary');
-      document.body.classList.remove('tutorial-flash-adrenaline-tx');
-      document.body.classList.remove('tutorial-flash-summary-close');
-      document.body.classList.remove('tutorial-flash-end');
-      document.body.classList.remove('tutorial-flash-close');
+      TUTORIAL_FLASH_CLASSES.forEach(c => document.body.classList.remove(c));
     };
-  }, [tutorialMode, tutorialScreen, state.treatments, state.currentOverlay, state.patientWeight, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
+  }, [tutorialMode, tutorialNodeId, tutorialNodeIndex, tutorialNodeList, state, showCatchup, catchupStep, showInteractiveTutorial, timingNodesComplete, showRecalibrateMenu, showWeightChange]);
 
   // Timeout for disregard pending states (3 seconds)
   useEffect(() => {
@@ -2286,6 +2229,7 @@ export default function App() {
             isShockForced={isShockForced}
             isCaseClosed={isCaseClosed}
             globalNodeIndex={tutorialNodeIndex}
+            mode={timingMode ?? 'elapsed'}
             onNodeChange={(nodeIndex, done) => {
               setTutorialNodeIndex(nodeIndex);
               setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
@@ -2313,30 +2257,25 @@ export default function App() {
             setShowInteractiveTutorial(false);
             setTimingNodesComplete(false);
             setTutorialModeIntro(null);
+            setTutorialAboutMode(null);
             setTutorialMode(true);
           }}
+          mode={timingMode}
           modeIntroLabel={tutorialModeIntro ? TIMING_MODE_LABELS[tutorialModeIntro] : null}
+          modeAboutMode={tutorialAboutMode}
+          onModeAboutClose={() => setTutorialAboutMode(null)}
           onModeIntroNext={() => {
             const chosen = tutorialModeIntro;
             setTutorialModeIntro(null);
-            // Only the Tx log & timers tutorial exists so far; the others say so
-            if (chosen === 'elapsed') setCatchupStep(2);
-            else if (chosen) setTutorialNotReadyMode(chosen);
+            // Each mode's setup starts where the real app's does: Timers only
+            // has no patient details or previous treatments, so it goes
+            // straight to the rhythm check interval.
+            if (chosen === 'minimal') setCatchupStep(7);
+            else if (chosen) setCatchupStep(2);
           }}
           onTimingNodesComplete={() => setTimingNodesComplete(true)}
           onCatchupNodeStatusChange={(_screen, cleared) => { console.log('[TUTORIAL DEBUG] App.tsx received:', _screen, cleared); setCatchupNodeCleared(cleared); }}
         />
-      )}
-
-      {/* Tutorial: shown when a mode whose tutorial hasn't been written yet is picked */}
-      {tutorialNotReadyMode && (
-        <div className="fixed inset-0 bg-black/70 z-[10001] flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Coming soon</h2>
-            <p className="text-neutral-500 mb-8">The {TIMING_MODE_LABELS[tutorialNotReadyMode]} tutorial hasn't been written yet.</p>
-            <button onClick={() => setTutorialNotReadyMode(null)} className="w-full bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">Back to modes</button>
-          </div>
-        </div>
       )}
 
       {/* Disclaimer Modal */}
@@ -2458,11 +2397,12 @@ export default function App() {
         {timingMode === 'log' ? (
           /* Log mode: scrollable running summary is the home screen */
           <div className="h-full flex flex-col relative">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <ArrestSummarySection state={state} showRecordingDuration />
-              <VitalSignsSection vitals={state.vitals} />
-              <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} />
-              <div className="rounded-xl border border-neutral-100">
+            <div data-scroll-container="summary" className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* In the tutorial the Arrest Summary is always shown, since its note is about it and no rhythm check has happened yet to bring it up on its own */}
+              <div data-tutorial-section="arrestSummary"><ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary={tutorialMode} /></div>
+              <div data-tutorial-section="vitalSigns"><VitalSignsSection vitals={state.vitals} /></div>
+              <div data-tutorial-section="pharmaSummary"><PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} /></div>
+              <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
                 <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
               </div>
@@ -2497,6 +2437,27 @@ export default function App() {
                 />
               )}
             </AnimatePresence>
+
+            {/* Tutorial overlay for Tx log only (the other modes' is in the branch below) */}
+            {tutorialMode && (
+              <TutorialOverlay
+                appState={state}
+                isShockForced={isShockForced}
+                isCaseClosed={isCaseClosed}
+                globalNodeIndex={tutorialNodeIndex}
+                mode={timingMode ?? 'elapsed'}
+                onNodeChange={(nodeIndex, done) => {
+                  setTutorialNodeIndex(nodeIndex);
+                  setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
+                }}
+                onExit={() => {
+                  setTutorialMode(false);
+                  setTutorialNodeIndex(0);
+                  setState(INITIAL_STATE);
+                  setShowCatchup(true);
+                }}
+              />
+            )}
           </div>
         ) : (
         <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
@@ -2733,6 +2694,7 @@ export default function App() {
               isShockForced={isShockForced}
               isCaseClosed={isCaseClosed}
               globalNodeIndex={tutorialNodeIndex}
+              mode={timingMode ?? 'elapsed'}
               onNodeChange={(nodeIndex, done) => {
                 setTutorialNodeIndex(nodeIndex);
                 setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
@@ -3360,7 +3322,13 @@ export default function App() {
                       <button
                         onClick={() => {
                           if (timingMode === 'elapsed' || timingMode === 'minimal') setCatchupStep(7);
-                          else if (timingMode === 'log') handleCatchupStart();
+                          else if (timingMode === 'log') {
+                            if (showInteractiveTutorial) {
+                              setShowInteractiveTutorial(false);
+                              setTutorialMode(true);
+                            }
+                            handleCatchupStart();
+                          }
                         }}
                         disabled={showInteractiveTutorial && !catchupNodeCleared}
                         className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && !catchupNodeCleared ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
@@ -3483,6 +3451,16 @@ export default function App() {
                                       <span>High</span>
                                     </div>
                                   </div>
+                                  {/* Tutorial only: read about this mode before committing to it.
+                                      Plain text in the card's own colours - deliberately not a node. */}
+                                  {showInteractiveTutorial && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setTutorialAboutMode(mode); }}
+                                      className="block text-sm font-semibold text-emerald-700 underline underline-offset-2"
+                                    >
+                                      About this mode ›
+                                    </button>
+                                  )}
                                 </div>
                               </motion.div>
                             )}
@@ -4049,7 +4027,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
-          <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} />
+          <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
         ) : (
           <>
             {editingTreatmentIndex != null && state.treatments[editingTreatmentIndex] && (
@@ -4076,12 +4054,20 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
 // Tx log if the mode is switched, and in the closed case); the only
 // difference is what there is to pick from: No ROSC / ROSC for a rhythm check,
 // and the two drugs that have timers.
-function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythmCheck }: {
+function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythmCheck, tutorialOutcomeRestriction }: {
   state: AppState;
   isShockForced: boolean;
   addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void;
   onDelayRhythmCheck?: () => void;
+  // Tutorial only: the one outcome the walkthrough is asking for. The others
+  // are slightly greyed and don't respond; the one to press pulses. Here
+  // 'redblue' means "No ROSC" (there is no shock/disarm to pick in this mode).
+  tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null;
 }) {
+  const noRoscOff = tutorialOutcomeRestriction === 'rosc' || tutorialOutcomeRestriction === 'delay';
+  const roscOff = tutorialOutcomeRestriction === 'redblue' || tutorialOutcomeRestriction === 'delay';
+  const delayOff = tutorialOutcomeRestriction === 'redblue' || tutorialOutcomeRestriction === 'rosc';
+  const dimmed = { opacity: 0.6, filter: 'grayscale(0.5)' } as const;
   // No ROSC is logged as a plain "Rhythm check": Timers only never learns
   // whether it was a shock or a disarm, but it still has to move the timers
   // the way a shock or disarm does, hence the flag.
@@ -4102,14 +4088,18 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="min-h-full flex flex-col justify-center gap-6 p-6">
             <button
-              onClick={noRosc}
-              className="w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-red-50 text-red-700 border-2 border-red-100"
+              onClick={() => { if (!noRoscOff) noRosc(); }}
+              disabled={noRoscOff}
+              style={noRoscOff ? dimmed : undefined}
+              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-red-50 text-red-700 border-2 border-red-100 ${noRoscOff ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'redblue' ? 'tutorial-outcome-flash' : ''}`}
             >
               No ROSC
             </button>
             <button
-              onClick={rosc}
-              className="w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-emerald-50 text-emerald-700 border-2 border-emerald-100"
+              onClick={() => { if (!roscOff) rosc(); }}
+              disabled={roscOff}
+              style={roscOff ? dimmed : undefined}
+              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-emerald-50 text-emerald-700 border-2 border-emerald-100 ${roscOff ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'rosc' ? 'tutorial-outcome-flash' : ''}`}
             >
               ROSC
             </button>
@@ -4118,8 +4108,10 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
         {onDelayRhythmCheck && (
           <div className="flex-shrink-0 px-6 pb-6">
             <button
-              onClick={onDelayRhythmCheck}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-base btn-base hover:bg-amber-100"
+              onClick={() => { if (!delayOff) onDelayRhythmCheck(); }}
+              disabled={delayOff}
+              style={delayOff ? dimmed : undefined}
+              className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-base btn-base hover:bg-amber-100 ${delayOff ? 'cursor-not-allowed' : ''} ${tutorialOutcomeRestriction === 'delay' ? 'tutorial-outcome-flash' : ''}`}
             >
               <Hourglass size={20} strokeWidth={2.5} />
               Delay rhythm check
@@ -4131,7 +4123,7 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
   }
 
   return (
-    <div className="w-full h-full overflow-y-auto pb-4">
+    <div data-tutorial-anchor="add-tx-submenu" className="w-full h-full overflow-y-auto pb-4">
       <TxSection
         title="Rhythm Check"
         color="pink"
