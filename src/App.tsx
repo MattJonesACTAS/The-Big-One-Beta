@@ -843,6 +843,8 @@ export default function App() {
   const [tutorialModeIntro, setTutorialModeIntro] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   // Which mode's "Learn more" slide is open (opened from the link on its card on the mode page, before committing to it)
   const [aboutMode, setAboutMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
+  // Tutorial: the mode page's Back asks the intro slides to step back one (see InteractiveTutorial)
+  const [introRewind, setIntroRewind] = useState(0);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
   // Which nodes this tutorial is showing and which one it is on. Everything
@@ -2236,6 +2238,7 @@ export default function App() {
           catchupStep={catchupStep}
           mode={timingMode}
           onExit={exitTutorialToWelcome}
+          introRewind={introRewind}
           modeIntroLabel={tutorialModeIntro ? TIMING_MODE_LABELS[tutorialModeIntro] : null}
           onModeIntroNext={() => {
             const chosen = tutorialModeIntro;
@@ -3426,7 +3429,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button onClick={() => (showInteractiveTutorial ? exitTutorialToWelcome() : setCatchupStep(1))} className="bg-neutral-100 py-4 rounded-xl font-bold transition-colors text-neutral-700 hover:bg-neutral-200">Back</button>
+                    <button onClick={() => (showInteractiveTutorial ? setIntroRewind(n => n + 1) : setCatchupStep(1))} className="bg-neutral-100 py-4 rounded-xl font-bold transition-colors text-neutral-700 hover:bg-neutral-200">Back</button>
                     <button
                       onClick={() => {
                         // In the tutorial this page is where a mode's tutorial is picked:
