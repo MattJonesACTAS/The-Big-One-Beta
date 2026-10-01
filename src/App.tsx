@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
+import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   RotateCcw, 
@@ -608,6 +609,16 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
 // wipes the in-memory "closed case" view before the user exports/deletes it.
 const PREVIOUS_CASES_KEY = 'theBigOnePreviousCases';
 
+// Starting and closing a case both wipe local storage for a completely fresh start. These
+// survive that: the previous-cases archive (it must outlive any one case), and the record of
+// which version's What's New notes were last shown (or they'd be shown again after every case).
+const clearStorageForFreshCase = () => {
+  const kept = [PREVIOUS_CASES_KEY, LAST_SEEN_VERSION_KEY].map(k => [k, localStorage.getItem(k)] as const);
+  localStorage.clear();
+  sessionStorage.clear();
+  kept.forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+};
+
 // A few names and checklist labels were respelled in a later version. Saved
 // data (a case in progress, or Previous Cases) is read through this, so a case
 // saved under the old spelling keeps matching its dose options and ticks.
@@ -744,6 +755,19 @@ const DrugTimerContent = ({ text, flashRed, nameColour, timeColour }: {
 };
 
 export default function App() {
+  // What's New: the notes to show (once) after an update. Worked out once, on load.
+  const [pendingNotes, setPendingNotes] = useState(() => {
+    const lastSeen = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+    // Closing a case wipes the disclaimer flag, so that alone can't tell an existing user from a new
+    // one: saved cases, or a case in progress, count as well.
+    const hadPriorUse = localStorage.getItem('disclaimerAccepted') === 'true'
+      || localStorage.getItem(PREVIOUS_CASES_KEY) !== null
+      || localStorage.getItem('theBigOneState') !== null;
+    const pending = pendingReleaseNotes(lastSeen, hadPriorUse);
+    // Nothing to say (a brand-new install, or this version has no notes): count it as seen
+    if (pending.length === 0 && lastSeen !== APP_VERSION) localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
+    return pending;
+  });
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => {
     return localStorage.getItem('disclaimerAccepted') === 'true';
   });
@@ -2004,14 +2028,8 @@ export default function App() {
   // --- Catchup Handlers ---
   const handleCatchupStart = (overrideWeight?: string) => {
     
-    // Clear localStorage for a completely fresh start, but keep the previous-cases
-    // backup archive - it must survive across cases, not just within one.
-    const previousCasesBackupOnStart = localStorage.getItem(PREVIOUS_CASES_KEY);
-    localStorage.clear();
-    sessionStorage.clear();
-    if (previousCasesBackupOnStart) {
-      localStorage.setItem(PREVIOUS_CASES_KEY, previousCasesBackupOnStart);
-    }
+    // Clear localStorage for a completely fresh start (keeping what must survive)
+    clearStorageForFreshCase();
     
     let adjustedElapsed = catchupElapsed.hrs * 3600 + catchupElapsed.mins * 60 + catchupElapsed.secs;
     
@@ -2147,14 +2165,8 @@ export default function App() {
   };
 
   const closeCase = () => {
-    // Preserve the previous-cases backup archive - it's meant to survive
-    // independent of whatever happens to the current case's own data.
-    const previousCasesBackup = localStorage.getItem(PREVIOUS_CASES_KEY);
-    localStorage.clear();
-    sessionStorage.clear();
-    if (previousCasesBackup) {
-      localStorage.setItem(PREVIOUS_CASES_KEY, previousCasesBackup);
-    }
+    // Start fresh, keeping what must survive (see clearStorageForFreshCase)
+    clearStorageForFreshCase();
     
     // Unregister service worker (removes stale cached content) then do a single
     // clean reload of the current URL. Previously this also navigated to a
@@ -2350,10 +2362,35 @@ export default function App() {
       )}
 
       {/* Disclaimer Modal */}
+      {pendingNotes.length > 0 && onWelcomeScreen && disclaimerAccepted && (
+        <div className="fixed inset-0 z-[3000] bg-black/60 flex items-center justify-center p-6" role="dialog" aria-label="What's New">
+          <div className="bg-white rounded-3xl p-7 max-w-sm w-full shadow-2xl flex flex-col" style={{ maxHeight: '88%' }}>
+            <h2 className="text-2xl font-bold text-neutral-900 text-center">What's New</h2>
+            <p className="text-sm text-neutral-500 text-center mt-1 mb-4">Updated to {APP_VERSION}</p>
+            <div className="overflow-y-auto min-h-0 flex-1 space-y-5 pr-1">
+              {pendingNotes.map(note => (
+                <div key={note.version}>
+                  {pendingNotes.length > 1 && <h3 className="text-base font-bold text-neutral-900 mb-1.5">{note.version}</h3>}
+                  <ul className="list-disc pl-5 space-y-2 text-neutral-700 text-[15px] leading-relaxed">
+                    {note.items.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION); setPendingNotes([]); }}
+              className="mt-5 w-full p-4 rounded-2xl bg-emerald-600 text-white font-bold flex-shrink-0"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.5</span></h1>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">{APP_VERSION}</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. <em>The Big One</em> tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
@@ -2974,7 +3011,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One v1.5</p>
+                    <p>The Big One {APP_VERSION}</p>
                     <p>ACTAS CMG v1.1.0.3</p>
                     <p>Last reviewed October 2026</p>
                   </div>
