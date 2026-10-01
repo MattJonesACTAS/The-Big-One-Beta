@@ -4,581 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Pause, RefreshCw, XCircle, FileText, Plus, Trash2, ChevronDown } from 'lucide-react';
-
-// Static Home Screen Component - Exact replica using real app code
-function StaticHomeScreen() {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative">
-      {/* Top Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <Pause size={14} className="sm:w-4 sm:h-4" /> Pause
-        </button>
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
-        </button>
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
-        </button>
-      </div>
-
-      {/* Top Quick Tools */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-blue-100 text-blue-700">
-          Reversibles
-        </button>
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-orange-100 text-orange-700">
-          ROSC
-        </button>
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-purple-100 text-purple-700">
-          PHEA
-        </button>
-      </div>
-
-      {/* Main Center Display */}
-      <div className="flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 border-emerald-500">
-        <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
-          {/* Corner Cards */}
-          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">1:28</span>
-            </div>
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">1</span>
-            </div>
-          </div>
-
-          {/* Rhythm Check - Centered vertically and responsive size */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
-            <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
-              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
-                <circle
-                  cx="150"
-                  cy="150"
-                  r="140"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  className="text-neutral-50"
-                />
-                <circle
-                  cx="150"
-                  cy="150"
-                  r="140"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  className="text-emerald-500"
-                  strokeDasharray="879.64"
-                  strokeDashoffset="454.77"
-                  style={{ pathLength: 1 }}
-                />
-              </svg>
-              
-              <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
-                <div className="text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none text-neutral-900">
-                  0:58
-                </div>
-                <div className="text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 text-neutral-400">
-                  Rhythm Check
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Main Controls */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
-        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
-          <FileText size={18} className="sm:w-6 sm:h-6" />
-          Summary
-        </button>
-        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
-          <Plus size={18} className="sm:w-6 sm:h-6" />
-          Add Tx
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Static Timing Method Screen - replica of catchup step 6
-function StaticTimingMethodScreen({ cprFading = false }: { cprFading?: boolean }) {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative justify-center">
-      <div className="space-y-5 px-4 max-w-md mx-auto w-full">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-neutral-900">Timing Method</h2>
-          <p className="text-neutral-500 text-sm">How are you tracking rhythm checks?</p>
-        </div>
-        <div className="flex flex-col gap-3">
-          {/* Record keeping only */}
-          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white">
-            <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-              <div className="w-full max-w-[220px] rounded-xl border border-neutral-200 overflow-hidden text-left bg-white shadow-sm">
-                <div className="bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 tracking-widest uppercase">Treatment Log</div>
-                <div className="px-3 py-2 grid grid-cols-[2fr_1fr_1fr] gap-1 border-b border-neutral-100">
-                  <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">Treatment</span>
-                  <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</span>
-                  <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</span>
-                </div>
-                <div className="px-3 py-2"><span className="text-[11px] text-neutral-400 italic">No entries yet</span></div>
-              </div>
-            </div>
-            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700"><div>No timer</div><div className="font-medium">(record keeping only)</div></div>
-          </div>
-          {/* CPR timer */}
-          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white" style={cprFading ? { animation: 'cprCardFade 2s ease-in-out infinite' } : {}}>
-            <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-              <div className="relative w-[100px] h-[100px] flex items-center justify-center">
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5" strokeLinecap="round" strokeDasharray="276.5" strokeDashoffset="138"/>
-                </svg>
-                <div className="flex flex-col items-center z-10">
-                  <span className="text-[22px] font-bold tabular-nums leading-none text-neutral-900">1:00</span>
-                  <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Rhythm Check</span>
-                </div>
-              </div>
-            </div>
-            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700">Monitor's inbuilt CPR timer</div>
-          </div>
-          {/* Elapsed time */}
-          <div className="w-full rounded-2xl overflow-hidden border-2 border-neutral-200 bg-white">
-            <div className="bg-neutral-50 px-5 pt-5 pb-3 flex flex-col items-center">
-              <div className="relative w-[100px] h-[100px] flex items-center justify-center">
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" strokeWidth="5" strokeLinecap="round" strokeDasharray="276.5" strokeDashoffset="207"/>
-                </svg>
-                <div className="flex flex-col items-center z-10">
-                  <span className="text-[16px] font-bold tabular-nums leading-none text-neutral-900">00:05:00</span>
-                  <span className="text-[7px] font-bold tracking-widest uppercase text-neutral-400 mt-1">Elapsed Time</span>
-                </div>
-              </div>
-            </div>
-            <div className="py-2.5 text-sm font-bold text-center border-t border-neutral-200 bg-white text-neutral-700"><div>Monitor's elapsed case time</div><div className="font-medium">(odds/evens method)</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Static Add Tx Menu Component - Rendered inside the central box like in the real app
-function StaticAddTxMenu() {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative">
-      {/* Top Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <Pause size={14} className="sm:w-4 sm:h-4" /> Pause
-        </button>
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
-        </button>
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
-        </button>
-      </div>
-
-      {/* Top Quick Tools */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-blue-100 text-blue-700">
-          Reversibles
-        </button>
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-orange-100 text-orange-700">
-          ROSC
-        </button>
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-purple-100 text-purple-700">
-          PHEA
-        </button>
-      </div>
-
-      {/* Main Center Display with Add Tx Menu Inside */}
-      <div className="flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 border-emerald-500">
-        {/* Add Tx Menu Content - STATIC, not scrollable */}
-        <div className="h-full overflow-hidden">
-          {/* Rhythm Check Section - COLLAPSED */}
-          <div>
-            <div className="flex items-center justify-between p-4 font-bold bg-rose-50 text-rose-800 border-b border-rose-100">
-              <span>Rhythm Check</span>
-              <ChevronDown className="transition-transform duration-300 -rotate-90" size={20} />
-            </div>
-          </div>
-
-          {/* Medications Section - Expanded with SINGLE COLUMN, showing only first 5 medications */}
-          <div>
-            <div className="flex items-center justify-between p-4 font-bold bg-emerald-50 text-emerald-800 border-b border-emerald-100">
-              <span>Medications</span>
-              <ChevronDown className="transition-transform duration-300" size={20} />
-            </div>
-            <div className="bg-white p-3">
-              <div className="grid grid-cols-1 gap-2">
-                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Adrenaline push</button>
-                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Adrenaline infusion</button>
-                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Amiodarone</button>
-                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Atropine</button>
-                <button className="text-left p-3 bg-neutral-50 rounded-xl font-bold text-sm text-neutral-700">Calcium</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Airway Section - Collapsed */}
-          <div>
-            <div className="flex items-center justify-between p-4 font-bold bg-blue-50 text-blue-800 border-b border-blue-100">
-              <span>Airway</span>
-              <ChevronDown className="transition-transform duration-300 -rotate-90" size={20} />
-            </div>
-          </div>
-
-          {/* Other Tx Section - Collapsed */}
-          <div>
-            <div className="flex items-center justify-between p-4 font-bold bg-neutral-100 text-neutral-800 border-b border-neutral-200">
-              <span>Other Tx</span>
-              <ChevronDown className="transition-transform duration-300 -rotate-90" size={20} />
-            </div>
-          </div>
-
-          {/* Custom Treatment Input */}
-          <div className="p-3 border-t border-neutral-100 bg-white">
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Custom treatment..."
-                className="flex-1 bg-white border border-neutral-200 rounded-xl p-3 text-sm"
-                disabled
-              />
-              <button className="bg-emerald-600 text-white px-5 rounded-xl font-bold text-sm">
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Main Controls - VISIBLE */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
-        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
-          <FileText size={18} className="sm:w-6 sm:h-6" />
-          Summary
-        </button>
-        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
-          <Plus size={18} className="sm:w-6 sm:h-6" />
-          Add Tx
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Static Adrenaline Dosing Component - Extracted from App.tsx medication dose selection
-function StaticAdrenalineDose() {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto pb-4">
-      <div className="p-6 mb-4">
-        <h2 className="text-2xl font-bold text-neutral-900 mb-2">Adrenaline push</h2>
-        <p className="text-neutral-500 text-sm mb-2">Patient weight: 100kg</p>
-        <p className="text-neutral-500 text-sm mb-6">Patient type: adult</p>
-        
-        <div className="space-y-3">
-          <button className="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold flex flex-col items-start gap-1">
-            <span className="text-[10px] font-normal uppercase tracking-wide">CARDIAC ARREST</span>
-            <span className="text-lg">1mg</span>
-          </button>
-          
-          <div className="w-full flex gap-2 items-center">
-            <div className="flex-1 relative flex items-center bg-white border border-neutral-200 rounded-xl min-w-0">
-              <input
-                type="text"
-                placeholder="Custom dose (mg)..."
-                className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
-                disabled
-              />
-              <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">mg</span>
-            </div>
-            <button className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="p-6 pt-0">
-        <button className="text-emerald-600 font-bold flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-          Back
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Static Home With Alerts Component - matches tutorial requirements
-function StaticHomeWithAlerts() {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-neutral-100 flex flex-col p-4 overflow-hidden relative">
-      {/* Top Controls */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <Pause size={14} className="sm:w-4 sm:h-4" /> Pause
-        </button>
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
-        </button>
-        <button className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-          <XCircle size={14} className="sm:w-4 sm:h-4" /> Close
-        </button>
-      </div>
-
-      {/* Top Quick Tools */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-blue-100 text-blue-700">
-          Reversibles
-        </button>
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-orange-100 text-orange-700">
-          ROSC
-        </button>
-        <button className="p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors bg-purple-100 text-purple-700">
-          PHEA
-        </button>
-      </div>
-
-      {/* Main Center Display with Alerts */}
-      <div className="flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 border-emerald-500">
-        <div className="h-full flex flex-col items-center px-2 sm:px-3 pt-4 pb-2 sm:pb-3 relative">
-          {/* Corner Cards */}
-          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex justify-between gap-3 sm:gap-4">
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">Total time</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">3:42</span>
-            </div>
-            <div className="bg-neutral-100 border border-neutral-100 shadow-sm rounded-xl sm:rounded-2xl py-4 px-4 sm:py-7 sm:px-8 flex flex-col items-center min-w-[100px] sm:min-w-[140px]">
-              <span className="text-[10px] sm:text-[12px] font-bold text-neutral-900 tracking-widest mb-1.5 sm:mb-3">CPR round</span>
-              <span className="text-[22px] sm:text-[43px] font-bold text-neutral-400 tabular-nums leading-none">2</span>
-            </div>
-          </div>
-
-          {/* Timer */}
-          <div className="flex-1 flex flex-col items-center justify-center w-full pt-14 sm:pt-16">
-            <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[320px] sm:h-[320px]">
-              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 300 300">
-                <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" className="text-neutral-50" />
-                <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" className="text-emerald-500" strokeDasharray="879.64" strokeDashoffset="659.73" style={{ pathLength: 1 }} />
-              </svg>
-              <div className="flex flex-col items-center z-10 translate-y-3 sm:translate-y-4">
-                <div className="text-7xl sm:text-[120px] font-bold tabular-nums tracking-tighter leading-none text-neutral-900">1:15</div>
-                <div className="text-[14px] sm:text-[18px] uppercase tracking-widest font-bold mt-4 sm:mt-8 text-neutral-400">Rhythm Check</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Alert Banners at bottom - NEW FORMAT */}
-          <div className="absolute bottom-3 left-3 right-3 space-y-2">
-            <div className="bg-amber-100 border-2 border-amber-400 rounded-xl p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                <span className="font-bold text-amber-900 text-sm">Adrenaline due</span>
-              </div>
-              <span className="text-amber-700 text-xs font-semibold">Next: 4:14</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Main Controls */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0">
-        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
-          <FileText size={18} className="sm:w-6 sm:h-6" />
-          Summary
-        </button>
-        <button className="p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors bg-emerald-600 text-white">
-          <Plus size={18} className="sm:w-6 sm:h-6" />
-          Add Tx
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Static Summary Component - Extracted from SummaryOverlay in App.tsx
-function StaticSummary() {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto pb-20">
-      {/* Arrest Summary */}
-      <div className="mb-6">
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">ARREST SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">CPR Rounds</span>
-            <span className="text-[16px] font-black tabular-nums text-neutral-900">1</span>
-          </div>
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Shocks given</span>
-            <span className="text-[16px] font-black tabular-nums text-red-600">0</span>
-          </div>
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Disarmed</span>
-            <span className="text-[16px] font-black tabular-nums text-blue-600">0</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Pharma Summary */}
-      <div className="mb-6">
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">PHARMA SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Adrenaline push</span>
-            <span className="text-[16px] font-black tabular-nums text-neutral-900">0.1mg (1)</span>
-          </div>
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Amiodarone</span>
-            <span className="text-[16px] font-black tabular-nums text-neutral-900">50mg (1)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Treatment Log */}
-      <div>
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">TREATMENT LOG</div>
-        <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] bg-neutral-100 border-b border-neutral-200 px-4 py-3">
-            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
-            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
-            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>
-            <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-right">Ago</div>
-          </div>
-          
-          <div className="divide-y divide-neutral-100">
-            <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] px-4 py-4 items-center gap-1">
-              <div className="pr-1">
-                <div className="text-[15px] font-bold text-neutral-900">Adrenaline 1mg</div>
-              </div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">14:42</div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(3:14 elapsed)</div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">2 min ago</div>
-            </div>
-            <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] px-4 py-4 items-center gap-1">
-              <div className="pr-1">
-                <div className="text-[15px] font-bold text-neutral-900">Amiodarone 300mg</div>
-              </div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">14:41</div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(3:13 elapsed)</div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">3 min ago</div>
-            </div>
-            <div className="grid grid-cols-[2.1fr_1fr_1.4fr_0.9fr] px-4 py-4 items-center gap-1">
-              <div className="pr-1">
-                <div className="text-[15px] font-bold text-neutral-900">Adrenaline 1mg</div>
-              </div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">14:40</div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(3:12 elapsed)</div>
-              <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-right">4 min ago</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Static Case Summary Component - Extracted from closed case view in App.tsx  
-function StaticCaseSummary() {
-  return (
-    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }} className="bg-white overflow-y-auto p-6 max-w-2xl mx-auto space-y-6 pb-24">
-      <h1 className="text-4xl font-bold text-center text-neutral-900 mb-8">Case Summary</h1>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <button className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 px-4 rounded-xl font-bold border border-emerald-100">
-          <FileText size={20} /> Export PDF
-        </button>
-        <button className="flex items-center justify-center gap-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-bold border border-red-100">
-          <Trash2 size={20} /> Delete Case
-        </button>
-      </div>
-
-      {/* Arrest Summary */}
-      <div>
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">ARREST SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">CPR Rounds</span>
-            <span className="text-[16px] font-black tabular-nums text-neutral-900">1</span>
-          </div>
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Shocks given</span>
-            <span className="text-[16px] font-black tabular-nums text-red-600">0</span>
-          </div>
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Disarmed</span>
-            <span className="text-[16px] font-black tabular-nums text-blue-600">0</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Pharma Summary */}
-      <div>
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">PHARMA SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Adrenaline push</span>
-            <span className="text-[16px] font-black tabular-nums text-neutral-900">0.1mg (1)</span>
-          </div>
-          <div className="flex justify-between items-center p-2 px-3">
-            <span className="text-neutral-500 text-[16px] font-medium">Amiodarone</span>
-            <span className="text-[16px] font-black tabular-nums text-neutral-900">50mg (1)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Final Treatment Log */}
-      <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider">FINAL TREATMENT LOG</div>
-      <div className="bg-white rounded-b-xl border border-neutral-100 overflow-hidden shadow-sm">
-        <div className="grid grid-cols-[2fr_1fr_1fr] bg-neutral-100 border-b border-neutral-200 px-4 py-3">
-          <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-left">Treatment</div>
-          <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Time</div>
-          <div className="text-[11px] font-black text-neutral-800 uppercase tracking-widest text-center">Elapsed</div>
-        </div>
-        
-        <div className="divide-y divide-neutral-100">
-          <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-4 items-center gap-1">
-            <div className="pr-1">
-              <div className="text-[15px] font-bold text-neutral-900">Close case</div>
-            </div>
-            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">08:09:01</div>
-            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(00:00:29 elapsed)</div>
-          </div>
-          <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-4 items-center gap-1">
-            <div className="pr-1">
-              <div className="text-[15px] font-bold text-neutral-900">Amiodarone</div>
-              <div className="text-[13px] text-neutral-500 font-medium mt-0.5">50mg</div>
-            </div>
-            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">08:08:42</div>
-            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(00:00:10 elapsed)</div>
-          </div>
-          <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-4 items-center gap-1">
-            <div className="pr-1">
-              <div className="text-[15px] font-bold text-neutral-900">Adrenaline push</div>
-              <div className="text-[13px] text-neutral-500 font-medium mt-0.5">0.1mg</div>
-            </div>
-            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">08:08:37</div>
-            <div className="text-[16px] text-neutral-800 font-medium tabular-nums text-center">(00:00:05 elapsed)</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface TutorialElement {
   id: string;
@@ -594,7 +19,6 @@ interface TutorialElement {
 
 interface TutorialScreen {
   title: string;
-  image: string;
   nextScreen: string | null;
   elements: TutorialElement[];
 }
@@ -604,7 +28,6 @@ interface TutorialScreens {
 }
 
 interface InteractiveTutorialProps {
-  onClose: () => void;
   onTimingNodesComplete?: () => void;
   onCatchupNodeStatusChange?: (screen: string, cleared: boolean) => void;
   catchupStep?: number;
@@ -613,6 +36,8 @@ interface InteractiveTutorialProps {
   onModeIntroNext?: () => void;
   // The mode being learned, so the setup screens number themselves to match its (shorter or longer) sequence
   mode?: 'log' | 'minimal' | 'elapsed' | null;
+  // Back on the very first slide leaves the tutorial
+  onExit?: () => void;
 }
 
 // EXPERIMENT: true shows each mode's "Learn more" as ONE scrollable page
@@ -640,17 +65,7 @@ const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; t
   ],
 };
 
-// The two notes that used to sit on the mode page, kept word for word. They
-// aren't shown at the moment: the mode page is now where each mode's own
-// tutorial is picked, and these describe only the old two-mode choice ("No
-// Timer Mode" / "Time Keeping Assistance Mode"). Kept here until it's decided
-// where their wording belongs.
-const PARKED_MODE_PAGE_NOTES = [
-{ id: 'timingLog',     x: 50, y: 38.0, number: 3, title: 'No Timer Mode',   description: "This option means the app will only help you record the times of interventions.\n\nThis will help you with your handovers and case sheets, but not with keeping track of rhythm check times or providing reminders for medication redoses.\n\nUse this mode for big jobs that aren't arrests, like Prehospital Emergency Anaesthesia (PHEA).\n\nThis option can also be useful if you are acting as scribe during a simulation." },
-{ id: 'timingElapsed', x: 50, y: 63.0, number: 4, title: 'Time Keeping Assistance Mode',  description: "In the time keeping assistance mode, the app will remind you of when your next rhythm checks and some medication repeats are due.\n\nChoose 'Time keeping assistance' to progress in the tutorial." },
-];
-
-const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, mode }) => {
+const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodesComplete, onCatchupNodeStatusChange, catchupStep, modeIntroLabel, onModeIntroNext, mode, onExit }) => {
   const [currentScreen, setCurrentScreen] = useState('intro1');
   const [exploredElements, setExploredElements] = useState<Set<string>>(new Set());
   // Which notes have been read on each page, so going Back to a page that was
@@ -663,25 +78,21 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
   const screens: TutorialScreens = {
     intro1: {
       title: 'Welcome',
-      image: '',
       nextScreen: 'introWhen',
       elements: [],
     },
     introWhen: {
       title: 'When to Use the App',
-      image: '',
       nextScreen: 'intro2',
       elements: [],
     },
     intro2: {
       title: 'Navigating the Tutorial',
-      image: '',
       nextScreen: 'timingMethod',
       elements: [],
     },
     patientDetails: {
       title: 'Patient Details',
-      image: '',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
         { id: 'patientType', x: 50, y: 50, number: 2, title: 'Patient Type', description: "First you will need to select either adult or paediatric mode, then the patient's weight.",
@@ -690,7 +101,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     },
     previousTreatments: {
       title: 'Previous Treatments',
-      image: '',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
         { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.",
@@ -699,7 +109,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     },
     timingMethod: {
       title: 'App Mode',
-      image: '',
       // This page is now where each app mode's own tutorial is chosen (the
       // intro leads straight here), so it no longer steps on to the next
       // screen by itself - the real Next button on the page does that.
@@ -713,7 +122,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     },
     rhythmCheckTiming: {
       title: 'Rhythm Check Timing',
-      image: '',
       nextScreen: 'enterElapsedTime',
       elements: [
         { id: 'rhythmCheckTiming', x: 50, y: 50, number: 4, title: 'Rhythm Check Timing', description: "To keep track of when the next rhythm check is due, The Big One uses the 'odds/evens' method.\n\nTo calibrate the app, you will need to enter whether you are performing rhythm checks on odd minutes, even minutes, or halfway in between them.",
@@ -722,84 +130,10 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     },
     enterElapsedTime: {
       title: 'Enter Current Elapsed Time',
-      image: '',
-      nextScreen: 'home1', // progression driven by real catchupStep, not by Next click
+      nextScreen: null, // progression is driven by the real catchupStep, not by a Next click
       elements: [
         { id: 'enterElapsedTime', x: 50, y: 50, number: 5, title: 'Enter Current Elapsed Time', description: "You will need to make the app's elapsed timer match the monitor's.",
           morePages: [{ title: "Give it a Go", text: "Enter any time you like to move forward." }] },
-      ],
-    },
-    home1: {
-      title: 'CPR Timer Home Screen',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/1.png?raw=true',
-      nextScreen: 'addTxMenu',
-      elements: [
-        { id: 'cprRound', x: 80.2, y: 22, number: 6, title: 'CPR Round', description: "The current round of CPR" },
-        { id: 'timer', x: 50, y: 52, number: 7, title: 'Rhythm Check Timer', description: "The countdown to the next rhythm check.\n\nWhen the timer reaches 0:00, it pauses for 6 seconds to allow for the rhythm check, then restarts from 2:00." },
-        { id: 'pause', x: 19.0, y: 4.2, number: 8, title: 'Pause Button', description: "Pause and resume the rhythm check timer" },
-        { id: 'recalibrate', x: 51.0, y: 4.2, number: 9, title: 'Recalibrate Button', description: "The app estimates a rhythm check of 6 seconds.\n\nRecalibrate the timer to match reality if your rhythm checks are longer." },
-        { id: 'tabs', x: 50, y: 10.75, number: 10, title: 'Checklists', description: "Quick access to checklists for the reversible causes of arrest, ROSC and Prehospital emergency anaesthesia (PHEA)" },
-        { id: 'addTxBtn', x: 75, y: 95.4, number: 11, title: 'Add Treatment Button', description: "Tap here to log treatments and interventions during the arrest" },
-      ],
-
-    },
-    addTxMenu: {
-      title: 'Add Treatment Menu',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/2.png?raw=true',
-      nextScreen: 'adrenalineDose',
-      elements: [
-        { id: 'addTxSubmenu', x: 50, y: 45.9, number: 12, title: 'Add Tx Submenu', description: "After pressing the Add Tx button, you will be brought to a submenu containing multiple kinds of treatments you can log" },
-      ],
-    },
-    adrenalineDose: {
-      title: 'Adrenaline Dosing',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/4.png?raw=true',
-      nextScreen: 'home2',
-      elements: [
-        { id: 'medications', x: 53.2, y: 44.2, number: 13, title: 'Medications', description: "Each medication will bring up one or multiple age/weight based dosage options depending on the indication.\n\nCustom doses can also be added.\n\nLet's log adrenaline and amiodarone." },
-      ],
-    },
-    home2: {
-      title: 'Medication Alerts',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
-      nextScreen: 'home2_summary',
-      elements: [
-        { id: 'adrenalineAlert', x: 28.4, y: 82.82, number: 14, title: 'Medication Alerts', description: "When you log adrenaline or amiodarone, an alert will appear on the home screen to help you keep track of when the next dose is due." },
-      ],
-    },
-    home2_summary: {
-      title: 'Summary Navigation',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
-      nextScreen: 'summary',
-      elements: [
-        { id: 'summaryBtn', x: 26.6, y: 95.4, number: 15, title: 'Summary Button', description: "Next, let's have a look at the running case summary page" },
-      ],
-    },
-    summary: {
-      title: 'Active Case Summary',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/6.png?raw=true',
-      nextScreen: 'home2_close',
-      elements: [
-        { id: 'pharmaSummary', x: 50, y: 50, number: 16, title: 'Medication Summary', description: "All medications logged will appear here, with an accumulative tally of the total amount of each drug given." },
-        { id: 'treatmentLog', x: 50, y: 70.9, number: 17, title: 'Treatment Log', description: "Chronological record of all logged interventions.\n\nTimestamps show the exact time, the elapsed time on the monitor, and how long ago each Tx was logged." },
-      ],
-    },
-    home2_close: {
-      title: 'Close Case Navigation',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
-      nextScreen: 'caseSummary',
-      elements: [
-        { id: 'close', x: 82.2, y: 4.2, number: 18, title: 'Close Button', description: "Let's say we've either stopped resuscitative efforts or we've handed our patient over at hospital.\n\nWe can now close the case." },
-      ],
-    },
-    caseSummary: {
-      title: 'Closed Case Summary',
-      image: 'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/8.png?raw=true',
-      nextScreen: null,
-      elements: [
-        { id: 'finalStats', x: 50, y: 61.64, number: 19, title: 'Final Case Data', description: "Now the case is over, the treatment log shows times to the second, not just to the minute" },
-        { id: 'export', x: 27, y: 14, number: 20, title: 'Export PDF', description: "Export the case summary and Tx log to a pdf, which you can then email for later review." },
-        { id: 'delete', x: 73, y: 14, number: 21, title: 'Delete Case', description: "Permanently delete the case information from the app" },
       ],
     },
   };
@@ -851,23 +185,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     }
   }, [catchupStep, currentScreen]);
 
-  // Preload all tutorial images when component mounts
-  useEffect(() => {
-    const imagesToPreload = [
-      'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/1.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/2.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/4.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/5.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/6.png?raw=true',
-      'https://github.com/MattJonesACTAS/The-Big-One/blob/main/public/tutorial/8.png?raw=true',
-    ];
-
-    imagesToPreload.forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
-
   const handleElementClick = (element: TutorialElement) => {
     setActiveExplanation(element);
     setExplanationPage(0);
@@ -888,6 +205,13 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
     setActiveExplanation(null);
     setShowingInfoBox(false);
     setExplanationPage(0);
+  };
+
+  // Back through the intro slides: Welcome's Back leaves the tutorial
+  const handleIntroBack = () => {
+    if (currentScreen === 'intro1') onExit?.();
+    else if (currentScreen === 'introWhen') setCurrentScreen('intro1');
+    else if (currentScreen === 'intro2') setCurrentScreen('introWhen');
   };
 
   const handleNext = () => {
@@ -916,12 +240,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
       pointerEvents: ['timingMethod', 'rhythmCheckTiming', 'patientDetails', 'previousTreatments', 'enterElapsedTime'].includes(currentScreen) ? 'none' : 'auto',
     }}>
       {/* Render static components for non-catchup screens only */}
-      {currentScreen === 'home1' && <StaticHomeScreen />}
-      {currentScreen === 'addTxMenu' && <StaticAddTxMenu />}
-      {currentScreen === 'adrenalineDose' && <StaticAdrenalineDose />}
-      {(currentScreen === 'home2' || currentScreen === 'home2_summary' || currentScreen === 'home2_close') && <StaticHomeWithAlerts />}
-      {currentScreen === 'summary' && <StaticSummary />}
-      {currentScreen === 'caseSummary' && <StaticCaseSummary />}
       
       {/* Intro pages: dark overlay over the live catchup behind */}
       {(currentScreen === 'intro1' || currentScreen === 'introWhen' || currentScreen === 'intro2') && (
@@ -942,6 +260,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
             maxWidth: '320px',
             width: '85%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            maxHeight: '100%',
+            overflowY: 'auto',
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px' }}>
               {currentScreen === 'intro1' && 'Welcome!'}
@@ -955,23 +275,41 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
                 ? "Imagine you're first on scene to a cardiac arrest or another complex job that will require multiple crews.\n\nYou perform the initial necessary interventions, then eventually more crews arrive.\n\nYou then take a step back, assume the role of Team Leader, assign roles to other crew members, and go hands off for the rest of the case.\n\nThat is when The Big One can be used."
                 : "In this tutorial you'll see red numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
             )}
-            <button
-              onClick={handleNext}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#10b981',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-              }}
-            >
-              Next
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleIntroBack}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                style={{
+                  flex: 2,
+                  padding: '12px',
+                  backgroundColor: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1083,323 +421,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.15); }
         }
-        @keyframes buttonPulse {
-          0%, 100% {
-            transform: translateX(-50%) scale(1);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-          }
-          50% {
-            transform: translateX(-50%) scale(1.05);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-          }
-        }
-        @keyframes cprCardFade {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.45; }
-        }
       `}</style>
-
-      {/* Next button - centered bottom with pulsing animation (for non-intro screens) */}
-      {/* Special case for home1: Add Tx button with flashing text */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home1' && (
-        <button
-          onClick={handleNext}
-          className="text-base sm:text-xl"
-          style={{
-            position: 'absolute',
-            bottom: '16px',
-            right: '16px',
-            width: 'calc((100% - 32px - 12px) / 2)',
-            height: '48px',
-            backgroundColor: '#059669',
-            color: '#ffffff',
-            border: 'none',
-            outline: 'none',
-            borderRadius: '16px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            zIndex: 10001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-          aria-label="Continue to Add Treatment screen"
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            animation: 'textFlash 2s infinite',
-          }}>
-            <Plus size={18} className="sm:w-6 sm:h-6" />
-            Add Tx
-          </div>
-        </button>
-      )}
-      
-      <style>{`
-        @keyframes textFlash {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
-        }
-      `}</style>
-      
-      {/* Special case for home2_summary: show exact replica of Summary button */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home2_summary' && (
-        <button
-          onClick={handleNext}
-          style={{
-            position: 'absolute',
-            bottom: 'calc(3.5% + 5px)',
-            left: 'calc(5% + 15px)',
-            width: '41.8%',
-            padding: '14.4px 20px',
-            backgroundColor: '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '16px',
-            fontSize: '18px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
-            animation: 'buttonPulse 2s infinite',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-          Summary
-        </button>
-      )}
-      
-      {/* Special case for addTxMenu: clickable Adrenaline push button matching the list item */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'addTxMenu' && (
-        <button
-          onClick={handleNext}
-          style={{
-            position: 'absolute',
-            top: 'calc(30.5% - 2px)',
-            left: '29px',
-            right: '29px',
-            height: '50px',
-            backgroundColor: '#f5f5f5',
-            color: '#000',
-            border: 'none',
-            outline: 'none',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            zIndex: 10001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            paddingLeft: '14px',
-            textAlign: 'left',
-          }}
-        >
-          <div style={{
-            animation: 'textFlash 2s infinite',
-          }}>
-            Adrenaline push
-          </div>
-        </button>
-      )}
-      
-      {/* Special case for adrenalineDose: clickable dose button */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'adrenalineDose' && (
-        <button
-          onClick={handleNext}
-          style={{
-            position: 'absolute',
-            top: '30%',
-            left: '16px',
-            right: '16px',
-            height: '70px',
-            backgroundColor: '#d1fae5',
-            color: '#065f46',
-            border: '2px solid #10b981',
-            outline: 'none',
-            borderRadius: '12px',
-            fontSize: '18px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            zIndex: 10001,
-            display: 'flex',
-            alignItems: 'center',
-            textAlign: 'left',
-            paddingLeft: '20px',
-          }}
-        >
-          <div style={{
-            animation: 'textFlash 2s infinite',
-          }}>
-            1mg (Adult cardiac arrest)
-          </div>
-        </button>
-      )}
-      
-      {/* Special case for home2_summary: Summary button overlay */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home2_summary' && (
-        <button
-          onClick={handleNext}
-          className="text-base sm:text-xl"
-          style={{
-            position: 'absolute',
-            bottom: '16px',
-            left: '16px',
-            width: 'calc((100% - 32px - 12px) / 2)',
-            height: '48px',
-            backgroundColor: '#059669',
-            color: '#ffffff',
-            border: 'none',
-            outline: 'none',
-            borderRadius: '16px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            zIndex: 10001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            animation: 'textFlash 2s infinite',
-          }}>
-            <FileText size={18} className="sm:w-6 sm:h-6" />
-            Summary
-          </div>
-        </button>
-      )}
-      
-      {/* Special case for home2_close: Close button overlay */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && currentScreen === 'home2_close' && (
-        <button
-          onClick={handleNext}
-          className="text-xs sm:text-sm"
-          style={{
-            position: 'absolute',
-            top: '16px',
-            right: '16px',
-            width: 'calc((100% - 32px - 12px) / 3)',
-            height: '44px',
-            backgroundColor: '#e5e5e5',
-            color: '#000',
-            border: 'none',
-            outline: 'none',
-            borderRadius: '12px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            zIndex: 10001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            animation: 'textFlash 2s infinite',
-          }}>
-            <XCircle size={14} className="sm:w-4 sm:h-4" />
-            Close
-          </div>
-        </button>
-      )}
-      
-      {/* For summary and caseSummary screens: use regular Next button */}
-      {allExplored && !showingInfoBox && currentScreenData.nextScreen && (currentScreen === 'summary' || currentScreen === 'home2') && (
-        <button
-          onClick={handleNext}
-          style={{
-            position: 'absolute',
-            bottom: '5%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '16px 48px',
-            backgroundColor: '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '12px',
-            fontSize: '18px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-            zIndex: 10001,
-          }}
-        >
-          <div style={{ animation: 'textFlash 2s infinite' }}>
-            Next
-          </div>
-        </button>
-      )}
-      
-      {/* Regular Next button for non-special screens */}
-      {allExplored && currentScreenData.nextScreen && currentScreen !== 'intro1' && currentScreen !== 'introWhen' && currentScreen !== 'intro2' && currentScreen !== 'intro3' && currentScreen !== 'patientDetails' && currentScreen !== 'previousTreatments' && currentScreen !== 'timingMethod' && currentScreen !== 'rhythmCheckTiming' && currentScreen !== 'enterElapsedTime' && currentScreen !== 'home1' && currentScreen !== 'addTxMenu' && currentScreen !== 'adrenalineDose' && currentScreen !== 'home2' && currentScreen !== 'home2_summary' && currentScreen !== 'home2_close' && currentScreen !== 'summary' && currentScreen !== 'caseSummary' && (
-        <button
-          onClick={handleNext}
-          style={{
-            position: 'absolute',
-            bottom: '15%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '12px 36px',
-            backgroundColor: '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '17px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-            animation: 'buttonPulse 2s infinite',
-          }}
-        >
-          Next
-        </button>
-      )}
-
-      {/* Finish button - appears on final screen in top-right */}
-      {currentScreen === 'caseSummary' && allExplored && (
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            padding: '12px 24px',
-            backgroundColor: '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-          }}
-        >
-          Finish
-        </button>
-      )}
 
       {activeExplanation && (
         <div
@@ -1428,6 +450,8 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onClose, onTi
               maxWidth: '400px',
               width: '100%',
               boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              maxHeight: '100%',
+              overflowY: 'auto',
             }}
           >
             <h3 style={{

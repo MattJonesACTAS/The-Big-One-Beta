@@ -844,7 +844,6 @@ export default function App() {
   // Which mode's "Learn more" slide is open (opened from the link on its card on the mode page, before committing to it)
   const [aboutMode, setAboutMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [catchupNodeCleared, setCatchupNodeCleared] = useState(false);
-  const [tutorialScreen, setTutorialScreen] = useState({ index: -1, complete: false, nodeIndex: 0 });
   const [tutorialNodeIndex, setTutorialNodeIndex] = useState(0);
   // Which nodes this tutorial is showing and which one it is on. Everything
   // below refers to nodes by their id, so each mode can have its own list
@@ -1121,37 +1120,7 @@ export default function App() {
     }
   }, [tutorialMode, state.patientWeight]);
 
-  // Temporary diagnostic: logs once per relevant change (not every second)
-  // to trace why the recalibrate/weight flash still isn't appearing despite
-  // the index===4 condition and node-advancement mechanism both checking out.
-  // Checks the class after a tick, since this effect is declared before the
-  // one that actually sets it - reading classList synchronously here would
-  // always see last render's (stale) value, not this one's.
   useEffect(() => {
-    if (!tutorialMode) return;
-    const snapshot = {
-      tutorialScreenIndex: tutorialScreen.index,
-      tutorialNodeIndex,
-      showRecalibrateMenu,
-      showWeightChange,
-      patientWeight: state.patientWeight,
-      tutorialInitialWeight: tutorialInitialWeightRef.current,
-      weightUnchanged: state.patientWeight === tutorialInitialWeightRef.current
-    };
-    const timer = setTimeout(() => {
-      console.log('[RECALIBRATE FLASH TRACE]', {
-        ...snapshot,
-        bodyHasFlashClass: document.body.classList.contains('tutorial-flash-recalibrate')
-      });
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [tutorialMode, tutorialScreen.index, tutorialNodeIndex, showRecalibrateMenu, showWeightChange, state.patientWeight]);
-
-  useEffect(() => {
-    console.log('Tutorial screen tracking:', tutorialScreen);
-    console.log('Current overlay:', state.currentOverlay);
-    console.log('Treatments length:', state.treatments.length);
-
     // Every other pulse comes from the node the tutorial is currently waiting
     // on (see flashWhileCurrent in TutorialOverlay.tsx): the previous node has
     // been dismissed and this one appears once its instruction is followed, so
@@ -2224,7 +2193,7 @@ export default function App() {
              <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Close This Case?</h2>
              <p className="text-neutral-500 mb-8">
-               You will return to the welcome page. Only your most recent three cases are saved as a backup, found under 'View previous cases' on the welcome screen.
+               You will return to the welcome page. Only your most recent three cases are saved as a backup, found under 'View Previous Cases' on the welcome screen.
              </p>
              <div className="grid grid-cols-2 gap-3">
                <button onClick={() => setShowCloseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
@@ -2243,7 +2212,6 @@ export default function App() {
             mode={timingMode ?? 'elapsed'}
             onNodeChange={(nodeIndex, done) => {
               setTutorialNodeIndex(nodeIndex);
-              setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
             }}
             onExit={() => {
               setTutorialMode(false);
@@ -2266,14 +2234,8 @@ export default function App() {
       {showInteractiveTutorial && (
         <InteractiveTutorial
           catchupStep={catchupStep}
-          onClose={() => {
-            setShowInteractiveTutorial(false);
-            setTimingNodesComplete(false);
-            setTutorialModeIntro(null);
-            setAboutMode(null);
-            setTutorialMode(true);
-          }}
           mode={timingMode}
+          onExit={exitTutorialToWelcome}
           modeIntroLabel={tutorialModeIntro ? TIMING_MODE_LABELS[tutorialModeIntro] : null}
           onModeIntroNext={() => {
             const chosen = tutorialModeIntro;
@@ -2285,7 +2247,7 @@ export default function App() {
             else if (chosen) setCatchupStep(2);
           }}
           onTimingNodesComplete={() => setTimingNodesComplete(true)}
-          onCatchupNodeStatusChange={(_screen, cleared) => { console.log('[TUTORIAL DEBUG] App.tsx received:', _screen, cleared); setCatchupNodeCleared(cleared); }}
+          onCatchupNodeStatusChange={(_screen, cleared) => { setCatchupNodeCleared(cleared); }}
         />
       )}
 
@@ -2296,7 +2258,7 @@ export default function App() {
             <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.4</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
-              <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. The Big One tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
+              <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. <em>The Big One</em> tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
               <p><strong className="text-neutral-900">Clinical responsibility remains with the treating clinician.</strong> All patient assessment, treatment decisions, and medication administration remain the responsibility of the treating clinician(s). Users must apply their own professional judgement and follow current local clinical guidelines at all times.</p>
               <p><strong className="text-neutral-900">Guideline alignment and verification.</strong> This application is configured to align with ACTAS Clinical Management Guidelines (CMG) v1.1.0.3. Users are responsible for verifying that information displayed by this application aligns with their service's current approved protocols.</p>
               <p><strong className="text-neutral-900">Independent application.</strong> This application is independently developed and is not affiliated with, endorsed by, or approved by any ambulance service, health authority, or regulatory body unless explicitly stated.</p>
@@ -2315,7 +2277,7 @@ export default function App() {
               disabled={!disclaimerChecked}
               className={`w-full py-4 rounded-xl font-bold text-[16px] transition-colors ${disclaimerChecked ? 'bg-emerald-600 text-white' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'}`}
             >
-              Continue to The Big One
+              Continue to <em>The Big One</em>
             </button>
           </div>
         </div>
@@ -2459,7 +2421,6 @@ export default function App() {
                 mode={timingMode ?? 'elapsed'}
                 onNodeChange={(nodeIndex, done) => {
                   setTutorialNodeIndex(nodeIndex);
-                  setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
                 }}
                 onExit={() => {
                   setTutorialMode(false);
@@ -2713,7 +2674,6 @@ export default function App() {
               mode={timingMode ?? 'elapsed'}
               onNodeChange={(nodeIndex, done) => {
                 setTutorialNodeIndex(nodeIndex);
-                setTutorialScreen({ index: nodeIndex, complete: done, nodeIndex });
               }}
               onExit={() => {
                 setTutorialMode(false);
@@ -2875,7 +2835,7 @@ export default function App() {
                   {/* Header with gradient accent */}
                   <div className="space-y-4">
                     <h1 className="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
-                      It's The Big One!
+                      It's <em>The Big One</em>!
                     </h1>
                     <p className="text-lg font-medium text-neutral-600 whitespace-nowrap">
                       Your cardiac arrest management tool
@@ -2916,7 +2876,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One v1.4</p>
+                    <p><em>The Big One</em> v1.4</p>
                     <p>ACTAS CMG v1.1.0.3</p>
                     <p>Last reviewed October 2026</p>
                   </div>
@@ -3106,24 +3066,24 @@ export default function App() {
                         className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                       >
                         <option value="">Select weight</option>
-                        <option value="35">35 kg</option>
-                        <option value="40">40 kg</option>
-                        <option value="50">50 kg</option>
-                        <option value="60">60 kg</option>
-                        <option value="70">70 kg</option>
-                        <option value="80">80 kg</option>
-                        <option value="90">90 kg</option>
-                        <option value="100">100 kg</option>
-                        <option value="110">110 kg</option>
-                        <option value="120">120 kg</option>
-                        <option value="130">130 kg</option>
-                        <option value="140">140 kg</option>
-                        <option value="150">150 kg</option>
-                        <option value="160">160 kg</option>
-                        <option value="170">170 kg</option>
-                        <option value="180">180 kg</option>
-                        <option value="190">190 kg</option>
-                        <option value="200">200 kg</option>
+                        <option value="35">35kg</option>
+                        <option value="40">40kg</option>
+                        <option value="50">50kg</option>
+                        <option value="60">60kg</option>
+                        <option value="70">70kg</option>
+                        <option value="80">80kg</option>
+                        <option value="90">90kg</option>
+                        <option value="100">100kg</option>
+                        <option value="110">110kg</option>
+                        <option value="120">120kg</option>
+                        <option value="130">130kg</option>
+                        <option value="140">140kg</option>
+                        <option value="150">150kg</option>
+                        <option value="160">160kg</option>
+                        <option value="170">170kg</option>
+                        <option value="180">180kg</option>
+                        <option value="190">190kg</option>
+                        <option value="200">200kg</option>
                       </select>
                     </motion.div>
                   )}
@@ -3156,7 +3116,7 @@ export default function App() {
                             ['7 years', 23], ['8 years', 25], ['9 years', 27], ['10 years', 30],
                             ['11 years', 33]
                           ].map(([age, weight]) => (
-                            <option key={age} value={weight}>{age} ({weight} kg)</option>
+                            <option key={age} value={weight}>{age} ({weight}kg)</option>
                           ))}
                         </select>
                       </div>
@@ -3510,7 +3470,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">Pause Timer?</h2>
-            <p className="text-neutral-500 mb-8">The arrest timer will stop until you resume.</p>
+            <p className="text-neutral-500 mb-8">The arrest timer will pause until you resume.</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowPauseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
               <button onClick={togglePause} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Pause</button>
@@ -3621,24 +3581,24 @@ export default function App() {
                 className="w-full bg-white border-2 border-emerald-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               >
                 <option value="">Select weight</option>
-                <option value="35">35 kg</option>
-                <option value="40">40 kg</option>
-                <option value="50">50 kg</option>
-                <option value="60">60 kg</option>
-                <option value="70">70 kg</option>
-                <option value="80">80 kg</option>
-                <option value="90">90 kg</option>
-                <option value="100">100 kg</option>
-                <option value="110">110 kg</option>
-                <option value="120">120 kg</option>
-                <option value="130">130 kg</option>
-                <option value="140">140 kg</option>
-                <option value="150">150 kg</option>
-                <option value="160">160 kg</option>
-                <option value="170">170 kg</option>
-                <option value="180">180 kg</option>
-                <option value="190">190 kg</option>
-                <option value="200">200 kg</option>
+                <option value="35">35kg</option>
+                <option value="40">40kg</option>
+                <option value="50">50kg</option>
+                <option value="60">60kg</option>
+                <option value="70">70kg</option>
+                <option value="80">80kg</option>
+                <option value="90">90kg</option>
+                <option value="100">100kg</option>
+                <option value="110">110kg</option>
+                <option value="120">120kg</option>
+                <option value="130">130kg</option>
+                <option value="140">140kg</option>
+                <option value="150">150kg</option>
+                <option value="160">160kg</option>
+                <option value="170">170kg</option>
+                <option value="180">180kg</option>
+                <option value="190">190kg</option>
+                <option value="200">200kg</option>
               </select>
             ) : (
               <div className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4">
@@ -3662,7 +3622,7 @@ export default function App() {
                       ['7 years', 23], ['8 years', 25], ['9 years', 27], ['10 years', 30],
                       ['11 years', 33]
                     ].map(([age, weight]) => (
-                      <option key={age} value={weight}>{age} ({weight} kg)</option>
+                      <option key={age} value={weight}>{age} ({weight}kg)</option>
                     ))}
                   </select>
                 </div>
@@ -4285,7 +4245,7 @@ function PHEASelection({ checkedItems, onToggle }: { checkedItems: string[], onT
       <SectionGroup title="INITIAL TEAM BRIEF" color="purple" items={['Adequate hands and skills mix?', { label: 'Optimise patient position', subItems: ['Consider relocating patient now to optimal location', 'Apply C-spine immobilisation if required', 'If remaining on scene and resources allow, prepare extrication concurrently'] }, { label: 'Assign roles', subItems: ['Team leader', 'Airway primary', 'Airway assistant', 'Drugs & access primary', 'Drugs & access assistant', 'Gofer'] }]} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="SCENE OPTIMISATION" color="purple" items={['Optimise environment', 'Optimise equipment placement']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="MONITORING" color="purple" items={['ECG', 'BP — cycling', 'SpO₂', 'EtCO₂']} checkedItems={checkedItems} onToggle={onToggle} />
-      <SectionGroup title="DRUGS & ACCESS" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication/s drawn up']} checkedItems={checkedItems} onToggle={onToggle} />
+      <SectionGroup title="DRUGS & ACCESS" color="purple" items={['IV/IO access ×2 if possible', 'IV fluids', 'Ketamine drawn up', 'Suxamethonium drawn up', 'Post PHEA sedation medication(s) drawn up']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup title="AIRWAY" color="purple" items={['Sufficient oxygen available?', 'Pre-oxygenation applied?', 'Suction', 'OPA/NPA', 'LMA', 'BVM', 'Airtraq', 'ETT', 'Syringe', 'Securing method', 'Laryngoscope checked', 'FONA scalpel', 'External laryngeal manipulation discussed', 'Fallback plan discussed']} checkedItems={checkedItems} onToggle={onToggle} />
       <SectionGroup 
         title="POST-INTUBATION" 

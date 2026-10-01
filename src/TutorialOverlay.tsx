@@ -630,7 +630,8 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
           padding: '32px', maxWidth: '400px', width: '90%',
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           zIndex: 10000, pointerEvents: 'auto',
-          overflow: 'hidden'
+          // Scrolls only if it would otherwise run off the screen
+          maxHeight: 'calc(100% - 40px)', overflowX: 'hidden', overflowY: 'auto'
         }}>
           {/* Sliding page content */}
           <div key={pageAnimKey} style={{ animation: 'slideInPage 0.25s ease-out' }}>
