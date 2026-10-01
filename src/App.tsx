@@ -307,6 +307,23 @@ const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
 // at the bottom (matches the difficulty levels in TIMING_MODE_DETAILS).
 const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['minimal', 'log', 'elapsed'];
 
+// The icon for each App Mode: the notepad for the Tx log, the stopwatch for the
+// timers, and both together. Shared by the setup cards and the Change Mode
+// buttons so they always match.
+const ModeIcon = ({ mode, size = 40, dim = false }: { mode: 'log' | 'minimal' | 'elapsed'; size?: number; dim?: boolean }) => {
+  const fade = dim ? 'opacity-40' : '';
+  if (mode === 'log') return <NotebookPen size={size} strokeWidth={1.5} className={`text-neutral-700 ${fade}`} />;
+  if (mode === 'minimal') return <Timer size={size} strokeWidth={1.5} className={`text-emerald-600 ${fade}`} />;
+  const pair = Math.round(size * 0.85);
+  return (
+    <div className={`flex items-center gap-1 ${fade}`}>
+      <NotebookPen size={pair} strokeWidth={1.75} className="text-neutral-700" />
+      <Plus size={Math.round(size * 0.25)} strokeWidth={2.5} className="text-neutral-400" />
+      <Timer size={pair} strokeWidth={1.75} className="text-emerald-600" />
+    </div>
+  );
+};
+
 // What's revealed under whichever App Mode card is selected: a one-line
 // description and how difficult the mode is to use (1 = easiest, 3 = hardest),
 // which is drawn as a low-to-high meter rather than written out. Anything
@@ -790,7 +807,11 @@ export default function App() {
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [showRecalibrateMenu, setShowRecalibrateMenu] = useState(false);
   const [showModeChange, setShowModeChange] = useState(false);
-  const [pendingModeChangeFrom, setPendingModeChangeFrom] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
+  // A switch to a timer mode waits for Done in the Recalibrate step before it takes
+  // effect: only then is the mode changed, saved and logged. Until then the case
+  // is still in its old mode, so a cancel - or the app reloading part-way - leaves
+  // everything exactly as it was.
+  const [stagedMode, setStagedMode] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
   const [stagedElapsedSeconds, setStagedElapsedSeconds] = useState(0);
   const [elapsedManuallyEdited, setElapsedManuallyEdited] = useState(false);
   const [stagedRhythmInterval, setStagedRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds'>('evens');
@@ -2117,10 +2138,9 @@ export default function App() {
       addTreatment(`Mode changed: ${TIMING_MODE_LABELS.log}`);
       return;
     }
-    // The timer modes go via the recalibrate step; the log entry is added when
-    // that's confirmed (and dropped if it's cancelled)
-    setPendingModeChangeFrom(timingMode);
-    setTimingMode(target);
+    // The timer modes go via the recalibrate step; the mode itself changes, and
+    // the log entry is added, only when that's confirmed
+    setStagedMode(target);
     const startingInterval = rhythmInterval || 'evens';
     if (!rhythmInterval) setRhythmInterval(startingInterval);
     setStagedElapsedSeconds(state.elapsedSeconds);
@@ -2129,6 +2149,10 @@ export default function App() {
     setShowModeChange(false);
     setShowElapsedRecalibrate(true);
   };
+
+  // What the Recalibrate step needs to know about the rhythm check right now
+  const recalDelayed = state.rhythmCheckDelayedAt != null;
+  const recalPaused = !!state.rhythmCheckPaused && !recalDelayed;
 
   const requestModeChange = (target: 'log' | 'minimal' | 'elapsed') => {
     if (target !== 'minimal' && state.patientWeight == null) {
@@ -2258,7 +2282,7 @@ export default function App() {
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.4</span></h1>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">v1.5</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Supplementary cognitive aid only.</strong> This application is a consolidated digital alternative to the pen, paper, and stopwatch a clinician would typically use during cardiac arrest management. <em>The Big One</em> tracks multiple timers, records interventions, and displays pre-configured guideline-derived information. It is a documentation, timing, and situational awareness tool only, not a clinical decision-making system, and does not replace clinical judgement, professional training, or your service's approved clinical guidelines and procedures. This application is intended for use by trained clinicians only.</p>
@@ -2879,7 +2903,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One v1.4</p>
+                    <p>The Big One v1.5</p>
                     <p>ACTAS CMG v1.1.0.3</p>
                     <p>Last reviewed October 2026</p>
                   </div>
@@ -3359,19 +3383,7 @@ export default function App() {
                             className="w-full h-[80px] px-4 flex items-center gap-4 text-left"
                           >
                             <div className="w-[88px] flex-shrink-0 flex items-center justify-center">
-                              {mode === 'log' && (
-                                <NotebookPen size={40} strokeWidth={1.5} className="text-neutral-700" />
-                              )}
-                              {mode === 'minimal' && (
-                                <Timer size={40} strokeWidth={1.5} className="text-emerald-600" />
-                              )}
-                              {mode === 'elapsed' && (
-                                <div className="flex items-center gap-1">
-                                  <NotebookPen size={34} strokeWidth={1.75} className="text-neutral-700" />
-                                  <Plus size={10} strokeWidth={2.5} className="text-neutral-400" />
-                                  <Timer size={34} strokeWidth={1.75} className="text-emerald-600" />
-                                </div>
-                              )}
+                              <ModeIcon mode={mode} />
                             </div>
                             <div className="font-bold text-lg text-neutral-900">{TIMING_MODE_LABELS[mode]}</div>
                           </button>
@@ -3695,19 +3707,19 @@ export default function App() {
       {showModeChange && (
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="text-center space-y-1">
-              <h2 className="text-2xl font-bold text-neutral-900">Change Mode</h2>
-              <p className="text-neutral-500 text-sm">How do you want to keep track of rhythm checks from now on?</p>
-            </div>
+            <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Mode</h2>
             <div className="flex flex-col gap-3">
-              {(['log', 'minimal', 'elapsed'] as const).map(mode => (
+              {TIMING_MODE_ORDER.map(mode => (
                 <button
                   key={mode}
                   disabled={timingMode === mode}
                   onClick={() => requestModeChange(mode)}
-                  className={`w-full p-4 rounded-2xl font-bold text-center ${timingMode === mode ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
+                  className={`w-full p-4 rounded-2xl font-bold flex items-center gap-3 text-left ${timingMode === mode ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'}`}
                 >
-                  {TIMING_MODE_LABELS[mode]}
+                  <span className="w-[72px] h-7 flex-shrink-0 flex items-center justify-center">
+                    <ModeIcon mode={mode} size={28} dim={timingMode === mode} />
+                  </span>
+                  <span>{TIMING_MODE_LABELS[mode]}</span>
                 </button>
               ))}
             </div>
@@ -3743,7 +3755,17 @@ export default function App() {
 
             <div>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 text-center">Rhythm Check Interval</p>
-              <div className="grid grid-cols-2 gap-2">
+              {recalDelayed && (
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-center">
+                  A rhythm check is currently delayed. The interval will be reset automatically once it's done.
+                </p>
+              )}
+              {recalPaused && (
+                <p className="text-xs text-neutral-600 bg-neutral-100 rounded-xl p-3 mb-3 text-center">
+                  The rhythm check is currently paused, and will stay paused.
+                </p>
+              )}
+              <div className={`grid grid-cols-2 gap-2 ${recalDelayed ? 'opacity-40 pointer-events-none' : ''}`} aria-disabled={recalDelayed}>
                 {([
                   { key: 'evens',      label: 'Evens',      example: '2:00, 4:00...' },
                   { key: 'odds',       label: 'Odds',       example: '1:00, 3:00...' },
@@ -3753,6 +3775,7 @@ export default function App() {
                   <button
                     key={key}
                     onClick={() => setStagedRhythmInterval(key)}
+                    disabled={recalDelayed}
                     className={`p-3 rounded-xl transition-all duration-200 ${
                       stagedRhythmInterval === key
                         ? 'bg-emerald-500 text-white shadow-md'
@@ -3771,10 +3794,7 @@ export default function App() {
                 onClick={() => {
                   // Discard staged changes entirely - nothing here was ever written to state.
                   setShowElapsedRecalibrate(false);
-                  if (pendingModeChangeFrom !== null) {
-                    setTimingMode(pendingModeChangeFrom);
-                    setPendingModeChangeFrom(null);
-                  }
+                  setStagedMode(null);
                 }}
                 className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base"
               >
@@ -3783,21 +3803,30 @@ export default function App() {
               <button
                 onClick={() => {
                   // Commit staged changes to real state.
-                  const newTarget = calcNextIntervalTarget(stagedElapsedSeconds, stagedRhythmInterval);
-                  setRhythmInterval(stagedRhythmInterval);
-                  setState(prev => ({
-                    ...prev,
-                    elapsedSeconds: stagedElapsedSeconds,
-                    startTime: Date.now(),
-                    pausedTime: stagedElapsedSeconds * 1000,
-                    rhythmCheckTarget: newTarget,
-                    rhythmCheckOvertime: 0
-                  }));
+                  // While a rhythm check is delayed the interval can't be changed (it is
+                  // reset by itself once that check is done), so the current one is kept
+                  const interval = recalDelayed ? (rhythmInterval || 'evens') : stagedRhythmInterval;
+                  const newTarget = calcNextIntervalTarget(stagedElapsedSeconds, interval);
+                  setRhythmInterval(interval);
+                  setState(prev => {
+                    const held = prev.rhythmCheckDelayedAt != null;
+                    return {
+                      ...prev,
+                      elapsedSeconds: stagedElapsedSeconds,
+                      startTime: Date.now(),
+                      pausedTime: stagedElapsedSeconds * 1000,
+                      // A delayed check keeps holding the timer, so its schedule is left alone
+                      ...(held ? {} : { rhythmCheckTarget: newTarget, rhythmCheckOvertime: 0 }),
+                      // A paused countdown stays paused, now frozen at the countdown to the new schedule
+                      ...(prev.rhythmCheckPaused && !held ? { frozenCountdown: Math.max(0, newTarget - stagedElapsedSeconds) } : {}),
+                    };
+                  });
                   setShowElapsedRecalibrate(false);
-                  if (pendingModeChangeFrom !== null && timingMode) {
-                    addTreatment(`Mode changed: ${TIMING_MODE_LABELS[timingMode]}`);
+                  if (stagedMode) {
+                    setTimingMode(stagedMode);
+                    addTreatment(`Mode changed: ${TIMING_MODE_LABELS[stagedMode]}`);
+                    setStagedMode(null);
                   }
-                  setPendingModeChangeFrom(null);
                 }}
                 className="bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
               >
