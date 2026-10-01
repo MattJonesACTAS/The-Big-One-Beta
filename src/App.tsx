@@ -2226,12 +2226,21 @@ export default function App() {
     setStagedMode(target);
     const startingInterval = rhythmInterval || 'evens';
     if (!rhythmInterval) setRhythmInterval(startingInterval);
-    setStagedElapsedSeconds(state.elapsedSeconds);
+    // Coming from Tx log only the clock was never checked against the monitor, so it isn't
+    // offered as a starting point: it starts at 00:00:00 and stays there until the real elapsed
+    // time is entered. (Between the two timer modes the timers were already calibrated, so the
+    // running clock is kept and carries on ticking.)
+    const fromTxLogOnly = timingMode === 'log';
+    setStagedElapsedSeconds(fromTxLogOnly ? 0 : state.elapsedSeconds);
     setStagedRhythmInterval(startingInterval);
-    setElapsedManuallyEdited(false);
+    setElapsedManuallyEdited(fromTxLogOnly); // true stops the live tick
     setShowModeChange(false);
     setShowElapsedRecalibrate(true);
   };
+
+  // Switching from Tx log only: the clock there was never checked against the monitor, so Done stays
+  // unavailable until the monitor's elapsed time has actually been entered (anything above 00:00:00).
+  const needsElapsedEntry = !!stagedMode && timingMode === 'log' && stagedElapsedSeconds === 0;
 
   // What the Recalibrate step needs to know about the rhythm check right now
   const recalDelayed = state.rhythmCheckDelayedAt != null;
@@ -3843,7 +3852,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-bold text-neutral-900">Recalibrate Elapsed Time</h2>
-              <p className="text-neutral-500 text-sm">Adjust elapsed time and rhythm check interval</p>
+              <p className="text-neutral-500 text-sm">{stagedMode && timingMode === 'log' ? 'Enter the elapsed time shown on the monitor' : 'Adjust elapsed time and rhythm check interval'}</p>
             </div>
 
             <div>
@@ -3910,6 +3919,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => {
+                  if (needsElapsedEntry) return;
                   // Commit staged changes to real state.
                   // While a rhythm check is delayed the interval can't be changed (it is
                   // reset by itself once that check is done), so the current one is kept
@@ -3936,7 +3946,8 @@ export default function App() {
                     setStagedMode(null);
                   }
                 }}
-                className="bg-emerald-600 text-white p-4 rounded-xl font-bold btn-base"
+                disabled={needsElapsedEntry}
+                className={`p-4 rounded-xl font-bold btn-base ${needsElapsedEntry ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
               >
                 Done
               </button>
