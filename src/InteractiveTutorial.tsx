@@ -120,7 +120,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
         // The old Getting Started page and the App Mode instruction, combined.
         { id: 'modeChoice', x: 50, y: 50, number: 1, title: 'Getting Started',
           description: "On opening The Big One, you'll need to choose one of three modes.\n\nEach mode has its own tutorial, and it's advised to complete them from top to bottom.\n\nOnce you've seen every mode, it will be up to you to choose which one works best for you.",
-          morePages: ["Each mode option has a 'Learn more' button.\n\nClick on these to gain further insight into each mode's capabilities and when it might be most useful.", { title: "Give it a Go", text: "Choose a mode to begin its tutorial." }] },
+          morePages: ["Each mode option has a 'Learn More' button.\n\nClick on these to gain further insight into each mode's capabilities and when it might be most useful.", { title: "Give it a Go", text: "Choose a mode to begin its tutorial." }] },
       ],
     },
     rhythmCheckTiming: {
@@ -510,7 +510,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
                 cursor: 'pointer',
               }}
             >
-              {activeExplanation.morePages?.length && explanationPage < activeExplanation.morePages.length ? 'Next' : 'Got it'}
+              {activeExplanation.morePages?.length && explanationPage < activeExplanation.morePages.length ? 'Next' : 'Got It'}
             </button>
           </div>
         </div>
@@ -604,7 +604,7 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
                 <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '36px', pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(255,255,255,0), #ffffff)' }} />
               )}
             </div>
-            <button onClick={onClose} style={buttonStyle}>Got it</button>
+            <button onClick={onClose} style={buttonStyle}>Got It</button>
           </>
         ) : (
           <>
@@ -615,7 +615,7 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
               ))}
             </div>
             <button onClick={() => (page < pages.length - 1 ? setPage(page + 1) : onClose())} style={buttonStyle}>
-              {page < pages.length - 1 ? 'Next' : 'Got it'}
+              {page < pages.length - 1 ? 'Next' : 'Got It'}
             </button>
           </>
         )}

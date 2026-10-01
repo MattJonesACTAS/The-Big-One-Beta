@@ -85,7 +85,7 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
       title: 'Select the Outcome',
-      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
       title: 'Give it a Go',
       description: "Choose any red or blue option to continue."
@@ -96,7 +96,7 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoAfterFirst', type: 'popup',
     pages: [{
       title: 'Well Done',
-      description: "Let's do that again, but this time choose 'Delay rhythm check' instead."
+      description: "Let's do that again, but this time choose 'Delay Rhythm Check' instead."
     }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
@@ -107,7 +107,7 @@ const ELAPSED_RAW: RawNode[] = [
       description: "Choose this option if the rhythm check needs to be delayed."
     }, {
       title: 'Give it a Go',
-      description: "Select 'Delay rhythm check' to continue."
+      description: "Select 'Delay Rhythm Check' to continue."
     }],
     condition: (s, sf) => sf === true
   },
@@ -340,7 +340,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('rhythmDemoFirstPopup', {
     pages: [{
       title: 'Select the Outcome',
-      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay rhythm check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
       title: 'Give it a Go',
       description: "Choose 'No ROSC' to continue."
@@ -662,7 +662,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
               fontSize: '16px', fontWeight: '700', cursor: 'pointer'
             }}
           >
-            {isLastPage ? 'Got it' : 'Next'}
+            {isLastPage ? 'Got It' : 'Next'}
           </button>
         </div>
       )}

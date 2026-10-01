@@ -2662,7 +2662,7 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-neutral-900 mb-4">Unscheduled Rhythm Check Added.</h2>
                 <p className="text-neutral-500 mb-2">2:00 countdown restarted.</p>
                 <p className="text-neutral-500 mb-8">Future rhythm checks changed to {patternSwitchNoticeRef.current}.</p>
-                <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got it</button>
+                <button onClick={() => setShowPatternSwitchModal(false)} className="w-full bg-amber-600 p-4 rounded-xl font-bold text-white btn-base">Got It</button>
               </div>
             </div>
           )}
@@ -2838,7 +2838,7 @@ export default function App() {
                   {/* Header with gradient accent */}
                   <div className="space-y-4">
                     <h1 className="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
-                      It's <em>The Big One</em>!
+                      It's The Big One!
                     </h1>
                     <p className="text-lg font-medium text-neutral-600 whitespace-nowrap">
                       Your cardiac arrest management tool
@@ -2879,7 +2879,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p><em>The Big One</em> v1.4</p>
+                    <p>The Big One v1.4</p>
                     <p>ACTAS CMG v1.1.0.3</p>
                     <p>Last reviewed October 2026</p>
                   </div>
@@ -3293,7 +3293,7 @@ export default function App() {
                       onClick={() => setCatchupTxMode(true)}
                       className="w-full p-3 rounded-xl font-bold text-base bg-neutral-100 text-neutral-700 border border-neutral-300 flex items-center justify-center gap-2"
                     >
-                      <Plus size={16} /> Full Tx list
+                      <Plus size={16} /> Full Tx List
                     </button>
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
@@ -3417,7 +3417,7 @@ export default function App() {
                                     onClick={(e) => { e.stopPropagation(); setAboutMode(mode); }}
                                     className="block text-sm font-semibold text-emerald-700 underline underline-offset-2"
                                   >
-                                    Learn more ›
+                                    Learn More ›
                                   </button>
                                 </div>
                               </motion.div>
@@ -3499,7 +3499,7 @@ export default function App() {
               }}
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
-              <div className="text-base">Recalibrate timer</div>
+              <div className="text-base">Recalibrate Timer</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Adjust the current elapsed time or rhythm check interval</div>
             </button>
             )}
@@ -3521,7 +3521,7 @@ export default function App() {
               data-button="change-weight"
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
-              <div className="text-base">Change patient weight</div>
+              <div className="text-base">Change Patient Weight</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {state.patientWeight}kg</div>
             </button>
             )}
@@ -3532,7 +3532,7 @@ export default function App() {
               }}
               className="w-full p-4 rounded-2xl bg-neutral-100 text-neutral-800 font-bold text-center"
             >
-              <div className="text-base">Change mode</div>
+              <div className="text-base">Change Mode</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode ? TIMING_MODE_LABELS[timingMode] : '—'}</div>
             </button>
             <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
@@ -4072,7 +4072,7 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
               className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-800 font-bold text-base btn-base hover:bg-amber-100 ${delayOff ? 'cursor-not-allowed' : ''}`}
             >
               <Hourglass size={20} strokeWidth={2.5} />
-              Delay rhythm check
+              Delay Rhythm Check
             </button>
           </div>
         )}
@@ -5243,7 +5243,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
                 style={delayDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
               >
                 <Hourglass size={16} strokeWidth={2.5} />
-                Delay rhythm check
+                Delay Rhythm Check
               </button>
             );
           })()}
