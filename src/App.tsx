@@ -399,6 +399,28 @@ const getLocalTimeWithSeconds = (date?: Date) => {
   return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 };
 
+// A rhythm check that came due but whose popup was never answered: nothing was logged
+// for it. Rather than leave a gap in the log (while the round count moves on), this entry
+// is added when the app moves on - the 0:20 return to the home screen, or the next check
+// coming due. It is stamped with the time the check was due, in its place in the log.
+const NOTHING_LOGGED_NAME = 'Rhythm check, nothing logged';
+const withNothingLoggedEntry = (prev: AppState, newElapsed: number, dueAt: number | null, nowMs: number): Treatment[] => {
+  const due = dueAt ?? newElapsed;
+  const at = new Date(nowMs - Math.max(0, newElapsed - due) * 1000);
+  const entry: Treatment = {
+    name: NOTHING_LOGGED_NAME,
+    elapsed: due,
+    round: prev.cprRound,
+    clock: getLocalTime(at),
+    clockSeconds: getLocalTimeWithSeconds(at),
+    loggedAt: at.getTime()
+  };
+  const list = [...prev.treatments];
+  const i = list.findIndex(t => t.elapsed > due);
+  if (i === -1) list.push(entry); else list.splice(i, 0, entry);
+  return list;
+};
+
 // Medications that carry a dose/detail suffix after the drug name, used both
 // for identity-matching (numbering repeats) and for splitting the med from
 // its dose in the treatment log display.
@@ -829,6 +851,9 @@ export default function App() {
   const loggedTreatmentRef = useRef<string>('');
   const patternSwitchNoticeRef = useRef<string | null>(null);
   const [isShockForced, setIsShockForced] = useState(false);
+  // The timer's interval can't see this state directly, so it reads this copy
+  const isShockForcedRef = useRef(false);
+  isShockForcedRef.current = isShockForced;
   const [rearrested, setRearrested] = useState(false);
   const [editingTreatmentIndex, setEditingTreatmentIndex] = useState<number | null>(null);
 
@@ -1350,6 +1375,7 @@ export default function App() {
           let nextTarget = prev.rhythmCheckTarget;
           let nextRound = prev.cprRound;
           let nextOverlay = prev.currentOverlay;
+          let nextTreatments = prev.treatments;
           let nextOvertime = prev.rhythmCheckOvertime;
           let nextPaused = prev.rhythmCheckPaused;
           
@@ -1363,6 +1389,11 @@ export default function App() {
             if (countdown === 20 && !hasAutoClosedAt10.current && tutorialAutoCloseOK) {
               nextOverlay = null;
               hasAutoClosedAt10.current = true;
+              // Back to the home screen with the last check's popup still unanswered
+              if (isShockForcedRef.current && !tutorialMode && !showCatchup) {
+                nextTreatments = withNothingLoggedEntry(prev, newElapsed, rhythmCheckDueAtRef.current, now);
+                setIsShockForced(false);
+              }
             }
 
             // Beep logic: beep each second from 10s to 5s in both modes
@@ -1376,12 +1407,21 @@ export default function App() {
             // Handle rhythm check reaching 0:00
             if (countdown <= 0) {
               if ((timingMode === 'elapsed' || timingMode === 'minimal') && rhythmInterval) {
-                // Elapsed/minimal mode: fire overlay immediately at rhythm check time, no overtime phase
-                if (countdown === 0) {
+                // Elapsed/minimal mode: fire overlay immediately at rhythm check time, no overtime phase.
+                // A tick can skip straight past 0:00 - the screen locked, the app was left, or it was
+                // closed and reopened - so a check that is already overdue (countdown below 0) counts as
+                // due right now, instead of never firing at all. (Not in the tutorial, which times its
+                // own rhythm checks.) The check's own due time is kept, so a delay shows how late it is.
+                if (countdown === 0 || (countdown < 0 && !tutorialMode)) {
+                  // The next check is due while the last one's popup is still unanswered
+                  // (e.g. the app was frozen across the 0:20 return): note it first
+                  if (isShockForcedRef.current && !tutorialMode && !showCatchup) {
+                    nextTreatments = withNothingLoggedEntry(prev, newElapsed, rhythmCheckDueAtRef.current, now);
+                  }
                   if (!showCatchup && tutorialPopupAtZeroOK) {
                     nextOverlay = 'treatment';
                     setIsShockForced(true);
-                    rhythmCheckDueAtRef.current = newElapsed;
+                    rhythmCheckDueAtRef.current = prev.rhythmCheckTarget;
                   }
                   nextTarget = calcNextIntervalTarget(newElapsed, rhythmInterval);
                   nextRound += 1;
@@ -1417,6 +1457,7 @@ export default function App() {
           return {
             ...prev,
             elapsedSeconds: newElapsed,
+            treatments: nextTreatments,
             rhythmCheckTarget: nextTarget,
             rhythmCheckOvertime: nextOvertime,
             rhythmCheckPaused: nextPaused,
@@ -1428,6 +1469,36 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [state.running, timingMode, rhythmInterval, tutorialMode, tutorialAutoCloseOK, tutorialPopupAtZeroOK, showCatchup]);
+
+  // Keep the screen awake while a case is running, so the phone doesn't lock part-way
+  // through (a locked screen stops the timers ticking). It's only a request: the phone
+  // can refuse (e.g. Low Power Mode) and the request is dropped whenever the app is left,
+  // so it's made again each time the app comes back to the front.
+  useEffect(() => {
+    if (!state.running) return;
+    const wakeLock = (navigator as any).wakeLock;
+    if (!wakeLock || typeof wakeLock.request !== 'function') return;
+    let sentinel: any = null;
+    let stopped = false;
+    const acquire = async () => {
+      if (stopped || sentinel || document.visibilityState !== 'visible') return;
+      try {
+        const lock = await wakeLock.request('screen');
+        if (stopped) { try { lock.release?.(); } catch { /* already released */ } return; }
+        sentinel = lock;
+        lock.addEventListener?.('release', () => { if (sentinel === lock) sentinel = null; });
+      } catch { /* refused by the phone - nothing more to do */ }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') acquire(); };
+    acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      try { sentinel?.release?.(); } catch { /* already released */ }
+      sentinel = null;
+    };
+  }, [state.running]);
 
   const togglePause = () => {
     setState(prev => {
