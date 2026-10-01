@@ -23,11 +23,11 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     version: 'v1.5',
     items: [
-      'Three modes to suit different cases: Timers only, Tx log only, and Tx log & timers. You can switch between them during a case.',
-      'A rebuilt tutorial, with a separate guided walkthrough for each mode, and a Learn More button on each mode card.',
-      'Rhythm checks are no longer missed if the screen locks or the app is left. The popup appears when you return, and a check you didn\u2019t answer is logged as \u201CRhythm check, nothing logged\u201D.',
-      'The screen now stays on during a case, on phones that allow it.',
-      'Aligned with ACTAS CMG v1.1.0.3, plus wording and spelling corrections.',
+      "New app mode 'Timers Only' added as a simpler alternative version",
+      "Significant update to the tutorial, which now walks you through all three mode types separately",
+      "'Delay rhythm check' button added",
+      "Clearer differentiation between adrenaline and amiodarone timers to reduce confusion",
+      "Screen now stays on if app is open",
     ],
   },
 ];
