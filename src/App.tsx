@@ -2142,6 +2142,7 @@ export default function App() {
       // wouldn't catch it - that effect only fires when the local timingMode/
       // rhythmInterval themselves change, and they don't change here.
       timingMode,
+      elapsedCalibrated: timingMode === 'elapsed' || timingMode === 'minimal',
       rhythmInterval,
     });
     
@@ -2216,6 +2217,8 @@ export default function App() {
   const beginModeChange = (target: 'log' | 'minimal' | 'elapsed') => {
     if (target === 'log') {
       // No timer to recalibrate, so it takes effect straight away
+      // (A case saved before elapsedCalibrated existed was calibrated if it was in a timer mode)
+      if (state.elapsedCalibrated === undefined && timingMode !== 'log') setState(prev => ({ ...prev, elapsedCalibrated: true }));
       setTimingMode('log');
       setShowModeChange(false);
       addTreatment(`Mode changed: ${TIMING_MODE_LABELS.log}`);
@@ -2226,11 +2229,12 @@ export default function App() {
     setStagedMode(target);
     const startingInterval = rhythmInterval || 'evens';
     if (!rhythmInterval) setRhythmInterval(startingInterval);
-    // Coming from Tx log only the clock was never checked against the monitor, so it isn't
+    // Coming from Tx log only with a clock that was never checked against the monitor, it isn't
     // offered as a starting point: it starts at 00:00:00 and stays there until the real elapsed
-    // time is entered. (Between the two timer modes the timers were already calibrated, so the
-    // running clock is kept and carries on ticking.)
-    const fromTxLogOnly = timingMode === 'log';
+    // time is entered. Otherwise (between the two timer modes, or back from Tx log only once the
+    // time has been entered) the clock was already calibrated and kept running, so it's kept and
+    // carries on ticking.
+    const fromTxLogOnly = timingMode === 'log' && !state.elapsedCalibrated;
     setStagedElapsedSeconds(fromTxLogOnly ? 0 : state.elapsedSeconds);
     setStagedRhythmInterval(startingInterval);
     setElapsedManuallyEdited(fromTxLogOnly); // true stops the live tick
@@ -2238,9 +2242,9 @@ export default function App() {
     setShowElapsedRecalibrate(true);
   };
 
-  // Switching from Tx log only: the clock there was never checked against the monitor, so Done stays
+  // Switching from Tx log only with a clock that was never checked against the monitor: Done stays
   // unavailable until the monitor's elapsed time has actually been entered (anything above 00:00:00).
-  const needsElapsedEntry = !!stagedMode && timingMode === 'log' && stagedElapsedSeconds === 0;
+  const needsElapsedEntry = !!stagedMode && timingMode === 'log' && !state.elapsedCalibrated && stagedElapsedSeconds === 0;
 
   // What the Recalibrate step needs to know about the rhythm check right now
   const recalDelayed = state.rhythmCheckDelayedAt != null;
@@ -3852,7 +3856,7 @@ export default function App() {
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-bold text-neutral-900">Recalibrate Elapsed Time</h2>
-              <p className="text-neutral-500 text-sm">{stagedMode && timingMode === 'log' ? 'Enter the elapsed time shown on the monitor' : 'Adjust elapsed time and rhythm check interval'}</p>
+              <p className="text-neutral-500 text-sm">{stagedMode && timingMode === 'log' && !state.elapsedCalibrated ? 'Enter the elapsed time shown on the monitor' : 'Adjust elapsed time and rhythm check interval'}</p>
             </div>
 
             <div>
@@ -3930,6 +3934,7 @@ export default function App() {
                     const held = prev.rhythmCheckDelayedAt != null;
                     return {
                       ...prev,
+                      elapsedCalibrated: true,
                       elapsedSeconds: stagedElapsedSeconds,
                       startTime: Date.now(),
                       pausedTime: stagedElapsedSeconds * 1000,
