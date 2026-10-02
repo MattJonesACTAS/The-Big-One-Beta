@@ -304,8 +304,18 @@ body.tutorial-flash-close [data-button="close-case"] {
   animation: adrenalineFlash 1.5s infinite;
 }
 
-body.tutorial-flash-adrenaline-tx [data-tx="adrenaline-push"] {
-  animation: adrenalineFlash 1.5s infinite;
+/* The adrenaline push's three-dot button (the way into Edit / Reorder / Delete) flashes red,
+   fast and growing - far harder to miss than the slow fade the other tutorial prompts use.
+   The row itself no longer flashes. */
+@keyframes tutorialDotsFlash {
+  0%, 100% { background-color: #ef4444; color: #ffffff; transform: scale(1.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.85); }
+  50%      { background-color: #fecaca; color: #b91c1c; transform: scale(1);   box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+body.tutorial-flash-adrenaline-tx [data-tx-more="adrenaline-push"] {
+  position: relative;
+  z-index: 2;
+  animation: tutorialDotsFlash 0.7s ease-in-out infinite;
 }
 
 @keyframes flashRed {
