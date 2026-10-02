@@ -2502,6 +2502,7 @@ export default function App() {
             setRoscButtonFlashing(false);
             setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'rosc' ? null : 'rosc' }))
           }}
+          data-button="rosc"
           disabled={isShockForced || tutorialRhythmDemoActive}
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors ${
             state.currentOverlay === 'rosc' ? 'bg-red-100 text-red-800' : 
@@ -5574,6 +5575,7 @@ function TxSection({
     <div>
       <div 
         data-tutorial-anchor="tx-section-header"
+        data-tx-section={sectionId}
         onClick={handleToggle}
         className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${colorMap[color]}`}
       >

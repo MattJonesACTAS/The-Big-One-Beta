@@ -174,7 +174,7 @@ const ELAPSED_RAW: RawNode[] = [
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
-    id: 'tabs', type: 'positioned', x: 50, y: 10.97, anchor: '[data-tutorial-anchor="checklist-row"]',
+    id: 'tabs', type: 'positioned', x: 37.5, y: 10.97, anchor: '[data-button="rosc"]',
     pages: [{ title: 'Checklists', description: 'Quick access to checklists for:\n\n• Reversible causes of arrest\n\n• ROSC\n\n• PHEA\n\nYou will notice the 4H 4T checklist starts out flashing red.\n\nThis encourages early management of the reversible causes of arrest.\n\nThe ROSC checklist works the same way: it goes red when ROSC mode is activated.' }, { title: 'Give it a Go', description: 'Open the 4H 4T checklist and tick one off to continue.' }],
     condition: (s, sf, initialWeight) => s.running && s.currentOverlay === null && !sf && initialWeight != null && s.patientWeight !== initialWeight
   },
@@ -205,7 +205,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   // --- Treatment screen ---
   {
-    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 36.08, anchor: '[data-tutorial-anchor="add-tx-submenu"]',
+    id: 'addTxSubmenu', type: 'positioned', x: 50, y: 36.08, anchor: '[data-tx-section="airway"]',
     pages: [
       {
         title: 'Add Tx Submenu',
@@ -408,6 +408,8 @@ const MINIMAL_NODES: RawNode[] = [
     }]
   }),
   withOverrides('addTxSubmenu', {
+    // Timers only has no Airway section, so this marker stays on the submenu itself
+    anchor: '[data-tutorial-anchor="add-tx-submenu"]',
     pages: [{
       title: 'Add Tx Submenu',
       description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (No ROSC and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode."
