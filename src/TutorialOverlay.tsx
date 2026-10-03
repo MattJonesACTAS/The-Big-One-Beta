@@ -40,6 +40,9 @@ export interface GlobalNode {
 
 type RawNode = Omit<GlobalNode, 'displayNumber'>;
 
+// How long the rhythm check popup shows on its own before its tutorial slide covers it
+const RHYTHM_REVEAL_DELAY_MS = 1500;
+
 // The VSS tab node's pages; only the last line of the second page differs by mode.
 function vssTabPages(whereShown: string): NodePage[] {
   return [{
@@ -101,7 +104,7 @@ const ELAPSED_RAW: RawNode[] = [
     id: 'rhythmDemoFirstPopup', type: 'popup',
     pages: [{
       title: 'Select the Outcome',
-      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+      description: "When the countdown reached 0:00, the 'rhythm check popup' appeared.\n\nYou use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
       title: 'Give it a Go',
       description: "Choose any red or blue option to continue."
@@ -373,7 +376,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('rhythmDemoFirstPopup', {
     pages: [{
       title: 'Select the Outcome',
-      description: "Once the countdown reaches 0:00, the 'rhythm check popup' will appear.\n\nWhen it does, you will use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+      description: "When the countdown reached 0:00, the 'rhythm check popup' appeared.\n\nYou use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
       title: 'Give it a Go',
       description: "Choose 'No ROSC' to continue."
@@ -576,13 +579,26 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     ? (currentNode.condition ? currentNode.condition(appState, isShockForced, initialWeightRef.current) : true)
     : false;
 
-  // Auto-show popup when condition met
+  // Auto-show popup when condition met. The four slides that sit over the real
+  // rhythm check popup wait RHYTHM_REVEAL_DELAY_MS first, so the user sees that
+  // popup arrive before the slide covers it. While waiting, taps are blocked
+  // (see revealPending below) so an outcome can't be chosen before the slide shows.
+  const [revealPending, setRevealPending] = useState(false);
   useEffect(() => {
-    if (currentNode?.type === 'popup' && conditionMet && !activePopup) {
+    if (!(currentNode?.type === 'popup' && conditionMet && !activePopup)) {
+      setRevealPending(false);
+      return;
+    }
+    const show = () => {
+      setRevealPending(false);
       setActivePopup(currentNode);
       setCurrentPageIndex(0);
       setPageAnimKey(k => k + 1);
-    }
+    };
+    if (!showsDuringRhythmCheck) { show(); return; }
+    setRevealPending(true);
+    const t = setTimeout(show, RHYTHM_REVEAL_DELAY_MS);
+    return () => clearTimeout(t);
   }, [currentNode?.id, conditionMet]);
 
   // Dismiss active popup during rhythm check window
@@ -622,6 +638,11 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
 
   return (
     <div data-tutorial-ui="true" style={{ position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none' }}>
+
+      {/* Invisible tap blocker while a rhythm check slide is waiting to appear */}
+      {revealPending && (
+        <div data-tutorial-reveal-blocker="true" style={{ position: 'absolute', inset: 0, zIndex: 9999, pointerEvents: 'auto' }} />
+      )}
 
       {/* Dark backdrop */}
       {showDarkOverlay && (
