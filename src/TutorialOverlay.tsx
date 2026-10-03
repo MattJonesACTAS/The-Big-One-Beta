@@ -18,6 +18,8 @@ export interface TutorialFlashContext {
   showWeightChange: boolean;
   weightUnchanged: boolean;
   adrenalineHandled: boolean;
+  intervalUnchanged: boolean;
+  showElapsedRecalibrate: boolean;
 }
 
 export interface GlobalNode {
@@ -31,7 +33,7 @@ export interface GlobalNode {
   // otherwise it falls back to the x/y percentages.
   anchor?: string;
   pages: NodePage[];
-  condition?: (appState: any, isShockForced?: boolean, initialPatientWeight?: number | null) => boolean;
+  condition?: (appState: any, isShockForced?: boolean, initialPatientWeight?: number | null, intervalBaseline?: string | null) => boolean;
   // While this node is the one the tutorial is waiting on (i.e. the previous
   // node has been dismissed and this one's condition isn't met yet), which
   // body classes to switch on so the right button pulses. Returns class names.
@@ -173,7 +175,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
-    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Give it a Go', description: "Change the patient's weight to move forward." }],
+    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Give it a Go', description: "Change the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
@@ -352,7 +354,7 @@ export const TUTORIAL_FLASH_CLASSES = [
   'tutorial-flash-adrenaline', 'tutorial-flash-dose', 'tutorial-flash-summary',
   'tutorial-flash-adrenaline-tx', 'tutorial-flash-summary-close', 'tutorial-flash-end',
   'tutorial-flash-close',
-];
+, 'tutorial-flash-recalibrate-timer'];
 
 const ELAPSED_NODES: RawNode[] = ELAPSED_RAW.map(n => FLASH[n.id] ? { ...n, flashWhileCurrent: FLASH[n.id] } : n);
 const nodeById = (id: string): RawNode => {
@@ -391,13 +393,18 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
-      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the app mode"
-    }]
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval\n\n• Change the app mode"
+    }, { title: 'Give it a Go', description: "Change the rhythm check interval to move forward." }]
   }),
-  // no patient weight in this mode, so nothing to wait for before checklists
+  // no patient weight in this mode, so the checklists wait for a real rhythm check interval change instead
   withOverrides('tabs', {
-    condition: (s, sf) => s.running && s.currentOverlay === null && !sf,
-    flashWhileCurrent: undefined
+    condition: (s, sf, _w, intervalBaseline) => s.running && s.currentOverlay === null && !sf && intervalBaseline != null && s.rhythmInterval !== intervalBaseline,
+    flashWhileCurrent: (c) => {
+      if (!c.intervalUnchanged) return [];
+      if (!c.showRecalibrateMenu && !c.showElapsedRecalibrate) return ['tutorial-flash-recalibrate'];
+      if (c.showRecalibrateMenu) return ['tutorial-flash-recalibrate-timer'];
+      return [];
+    }
   }),
   nodeById('closeChecklist'),
   withOverrides('vssTab', { pages: vssTabPages("Your values appear on the case summary when the case is closed, which we'll see later.") }),
@@ -519,9 +526,13 @@ interface Props {
   isCaseClosed?: boolean;
   globalNodeIndex?: number;
   mode?: TutorialMode;
+  // True while one of the app's own menus (Recalibrate, Change Mode, warnings...) is open: the
+  // waiting node's marker then hides behind it instead of floating on top
+  appModalOpen?: boolean;
+  intervalBaseline?: string | null;
 }
 
-export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed' }: Props) {
+export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed', appModalOpen = false, intervalBaseline = null }: Props) {
   const ALL_NODES = getTutorialNodes(mode);
   const [internalNodeIndex, setInternalNodeIndex] = useState(externalNodeIndex);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
@@ -576,7 +587,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   const inRhythmCheckWindow = appState.running && isShockForced && !showsDuringRhythmCheck;
 
   const conditionMet = !inRhythmCheckWindow && currentNode
-    ? (currentNode.condition ? currentNode.condition(appState, isShockForced, initialWeightRef.current) : true)
+    ? (currentNode.condition ? currentNode.condition(appState, isShockForced, initialWeightRef.current, intervalBaseline) : true)
     : false;
 
   // Auto-show popup when condition met. The four slides that sit over the real
@@ -654,7 +665,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
       )}
 
       {/* Positioned node circle */}
-      {currentNode?.type === 'positioned' && conditionMet && !activePositioned && !tutorialDone && (
+      {currentNode?.type === 'positioned' && conditionMet && !activePositioned && !tutorialDone && !appModalOpen && (
         <div
           onClick={handleNodeClick}
           style={{
