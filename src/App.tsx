@@ -1374,36 +1374,72 @@ export default function App() {
     !viewingPreviousCase && !showPreviousCasesList && !tutorialMode;
 
   // --- Phone back button ---
-  // Anywhere except the welcome screen, one extra history entry is kept in place so that the
-  // phone's back button lands on it instead of closing the app. Each back press then steps back
-  // one layer using the same logic as the on-screen Back / Cancel buttons (handleBackRef below),
-  // and the entry is put back. On the welcome screen no entry is kept, so back closes the app.
+  // Anywhere except the welcome screen, one extra history entry sits in front of the app's own
+  // entry, so the phone's back button lands on it instead of closing the app. Each back press
+  // steps back one layer using the same logic as the on-screen Back / Cancel buttons
+  // (handleBackRef below). On the welcome screen no entry is kept, so back closes the app.
+  //
+  // Why the entry is put back with history.go(1) and not a new pushState: Chrome's back button
+  // skips any history entry the page added without a fresh tap behind it, and a back press is not
+  // a tap. So an entry pushed from the back handler gets skipped, and the second back press in a
+  // row would close the app. Stepping forward onto the entry we already made is never skipped.
   const backTrapActive = !onWelcomeScreen || showInteractiveTutorial || !!aboutMode;
   const backTrapActiveRef = useRef(false);
   backTrapActiveRef.current = backTrapActive;
-  // Our extra history entry is currently in place. Starts true when the page loads sitting on one
-  // (closing a case reloads the page, and a reload keeps the entry), so it's reused or removed
-  // instead of forgotten - otherwise the welcome screen would need two back presses to exit.
-  const backSentinelRef = useRef(typeof window !== 'undefined' && !!window.history.state?.bigOneBackTrap);
-  const backIgnorePopRef = useRef(false);     // the next popstate is us removing that entry
-  const backArmedRef = useRef(false);         // waiting for a first tap before adding the entry
+  // Our extra entry exists, and we're sitting on it. Both start true when the page loads sitting
+  // on one (closing a case reloads the page, and a reload keeps the entry), so it's reused or
+  // removed instead of forgotten - otherwise the welcome screen would need two back presses to exit.
+  const backExistsRef = useRef(typeof window !== 'undefined' && !!window.history.state?.bigOneBackTrap);
+  const backAtSentinelRef = useRef(backExistsRef.current);
+  const backFreshRef = useRef(false);          // a real tap has happened since the last back/forward move
+  const backIgnorePopsRef = useRef(0);         // popstate events caused by our own history.go() calls
+  const backIgnoreUntilRef = useRef(0);
+  const backArmedRef = useRef(false);          // waiting for a tap before adding the entry
   const handleBackRef = useRef<() => void>(() => {});
 
+  // History moves are done one at a time: the browser drops a second history.go() made before the
+  // first one has finished (e.g. stepping back onto our entry and then straight off it again).
+  const backQueueRef = useRef<number[]>([]);
+  const backBusyRef = useRef(false);
+  const backPump = () => {
+    if (backBusyRef.current) return;
+    const delta = backQueueRef.current.shift();
+    if (delta === undefined) return;
+    backBusyRef.current = true;
+    backIgnorePopsRef.current += 1;
+    backIgnoreUntilRef.current = Date.now() + 1500;
+    window.history.go(delta);
+    // If the move never reports back (nothing to move to), don't stay stuck
+    window.setTimeout(() => {
+      if (backBusyRef.current && Date.now() >= backIgnoreUntilRef.current) {
+        backBusyRef.current = false;
+        backIgnorePopsRef.current = 0;
+        backPump();
+      }
+    }, 1600);
+  };
+  const backGo = (delta: number) => { backQueueRef.current.push(delta); backPump(); };
+
   const addBackSentinel = () => {
-    if (backSentinelRef.current) return;
-    // Browsers skip history entries added before the person has touched the page, so on a
-    // fresh start (e.g. reopening mid-case) wait for the first tap.
-    const ua = (navigator as any).userActivation;
-    if (ua && !ua.hasBeenActive) {
+    if (backExistsRef.current) {
+      if (!backAtSentinelRef.current) { backAtSentinelRef.current = true; backGo(1); }
+      return;
+    }
+    // Chrome only keeps an entry that was added with a fresh tap behind it (a back/forward move
+    // uses the tap up), so on a fresh start, or after a back press, wait for the next tap.
+    if (!backFreshRef.current) {
       if (backArmedRef.current) return;
       backArmedRef.current = true;
-      const arm = () => {
+      const arm = (e: Event) => {
+        if (!e.isTrusted) return;
         window.removeEventListener('pointerup', arm, true);
         window.removeEventListener('keydown', arm, true);
         backArmedRef.current = false;
-        if (backTrapActiveRef.current && !backSentinelRef.current) {
+        backFreshRef.current = true;
+        if (backTrapActiveRef.current && !backExistsRef.current) {
           window.history.pushState({ bigOneBackTrap: true }, '');
-          backSentinelRef.current = true;
+          backExistsRef.current = true;
+          backAtSentinelRef.current = true;
         }
       };
       window.addEventListener('pointerup', arm, true);
@@ -1411,30 +1447,47 @@ export default function App() {
       return;
     }
     window.history.pushState({ bigOneBackTrap: true }, '');
-    backSentinelRef.current = true;
+    backExistsRef.current = true;
+    backAtSentinelRef.current = true;
+  };
+
+  const removeBackSentinel = () => {
+    if (!backExistsRef.current) return;
+    if (backAtSentinelRef.current) { backAtSentinelRef.current = false; backGo(-1); }
+    backExistsRef.current = false;
   };
 
   useEffect(() => {
-    if (backTrapActive) {
-      addBackSentinel();
-    } else if (backSentinelRef.current) {
-      backSentinelRef.current = false;
-      backIgnorePopRef.current = true;
-      window.history.back();
-    }
+    if (backTrapActive) addBackSentinel(); else removeBackSentinel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backTrapActive]);
 
   useEffect(() => {
+    const mark = (e: Event) => { if (e.isTrusted) backFreshRef.current = true; };
+    const evs = ['pointerup', 'keydown', 'touchend', 'click'];
+    evs.forEach(t => window.addEventListener(t, mark, true));
     const onPop = () => {
-      if (backIgnorePopRef.current) { backIgnorePopRef.current = false; return; }
-      backSentinelRef.current = false;           // the browser just used up our entry
-      if (!backTrapActiveRef.current) return;    // welcome screen: back works as normal
+      backFreshRef.current = false;              // a back/forward move uses up the last tap
+      if (backIgnorePopsRef.current > 0 && Date.now() < backIgnoreUntilRef.current) {
+        backIgnorePopsRef.current -= 1;
+        backBusyRef.current = false;
+        backPump();                              // start the next queued move, if any
+        return;
+      }
+      backIgnorePopsRef.current = 0;
+      const onSentinel = !!window.history.state?.bigOneBackTrap;
+      backAtSentinelRef.current = onSentinel;
+      if (onSentinel) return;                    // moved forward onto our entry: nothing to do
+      // Back was pressed and we landed on the app's own entry
+      if (!backTrapActiveRef.current) { backExistsRef.current = false; return; }   // welcome screen: back works as normal
       handleBackRef.current();
-      addBackSentinel();
+      if (backExistsRef.current) { backAtSentinelRef.current = true; backGo(1); }  // step back onto our entry
     };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    return () => {
+      evs.forEach(t => window.removeEventListener(t, mark, true));
+      window.removeEventListener('popstate', onPop);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
