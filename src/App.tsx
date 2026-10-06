@@ -1373,6 +1373,122 @@ export default function App() {
     !state.running && !isCaseClosed &&
     !viewingPreviousCase && !showPreviousCasesList && !tutorialMode;
 
+  // --- Phone back button ---
+  // Anywhere except the welcome screen, one extra history entry is kept in place so that the
+  // phone's back button lands on it instead of closing the app. Each back press then steps back
+  // one layer using the same logic as the on-screen Back / Cancel buttons (handleBackRef below),
+  // and the entry is put back. On the welcome screen no entry is kept, so back closes the app.
+  const backTrapActive = !onWelcomeScreen || showInteractiveTutorial || !!aboutMode;
+  const backTrapActiveRef = useRef(false);
+  backTrapActiveRef.current = backTrapActive;
+  // Our extra history entry is currently in place. Starts true when the page loads sitting on one
+  // (closing a case reloads the page, and a reload keeps the entry), so it's reused or removed
+  // instead of forgotten - otherwise the welcome screen would need two back presses to exit.
+  const backSentinelRef = useRef(typeof window !== 'undefined' && !!window.history.state?.bigOneBackTrap);
+  const backIgnorePopRef = useRef(false);     // the next popstate is us removing that entry
+  const backArmedRef = useRef(false);         // waiting for a first tap before adding the entry
+  const handleBackRef = useRef<() => void>(() => {});
+
+  const addBackSentinel = () => {
+    if (backSentinelRef.current) return;
+    // Browsers skip history entries added before the person has touched the page, so on a
+    // fresh start (e.g. reopening mid-case) wait for the first tap.
+    const ua = (navigator as any).userActivation;
+    if (ua && !ua.hasBeenActive) {
+      if (backArmedRef.current) return;
+      backArmedRef.current = true;
+      const arm = () => {
+        window.removeEventListener('pointerup', arm, true);
+        window.removeEventListener('keydown', arm, true);
+        backArmedRef.current = false;
+        if (backTrapActiveRef.current && !backSentinelRef.current) {
+          window.history.pushState({ bigOneBackTrap: true }, '');
+          backSentinelRef.current = true;
+        }
+      };
+      window.addEventListener('pointerup', arm, true);
+      window.addEventListener('keydown', arm, true);
+      return;
+    }
+    window.history.pushState({ bigOneBackTrap: true }, '');
+    backSentinelRef.current = true;
+  };
+
+  useEffect(() => {
+    if (backTrapActive) {
+      addBackSentinel();
+    } else if (backSentinelRef.current) {
+      backSentinelRef.current = false;
+      backIgnorePopRef.current = true;
+      window.history.back();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backTrapActive]);
+
+  useEffect(() => {
+    const onPop = () => {
+      if (backIgnorePopRef.current) { backIgnorePopRef.current = false; return; }
+      backSentinelRef.current = false;           // the browser just used up our entry
+      if (!backTrapActiveRef.current) return;    // welcome screen: back works as normal
+      handleBackRef.current();
+      addBackSentinel();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  handleBackRef.current = () => {
+    // 1. Layers owned by other components (tutorial slides, delete confirmation, reorder mode)
+    //    say so by marking this event handled.
+    const ev = new CustomEvent('bigone:back', { detail: { handled: false } });
+    window.dispatchEvent(ev);
+    if (ev.detail.handled) return;
+
+    // 2. Warnings and notices: back works like their Cancel / OK
+    if (showTutorialModeBlocked) { setShowTutorialModeBlocked(false); return; }
+    if (showCloseWarning) { setShowCloseWarning(false); return; }
+    if (showEndWarning) { setShowEndWarning(false); return; }
+    if (showPauseWarning) { setShowPauseWarning(false); return; }
+    if (showResetWarning) { setShowResetWarning(false); return; }
+    if (showPatternSwitchModal) { setShowPatternSwitchModal(false); return; }
+
+    // 3. Recalibrate: its pages go back to the Recalibrate menu, which goes back to the home page
+    if (showElapsedRecalibrate) { setShowElapsedRecalibrate(false); setStagedMode(null); setShowRecalibrateMenu(true); return; }
+    if (showWeightChange) { setPendingWeightForMode(null); setShowWeightChange(false); setShowRecalibrateMenu(true); return; }
+    if (showModeChange) { setShowModeChange(false); setShowRecalibrateMenu(true); return; }
+    if (showRecalibrateMenu) { setShowRecalibrateMenu(false); return; }
+
+    // 4. A rhythm check popup has to be answered, so back does nothing
+    if (isShockForced) return;
+
+    // 5. Menus and checklists open over the home page
+    if (state.currentOverlay) {
+      setState(p => ({ ...p, currentOverlay: null }));
+      setEditingTreatmentIndex(null);
+      return;
+    }
+
+    // 6. Previous cases, the mode descriptions, and the Tx step of the setup
+    if (viewingPreviousCase) { setViewingPreviousCase(null); setShowPreviousCasesList(true); return; }
+    if (showPreviousCasesList) { setShowPreviousCasesList(false); return; }
+    if (aboutMode) { setAboutMode(null); return; }
+    if (catchupTxMode) { setCatchupTxMode(false); return; }
+
+    // 7. Setup pages: the same step back as each page's Back button
+    if (showCatchup && !state.running && !tutorialMode) {
+      if (tutorialModeIntro) return;
+      if (catchupStep === 6) { if (showInteractiveTutorial) setIntroRewind(n => n + 1); else setCatchupStep(1); }
+      else if (catchupStep === 2) setCatchupStep(6);
+      else if (catchupStep === 3) setCatchupStep(2);
+      else if (catchupStep === 7) setCatchupStep(timingMode === 'minimal' ? 6 : 3);
+      else if (catchupStep === 4) { setCatchupStep(7); setUseManualEntry(false); }
+      return;
+    }
+
+    // 8. The home page mid-case (and the closed case page): back does nothing
+  };
+
   useEffect(() => {
     try {
       updateSWFnRef.current = registerSW({
@@ -4625,6 +4741,19 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
   const [dragOverGapIdx, setDragOverGapIdx] = React.useState<number | null>(null);
   const rowRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
 
+  // Phone back button: close the delete confirmation, or leave reorder mode (see handleBackRef)
+  React.useEffect(() => {
+    if (pendingDelete === null && reorderingRealIdx === null) return;
+    const onBack = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d.handled) return;
+      d.handled = true;
+      if (pendingDelete !== null) setPendingDelete(null); else setReorderingRealIdx(null);
+    };
+    window.addEventListener('bigone:back', onBack);
+    return () => window.removeEventListener('bigone:back', onBack);
+  }, [pendingDelete, reorderingRealIdx]);
+
   const handleDragPointerDown = (realIdx: number) => (e: React.PointerEvent) => {
     setDraggingRealIdx(realIdx);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -5173,6 +5302,21 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
     setSelectedCustomUnit(null);
     setExpandedSection(() => 'medications');
   };
+
+  // Phone back button: with the dose picker open, back returns to the treatments menu
+  // (same as the picker's own back button) instead of closing the whole menu
+  useEffect(() => {
+    if (!selectedMed) return;
+    const onBack = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d.handled) return;
+      d.handled = true;
+      handleBackFromMed();
+    };
+    window.addEventListener('bigone:back', onBack);
+    return () => window.removeEventListener('bigone:back', onBack);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMed]);
   
   if (selectedMed && DOSE_CONFIG[selectedMed]) {
     const allDoses = DOSE_CONFIG[selectedMed].doses;
