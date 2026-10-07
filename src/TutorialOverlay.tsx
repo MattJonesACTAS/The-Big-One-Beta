@@ -47,6 +47,10 @@ type RawNode = Omit<GlobalNode, 'displayNumber'>;
 const RHYTHM_REVEAL_DELAY_FIRST_MS = 1500;
 const RHYTHM_REVEAL_DELAY_MS = 1000;
 
+// How long the tutorial waits for an instructed action ("Give it a Go") before offering the
+// instruction again in a "Lost?" slide. A fixed timer: taps and open menus don't reset it.
+const LOST_DELAY_MS = 20000;
+
 // The VSS tab node's pages; only the last line of the second page differs by mode.
 function vssTabPages(whereShown: string): NodePage[] {
   return [{
@@ -597,6 +601,10 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   // popup arrive before the slide covers it. While waiting, taps are blocked
   // (see revealPending below) so an outcome can't be chosen before the slide shows.
   const [revealPending, setRevealPending] = useState(false);
+  // The instruction from the last dismissed "Give it a Go" slide while its action is still to be done,
+  // and the "Lost?" slide when it's showing (see below)
+  const [lostInstruction, setLostInstruction] = useState<string | null>(null);
+  const [lostNode, setLostNode] = useState<GlobalNode | null>(null);
   useEffect(() => {
     if (!(currentNode?.type === 'popup' && conditionMet && !activePopup)) {
       setRevealPending(false);
@@ -617,11 +625,29 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   // Phone back button: while a tutorial slide is showing (or about to), back does nothing,
   // since these slides only go forward (see handleBackRef in App.tsx)
   useEffect(() => {
-    if (!activePopup && !activePositioned && !revealPending) return;
+    if (!activePopup && !activePositioned && !revealPending && !lostNode) return;
     const onBack = (e: Event) => { (e as CustomEvent).detail.handled = true; };
     window.addEventListener('bigone:back', onBack);
     return () => window.removeEventListener('bigone:back', onBack);
-  }, [activePopup, activePositioned, revealPending]);
+  }, [activePopup, activePositioned, revealPending, lostNode]);
+
+  // "Lost?" slide: after a "Give it a Go" slide is dismissed, if the instructed action still hasn't
+  // been done LOST_DELAY_MS later, show that instruction again under the heading "Lost?", and
+  // again after each further wait until it's done. It never shows over another slide or while the
+  // real rhythm check popup is up (the wait starts again once those have finished).
+  useEffect(() => {
+    if (lostInstruction !== null && conditionMet) setLostInstruction(null);   // the action was done
+  }, [lostInstruction, conditionMet]);
+  useEffect(() => {
+    if (lostInstruction === null || conditionMet || tutorialDone || lostNode
+        || activePopup || activePositioned || revealPending || isShockForced) return;
+    const t = setTimeout(() => {
+      setLostNode({ id: 'lost', type: 'popup', pages: [{ title: 'Lost?', description: lostInstruction }] } as unknown as GlobalNode);
+      setCurrentPageIndex(0);
+      setPageAnimKey(k => k + 1);
+    }, LOST_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [lostInstruction, conditionMet, tutorialDone, lostNode, activePopup, activePositioned, revealPending, isShockForced, currentNode?.id]);
 
 
   // Dismiss active popup during rhythm check window
@@ -632,7 +658,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     }
   }, [inRhythmCheckWindow, activePositioned]);
 
-  const activeNode = activePopup || activePositioned;
+  const activeNode = activePopup || activePositioned || lostNode;
   const activePages = activeNode?.pages ?? [];
   const currentPage = activePages[currentPageIndex];
   const isLastPage = currentPageIndex >= activePages.length - 1;
@@ -643,6 +669,13 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   };
 
   const handleGotIt = () => {
+    if (lostNode) {            // closing the "Lost?" slide doesn't move the tutorial on
+      setLostNode(null);
+      setCurrentPageIndex(0);
+      return;
+    }
+    const lastPage = activePages[activePages.length - 1];
+    setLostInstruction(lastPage && /^give it a go$/i.test(lastPage.title) ? lastPage.description : null);
     setCurrentPageIndex(0);
     setActivePopup(null);
     setActivePositioned(null);
@@ -657,7 +690,7 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     }
   };
 
-  const showDarkOverlay = activePopup !== null || activePositioned !== null;
+  const showDarkOverlay = activePopup !== null || activePositioned !== null || lostNode !== null;
 
   return (
     <div data-tutorial-ui="true" style={{ position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none' }}>
