@@ -320,7 +320,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
               <>
                 {renderIntroDescription("In this tutorial you'll see red numbered icons hovering over different elements of the app, like this:")}
                 {/* Example of a real tutorial icon (same look and size, same gentle pulse); it can't be pressed */}
-                <div aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', margin: '-4px 0 22px', pointerEvents: 'none' }}>
+                <div aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', margin: '-4px 0 48px', pointerEvents: 'none' }}>
                   <div style={{
                     width: '50px', height: '50px', borderRadius: '50%',
                     backgroundColor: '#ef4444',
