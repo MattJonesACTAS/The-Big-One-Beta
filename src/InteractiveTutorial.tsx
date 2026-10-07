@@ -309,12 +309,31 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
               {currentScreen === 'introWhen' && 'When to Use the App'}
               {currentScreen === 'intro2' && 'Navigating the Tutorial'}
             </h2>
-            {renderIntroDescription(
+            {currentScreen !== 'intro2' && renderIntroDescription(
               currentScreen === 'intro1'
                 ? "The Big One is a cognitive aid for use during cardiac arrests or any other big job.\n\nIt is designed to assist you to keep track of:\n\n• Rhythm check intervals\n\n• Medication re-dosing intervals\n\n• The times events occurred, making case sheets easy and accurate\n\nBy offloading this cognitive load, you can focus on situational awareness and team leadership."
                 : currentScreen === 'introWhen'
                 ? "Imagine you're first on scene to a cardiac arrest or another complex job that will require multiple crews.\n\nYou perform the initial necessary interventions, then eventually more crews arrive.\n\nYou then take a step back, assume the role of Team Leader, assign roles to other crew members, and go hands off for the rest of the case.\n\nThat is when The Big One can be used."
-                : "In this tutorial you'll see red numbered icons hovering over different elements of the app.\n\nClick on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial."
+                : ''
+            )}
+            {currentScreen === 'intro2' && (
+              <>
+                {renderIntroDescription("In this tutorial you'll see red numbered icons hovering over different elements of the app, like this:")}
+                {/* Example of a real tutorial icon (same look and size, same gentle pulse); it can't be pressed */}
+                <div aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', margin: '-4px 0 22px', pointerEvents: 'none' }}>
+                  <div style={{
+                    width: '50px', height: '50px', borderRadius: '50%',
+                    backgroundColor: '#ef4444',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '20px', fontWeight: '700', color: 'white',
+                    animation: 'introExampleBreath 2s ease-in-out infinite',
+                  }}>
+                    1
+                  </div>
+                </div>
+                <style>{`@keyframes introExampleBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }`}</style>
+                {renderIntroDescription("Click on the icons to learn about these features.\n\nYou'll need to clear all icons and complete any instructions to progress through the tutorial.")}
+              </>
             )}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
