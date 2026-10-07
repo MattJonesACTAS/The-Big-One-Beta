@@ -51,6 +51,40 @@ const RHYTHM_REVEAL_DELAY_MS = 1000;
 // instruction again in a "Lost?" slide. A fixed timer: taps and open menus don't reset it.
 const LOST_DELAY_MS = 20000;
 
+// Fuller wording for the "Lost?" slide where the instructed action takes more than one tap, keyed by
+// the node whose "Give it a Go" slide was dismissed. Any node not listed repeats that slide's own text.
+const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
+  elapsed: {
+    recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
+    tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
+    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
+    addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
+    treatmentLogInfo: "Press the 'Summary' button at the bottom left of the home screen, tap the small button beside the adrenaline push entry in the treatment log, and choose Edit, Reorder, or Delete.",
+    endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
+    delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
+  },
+  log: {
+    recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
+    tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
+    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
+    addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
+    treatmentLogInfo: "Tap the small button beside the adrenaline push entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
+    endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
+    delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
+  },
+  minimal: {
+    recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the rhythm check interval.",
+    tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
+    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can start an adrenaline timer.",
+    addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen and choose 'Adrenaline' to start its timer.",
+    endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
+    delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
+  },
+};
+
 // The VSS tab node's pages; only the last line of the second page differs by mode.
 function vssTabPages(whereShown: string): NodePage[] {
   return [{
@@ -622,14 +656,19 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     return () => clearTimeout(t);
   }, [currentNode?.id, conditionMet]);
 
-  // Phone back button: while a tutorial slide is showing (or about to), back does nothing,
-  // since these slides only go forward (see handleBackRef in App.tsx)
+  // Phone back button: while a tutorial slide is showing (or about to), back does the same as the
+  // slide's own Back button: one page back on page 2 onwards, nothing on page 1
+  // (see handleBackRef in App.tsx)
   useEffect(() => {
     if (!activePopup && !activePositioned && !revealPending && !lostNode) return;
-    const onBack = (e: Event) => { (e as CustomEvent).detail.handled = true; };
+    const onBack = (e: Event) => {
+      (e as CustomEvent).detail.handled = true;
+      if (!lostNode && (activePopup || activePositioned) && currentPageIndex > 0) handleBack();
+    };
     window.addEventListener('bigone:back', onBack);
     return () => window.removeEventListener('bigone:back', onBack);
-  }, [activePopup, activePositioned, revealPending, lostNode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePopup, activePositioned, revealPending, lostNode, currentPageIndex]);
 
   // "Lost?" slide: after a "Give it a Go" slide is dismissed, if the instructed action still hasn't
   // been done LOST_DELAY_MS later, show that instruction again under the heading "Lost?", and
@@ -668,6 +707,11 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
     setPageAnimKey(k => k + 1);
   };
 
+  const handleBack = () => {
+    setCurrentPageIndex(prev => Math.max(0, prev - 1));
+    setPageAnimKey(k => k + 1);
+  };
+
   const handleGotIt = () => {
     if (lostNode) {            // closing the "Lost?" slide doesn't move the tutorial on
       setLostNode(null);
@@ -675,7 +719,9 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
       return;
     }
     const lastPage = activePages[activePages.length - 1];
-    setLostInstruction(lastPage && /^give it a go$/i.test(lastPage.title) ? lastPage.description : null);
+    setLostInstruction(lastPage && /^give it a go$/i.test(lastPage.title)
+      ? (LOST_TEXT[mode]?.[activeNode?.id ?? ''] ?? lastPage.description)
+      : null);
     setCurrentPageIndex(0);
     setActivePopup(null);
     setActivePositioned(null);
@@ -770,16 +816,30 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
             </div>
           )}
 
-          <button
-            onClick={isLastPage ? handleGotIt : handleNext}
-            style={{
-              width: '100%', backgroundColor: '#059669', color: 'white',
-              padding: '16px', borderRadius: '12px', border: 'none',
-              fontSize: '16px', fontWeight: '700', cursor: 'pointer'
-            }}
-          >
-            {isLastPage ? 'Got It' : 'Next'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {currentPageIndex > 0 && !lostNode && (
+              <button
+                onClick={handleBack}
+                style={{
+                  flex: 1, backgroundColor: '#f3f4f6', color: '#374151',
+                  padding: '16px', borderRadius: '12px', border: 'none',
+                  fontSize: '16px', fontWeight: '700', cursor: 'pointer'
+                }}
+              >
+                Back
+              </button>
+            )}
+            <button
+              onClick={isLastPage ? handleGotIt : handleNext}
+              style={{
+                flex: 1, backgroundColor: '#059669', color: 'white',
+                padding: '16px', borderRadius: '12px', border: 'none',
+                fontSize: '16px', fontWeight: '700', cursor: 'pointer'
+              }}
+            >
+              {isLastPage ? 'Got It' : 'Next'}
+            </button>
+          </div>
         </div>
       )}
 
