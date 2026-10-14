@@ -22,8 +22,8 @@ export default defineConfig({
         name: 'The Big One',
         short_name: 'The Big One',
         description: 'Cardiac arrest timer and treatment logger',
-        theme_color: '#10b981',
-        background_color: '#000000',   // the launch (splash) screen colour; the bars use theme_color and the page's own background
+        theme_color: '#000000',        // the status bar at the top (and, on newer Chrome, the bar at the bottom)
+        background_color: '#000000',   // the launch (splash) screen colour
         icons: [
           {
             src: 'pwa-192x192.png',
