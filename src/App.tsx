@@ -28,12 +28,13 @@ import {
   Hand,
   User,
   Check,
+  ClipboardList,
   MoreVertical,
   NotebookPen,
   Timer,
   Hourglass
 } from 'lucide-react';
-import { AppState, Treatment, OverlayType } from './types';
+import { AppState, Treatment, OverlayType , HandoverFields } from './types';
 import InteractiveTutorial, { ModeAboutSlide } from './InteractiveTutorial';
 import TutorialOverlay, { getTutorialNodes, TUTORIAL_FLASH_CLASSES } from './TutorialOverlay';
 
@@ -845,6 +846,7 @@ export default function App() {
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [showHandover, setShowHandover] = useState(false);
   const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
   const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
   const [viewingPreviousCase, setViewingPreviousCase] = useState<AppState | null>(null);
@@ -1498,6 +1500,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const setHandoverField = (key: keyof HandoverFields, value: string) =>
+    setState(p => ({ ...p, handover: { ...HANDOVER_EMPTY, ...(p.handover ?? {}), [key]: value } }));
+
   handleBackRef.current = () => {
     // 1. Layers owned by other components (tutorial slides, delete confirmation, reorder mode)
     //    say so by marking this event handled.
@@ -1505,7 +1510,10 @@ export default function App() {
     window.dispatchEvent(ev);
     if (ev.detail.handled) return;
 
-    // 2. Warnings and notices: back works like their Cancel / OK
+    // 2. The Handover page closes first (it sits over the summary or the closed case page)
+    if (showHandover) { setShowHandover(false); return; }
+
+    // 2b. Warnings and notices: back works like their Cancel / OK
     if (showTutorialModeBlocked) { setShowTutorialModeBlocked(false); return; }
     if (showCloseWarning) { setShowCloseWarning(false); return; }
     if (showEndWarning) { setShowEndWarning(false); return; }
@@ -2434,7 +2442,7 @@ export default function App() {
     setState(prev => {
       const closed = { ...prev, running: false, caseClosedAt: Date.now() };
       if (!tutorialMode) {
-        savePreviousCase(closed);
+        savePreviousCase({ ...closed, handover: undefined });
         setPreviousCases(loadPreviousCases());
       }
       return closed;
@@ -2525,6 +2533,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
+          {state.timingMode !== 'minimal' && <HandoverButton onClick={() => setShowHandover(true)} className="col-span-2" />}
           <button 
             onClick={() => exportCasePdf(state.caseClosedAt)}
             className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
@@ -2554,7 +2563,11 @@ export default function App() {
         </div>
       </div>
 
-        {showCloseWarning && (
+        {showHandover && (
+          <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onClose={() => setShowHandover(false)} />
+      )}
+
+      {showCloseWarning && (
            <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
              <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
@@ -2772,6 +2785,7 @@ export default function App() {
           /* Log mode: scrollable running summary is the home screen */
           <div className="h-full flex flex-col relative">
             <div data-scroll-container="summary" className="flex-1 overflow-y-auto p-4 space-y-4">
+              {!tutorialMode && <HandoverButton onClick={() => setShowHandover(true)} />}
               {/* In the tutorial the Arrest Summary is always shown, since its note is about it and no rhythm check has happened yet to bring it up on its own */}
               <div data-tutorial-section="arrestSummary"><ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary={tutorialMode} /></div>
               <div data-tutorial-section="vitalSigns"><VitalSignsSection vitals={state.vitals} /></div>
@@ -2808,6 +2822,7 @@ export default function App() {
                   onEditTreatment={handleEditTreatment}
                   editingTreatmentIndex={editingTreatmentIndex}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                onHandover={tutorialMode ? undefined : () => setShowHandover(true)}
                 />
               )}
             </AnimatePresence>
@@ -3022,6 +3037,7 @@ export default function App() {
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
                 onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                onHandover={tutorialMode ? undefined : () => setShowHandover(true)}
               />
             )}
           </AnimatePresence>
@@ -3052,6 +3068,7 @@ export default function App() {
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                onHandover={tutorialMode ? undefined : () => setShowHandover(true)}
               />
             )}
           </AnimatePresence>
@@ -3849,6 +3866,10 @@ export default function App() {
 
 
       {/* Warning Modals */}
+      {showHandover && (
+        <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onClose={() => setShowHandover(false)} />
+      )}
+
       {showEndWarning && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
@@ -4390,7 +4411,7 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onHandover }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -4406,7 +4427,8 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   onMoveTreatment?: (fromIdx: number, toIdx: number) => void,
   onEditTreatment?: (idx: number) => void,
   editingTreatmentIndex?: number | null,
-  onUpdateInfusionDose?: (drug: string, dose: string) => void
+  onUpdateInfusionDose?: (drug: string, dose: string) => void,
+  onHandover?: () => void
 }) {
   const isTop = ['reversibles', 'rosc', 'phea', 'vitals'].includes(type);
   
@@ -4423,7 +4445,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
-        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
+        {type === 'summary' && <SummaryOverlay onHandover={onHandover} state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
           <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
         ) : (
@@ -5091,6 +5113,237 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
   );
 }
 
+// ---------------------------------------------------------------------------------------------
+// Handover (IMIST). Name, age, gender, mechanism and extra information are typed by the crew; weight,
+// signs, information from the case and treatment are filled in from what the app recorded.
+// ---------------------------------------------------------------------------------------------
+const HANDOVER_EMPTY: HandoverFields = { name: '', age: '', gender: '', mechanism: '', information: '' };
+const HANDOVER_NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+// Airways from least to most advanced: only the most advanced one that worked is listed
+const HANDOVER_AIRWAY_LADDER = ['NPA', 'OPA', 'LMA', 'ETT', 'FONA'];
+const HANDOVER_OTHER_KNOWN = ['Corpuls', 'Extrication', 'Pacing', 'Reassurance provided', 'Suction', 'IGT', 'IO access', 'IV access', 'Rearrest', 'Close case'];
+
+const rhythmFromName = (name: string): string | null => {
+  const m = name.match(/^(?:Shock|Disarm)(?: #\d+)? - (.+)$/);
+  return m ? m[1] : null;
+};
+
+type HandoverContent = {
+  weight: string;
+  defaultAge: string;
+  information: string[];
+  signs: [string, string][];
+  treatment: string[];
+};
+
+const buildHandoverContent = (
+  state: AppState,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>
+): HandoverContent => {
+  const tx = state.treatments;
+  const succeeded = (n: string) => !n.includes('Unsuccessful');
+  const isOutcome = (n: string) => {
+    const id = getTreatmentIdentity(n);
+    return id === 'Shock' || id === 'Disarm' || isRoscName(n) || /^Rhythm check( #\d+)?$/.test(n.trim());
+  };
+
+  // --- Information
+  const roscIdx = tx.map((x, i) => (isRoscName(x.name) ? i : -1)).filter(i => i >= 0);
+  const lastRoscIdx = roscIdx.length ? roscIdx[roscIdx.length - 1] : -1;
+  const lastRosc = lastRoscIdx >= 0 ? tx[lastRoscIdx] : null;
+  // The arrest is counted from the first rhythm check logged during the case (not one entered at setup)
+  const firstCheck = tx.find(x => !x.prior && !x.timeUnknown && isOutcome(x.name));
+  let duration = '';
+  if (firstCheck) {
+    const endAtRosc = state.isROSCMode && lastRosc && !lastRosc.timeUnknown;
+    if (state.timingMode === 'log') {
+      const start = firstCheck.loggedAt;
+      const end = endAtRosc ? lastRosc!.loggedAt : (state.caseClosedAt ?? Date.now());
+      if (start != null && end != null) duration = formatRecordingDuration(Math.max(0, Math.floor((end - start) / 1000)));
+    } else {
+      const end = endAtRosc ? lastRosc!.elapsed : state.elapsedSeconds;
+      duration = formatRecordingDuration(Math.max(0, Math.floor(end - firstCheck.elapsed)));
+    }
+  }
+  const shockCount = tx.filter(x => x.name.includes('Shock') && !x.name.includes('Disarm')).length;
+  const disarmCount = tx.filter(x => x.name.includes('Disarm') && !isRoscName(x.name)).length;
+  const withRhythm = tx.filter(x => rhythmFromName(x.name));
+  const firstRhythm = withRhythm.length ? rhythmFromName(withRhythm[0].name)! : '';
+  const otherRhythms: string[] = [];
+  withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && !otherRhythms.includes(r)) otherRhythms.push(r); });
+  const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
+  const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
+  const information: string[] = [];
+  if (duration) information.push(`Arrest duration: ${duration}`);
+  information.push(`CPR rounds: ${state.cprRound}`);
+  information.push(`Shocks: ${shockCount}`);
+  information.push(`Disarms: ${disarmCount}`);
+  if (firstRhythm) information.push(`First rhythm: ${firstRhythm}`);
+  if (otherRhythms.length) information.push(`Other rhythms: ${otherRhythms.join(', ')}`);
+  if (recentRhythm) information.push(`${state.isROSCMode ? 'Last rhythm before ROSC' : 'Most recent rhythm'}: ${recentRhythm}`);
+  if (lastRosc) {
+    const rearrestSince = tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
+    information.push(`ROSC: ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}`);
+  }
+
+  // --- Signs: the full list, blank when nothing was entered
+  const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+  const signs: [string, string][] = [
+    ['HR', v.hr ? `${v.hr} bpm` : ''],
+    ['BP', (v.bpSys || v.bpDia) ? `${v.bpSys || ''}/${v.bpDia || ''} mmHg` : ''],
+    ['RR', v.rr ? `${v.rr} /min` : ''],
+    ['SpO₂', v.spo2 ? `${v.spo2}%` : ''],
+    ['EtCO₂', v.etco2 ? `${v.etco2} mmHg` : ''],
+    ['GCS', v.gcs ? `${v.gcs}/15` : ''],
+    ['BGL', v.bgl ? `${v.bgl} mmol/L` : ''],
+    ['Temp', v.temp ? `${v.temp}°C` : ''],
+  ];
+
+  // --- Treatment: drugs, oxygen, the most advanced airway, access that worked, and anything else given
+  const treatment: string[] = [];
+  Object.entries(pharmaSummary).forEach(([med, info]) => treatment.push(`${med} ${info.display}`));
+  const oxygen = tx.filter(x => getTreatmentIdentity(x.name) === 'Oxygen' && succeeded(x.name));
+  if (oxygen.length) {
+    const devices: string[] = [];
+    oxygen.forEach(x => { const d = x.name.replace(/^Oxygen\s*(#\d+\s*)?/, '').trim(); if (d && !devices.includes(d)) devices.push(d); });
+    treatment.push(devices.length ? `Oxygen: ${devices.join(', ')}` : 'Oxygen');
+  }
+  const airwayDone = (id: string) => tx.some(x => getTreatmentIdentity(x.name) === id && succeeded(x.name));
+  const topAirway = [...HANDOVER_AIRWAY_LADDER].reverse().find(airwayDone);
+  const airway = [topAirway, airwayDone('IGT') ? 'IGT' : null].filter((a): a is string => !!a);
+  if (airway.length) treatment.push(`Airway: ${airway.join(', ')}`);
+  const accessCount = (id: string) => tx.filter(x => getTreatmentIdentity(x.name) === id && succeeded(x.name)).length;
+  const word = (n: number) => (n < HANDOVER_NUMBER_WORDS.length ? HANDOVER_NUMBER_WORDS[n] : String(n));
+  const access = [accessCount('IV access') ? `${word(accessCount('IV access'))} IV` : null, accessCount('IO access') ? `${word(accessCount('IO access'))} IO` : null].filter((a): a is string => !!a);
+  if (access.length) treatment.push(`Access: ${access.join(', ')}`);
+  ['Corpuls', 'Pacing'].forEach(n => { if (tx.some(x => getTreatmentIdentity(x.name) === n || x.name.startsWith(n))) treatment.push(n); });
+  // Anything typed into the log that isn't one of the app's own items is listed as typed
+  const custom: string[] = [];
+  tx.forEach(x => {
+    const n = x.name;
+    const known = isOutcome(n) || n.startsWith('Rhythm check') || n.startsWith('Mode changed')
+      || MEDICATIONS.some(m => n.startsWith(m)) || KNOWN_MEDS.some(m => n.startsWith(m)) || n.startsWith('Oxygen')
+      || HANDOVER_AIRWAY_LADDER.some(a => n === a || n.startsWith(a + ' ')) || HANDOVER_OTHER_KNOWN.some(a => n === a || n.startsWith(a + ' ') || getTreatmentIdentity(n) === a);
+    if (known) return;
+    const clean = n.replace(/ #\d+/, '');
+    if (!custom.includes(clean)) custom.push(clean);
+  });
+  custom.forEach(c => treatment.push(c));
+  if (!treatment.length) treatment.push('None recorded');
+
+  return {
+    weight: state.patientWeight ? `${state.patientWeight}kg` : '',
+    defaultAge: state.patientType === 'paed' && state.patientAge ? String(state.patientAge) : '',
+    information,
+    signs,
+    treatment,
+  };
+};
+
+const handoverText = (content: HandoverContent, h: HandoverFields): string => {
+  const typed = (txt: string) => { const ls = txt.split('\n').map(l => l.trim()).filter(Boolean); return ls.length ? ls.map(l => `• ${l}`) : ['• ']; };
+  const lines: string[] = [];
+  lines.push('IMIST HANDOVER', '');
+  lines.push('I – Identification');
+  lines.push(`• Name: ${h.name}`, `• Age: ${h.age}`, `• Gender: ${h.gender}`, `• Weight: ${content.weight}`, '');
+  lines.push('M – Mechanism / medical complaint');
+  lines.push(...typed(h.mechanism), '');
+  lines.push('I – Information');
+  content.information.forEach(l => lines.push(`• ${l}`));
+  if (h.information.trim()) lines.push(...typed(h.information));
+  lines.push('');
+  lines.push('S – Signs');
+  content.signs.forEach(([label, value]) => lines.push(`• ${label}: ${value}`));
+  lines.push('');
+  lines.push('T – Treatment');
+  content.treatment.forEach(l => lines.push(`• ${l}`));
+  return lines.join('\n');
+};
+
+function HandoverButton({ onClick, className = '' }: { onClick: () => void, className?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      data-button="handover"
+      className={`w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-xl font-bold btn-base ${className}`}
+    >
+      <ClipboardList size={20} /> Handover
+    </button>
+  );
+}
+
+function HandoverSection({ letter, title, children }: { letter: string, title: string, children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
+      <div className="bg-blue-50 text-blue-800 px-4 py-3 font-bold text-sm tracking-wider text-center uppercase">{letter} – {title}</div>
+      <div className="p-4 space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function HandoverOverlay({ state, pharmaSummary, onField, onClose }: {
+  state: AppState,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
+  onField: (key: keyof HandoverFields, value: string) => void,
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false);
+  const content = buildHandoverContent(state, pharmaSummary);
+  const typed: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
+  // A paediatric age the app already knows is filled in until it's typed over
+  const age = state.handover?.age ?? content.defaultAge;
+  const text = handoverText(content, { ...typed, age });
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+  };
+  const inputClass = 'w-full bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-3 text-[16px] text-neutral-900 outline-none focus:border-blue-400';
+  const bullets = (lines: string[]) => (
+    <ul className="space-y-1">{lines.map((l, i) => <li key={i} className="text-[15px] text-neutral-800 flex gap-2"><span>•</span><span>{l}</span></li>)}</ul>
+  );
+  return (
+    <div data-handover className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
+      <div className="bg-blue-600 text-white p-4 text-center font-bold tracking-wide flex-shrink-0">IMIST HANDOVER</div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <HandoverSection letter="I" title="Identification">
+          <label className="block"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Name</span>
+            <input aria-label="Name" value={typed.name} onChange={e => onField('name', e.target.value)} autoCapitalize="words" autoComplete="off" className={inputClass} /></label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Age</span>
+              <input aria-label="Age" value={age} onChange={e => onField('age', e.target.value)} autoComplete="off" className={inputClass} /></label>
+            <label className="block"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Gender</span>
+              <input aria-label="Gender" value={typed.gender} onChange={e => onField('gender', e.target.value)} autoCapitalize="words" autoComplete="off" className={inputClass} /></label>
+          </div>
+          <div className="text-[15px] text-neutral-800"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide mr-2">Weight</span>{content.weight}</div>
+        </HandoverSection>
+        <HandoverSection letter="M" title="Mechanism / medical complaint">
+          <textarea aria-label="Mechanism" value={typed.mechanism} onChange={e => onField('mechanism', e.target.value)} rows={3} className={inputClass} />
+        </HandoverSection>
+        <HandoverSection letter="I" title="Information">
+          {bullets(content.information)}
+          <textarea aria-label="Additional information" value={typed.information} onChange={e => onField('information', e.target.value)} rows={3} placeholder="Additional information" className={inputClass} />
+        </HandoverSection>
+        <HandoverSection letter="S" title="Signs">
+          <div className="divide-y divide-neutral-100">
+            {content.signs.map(([label, value]) => (
+              <div key={label} className="flex items-baseline justify-between py-2 text-[15px]">
+                <span className="text-neutral-500 font-medium">{label}</span>
+                <span data-handover-sign={label} className="font-bold text-neutral-900 tabular-nums min-h-[1.25rem]">{value}</span>
+              </div>
+            ))}
+          </div>
+        </HandoverSection>
+        <HandoverSection letter="T" title="Treatment">
+          {bullets(content.treatment)}
+        </HandoverSection>
+      </div>
+      <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
+        <button onClick={onClose} data-button="handover-close" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Close</button>
+        <button onClick={copy} data-button="handover-copy" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">{copied ? 'Copied!' : 'Copy'}</button>
+      </div>
+    </div>
+  );
+}
+
 function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration, alwaysShowArrestSummary }: { state: AppState, showRecordingDuration?: boolean, showFinalDuration?: boolean, alwaysShowArrestSummary?: boolean }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm') && !isRoscName(t.name)).length;
@@ -5212,9 +5465,10 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
+function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onHandover }: { onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
+      {onHandover && state.timingMode !== 'minimal' && <HandoverButton onClick={onHandover} />}
       <div data-tutorial-section="arrestSummary">
         <ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary />
       </div>

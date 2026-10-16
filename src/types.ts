@@ -16,6 +16,16 @@ export interface Treatment {
   edited?: boolean;
 }
 
+// What the crew types on the Handover page. Kept with the open case only: cleared when the case is
+// closed, and never saved with a previous case or printed in the PDF.
+export interface HandoverFields {
+  name: string;
+  age: string;
+  gender: string;
+  mechanism: string;
+  information: string;
+}
+
 export interface AppState {
   running: boolean;
   reversiblesChecklistOpened: boolean;
@@ -54,6 +64,11 @@ export interface AppState {
   // it stays valid there. Absent on cases saved before this existed.
   elapsedCalibrated?: boolean;
   rhythmInterval: 'evens' | 'odds' | 'half-evens' | 'half-odds' | null;
+  // When a timer-fired rhythm check popup is showing and not yet answered, the elapsed time
+  // it was due at. Saved so that after an app restart the app still knows the popup was
+  // unanswered (see the tick in App.tsx). Absent/null otherwise.
+  pendingRhythmCheckDueAt?: number | null;
+  handover?: HandoverFields;
   vitals: {
     hr: string; rr: string; gcs: string;
     bpSys: string; bpDia: string; spo2: string;
