@@ -1508,6 +1508,13 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openWeightChange = () => {
+    setNewWeightInput(String(state.patientWeight ?? ''));
+    setNewPatientType(state.patientType as 'adult' | 'paed');
+    if (state.patientType === 'paed' && state.patientAge) { setNewPaedWeightMethod('age'); setNewPaedAgeLabel(state.patientAge); }
+    else { setNewPaedWeightMethod('weight'); setNewPaedAgeLabel(null); }
+    setShowWeightChange(true);
+  };
   const setVital = (key: keyof AppState['vitals'], value: string) =>
     setState(p => ({ ...p, vitals: { ...p.vitals, [key]: value } }));
   const setHandoverField = (key: keyof HandoverFields, value: string) =>
@@ -3879,7 +3886,7 @@ export default function App() {
 
       {/* Warning Modals */}
       {showHandover && (
-        <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onClose={() => setShowHandover(false)} />
+        <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onClose={() => setShowHandover(false)} onChangeWeight={openWeightChange} />
       )}
 
       {showEndWarning && (
@@ -5179,13 +5186,26 @@ const ageText = (value: string, unit: string): string => {
 const genderText = (h: HandoverFields): string => (h.gender === 'Other' ? (h.genderOther.trim() || 'Other') : h.gender);
 const allergyText = (h: HandoverFields): string => (h.allergies === 'Other' ? (h.allergiesOther.trim() || 'Other') : h.allergies);
 
+type HandoverInfoItem = { t: string, sub?: string[] };
 type HandoverContent = {
   weight: string;
   defaultAge: { value: string, unit: string } | null;
   airway: string;
-  information: string[];
+  rhythm: { text: string, urgent: boolean } | null;
+  information: HandoverInfoItem[];
   signs: HandoverSign[];
   treatment: string[];
+};
+
+// When the next rhythm check is due, as on the home screen. Only while the patient is in arrest and the
+// app is running the rhythm check timer (not Tx log only, not ROSC).
+const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean } | null => {
+  if (state.timingMode === 'log' || state.isROSCMode || !state.running) return null;
+  if (state.rhythmCheckDelayedAt != null) return { text: 'Rhythm check delayed', urgent: true };
+  if (state.rhythmCheckPaused) return { text: `Rhythm check timer paused at ${formatTime(state.frozenCountdown || 0)}`, urgent: false };
+  const left = state.rhythmCheckTarget - state.elapsedSeconds;
+  if (state.rhythmCheckOvertime > 0 || left <= 0) return { text: 'Rhythm check due now', urgent: true };
+  return { text: `Next rhythm check in ${formatTime(left)}`, urgent: left <= 30 };
 };
 
 const buildHandoverContent = (
@@ -5234,17 +5254,19 @@ const buildHandoverContent = (
   withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && !otherRhythms.includes(r)) otherRhythms.push(r); });
   const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
   const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
-  const information: string[] = [];
-  if (duration) information.push(`Arrest ${duration}`);
-  information.push(`${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}`);
-  information.push(`${shockCount} shock${shockCount === 1 ? '' : 's'}`);
-  information.push(`${disarmCount} disarm${disarmCount === 1 ? '' : 's'}`);
-  if (firstRhythm) information.push(`First rhythm ${firstRhythm}`);
-  if (otherRhythms.length) information.push(`Other rhythms ${otherRhythms.join(', ')}`);
-  if (recentRhythm) information.push(`${state.isROSCMode ? 'Last rhythm before ROSC' : 'Latest rhythm'} ${recentRhythm}`);
+  const rhythm = handoverRhythmStatus(state);
+  const information: HandoverInfoItem[] = [];
+  if (rhythm) information.push({ t: rhythm.text });
+  if (duration) information.push({ t: `Arrest ${duration}` });
+  information.push({ t: `${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}` });
+  information.push({ t: `${shockCount} shock${shockCount === 1 ? '' : 's'}` });
+  information.push({ t: `${disarmCount} disarm${disarmCount === 1 ? '' : 's'}` });
+  if (firstRhythm) information.push({ t: `First rhythm ${firstRhythm}` });
+  if (otherRhythms.length) information.push({ t: 'Other rhythms', sub: otherRhythms });
+  if (recentRhythm) information.push({ t: `${state.isROSCMode ? 'Last rhythm before ROSC' : 'Latest rhythm'} ${recentRhythm}` });
   if (lastRosc) {
     const rearrestSince = tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
-    information.push(`ROSC ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}`);
+    information.push({ t: `ROSC ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}` });
   }
 
   // --- Signs not covered by R / A / B / C. SpO₂ only matters once there's a circulation to measure it in.
@@ -5254,43 +5276,49 @@ const buildHandoverContent = (
     : [['EtCO₂', 'etco2', 'mmHg'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']];
   const signs: HandoverSign[] = signDefs.map(([label, key, unit]) => ({ label, key, unit, value: v[key] ?? '' }));
 
-  // --- Treatment: drugs (with when they were last given), oxygen, the most advanced airway, access that worked, anything else
+  // --- Treatment, in the order a receiving team wants it: the airway, then access, then medications (and oxygen)
+  // in the order each was first given, then anything else that was done
   const treatment: string[] = [];
-  Object.entries(pharmaSummary).forEach(([med, info]) => {
-    const dt = doseTimeNote(tx, med);
-    if (INFUSION_DRUGS.includes(med)) {
-      const dose = state.infusionDoses?.[med];
-      treatment.push(`${med}${dose ? ` ${dose}${med === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : ''}${dt ? `, started ${dt.time}` : ''}`);
-    } else {
-      treatment.push(`${med} ${info.display}${dt ? `, last ${dt.time}` : ''}`);
-    }
-  });
-  if (oxygen.length) treatment.push(oxygenDevices.length ? `Oxygen ${oxygenDevices.join(', ')}` : 'Oxygen');
   if (airway.length) treatment.push(`Airway ${airway.join(', ')}`);
   const accessCount = (id: string) => tx.filter(x => getTreatmentIdentity(x.name) === id && succeeded(x.name)).length;
-  const word = (n: number) => (n < HANDOVER_NUMBER_WORDS.length ? HANDOVER_NUMBER_WORDS[n] : String(n));
-  const access = [accessCount('IV access') ? `${word(accessCount('IV access'))} IV` : null, accessCount('IO access') ? `${word(accessCount('IO access'))} IO` : null].filter((a): a is string => !!a);
-  if (access.length) treatment.push(`Access ${access.join(', ')}`);
-  ['Corpuls', 'Pacing'].forEach(n => { if (tx.some(x => getTreatmentIdentity(x.name) === n || x.name.startsWith(n))) treatment.push(n); });
-  // Anything typed into the log that isn't one of the app's own items is listed as typed
-  const custom: string[] = [];
-  tx.forEach(x => {
+  if (accessCount('IO access')) treatment.push(`IO x ${accessCount('IO access')}`);
+  if (accessCount('IV access')) treatment.push(`IV x ${accessCount('IV access')}`);
+  const firstIdx = (match: (n: string) => boolean) => tx.findIndex(x => match(x.name));
+  const meds: { idx: number, line: string }[] = [];
+  Object.entries(pharmaSummary).forEach(([med, info]) => {
+    const dt = doseTimeNote(tx, med);
+    let line: string;
+    if (INFUSION_DRUGS.includes(med)) {
+      const dose = state.infusionDoses?.[med];
+      line = `${med}${dose ? ` ${dose}${med === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : ''}${dt ? `, started ${dt.time}` : ''}`;
+    } else {
+      line = `${med} ${info.display}${dt ? `, last ${dt.time}` : ''}`;
+    }
+    meds.push({ idx: firstIdx(n => n.startsWith(med)), line });
+  });
+  if (oxygen.length) meds.push({ idx: firstIdx(n => getTreatmentIdentity(n) === 'Oxygen' && succeeded(n)), line: oxygenDevices.length ? `Oxygen ${oxygenDevices.join(', ')}` : 'Oxygen' });
+  meds.sort((p, q) => p.idx - q.idx).forEach(m => treatment.push(m.line));
+  // Anything else: Corpuls, Pacing, and anything typed into the log that isn't one of the app's own items
+  const others: { idx: number, line: string }[] = [];
+  ['Corpuls', 'Pacing'].forEach(n => { const i = firstIdx(x => getTreatmentIdentity(x) === n || x.startsWith(n)); if (i >= 0) others.push({ idx: i, line: n }); });
+  tx.forEach((x, i) => {
     const n = x.name;
-    const known = isOutcome(n) || n.startsWith('Rhythm check') || n.startsWith('Mode changed')
+    const known = isOutcome(n) || n.startsWith('Rhythm check') || n.startsWith('Mode changed') || n.startsWith('Weight changed')
       || MEDICATIONS.some(m => n.startsWith(m)) || KNOWN_MEDS.some(m => n.startsWith(m)) || n.startsWith('Oxygen')
       || HANDOVER_LEFT_OUT.some(a => n === a || n.startsWith(a + ' '))
       || HANDOVER_AIRWAY_LADDER.some(a => n === a || n.startsWith(a + ' ')) || HANDOVER_OTHER_KNOWN.some(a => n === a || n.startsWith(a + ' ') || getTreatmentIdentity(n) === a);
     if (known) return;
     const clean = n.replace(/ #\d+/, '');
-    if (!custom.includes(clean)) custom.push(clean);
+    if (!others.some(o => o.line === clean)) others.push({ idx: i, line: clean });
   });
-  custom.forEach(c => treatment.push(c));
+  others.sort((p, q) => p.idx - q.idx).forEach(o => treatment.push(o.line));
   if (!treatment.length) treatment.push('None recorded');
 
   return {
     weight: state.patientWeight ? `${state.patientWeight}kg` : '',
     defaultAge: state.patientType === 'paed' ? parseAgeLabel(state.patientAge) : null,
     airway: airway.length ? airway.join(', ') : 'none recorded',
+    rhythm,
     information,
     signs,
     treatment,
@@ -5358,7 +5386,16 @@ function HandoverNumber({ label, value, onChange, unit }: { label: string, value
   );
 }
 
-function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
+// A strip that keeps the next rhythm check in view (arrest only)
+function HandoverRhythmStrip({ rhythm }: { rhythm: { text: string, urgent: boolean } | null }) {
+  if (!rhythm) return null;
+  return (
+    <div data-handover-rhythm className={`flex-shrink-0 px-4 py-2 text-center text-[15px] font-bold tabular-nums ${rhythm.urgent ? 'bg-red-600 text-white' : 'bg-neutral-800 text-white'}`}>{rhythm.text}</div>
+  );
+}
+
+function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onClose }: {
+  onChangeWeight?: () => void,
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   onField: (key: keyof HandoverFields, value: string) => void,
@@ -5391,8 +5428,16 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
 
   const inputClass = 'w-full bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-3 text-[16px] text-neutral-900 outline-none focus:border-blue-400';
   const labelClass = 'text-xs font-bold text-neutral-500 uppercase tracking-wide';
-  const bullets = (lines: string[]) => (
-    <ul className="space-y-1">{lines.map((l, i) => <li key={i} className="text-[15px] text-neutral-800 flex gap-2"><span>•</span><span>{l}</span></li>)}</ul>
+  const bullets = (lines: (string | HandoverInfoItem)[]) => (
+    <ul className="space-y-1">{lines.map((item, i) => {
+      const l = typeof item === 'string' ? { t: item } : item;
+      return (
+        <li key={i} className="text-[15px] text-neutral-800">
+          <div className="flex gap-2"><span>•</span><span>{l.t}</span></div>
+          {l.sub && <ul className="ml-6 mt-1 space-y-1">{l.sub.map((x, j) => <li key={j} className="flex gap-2"><span>–</span><span>{x}</span></li>)}</ul>}
+        </li>
+      );
+    })}</ul>
   );
   const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean, prompt?: boolean }) => (
     <label className="block"><span className={labelClass}>{label}{extra?.prompt && !h[key].trim() && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
@@ -5450,7 +5495,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
     <div key="d">{h.downtime ? (h.downtime === 'Unknown' ? 'Collapse to CPR unknown' : `Collapse to CPR ${h.downtime.toLowerCase()}`) : <span className="text-amber-500" data-handover-missing-frag="Collapse to CPR ?">Collapse to CPR ?</span>}</div>,
     <div key="s">{h.suspectedCause.trim() ? `Suspected: ${h.suspectedCause.trim()}` : <span className="text-amber-500" data-handover-missing-frag="Suspected cause ?">Suspected cause ?</span>}</div>,
   ];
-  const info = [...content.information, ...(h.information.trim() ? h.information.split('\n').map(l => l.trim()).filter(Boolean) : [])];
+  const info: HandoverInfoItem[] = [...content.information, ...(h.information.trim() ? h.information.split('\n').map(l => l.trim()).filter(Boolean).map(t => ({ t })) : [])];
   const ambo: React.ReactNode[] = [
     <div key="a">{h.allergies ? (h.allergies === 'NKA' ? 'NKA' : `Allergies: ${allergyText(h)}`) : <span className="text-amber-500" data-handover-missing-frag="Allergies ?">Allergies ?</span>}</div>,
     ...(h.medications.trim() ? [<div key="m">Meds: {h.medications.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}</div>] : []),
@@ -5459,10 +5504,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
   ];
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: identification },
-    inRosc ? { key: 'RABC', title: 'R / A / B / C', body: roscBlock } : { key: 'A', title: 'A – Airway', body: <div>{content.airway}</div> },
+    ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     { key: 'M', title: 'M – What happened', body: what },
-    { key: 'I2', title: 'I – Information', body: info.map((l, i) => <div key={i}>{l}</div>) },
-    { key: 'S', title: 'S – Signs', body: (
+    { key: 'I2', title: 'I – Info / Arrest Summary', body: info.map((l, i) => (
+      <div key={i}>{l.t}{l.sub && <div className="mt-1 ml-5 space-y-1 text-[24px] font-semibold text-neutral-700">{l.sub.map((x, j) => <div key={j}>• {x}</div>)}</div>}</div>
+    )) },
+    { key: 'S', title: 'S – Vital Signs', body: (
       <div className="grid grid-cols-2 gap-x-6 gap-y-3">
         {content.signs.map(s => (
           <div key={s.label}><div className="text-[13px] font-bold text-neutral-400 tracking-wide">{s.label}</div>
@@ -5484,6 +5531,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
           <span className="text-center leading-tight"><span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span><span data-handover-title>{c.title}</span></span>
           <span className="text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
+        <HandoverRhythmStrip rhythm={content.rhythm} />
         <div data-handover-card={c.key} className={`flex-1 overflow-y-auto p-6 space-y-5 text-[28px] leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
           {c.muted && <div className="text-xs font-bold tracking-wider uppercase text-neutral-400">If time allows</div>}
           {c.body}
@@ -5503,6 +5551,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
   return (
     <div data-handover data-handover-view="fill" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
       <div className="bg-blue-600 text-white p-4 text-center font-bold tracking-wide flex-shrink-0">HANDOVER</div>
+      <HandoverRhythmStrip rhythm={content.rhythm} />
       {(h.type === 'Arrest' ? toFill.length > 0 : !h.type) && (
         <div data-handover-banner className="flex-shrink-0 bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-[13px] font-semibold">
           Still to fill: {h.type === 'Arrest' ? toFill.join(', ') : 'Handover type'}
@@ -5539,7 +5588,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
           </div>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} />
           {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
-          <div className="text-[15px] text-neutral-800"><span className={`${labelClass} mr-2`}>Weight</span>{content.weight}</div>
+          <div className="flex items-center justify-between text-[15px] text-neutral-800">
+            <span><span className={`${labelClass} mr-2`}>Weight</span>{content.weight}</span>
+            {onChangeWeight && <button data-button="handover-weight" onClick={onChangeWeight} className="px-4 py-2 rounded-lg font-bold text-[14px] border border-blue-300 text-blue-700 bg-white btn-base">Change</button>}
+          </div>
         </HandoverSection>
         {inRosc ? (
           <HandoverSection letter="" title="R / A / B / C" done={roscComplete}>
@@ -5559,22 +5611,23 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
               <HandoverNumber label="BP diastolic" value={vit.bpDia} onChange={v => onVital('bpDia', v)} unit="mmHg" />
             </div>
           </HandoverSection>
-        ) : (
-          <HandoverSection letter="A" title="Airway">
-            <div className="text-[15px] text-neutral-800">{content.airway}</div>
-          </HandoverSection>
-        )}
+        ) : null}
         <HandoverSection letter="M" title="What happened" done={doneM}>
           <HandoverChoice label="Witnessed" options={HANDOVER_YNU} value={h.witnessed} onChange={v => onField('witnessed', v)} />
           <HandoverChoice label="Bystander CPR" options={HANDOVER_YNU} value={h.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
           <HandoverChoice label="Collapse to CPR" options={HANDOVER_DOWNTIMES} value={h.downtime} onChange={v => onField('downtime', v)} columns={2} />
-          {text('suspectedCause', 'Suspected cause of arrest', { prompt: true })}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">{text('suspectedCause', 'Suspected cause of arrest', { prompt: true })}</div>
+            <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
+              onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
+              className={`px-4 py-3 rounded-lg font-bold text-[15px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
+          </div>
         </HandoverSection>
-        <HandoverSection letter="I" title="Information">
+        <HandoverSection letter="I" title="Info / Arrest Summary">
           {bullets(content.information)}
           {text('information', 'Notes', { rows: 2 })}
         </HandoverSection>
-        <HandoverSection letter="S" title="Signs">
+        <HandoverSection letter="S" title="Vital Signs">
           <div className="grid grid-cols-2 gap-2">
             {content.signs.map(s => <div key={s.key}><HandoverNumber label={s.label} value={s.value} onChange={v => onVital(s.key, v)} unit={s.unit} /></div>)}
           </div>
