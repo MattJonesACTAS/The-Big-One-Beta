@@ -24,9 +24,10 @@ export interface HandoverFields {
   ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
   gender: string;           // 'Male' | 'Female' | 'Other' | ''
   genderOther: string;
+  breathing: string;        // 'Breathing' | 'Ventilated' | '' (ROSC: is the patient breathing, or are we ventilating)
   witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
   bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
-  downtime: string;         // 'Under 5 min' | '5–10 min' | '10–20 min' | 'Over 20 min' | 'Unknown' | ''
+  downtime: string;         // time from collapse to the start of CPR: 'Under 2 min' | '2–5 min' | '5–10 min' | 'Over 10 min' | 'Unknown' | ''
   suspectedCause: string;
   information: string;      // optional notes under Information
   // AMBO: useful if there's time, kept apart from IMIST
