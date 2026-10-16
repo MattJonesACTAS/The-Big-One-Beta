@@ -5038,7 +5038,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
         <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
         <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
           <StatRow label="CPR Rounds" value={state.cprRound} />
-          <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+          <StatRow label="Shocks" value={shockCount} color="text-red-600" />
           <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
           <StatRow label="ROSC" value={roscCount} color="text-emerald-600" />
         </div>
@@ -5148,7 +5148,7 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
             {state.cprRound > 0 ? (
               <>
                 <StatRow label="CPR Rounds" value={state.cprRound} />
-                <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+                <StatRow label="Shocks" value={shockCount} color="text-red-600" />
                 <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
                 <StatRow label="ROSC" value={roscCount} color="text-emerald-600" />
               </>
