@@ -20,16 +20,18 @@ export interface Treatment {
 // closed, and never saved with a previous case or printed in the PDF.
 export interface HandoverFields {
   name: string;
-  age: string;
-  gender: string;
+  age?: string;             // digits only; the unit is separate. Not set until the crew types or clears it, so a paediatric age from setup shows until then
+  ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
+  gender: string;           // 'Male' | 'Female' | 'Other' | ''
+  genderOther: string;
   witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
   bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
-  downtime: string;
+  downtime: string;         // 'Under 5 min' | '5–10 min' | '10–20 min' | 'Over 20 min' | 'Unknown' | ''
   suspectedCause: string;
-  mechanism: string;
-  information: string;
+  information: string;      // optional notes under Information
   // AMBO: useful if there's time, kept apart from IMIST
-  allergies: string;
+  allergies: string;        // 'NKA' | 'Unknown' | 'Other' | ''
+  allergiesOther: string;
   medications: string;
   background: string;
   otherInfo: string;

@@ -5123,15 +5123,19 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Handover (IMIST, then AMBO). Name, age, gender, whether it was witnessed, bystander CPR, downtime, the
-// suspected cause, the mechanism and the AMBO details are entered by the crew; weight, A/B/C, signs,
-// information from the case and treatment are filled in from what the app recorded.
+// Handover (IMIST, then AMBO). Two views of the same page: "Fill in" (mostly buttons, done en route)
+// and "Read out" (one big card at a time, short fragments, to speak from at handover).
+// Name, age, gender, witnessed, bystander CPR, downtime, suspected cause and the AMBO details are entered
+// by the crew; weight, A/B/C, information from the case, signs and treatment come from what was recorded.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  name: '', age: '', gender: '', witnessed: '', bystanderCpr: '', downtime: '', suspectedCause: '',
-  mechanism: '', information: '', allergies: '', medications: '', background: '', otherInfo: ''
+  name: '', gender: '', genderOther: '', witnessed: '', bystanderCpr: '', downtime: '',
+  suspectedCause: '', information: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
-const HANDOVER_CHOICES = ['Yes', 'No', 'Unknown'];
+const HANDOVER_YNU = ['Yes', 'No', 'Unknown'];
+const HANDOVER_GENDERS = ['Male', 'Female', 'Other'];
+const HANDOVER_DOWNTIMES = ['Under 5 min', '5–10 min', '10–20 min', 'Over 20 min', 'Unknown'];
+const HANDOVER_ALLERGIES = ['NKA', 'Unknown', 'Other'];
 const HANDOVER_NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 // Airways from least to most advanced: only the most advanced one that worked is listed
 const HANDOVER_AIRWAY_LADDER = ['NPA', 'OPA', 'LMA', 'ETT', 'FONA'];
@@ -5142,10 +5146,26 @@ const rhythmFromName = (name: string): string | null => {
   return m ? m[1] : null;
 };
 
+// '3 months', '2 years', 'Newborn' (a paediatric age picked at setup) -> number and unit for the Age box
+const parseAgeLabel = (label: string | null): { value: string, unit: string } | null => {
+  if (!label) return null;
+  if (/^newborn/i.test(label)) return { value: '0', unit: 'Months' };
+  const m = label.match(/^(\d+)\s*(month|year)/i);
+  return m ? { value: m[1], unit: /month/i.test(m[2]) ? 'Months' : 'Years' } : null;
+};
+const ageText = (value: string, unit: string): string => {
+  if (!value) return '';
+  if (value === '0' && unit === 'Months') return 'Newborn';
+  const u = unit === 'Months' ? 'month' : 'year';
+  return `${value} ${u}${value === '1' ? '' : 's'}`;
+};
+const genderText = (h: HandoverFields): string => (h.gender === 'Other' ? (h.genderOther.trim() || 'Other') : h.gender);
+const allergyText = (h: HandoverFields): string => (h.allergies === 'Other' ? (h.allergiesOther.trim() || 'Other') : h.allergies);
+
 type HandoverContent = {
   weight: string;
-  defaultAge: string;
-  status: string[];
+  defaultAge: { value: string, unit: string } | null;
+  status: { short: string, long: string, value: string }[];
   information: string[];
   signs: [string, string][];
   treatment: string[];
@@ -5197,39 +5217,37 @@ const buildHandoverContent = (
   const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
   const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
   const information: string[] = [];
-  if (duration) information.push(`Arrest duration: ${duration}`);
-  information.push(`CPR rounds: ${state.cprRound}`);
-  information.push(`Shocks: ${shockCount}`);
-  information.push(`Disarms: ${disarmCount}`);
-  if (firstRhythm) information.push(`First rhythm: ${firstRhythm}`);
-  if (otherRhythms.length) information.push(`Other rhythms: ${otherRhythms.join(', ')}`);
-  if (recentRhythm) information.push(`${state.isROSCMode ? 'Last rhythm before ROSC' : 'Most recent rhythm'}: ${recentRhythm}`);
+  if (duration) information.push(`Arrest ${duration}`);
+  information.push(`${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}`);
+  information.push(`${shockCount} shock${shockCount === 1 ? '' : 's'}`);
+  information.push(`${disarmCount} disarm${disarmCount === 1 ? '' : 's'}`);
+  if (firstRhythm) information.push(`First rhythm ${firstRhythm}`);
+  if (otherRhythms.length) information.push(`Other rhythms ${otherRhythms.join(', ')}`);
+  if (recentRhythm) information.push(`${state.isROSCMode ? 'Last rhythm before ROSC' : 'Latest rhythm'} ${recentRhythm}`);
   if (lastRosc) {
     const rearrestSince = tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
-    information.push(`ROSC: ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}`);
+    information.push(`ROSC ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}`);
   }
 
   // --- A / B / C: automatic, from what was recorded
   const corpuls = tx.some(x => x.name.startsWith('Corpuls'));
   const status = [
-    `A – Airway: ${airway.length ? airway.join(', ') : 'none recorded'}`,
-    `B – Oxygen: ${oxygen.length ? (oxygenDevices.join(', ') || 'given') : 'none recorded'}`,
-    state.isROSCMode
-      ? `C – ROSC${lastRosc ? ` at ${lastRosc.clock}` : ''}`
-      : `C – CPR ongoing${corpuls ? ', mechanical (Corpuls)' : ''}`,
+    { short: 'A', long: 'Airway', value: airway.length ? airway.join(', ') : 'none recorded' },
+    { short: 'B', long: 'Oxygen', value: oxygen.length ? (oxygenDevices.join(', ') || 'given') : 'none recorded' },
+    { short: 'C', long: 'Circulation', value: state.isROSCMode ? `ROSC${lastRosc ? ` ${lastRosc.clock}` : ''}` : `CPR ongoing${corpuls ? ', mechanical' : ''}` },
   ];
 
   // --- Signs: the full list, blank when nothing was entered
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const signs: [string, string][] = [
-    ['HR', v.hr ? `${v.hr} bpm` : ''],
-    ['BP', (v.bpSys || v.bpDia) ? `${v.bpSys || ''}/${v.bpDia || ''} mmHg` : ''],
-    ['RR', v.rr ? `${v.rr} /min` : ''],
+    ['HR', v.hr ? `${v.hr}` : ''],
+    ['BP', (v.bpSys || v.bpDia) ? `${v.bpSys || ''}/${v.bpDia || ''}` : ''],
+    ['RR', v.rr ? `${v.rr}` : ''],
     ['SpO₂', v.spo2 ? `${v.spo2}%` : ''],
-    ['EtCO₂', v.etco2 ? `${v.etco2} mmHg` : ''],
-    ['GCS', v.gcs ? `${v.gcs}/15` : ''],
-    ['BGL', v.bgl ? `${v.bgl} mmol/L` : ''],
-    ['Temp', v.temp ? `${v.temp}°C` : ''],
+    ['EtCO₂', v.etco2 ? `${v.etco2}` : ''],
+    ['GCS', v.gcs ? `${v.gcs}` : ''],
+    ['BGL', v.bgl ? `${v.bgl}` : ''],
+    ['Temp', v.temp ? `${v.temp}°` : ''],
   ];
 
   // --- Treatment: drugs (with when they were last given), oxygen, the most advanced airway, access that worked, anything else
@@ -5243,12 +5261,12 @@ const buildHandoverContent = (
       treatment.push(`${med} ${info.display}${dt ? `, last ${dt.time}` : ''}`);
     }
   });
-  if (oxygen.length) treatment.push(oxygenDevices.length ? `Oxygen: ${oxygenDevices.join(', ')}` : 'Oxygen');
-  if (airway.length) treatment.push(`Airway: ${airway.join(', ')}`);
+  if (oxygen.length) treatment.push(oxygenDevices.length ? `Oxygen ${oxygenDevices.join(', ')}` : 'Oxygen');
+  if (airway.length) treatment.push(`Airway ${airway.join(', ')}`);
   const accessCount = (id: string) => tx.filter(x => getTreatmentIdentity(x.name) === id && succeeded(x.name)).length;
   const word = (n: number) => (n < HANDOVER_NUMBER_WORDS.length ? HANDOVER_NUMBER_WORDS[n] : String(n));
   const access = [accessCount('IV access') ? `${word(accessCount('IV access'))} IV` : null, accessCount('IO access') ? `${word(accessCount('IO access'))} IO` : null].filter((a): a is string => !!a);
-  if (access.length) treatment.push(`Access: ${access.join(', ')}`);
+  if (access.length) treatment.push(`Access ${access.join(', ')}`);
   ['Corpuls', 'Pacing'].forEach(n => { if (tx.some(x => getTreatmentIdentity(x.name) === n || x.name.startsWith(n))) treatment.push(n); });
   // Anything typed into the log that isn't one of the app's own items is listed as typed
   const custom: string[] = [];
@@ -5266,41 +5284,12 @@ const buildHandoverContent = (
 
   return {
     weight: state.patientWeight ? `${state.patientWeight}kg` : '',
-    defaultAge: state.patientType === 'paed' && state.patientAge ? String(state.patientAge) : '',
+    defaultAge: state.patientType === 'paed' ? parseAgeLabel(state.patientAge) : null,
     status,
     information,
     signs,
     treatment,
   };
-};
-
-const handoverText = (content: HandoverContent, h: HandoverFields): string => {
-  const typed = (txt: string) => { const ls = txt.split('\n').map(l => l.trim()).filter(Boolean); return ls.length ? ls.map(l => `• ${l}`) : ['• ']; };
-  const oneLine = (txt: string) => txt.split('\n').map(l => l.trim()).filter(Boolean).join('; ');
-  const lines: string[] = [];
-  lines.push('IMIST HANDOVER', '');
-  lines.push('I – Identification');
-  lines.push(`• Name: ${h.name}`, `• Age: ${h.age}`, `• Gender: ${h.gender}`, `• Weight: ${content.weight}`, '');
-  lines.push('A / B / C');
-  content.status.forEach(l => lines.push(`• ${l}`));
-  lines.push('');
-  lines.push('M – Mechanism / medical complaint');
-  lines.push(`• Witnessed: ${h.witnessed}`, `• Bystander CPR: ${h.bystanderCpr}`, `• Downtime: ${oneLine(h.downtime)}`, `• Suspected cause of arrest: ${oneLine(h.suspectedCause)}`);
-  if (h.mechanism.trim()) lines.push(...typed(h.mechanism));
-  lines.push('');
-  lines.push('I – Information');
-  content.information.forEach(l => lines.push(`• ${l}`));
-  if (h.information.trim()) lines.push(...typed(h.information));
-  lines.push('');
-  lines.push('S – Signs');
-  content.signs.forEach(([label, value]) => lines.push(`• ${label}: ${value}`));
-  lines.push('');
-  lines.push('T – Treatment');
-  content.treatment.forEach(l => lines.push(`• ${l}`));
-  lines.push('');
-  lines.push('AMBO (if time allows)');
-  lines.push(`• Allergies: ${oneLine(h.allergies)}`, `• Medications: ${oneLine(h.medications)}`, `• Background history: ${oneLine(h.background)}`, `• Other information: ${oneLine(h.otherInfo)}`);
-  return lines.join('\n');
 };
 
 function HandoverButton({ onClick, className = '' }: { onClick: () => void, className?: string }) {
@@ -5315,21 +5304,26 @@ function HandoverButton({ onClick, className = '' }: { onClick: () => void, clas
   );
 }
 
-function HandoverSection({ letter, title, children, muted = false }: { letter: string, title: string, children: React.ReactNode, muted?: boolean }) {
+function HandoverSection({ letter, title, children, muted = false, done }: { letter: string, title: string, children: React.ReactNode, muted?: boolean, done?: boolean }) {
   return (
     <div className={`rounded-xl bg-white overflow-hidden ${muted ? 'border-2 border-dashed border-neutral-300' : 'border border-neutral-200'}`}>
-      <div className={`px-4 py-3 font-bold text-sm tracking-wider text-center uppercase ${muted ? 'bg-neutral-100 text-neutral-500' : 'bg-blue-50 text-blue-800'}`}>{letter}{letter ? ' – ' : ''}{title}</div>
-      <div className="p-4 space-y-3">{children}</div>
+      <div className={`relative px-4 py-3 font-bold text-sm tracking-wider text-center uppercase ${muted ? 'bg-neutral-100 text-neutral-500' : 'bg-blue-50 text-blue-800'}`}>
+        {letter}{letter ? ' – ' : ''}{title}
+        {done !== undefined && (
+          <span data-handover-tick={done ? 'done' : 'todo'} className={`absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-[13px] ${done ? 'bg-emerald-500 text-white' : 'border-2 border-neutral-300 text-transparent'}`}>✓</span>
+        )}
+      </div>
+      <div className="p-4 space-y-4">{children}</div>
     </div>
   );
 }
 
-function HandoverChoice({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
+function HandoverChoice({ label, options, value, onChange, columns = 3 }: { label: string, options: string[], value: string, onChange: (v: string) => void, columns?: 2 | 3 }) {
   return (
     <div>
       <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">{label}</span>
-      <div className="grid grid-cols-3 gap-2 mt-1">
-        {HANDOVER_CHOICES.map(c => (
+      <div className={`grid ${columns === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-2 mt-1`}>
+        {options.map(c => (
           <button
             key={c}
             data-handover-choice={`${label}: ${c}`}
@@ -5349,61 +5343,140 @@ function HandoverOverlay({ state, pharmaSummary, onField, onClose }: {
   onField: (key: keyof HandoverFields, value: string) => void,
   onClose: () => void
 }) {
-  const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<'fill' | 'read'>('fill');
+  const [card, setCard] = useState(0);
   const content = buildHandoverContent(state, pharmaSummary);
-  const typed: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
-  // A paediatric age the app already knows is filled in until it's typed over
-  const age = state.handover?.age ?? content.defaultAge;
-  const text = handoverText(content, { ...typed, age });
-  const copy = () => {
-    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
-  };
+  const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
+  // A paediatric age the app already knows is filled in until it's changed
+  const ageValue = state.handover?.age ?? content.defaultAge?.value ?? '';
+  const ageUnit = state.handover?.ageUnit || content.defaultAge?.unit || 'Years';
+  const age = ageText(ageValue, ageUnit);
+
+  // Phone back: in Read out go back a card, then back to Fill in; in Fill in the page closes (handled in App)
+  useEffect(() => {
+    const onBack = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d.handled || view !== 'read') return;
+      d.handled = true;
+      if (card > 0) setCard(card - 1); else setView('fill');
+    };
+    window.addEventListener('bigone:back', onBack);
+    return () => window.removeEventListener('bigone:back', onBack);
+  }, [view, card]);
+
   const inputClass = 'w-full bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-3 text-[16px] text-neutral-900 outline-none focus:border-blue-400';
   const labelClass = 'text-xs font-bold text-neutral-500 uppercase tracking-wide';
   const bullets = (lines: string[]) => (
     <ul className="space-y-1">{lines.map((l, i) => <li key={i} className="text-[15px] text-neutral-800 flex gap-2"><span>•</span><span>{l}</span></li>)}</ul>
   );
-  const field = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean }) => (
+  const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean }) => (
     <label className="block"><span className={labelClass}>{label}</span>
       {extra?.rows
-        ? <textarea aria-label={label} value={typed[key]} onChange={e => onField(key, e.target.value)} rows={extra.rows} className={inputClass} />
-        : <input aria-label={label} value={typed[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off" className={inputClass} />}
+        ? <textarea aria-label={label} value={h[key]} onChange={e => onField(key, e.target.value)} rows={extra.rows} className={inputClass} />
+        : <input aria-label={label} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off" className={inputClass} />}
     </label>
   );
+
+  // --- Read out: one card at a time, short fragments
+  const dash = <span className="text-neutral-300">—</span>;
+  const roPhrases: string[] = [];
+  const idLine = [age, genderText(h), content.weight].filter(Boolean).join(' · ');
+  const identification = [idLine, h.name.trim() ? h.name.trim() : ''].filter(Boolean);
+  const what: string[] = [];
+  if (h.witnessed) what.push(h.witnessed === 'Yes' ? 'Witnessed' : h.witnessed === 'No' ? 'Unwitnessed' : 'Witnessed unknown');
+  if (h.bystanderCpr) what.push(h.bystanderCpr === 'Yes' ? 'Bystander CPR' : h.bystanderCpr === 'No' ? 'No bystander CPR' : 'Bystander CPR unknown');
+  if (h.downtime) what.push(h.downtime === 'Unknown' ? 'Downtime unknown' : `Down ${h.downtime.toLowerCase()}`);
+  if (h.suspectedCause.trim()) what.push(`Suspected: ${h.suspectedCause.trim()}`);
+  const info = [...content.information, ...(h.information.trim() ? h.information.split('\n').map(l => l.trim()).filter(Boolean) : [])];
+  const ambo: string[] = [];
+  if (h.allergies) ambo.push(h.allergies === 'NKA' ? 'NKA' : `Allergies: ${allergyText(h)}`);
+  if (h.medications.trim()) ambo.push(`Meds: ${h.medications.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}`);
+  if (h.background.trim()) ambo.push(`Hx: ${h.background.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}`);
+  if (h.otherInfo.trim()) ambo.push(`Other: ${h.otherInfo.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}`);
+  void roPhrases;
+  const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
+    { key: 'I', title: 'I – Identification', body: identification.length ? identification.map((l, i) => <div key={i}>{l}</div>) : dash },
+    { key: 'ABC', title: 'A / B / C', body: content.status.map(s => <div key={s.short}><span className="text-neutral-400 mr-3">{s.short}</span>{s.value}</div>) },
+    { key: 'M', title: 'M – What happened', body: what.length ? what.map((l, i) => <div key={i}>{l}</div>) : dash },
+    { key: 'I2', title: 'I – Information', body: info.map((l, i) => <div key={i}>{l}</div>) },
+    { key: 'S', title: 'S – Signs', body: (
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+        {content.signs.map(([label, value]) => (
+          <div key={label}><div className="text-[13px] font-bold text-neutral-400 tracking-wide">{label}</div><div data-handover-sign={label}>{value || dash}</div></div>
+        ))}
+      </div>
+    ) },
+    { key: 'T', title: 'T – Treatment', body: content.treatment.map((l, i) => <div key={i}>{l}</div>) },
+    { key: 'AMBO', title: 'AMBO – if time allows', muted: true, body: ambo.length ? ambo.map((l, i) => <div key={i}>{l}</div>) : dash },
+  ];
+
+  if (view === 'read') {
+    const c = cards[card];
+    const last = card === cards.length - 1;
+    return (
+      <div data-handover data-handover-view="read" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
+        <div className={`flex-shrink-0 p-4 flex items-center justify-between font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
+          <button onClick={() => setView('fill')} data-button="handover-edit" className="px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
+          <span data-handover-title>{c.title}</span>
+          <span className="text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
+        </div>
+        <div data-handover-card={c.key} className={`flex-1 overflow-y-auto p-6 space-y-5 text-[28px] leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
+          {c.muted && <div className="text-xs font-bold tracking-wider uppercase text-neutral-400">If time allows</div>}
+          {c.body}
+        </div>
+        <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
+          <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Back</button>
+          <button onClick={() => (last ? setView('fill') : setCard(card + 1))} data-button="handover-next" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">{last ? 'Done' : 'Next'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Fill in
+  const doneId = !!ageValue && !!h.gender;
+  const doneM = !!h.witnessed && !!h.bystanderCpr && !!h.downtime && !!h.suspectedCause.trim();
+  const doneAmbo = !!h.allergies && !!h.medications.trim() && !!h.background.trim();
   return (
-    <div data-handover className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
-      <div className="bg-blue-600 text-white p-4 text-center font-bold tracking-wide flex-shrink-0">IMIST HANDOVER</div>
+    <div data-handover data-handover-view="fill" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
+      <div className="bg-blue-600 text-white p-4 text-center font-bold tracking-wide flex-shrink-0">HANDOVER</div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <HandoverSection letter="I" title="Identification">
-          {field('name', 'Name', { words: true })}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block"><span className={labelClass}>Age</span>
-              <input aria-label="Age" value={age} onChange={e => onField('age', e.target.value)} autoComplete="off" className={inputClass} /></label>
-            {field('gender', 'Gender', { words: true })}
+        <HandoverSection letter="I" title="Identification" done={doneId}>
+          {text('name', 'Name (optional)', { words: true })}
+          <div>
+            <span className={labelClass}>Age</span>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={ageValue} onChange={e => onField('age', e.target.value.replace(/\D/g, '').slice(0, 3))} autoComplete="off" className={inputClass} />
+              <div className="grid grid-cols-2 gap-2">
+                {['Years', 'Months'].map(u => (
+                  <button key={u} data-handover-choice={`Age unit: ${u}`} aria-pressed={ageUnit === u} onClick={() => onField('ageUnit', u)}
+                    className={`rounded-lg font-bold text-[14px] border btn-base ${ageUnit === u ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>{u}</button>
+                ))}
+              </div>
+            </div>
           </div>
+          <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} />
+          {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
           <div className="text-[15px] text-neutral-800"><span className={`${labelClass} mr-2`}>Weight</span>{content.weight}</div>
         </HandoverSection>
         <HandoverSection letter="" title="A / B / C">
-          {bullets(content.status)}
+          <ul className="space-y-1">{content.status.map(s => <li key={s.short} className="text-[15px] text-neutral-800"><b>{s.short}</b> – {s.long}: {s.value}</li>)}</ul>
         </HandoverSection>
-        <HandoverSection letter="M" title="Mechanism / medical complaint">
-          <HandoverChoice label="Witnessed" value={typed.witnessed} onChange={v => onField('witnessed', v)} />
-          <HandoverChoice label="Bystander CPR" value={typed.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
-          {field('downtime', 'Downtime')}
-          {field('suspectedCause', 'Suspected cause of arrest')}
-          <label className="block"><span className={labelClass}>Notes</span>
-            <textarea aria-label="Mechanism" value={typed.mechanism} onChange={e => onField('mechanism', e.target.value)} rows={3} className={inputClass} /></label>
+        <HandoverSection letter="M" title="What happened" done={doneM}>
+          <HandoverChoice label="Witnessed" options={HANDOVER_YNU} value={h.witnessed} onChange={v => onField('witnessed', v)} />
+          <HandoverChoice label="Bystander CPR" options={HANDOVER_YNU} value={h.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
+          <HandoverChoice label="Downtime" options={HANDOVER_DOWNTIMES} value={h.downtime} onChange={v => onField('downtime', v)} columns={2} />
+          {text('suspectedCause', 'Suspected cause of arrest')}
         </HandoverSection>
         <HandoverSection letter="I" title="Information">
           {bullets(content.information)}
-          <textarea aria-label="Additional information" value={typed.information} onChange={e => onField('information', e.target.value)} rows={3} placeholder="Additional information" className={inputClass} />
+          {text('information', 'Notes', { rows: 2 })}
         </HandoverSection>
         <HandoverSection letter="S" title="Signs">
           <div className="divide-y divide-neutral-100">
             {content.signs.map(([label, value]) => (
               <div key={label} className="flex items-baseline justify-between py-2 text-[15px]">
                 <span className="text-neutral-500 font-medium">{label}</span>
-                <span data-handover-sign={label} className="font-bold text-neutral-900 tabular-nums min-h-[1.25rem]">{value}</span>
+                <span className="font-bold text-neutral-900 tabular-nums min-h-[1.25rem]">{value}</span>
               </div>
             ))}
           </div>
@@ -5413,17 +5486,18 @@ function HandoverOverlay({ state, pharmaSummary, onField, onClose }: {
         </HandoverSection>
         <div className="pt-2 space-y-2">
           <div className="text-center text-xs font-bold tracking-wider uppercase text-neutral-400">If time allows</div>
-          <HandoverSection letter="" title="AMBO" muted>
-            {field('allergies', 'Allergies')}
-            {field('medications', 'Medications', { rows: 2 })}
-            {field('background', 'Background history', { rows: 2 })}
-            {field('otherInfo', 'Other information', { rows: 2 })}
+          <HandoverSection letter="" title="AMBO" muted done={doneAmbo}>
+            <HandoverChoice label="Allergies" options={HANDOVER_ALLERGIES} value={h.allergies} onChange={v => onField('allergies', v)} />
+            {h.allergies === 'Other' && text('allergiesOther', 'Allergies (other)')}
+            {text('medications', 'Medications', { rows: 2 })}
+            {text('background', 'Background history', { rows: 2 })}
+            {text('otherInfo', 'Other information', { rows: 2 })}
           </HandoverSection>
         </div>
       </div>
       <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
         <button onClick={onClose} data-button="handover-close" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Close</button>
-        <button onClick={copy} data-button="handover-copy" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">{copied ? 'Copied!' : 'Copy'}</button>
+        <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">Read out</button>
       </div>
     </div>
   );
