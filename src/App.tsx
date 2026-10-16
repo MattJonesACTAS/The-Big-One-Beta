@@ -5187,13 +5187,35 @@ const genderText = (h: HandoverFields): string => (h.gender === 'Other' ? (h.gen
 const allergyText = (h: HandoverFields): string => (h.allergies === 'Other' ? (h.allergiesOther.trim() || 'Other') : h.allergies);
 
 type HandoverInfoItem = { t: string, sub?: string[] };
+type HandoverArrest = {
+  rhythm: { text: string, urgent: boolean } | null;   // the next rhythm check (arrest with timers only)
+  durationSeconds: number | null;                     // first rhythm check to now, or to ROSC
+  rounds: number;
+  shocks: number;
+  disarms: number;
+  firstRhythm: string;
+  others: string[];                                   // rhythms seen apart from the first and the latest
+  latest: string;                                     // latest rhythm, or the last one before ROSC
+  inRosc: boolean;
+  rosc: { clock: string, rearrestSince: boolean } | null;
+  collapseClock: string;                              // 5 minutes before the elapsed time would have been 0:00:00
+};
+type HandoverTreatment = {
+  airway: string[];                                   // the most advanced airway that worked, then IGT
+  io: number;
+  iv: number;
+  meds: { name: string, dose: string, note: string }[];   // in the order each was first given
+  others: string[];
+};
 type HandoverContent = {
   weight: string;
   defaultAge: { value: string, unit: string } | null;
   airway: string;
   rhythm: { text: string, urgent: boolean } | null;
+  arrest: HandoverArrest;
   information: HandoverInfoItem[];
   signs: HandoverSign[];
+  tx: HandoverTreatment;
   treatment: string[];
 };
 
@@ -5228,46 +5250,55 @@ const buildHandoverContent = (
   // BVM is covered by "ventilated", so it isn't named as an oxygen device
   oxygen.forEach(x => { const d = x.name.replace(/^Oxygen\s*(#\d+\s*)?/, '').trim(); if (d && d !== 'BVM' && !oxygenDevices.includes(d)) oxygenDevices.push(d); });
 
-  // --- Information
+  // --- Arrest summary
   const roscIdx = tx.map((x, i) => (isRoscName(x.name) ? i : -1)).filter(i => i >= 0);
   const lastRoscIdx = roscIdx.length ? roscIdx[roscIdx.length - 1] : -1;
   const lastRosc = lastRoscIdx >= 0 ? tx[lastRoscIdx] : null;
   // The arrest is counted from the first rhythm check logged during the case (not one entered at setup)
   const firstCheck = tx.find(x => !x.prior && !x.timeUnknown && isOutcome(x.name));
-  let duration = '';
+  let durationSeconds: number | null = null;
   if (firstCheck) {
     const endAtRosc = state.isROSCMode && lastRosc && !lastRosc.timeUnknown;
     if (state.timingMode === 'log') {
       const start = firstCheck.loggedAt;
       const end = endAtRosc ? lastRosc!.loggedAt : (state.caseClosedAt ?? Date.now());
-      if (start != null && end != null) duration = formatRecordingDuration(Math.max(0, Math.floor((end - start) / 1000)));
+      if (start != null && end != null) durationSeconds = Math.max(0, Math.floor((end - start) / 1000));
     } else {
       const end = endAtRosc ? lastRosc!.elapsed : state.elapsedSeconds;
-      duration = formatRecordingDuration(Math.max(0, Math.floor(end - firstCheck.elapsed)));
+      durationSeconds = Math.max(0, Math.floor(end - firstCheck.elapsed));
     }
   }
   const shockCount = tx.filter(x => x.name.includes('Shock') && !x.name.includes('Disarm')).length;
   const disarmCount = tx.filter(x => x.name.includes('Disarm') && !isRoscName(x.name)).length;
   const withRhythm = tx.filter(x => rhythmFromName(x.name));
   const firstRhythm = withRhythm.length ? rhythmFromName(withRhythm[0].name)! : '';
-  const otherRhythms: string[] = [];
-  withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && !otherRhythms.includes(r)) otherRhythms.push(r); });
   const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
   const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
+  // Rhythms seen apart from the first and the latest (neither is listed twice)
+  const others: string[] = [];
+  withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && r !== recentRhythm && !others.includes(r)) others.push(r); });
+  // 5 minutes before the elapsed time would have been 0:00:00 (Tx log only has no elapsed time: when recording began)
+  const zeroMs = state.timingMode === 'log'
+    ? state.caseOpenedAt
+    : (state.caseClosedAt ?? Date.now()) - state.elapsedSeconds * 1000;
+  const collapseClock = zeroMs ? getLocalTime(new Date(zeroMs - 5 * 60 * 1000)) : '';
   const rhythm = handoverRhythmStatus(state);
+  const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
+  const arrest: HandoverArrest = {
+    rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
+    firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, collapseClock,
+  };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
-  if (duration) information.push({ t: `Arrest ${duration}` });
+  if (durationSeconds != null) information.push({ t: `Arrest ${formatRecordingDuration(durationSeconds)}` });
   information.push({ t: `${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}` });
   information.push({ t: `${shockCount} shock${shockCount === 1 ? '' : 's'}` });
   information.push({ t: `${disarmCount} disarm${disarmCount === 1 ? '' : 's'}` });
   if (firstRhythm) information.push({ t: `First rhythm ${firstRhythm}` });
-  if (otherRhythms.length) information.push({ t: 'Other rhythms', sub: otherRhythms });
+  if (others.length) information.push({ t: 'Other rhythms', sub: others });
   if (recentRhythm) information.push({ t: `${state.isROSCMode ? 'Last rhythm before ROSC' : 'Latest rhythm'} ${recentRhythm}` });
-  if (lastRosc) {
-    const rearrestSince = tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
-    information.push({ t: `ROSC ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}` });
-  }
+  if (lastRosc) information.push({ t: `ROSC ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}` });
 
   // --- Signs not covered by R / A / B / C. SpO₂ only matters once there's a circulation to measure it in.
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
@@ -5278,29 +5309,26 @@ const buildHandoverContent = (
 
   // --- Treatment, in the order a receiving team wants it: the airway, then access, then medications (and oxygen)
   // in the order each was first given, then anything else that was done
-  const treatment: string[] = [];
-  if (airway.length) treatment.push(`Airway ${airway.join(', ')}`);
   const accessCount = (id: string) => tx.filter(x => getTreatmentIdentity(x.name) === id && succeeded(x.name)).length;
-  if (accessCount('IO access')) treatment.push(`IO x ${accessCount('IO access')}`);
-  if (accessCount('IV access')) treatment.push(`IV x ${accessCount('IV access')}`);
   const firstIdx = (match: (n: string) => boolean) => tx.findIndex(x => match(x.name));
-  const meds: { idx: number, line: string }[] = [];
+  const medList: { idx: number, name: string, dose: string, note: string }[] = [];
   Object.entries(pharmaSummary).forEach(([med, info]) => {
     const dt = doseTimeNote(tx, med);
-    let line: string;
+    const name = med.replace(/ push$/, '');
+    let dose: string;
     if (INFUSION_DRUGS.includes(med)) {
-      const dose = state.infusionDoses?.[med];
-      line = `${med}${dose ? ` ${dose}${med === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : ''}${dt ? `, started ${dt.time}` : ''}`;
+      const d = state.infusionDoses?.[med];
+      dose = d ? `${d}${med === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : '';
     } else {
-      line = `${med} ${info.display}${dt ? `, last ${dt.time}` : ''}`;
+      dose = info.display.replace(/\s*\(\d+\)\s*$/, '');
     }
-    meds.push({ idx: firstIdx(n => n.startsWith(med)), line });
+    medList.push({ idx: firstIdx(n => n.startsWith(med)), name, dose, note: dt ? `${dt.label === 'Started' ? 'started' : 'last'} ${dt.time}` : '' });
   });
-  if (oxygen.length) meds.push({ idx: firstIdx(n => getTreatmentIdentity(n) === 'Oxygen' && succeeded(n)), line: oxygenDevices.length ? `Oxygen ${oxygenDevices.join(', ')}` : 'Oxygen' });
-  meds.sort((p, q) => p.idx - q.idx).forEach(m => treatment.push(m.line));
+  if (oxygen.length) medList.push({ idx: firstIdx(n => getTreatmentIdentity(n) === 'Oxygen' && succeeded(n)), name: 'Oxygen', dose: oxygenDevices.join(', '), note: '' });
+  medList.sort((p, q) => p.idx - q.idx);
   // Anything else: Corpuls, Pacing, and anything typed into the log that isn't one of the app's own items
-  const others: { idx: number, line: string }[] = [];
-  ['Corpuls', 'Pacing'].forEach(n => { const i = firstIdx(x => getTreatmentIdentity(x) === n || x.startsWith(n)); if (i >= 0) others.push({ idx: i, line: n }); });
+  const otherList: { idx: number, line: string }[] = [];
+  ['Corpuls', 'Pacing'].forEach(n => { const i = firstIdx(x => getTreatmentIdentity(x) === n || x.startsWith(n)); if (i >= 0) otherList.push({ idx: i, line: n }); });
   tx.forEach((x, i) => {
     const n = x.name;
     const known = isOutcome(n) || n.startsWith('Rhythm check') || n.startsWith('Mode changed') || n.startsWith('Weight changed')
@@ -5309,9 +5337,19 @@ const buildHandoverContent = (
       || HANDOVER_AIRWAY_LADDER.some(a => n === a || n.startsWith(a + ' ')) || HANDOVER_OTHER_KNOWN.some(a => n === a || n.startsWith(a + ' ') || getTreatmentIdentity(n) === a);
     if (known) return;
     const clean = n.replace(/ #\d+/, '');
-    if (!others.some(o => o.line === clean)) others.push({ idx: i, line: clean });
+    if (!otherList.some(o => o.line === clean)) otherList.push({ idx: i, line: clean });
   });
-  others.sort((p, q) => p.idx - q.idx).forEach(o => treatment.push(o.line));
+  otherList.sort((p, q) => p.idx - q.idx);
+  const txData: HandoverTreatment = {
+    airway, io: accessCount('IO access'), iv: accessCount('IV access'),
+    meds: medList.map(m => ({ name: m.name, dose: m.dose, note: m.note })), others: otherList.map(o => o.line),
+  };
+  const treatment: string[] = [];
+  if (airway.length) treatment.push(`Airway ${airway.join(', ')}`);
+  if (txData.io) treatment.push(`${txData.io} x IO`);
+  if (txData.iv) treatment.push(`${txData.iv} x IV`);
+  txData.meds.forEach(m => treatment.push(`${m.name}${m.dose ? ` ${m.dose}` : ''}${m.note ? ` (${m.note})` : ''}`));
+  txData.others.forEach(o => treatment.push(o));
   if (!treatment.length) treatment.push('None recorded');
 
   return {
@@ -5319,8 +5357,10 @@ const buildHandoverContent = (
     defaultAge: state.patientType === 'paed' ? parseAgeLabel(state.patientAge) : null,
     airway: airway.length ? airway.join(', ') : 'none recorded',
     rhythm,
+    arrest,
     information,
     signs,
+    tx: txData,
     treatment,
   };
 };
@@ -5472,52 +5512,85 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   if (!h.suspectedCause.trim()) toFill.push('Suspected cause');
   content.signs.forEach(s => { if (!s.value) toFill.push(s.label); });
 
-  // --- Read out: one card at a time, short fragments; anything missing is shown amber with a question mark
-  type Frag = { t: string, missing?: boolean };
-  const q = (t: string): Frag => ({ t, missing: true });
-  const line = (frags: Frag[], sep = ' · ') => (
-    <div>{frags.map((f, i) => <span key={i}>{i > 0 && <span className="text-neutral-300">{sep}</span>}<span className={f.missing ? 'text-amber-500' : ''} {...(f.missing ? { 'data-handover-missing-frag': f.t } : {})}>{f.t}</span></span>)}</div>
+  // --- Read out: one card at a time, written as the words to say. Anything missing is shown amber with a question mark.
+  const miss = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
+  const withCommas = (lines: React.ReactNode[]) => lines.map((n, i) => <div key={i}>{n}{i < lines.length - 1 ? ',' : ''}</div>);
+  const sub = (items: React.ReactNode[]) => (
+    <div className="mt-2 ml-5 space-y-2 text-[24px] font-semibold text-neutral-700">{items.map((x, i) => <div key={i}>• {x}</div>)}</div>
   );
-  const identification: React.ReactNode[] = [
-    line([age ? { t: age } : q('Age ?'), h.gender ? { t: genderText(h) } : q('Gender ?'), ...(content.weight ? [{ t: content.weight }] : [])]),
-    ...(h.name.trim() ? [<div key="n">{h.name.trim()}</div>] : []),
+  const rhythmWords = (r: string) => (r === 'pVT' ? 'pulseless VT' : r);
+  const bandWords: Record<string, string> = { 'Under 2 min': 'under 2 minutes', '2–5 min': '2 to 5 minutes', '5–10 min': '5 to 10 minutes', 'Over 10 min': 'over 10 minutes' };
+  const lines = (txt: string) => txt.split('\n').map(l => l.trim()).filter(Boolean);
+
+  const ageWords = !ageValue ? null : (ageValue === '0' && ageUnit === 'Months') ? 'newborn' : `${ageValue} ${ageUnit === 'Months' ? 'month' : 'year'} old`;
+  const idLines: React.ReactNode[] = [
+    ...(h.name.trim() ? [`This is ${h.name.trim()}`] : []),
+    <>{ageWords ?? miss('Age ?')} {h.gender ? genderText(h).toLowerCase() : miss('Gender ?')}</>,
+    ...(content.weight ? [`estimated weight ${content.weight}`] : []),
   ];
+  const witnessedLine: React.ReactNode = !h.witnessed ? miss('Witnessed ?')
+    : h.witnessed === 'Yes' ? `This was a witnessed arrest${content.arrest.collapseClock ? ` at approximately ${content.arrest.collapseClock}` : ''}`
+    : h.witnessed === 'No' ? 'This was an unwitnessed arrest' : "It's not known whether this arrest was witnessed";
+  const cprWhen = h.downtime && h.downtime !== 'Unknown' ? bandWords[h.downtime] : null;
+  const cprLine: React.ReactNode = !h.bystanderCpr ? miss('Bystander CPR ?')
+    : h.bystanderCpr === 'Unknown' ? 'bystander CPR is unknown'
+    : <>{h.bystanderCpr === 'Yes' ? 'patient received bystander CPR' : 'no bystander CPR'}{' '}
+        {h.downtime === 'Unknown' ? '(time to CPR unknown)' : cprWhen ? (h.bystanderCpr === 'Yes' ? `in ${cprWhen}` : `and CPR started after ${cprWhen}`) : miss('Collapse to CPR ?')}</>;
+  const causeLine: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
+    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'cause of arrest is unknown' : `suspected cause of arrest is ${h.suspectedCause.trim()}`;
+
+  const a = content.arrest;
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const arrestNodes: React.ReactNode[] = [];
+  if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text.startsWith('Next rhythm check in ') ? `Next rhythm check is in ${a.rhythm.text.slice('Next rhythm check in '.length)}` : a.rhythm.text}.</div>);
+  if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `The arrest ran for ${formatTime(a.durationSeconds)}${a.rosc ? ` before ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `Arrest has been running for ${formatTime(a.durationSeconds)}.`}</div>);
+  else if (a.inRosc && a.rosc) arrestNodes.push(<div key="d">{`ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
+  arrestNodes.push(<div key="p">Pt has received{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), `${plural(a.disarms, 'disarm', 'disarms')}.`])}</div>);
+  if (a.firstRhythm) {
+    if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
+    else if (a.latest && a.latest !== a.firstRhythm) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
+    else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
+    if (a.latest && (a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
+  }
+  if (h.information.trim()) arrestNodes.push(<div key="n">Also:{sub(lines(h.information))}</div>);
+
+  const recorded = content.signs.filter(s => s.value);
+  const notRecorded = content.signs.filter(s => !s.value);
+  const vitalsNodes: React.ReactNode[] = [
+    <div key="v">{recorded.length ? 'For vital signs we have recorded:' : 'No vital signs recorded:'}
+      {sub([...recorded.map(s => `${s.label} of ${s.value}${s.unit === '%' ? '%' : ''}`), ...notRecorded.map(s => <span key={s.label} className="text-amber-500" data-handover-missing-frag={`${s.label} ?`}>{s.label} ?</span>)])}</div>,
+  ];
+
+  const t = content.tx;
+  const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA', IGT: 'an IGT' };
+  const airwayPhrase = t.airway.length ? (t.airway.length === 2 ? `${airwayName[t.airway[0]]} with an IGT` : airwayName[t.airway[0]]) : '';
+  const treatmentNodes: React.ReactNode[] = [
+    <div key="a">{airwayPhrase ? `For airway we have ${airwayPhrase}` : 'No airway device recorded'}</div>,
+    t.io || t.iv ? <div key="x">For access we have:{sub([...(t.io ? [`${t.io} x IO`] : []), ...(t.iv ? [`${t.iv} x IV`] : [])])}</div> : <div key="x">No access recorded</div>,
+    t.meds.length ? <div key="m">For medications we have given:{sub(t.meds.map(m => `${m.name}${m.dose ? ` ${m.dose}` : ''}${m.note ? ` (${m.note})` : ''}`))}</div> : <div key="m">No medications given</div>,
+    ...(t.others.length ? [<div key="o">We have also used:{sub(t.others)}</div>] : []),
+  ];
+
   const roscBlock: React.ReactNode[] = [
     <div key="R"><span className="text-neutral-400 mr-3">R</span>{vit.gcs ? `GCS ${vit.gcs}` : <span className="text-amber-500" data-handover-missing-frag="GCS ?">GCS ?</span>}</div>,
     <div key="A"><span className="text-neutral-400 mr-3">A</span>{content.airway}</div>,
     <div key="B"><span className="text-neutral-400 mr-3">B</span>{!h.breathing ? <span className="text-amber-500" data-handover-missing-frag="Breathing ?">Breathing ?</span>
       : <>{h.breathing === 'Breathing' ? 'Breathing' : 'Ventilated'} {vit.rr ? `${vit.rr}/min` : <span className="text-amber-500" data-handover-missing-frag="rate ?">rate ?</span>}</>}</div>,
-    <div key="C" className="flex items-baseline"><span className="text-neutral-400 mr-3">C</span>{line([vit.hr ? { t: `HR ${vit.hr}` } : q('HR ?'), (vit.bpSys && vit.bpDia) ? { t: `BP ${vit.bpSys}/${vit.bpDia}` } : q('BP ?')])}</div>,
+    <div key="C" className="flex items-baseline"><span className="text-neutral-400 mr-3">C</span><span>{vit.hr ? `HR ${vit.hr}` : miss('HR ?')} · {(vit.bpSys && vit.bpDia) ? `BP ${vit.bpSys}/${vit.bpDia}` : miss('BP ?')}</span></div>,
   ];
-  const what: React.ReactNode[] = [
-    <div key="w">{h.witnessed ? (h.witnessed === 'Yes' ? 'Witnessed' : h.witnessed === 'No' ? 'Unwitnessed' : 'Witnessed unknown') : <span className="text-amber-500" data-handover-missing-frag="Witnessed ?">Witnessed ?</span>}</div>,
-    <div key="b">{h.bystanderCpr ? (h.bystanderCpr === 'Yes' ? 'Bystander CPR' : h.bystanderCpr === 'No' ? 'No bystander CPR' : 'Bystander CPR unknown') : <span className="text-amber-500" data-handover-missing-frag="Bystander CPR ?">Bystander CPR ?</span>}</div>,
-    <div key="d">{h.downtime ? (h.downtime === 'Unknown' ? 'Collapse to CPR unknown' : `Collapse to CPR ${h.downtime.toLowerCase()}`) : <span className="text-amber-500" data-handover-missing-frag="Collapse to CPR ?">Collapse to CPR ?</span>}</div>,
-    <div key="s">{h.suspectedCause.trim() ? `Suspected: ${h.suspectedCause.trim()}` : <span className="text-amber-500" data-handover-missing-frag="Suspected cause ?">Suspected cause ?</span>}</div>,
-  ];
-  const info: HandoverInfoItem[] = [...content.information, ...(h.information.trim() ? h.information.split('\n').map(l => l.trim()).filter(Boolean).map(t => ({ t })) : [])];
   const ambo: React.ReactNode[] = [
     <div key="a">{h.allergies ? (h.allergies === 'NKA' ? 'NKA' : `Allergies: ${allergyText(h)}`) : <span className="text-amber-500" data-handover-missing-frag="Allergies ?">Allergies ?</span>}</div>,
-    ...(h.medications.trim() ? [<div key="m">Meds: {h.medications.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}</div>] : []),
-    ...(h.background.trim() ? [<div key="h">Hx: {h.background.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}</div>] : []),
-    ...(h.otherInfo.trim() ? [<div key="o">Other: {h.otherInfo.split('\n').map(l => l.trim()).filter(Boolean).join(', ')}</div>] : []),
+    ...(h.medications.trim() ? [<div key="m">Meds: {lines(h.medications).join(', ')}</div>] : []),
+    ...(h.background.trim() ? [<div key="h">Hx: {lines(h.background).join(', ')}</div>] : []),
+    ...(h.otherInfo.trim() ? [<div key="o">Other: {lines(h.otherInfo).join(', ')}</div>] : []),
   ];
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
-    { key: 'I', title: 'I – Identification', body: identification },
+    { key: 'I', title: 'I – Identification', body: withCommas(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
-    { key: 'M', title: 'M – What happened', body: what },
-    { key: 'I2', title: 'I – Info / Arrest Summary', body: info.map((l, i) => (
-      <div key={i}>{l.t}{l.sub && <div className="mt-1 ml-5 space-y-1 text-[24px] font-semibold text-neutral-700">{l.sub.map((x, j) => <div key={j}>• {x}</div>)}</div>}</div>
-    )) },
-    { key: 'S', title: 'S – Vital Signs', body: (
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-        {content.signs.map(s => (
-          <div key={s.label}><div className="text-[13px] font-bold text-neutral-400 tracking-wide">{s.label}</div>
-            <div data-handover-sign={s.label}>{s.value ? `${s.value}${s.unit === '%' ? '%' : s.unit === '°C' ? '°' : ''}` : <span className="text-amber-500" data-handover-missing-frag={`${s.label} —`}>—</span>}</div></div>
-        ))}
-      </div>
-    ) },
-    { key: 'T', title: 'T – Treatment', body: content.treatment.map((l, i) => <div key={i}>{l}</div>) },
+    { key: 'M', title: 'M – What happened', body: withCommas([witnessedLine, cprLine, causeLine]) },
+    { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestNodes },
+    { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
+    { key: 'T', title: 'T – Treatment', body: treatmentNodes },
     { key: 'AMBO', title: 'AMBO – if time allows', muted: true, body: ambo },
   ];
 
