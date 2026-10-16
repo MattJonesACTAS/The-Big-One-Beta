@@ -1669,6 +1669,7 @@ export default function App() {
             // Auto-close overlay ONCE at 10s (not in tutorial)
             if (countdown === 20 && !hasAutoClosedAt10.current && tutorialAutoCloseOK) {
               nextOverlay = null;
+              setShowHandover(false);   // the Handover page goes too (what's been filled in is kept)
               hasAutoClosedAt10.current = true;
               // Back to the home screen with the last check's popup still unanswered
               if (isShockForcedRef.current && !tutorialMode && !showCatchup) {
@@ -2795,11 +2796,11 @@ export default function App() {
           /* Log mode: scrollable running summary is the home screen */
           <div className="h-full flex flex-col relative">
             <div data-scroll-container="summary" className="flex-1 overflow-y-auto p-4 space-y-4">
-              {!tutorialMode && <HandoverButton onClick={() => setShowHandover(true)} />}
               {/* In the tutorial the Arrest Summary is always shown, since its note is about it and no rhythm check has happened yet to bring it up on its own */}
               <div data-tutorial-section="arrestSummary"><ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary={tutorialMode} /></div>
               <div data-tutorial-section="vitalSigns"><VitalSignsSection vitals={state.vitals} /></div>
               <div data-tutorial-section="pharmaSummary"><PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} /></div>
+              {!tutorialMode && <HandoverButton onClick={() => setShowHandover(true)} />}
               <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
                 <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
@@ -5134,9 +5135,11 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  name: '', gender: '', genderOther: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
+  type: '', name: '', gender: '', genderOther: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
   suspectedCause: '', information: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
+// The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
+const HANDOVER_TYPES = ['Arrest', 'PHEA', 'Both'];
 const HANDOVER_YNU = ['Yes', 'No', 'Unknown'];
 const HANDOVER_GENDERS = ['Male', 'Female', 'Other'];
 // Time between collapse and the start of CPR
@@ -5301,7 +5304,7 @@ function HandoverButton({ onClick, className = '' }: { onClick: () => void, clas
       data-button="handover"
       className={`w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-xl font-bold btn-base ${className}`}
     >
-      <ClipboardList size={20} /> Handover
+      <ClipboardList size={20} /> Handover assistance
     </button>
   );
 }
@@ -5478,7 +5481,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
       <div data-handover data-handover-view="read" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
         <div className={`flex-shrink-0 p-4 flex items-center justify-between font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
           <button onClick={() => setView('fill')} data-button="handover-edit" className="px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
-          <span data-handover-title>{c.title}</span>
+          <span className="text-center leading-tight"><span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span><span data-handover-title>{c.title}</span></span>
           <span className="text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
         <div data-handover-card={c.key} className={`flex-1 overflow-y-auto p-6 space-y-5 text-[28px] leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
@@ -5500,11 +5503,24 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
   return (
     <div data-handover data-handover-view="fill" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
       <div className="bg-blue-600 text-white p-4 text-center font-bold tracking-wide flex-shrink-0">HANDOVER</div>
-      {toFill.length > 0 && (
+      {(h.type === 'Arrest' ? toFill.length > 0 : !h.type) && (
         <div data-handover-banner className="flex-shrink-0 bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-[13px] font-semibold">
-          Still to fill: {toFill.join(', ')}
+          Still to fill: {h.type === 'Arrest' ? toFill.join(', ') : 'Handover type'}
         </div>
       )}
+      <div data-handover-types className="flex-shrink-0 grid grid-cols-3 gap-2 px-4 pt-3 pb-2 bg-neutral-100">
+        {HANDOVER_TYPES.map(t => (
+          <button key={t} data-handover-type={t} aria-pressed={h.type === t} onClick={() => { onField('type', t); setCard(0); }}
+            className={`py-3 rounded-xl font-bold text-[16px] border-2 btn-base ${h.type === t ? 'bg-blue-600 text-white border-blue-600' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-amber-300'}`}>{t}</button>
+        ))}
+      </div>
+      {h.type !== 'Arrest' ? (
+        <div data-handover-empty className="flex-1 overflow-y-auto p-6">
+          <div className={`rounded-xl p-5 text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
+            {h.type ? `The ${h.type} handover prompts are still to be added.` : 'Choose Arrest, PHEA or Both. The handover prompts are different for each.'}
+          </div>
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <HandoverSection letter="I" title="Identification" done={doneId}>
           {text('name', 'Name (optional)', { words: true })}
@@ -5577,9 +5593,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onClose }: {
           </HandoverSection>
         </div>
       </div>
+      )}
       <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
         <button onClick={onClose} data-button="handover-close" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Close</button>
-        <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">Read out</button>
+        <button onClick={() => { setCard(0); setView('read'); }} disabled={h.type !== 'Arrest'} data-button="handover-readout" className={`p-4 rounded-xl font-bold btn-base ${h.type === 'Arrest' ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-400'}`}>Read out</button>
       </div>
     </div>
   );
@@ -5711,7 +5728,6 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
 function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onHandover }: { onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
-      {onHandover && state.timingMode !== 'minimal' && <HandoverButton onClick={onHandover} />}
       <div data-tutorial-section="arrestSummary">
         <ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary />
       </div>
@@ -5721,6 +5737,7 @@ function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpda
       <div data-tutorial-section="pharmaSummary">
         <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
       </div>
+      {onHandover && state.timingMode !== 'minimal' && <HandoverButton onClick={onHandover} />}
       <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
         <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={onDelete} onMove={onMove} onEdit={onEdit} />

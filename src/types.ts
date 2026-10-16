@@ -19,6 +19,7 @@ export interface Treatment {
 // What the crew types on the Handover page. Kept with the open case only: cleared when the case is
 // closed, and never saved with a previous case or printed in the PDF.
 export interface HandoverFields {
+  type: string;             // 'Arrest' | 'PHEA' | 'Both' | '' (chosen at the top of the Handover page)
   name: string;
   age?: string;             // digits only; the unit is separate. Not set until the crew types or clears it, so a paediatric age from setup shows until then
   ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
