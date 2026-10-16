@@ -418,10 +418,10 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('rhythmDemoFirstPopup', {
     pages: [{
       title: 'Select the Outcome',
-      description: "When the countdown reached 0:00, the 'rhythm check popup' appeared.\n\nYou use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• No ROSC (red)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
+      description: "When the countdown reached 0:00, the 'rhythm check popup' appeared.\n\nYou use it to log what the outcome of the rhythm check was.\n\nThere are four kinds of outcome:\n\n• Shock (red)\n\n• Disarm (blue)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
       title: 'Give it a Go',
-      description: "Choose 'No ROSC' to continue."
+      description: "Choose 'Shock' or 'Disarm' to continue."
     }]
   }),
   nodeById('rhythmDemoAfterFirst'),
@@ -462,7 +462,7 @@ const MINIMAL_NODES: RawNode[] = [
     anchor: '[data-tutorial-anchor="add-tx-submenu"]',
     pages: [{
       title: 'Add Tx Submenu',
-      description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (No ROSC and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode."
+      description: "The Add Tx submenu has two categories:\n\n• Rhythm Check (Shock, Disarm, and ROSC)\n\n• Medications (adrenaline and amiodarone)\n\nThere are no doses to choose in this mode."
     }, {
       title: 'Give it a Go',
       description: "Press 'Adrenaline' to start its timer."

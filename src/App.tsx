@@ -435,8 +435,13 @@ const KNOWN_MEDS = [
 // Identifies the 'type' of a treatment for numbering purposes, ignoring any
 // numbering already present (so re-checking an already-numbered entry like
 // "Shock #2 - VF" still correctly identifies as "Shock").
+// ROSC is its own kind of entry. It used to be stored as 'Disarm - ROSC' (and cases saved that way,
+// including numbered forms like 'Disarm #2 - ROSC', still exist), so both are recognised.
+const isRoscName = (name: string): boolean => /^(Disarm( #\d+)? - )?ROSC( #\d+)?$/.test(name.trim());
+
 const getTreatmentIdentity = (rawName: string): string => {
   const name = rawName.replace(/#\d+\s*/, '').replace(/\s+/g, ' ').trim();
+  if (isRoscName(name)) return 'ROSC';
   if (name.startsWith('Oxygen ')) return 'Oxygen';
   if (name.startsWith('Sodium bicarbonate')) return 'Sodium bicarbonate';
   if (name.startsWith('Shock')) return 'Shock';
@@ -482,8 +487,10 @@ const stripTreatmentNumber = (name: string, identity: string): string => {
 const renumberTreatments = (treatments: Treatment[]): Treatment[] => {
   const seenCounts: Record<string, number> = {};
   return treatments.map(t => {
-    const identity = getTreatmentIdentity(t.name);
-    const baseName = stripTreatmentNumber(t.name, identity);
+    // A ROSC saved the old way ('Disarm - ROSC') is renamed 'ROSC' when it's renumbered
+    const current = isRoscName(t.name) ? 'ROSC' : t.name;
+    const identity = getTreatmentIdentity(current);
+    const baseName = stripTreatmentNumber(current, identity);
     const count = (seenCounts[identity] = (seenCounts[identity] || 0) + 1);
     return { ...t, name: count > 1 ? insertTreatmentNumber(baseName, identity, count) : baseName };
   });
@@ -1884,12 +1891,11 @@ export default function App() {
 
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
-    // Shock and Disarm outcomes move the rhythm check timers. Timers only has
-    // no shock/disarm to pick, so its plain "Rhythm check" (No ROSC) is flagged
-    // to be treated the same way, and gets all of it: an early check restarts
-    // the countdown, a rearrest re-picks the interval, a delayed check is
-    // resolved, and so on.
-    const isRhythmOutcomeName = !!options?.rhythmOutcome || name.includes('Shock') || name.includes('Disarm');
+    // Shock, Disarm and ROSC outcomes move the rhythm check timers. (Cases saved by older versions of
+    // Timers only may contain a plain "Rhythm check" for what is now Shock or Disarm; those were flagged
+    // by the option below.) An early check restarts the countdown, a rearrest re-picks the interval,
+    // a delayed check is resolved, and so on.
+    const isRhythmOutcomeName = !!options?.rhythmOutcome || name.includes('Shock') || name.includes('Disarm') || isRoscName(name);
 
     // First time a given treatment type is logged, leave it unnumbered.
     // Every subsequent log of that same type gets numbered (#2, #3, ...).
@@ -1926,7 +1932,7 @@ export default function App() {
     // (like which ref to set) isn't available yet by the time this function
     // continues executing.
     const isShockOrDisarmForReset = isRhythmOutcomeName;
-    const isROSCForReset = name === 'Disarm - ROSC';
+    const isROSCForReset = isRoscName(name);
     // Any rhythm check outcome logged while a check is delayed - from the
     // "Rhythm check now" popup or straight from Add Tx - is that delayed
     // check, done now: it restores the held CPR round and re-anchors the
@@ -1964,7 +1970,7 @@ export default function App() {
 
     setState(prev => {
       const isShockOrDisarm = isRhythmOutcomeName;
-      const isROSC = name === 'Disarm - ROSC';
+      const isROSC = isRoscName(name);
       const isRearrest = name === 'Rearrest';
       const wasRhythmCheckPaused = prev.rhythmCheckPaused;
       // Increment round if shock/disarm logged out of turn (before timer hit 0)
@@ -2030,7 +2036,7 @@ export default function App() {
     }
 
     // Make ROSC button flash when ROSC is selected
-    if (name === 'Disarm - ROSC') {
+    if (isRoscName(name)) {
       setRoscButtonFlashing(true);
     }
     
@@ -2044,7 +2050,7 @@ export default function App() {
     // has plenty happening on screen and doesn't need an extra prompt.
     if ((rearrested || resolvingDelay) && isRhythmOutcomeName) {
       setRearrested(false);
-      if (name === 'Disarm - ROSC') {
+      if (isRoscName(name)) {
         // ROSC again — go straight back to ROSC mode, no interval picker needed
       } else if (timingMode === 'elapsed' || timingMode === 'minimal') {
         const patterns: Array<'evens' | 'odds' | 'half-evens' | 'half-odds'> = ['evens', 'odds', 'half-evens', 'half-odds'];
@@ -2071,7 +2077,7 @@ export default function App() {
     }
     
     // Show notification with treatment name
-    if (name !== 'Disarm - ROSC' && !name.startsWith('Mode changed')) {
+    if (!isRoscName(name) && !name.startsWith('Mode changed')) {
       loggedTreatmentRef.current = name;
       setShowLoggedNotification(true);
       setTimeout(() => setShowLoggedNotification(false), 2000);
@@ -4444,8 +4450,8 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
 // Add Tx and the forced rhythm check popup for Timers only. Everything here is
 // logged in the background exactly as in the other modes (so it shows in the
 // Tx log if the mode is switched, and in the closed case); the only
-// difference is what there is to pick from: No ROSC / ROSC for a rhythm check,
-// and the two drugs that have timers.
+// difference is what there is to pick from: Shock / Disarm / ROSC for a rhythm
+// check (no rhythm or dose is asked for), and the two drugs that have timers.
 function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythmCheck, tutorialOutcomeRestriction }: {
   state: AppState;
   isShockForced: boolean;
@@ -4453,18 +4459,16 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
   onDelayRhythmCheck?: () => void;
   // Tutorial only: the one outcome the walkthrough is asking for. The others
   // are slightly greyed and don't respond; the one to press pulses. Here
-  // 'redblue' means "No ROSC" (there is no shock/disarm to pick in this mode).
+  // 'redblue' means Shock or Disarm.
   tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null;
 }) {
-  const noRoscOff = tutorialOutcomeRestriction === 'rosc' || tutorialOutcomeRestriction === 'delay';
+  const redBlueOff = tutorialOutcomeRestriction === 'rosc' || tutorialOutcomeRestriction === 'delay';
   const roscOff = tutorialOutcomeRestriction === 'redblue' || tutorialOutcomeRestriction === 'delay';
   const delayOff = tutorialOutcomeRestriction === 'redblue' || tutorialOutcomeRestriction === 'rosc';
   const dimmed = { opacity: 0.6, filter: 'grayscale(0.5)' } as const;
-  // No ROSC is logged as a plain "Rhythm check": Timers only never learns
-  // whether it was a shock or a disarm, but it still has to move the timers
-  // the way a shock or disarm does, hence the flag.
-  const noRosc = () => addTreatment('Rhythm check', { rhythmOutcome: true });
-  const rosc = () => addTreatment('Disarm - ROSC');
+  const shock = () => addTreatment('Shock', { rhythmOutcome: true });
+  const disarm = () => addTreatment('Disarm', { rhythmOutcome: true });
+  const rosc = () => addTreatment('ROSC');
 
   if (isShockForced) {
     return (
@@ -4472,26 +4476,34 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
         <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse flex-shrink-0">
           RHYTHM CHECK
         </div>
-        {/* The two outcomes sit in the middle of the space below the header.
+        {/* The outcomes sit in the middle of the space below the header.
             (min-h-full rather than justify-center on the scroller itself, so
             a short screen scrolls from the top instead of clipping it.)
-            ROSC is last, with a full gap above it, so it isn't hit by
-            accident reaching for the far more common No ROSC. */}
+            ROSC is last, with a bigger gap above it, so it isn't hit by
+            accident reaching for Shock or Disarm. */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="min-h-full flex flex-col justify-center gap-6 p-6">
+          <div className="min-h-full flex flex-col justify-center gap-4 p-6 timers-outcomes">
             <button
-              onClick={() => { if (!noRoscOff) noRosc(); }}
-              disabled={noRoscOff}
-              style={noRoscOff ? dimmed : undefined}
-              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-red-50 text-red-700 border-2 border-red-100 ${noRoscOff ? 'cursor-not-allowed' : ''}`}
+              onClick={() => { if (!redBlueOff) shock(); }}
+              disabled={redBlueOff}
+              style={redBlueOff ? dimmed : undefined}
+              className={`w-full py-8 rounded-2xl text-2xl font-bold btn-base timers-outcome bg-red-50 text-red-700 border-2 border-red-100 ${redBlueOff ? 'cursor-not-allowed' : ''}`}
             >
-              No ROSC
+              Shock
+            </button>
+            <button
+              onClick={() => { if (!redBlueOff) disarm(); }}
+              disabled={redBlueOff}
+              style={redBlueOff ? dimmed : undefined}
+              className={`w-full py-8 rounded-2xl text-2xl font-bold btn-base timers-outcome bg-blue-50 text-blue-700 border-2 border-blue-100 ${redBlueOff ? 'cursor-not-allowed' : ''}`}
+            >
+              Disarm
             </button>
             <button
               onClick={() => { if (!roscOff) rosc(); }}
               disabled={roscOff}
               style={roscOff ? dimmed : undefined}
-              className={`w-full py-10 rounded-2xl text-2xl font-bold btn-base bg-emerald-50 text-emerald-700 border-2 border-emerald-100 ${roscOff ? 'cursor-not-allowed' : ''}`}
+              className={`w-full py-8 mt-4 rounded-2xl text-2xl font-bold btn-base timers-outcome timers-rosc bg-emerald-50 text-emerald-700 border-2 border-emerald-100 ${roscOff ? 'cursor-not-allowed' : ''}`}
             >
               ROSC
             </button>
@@ -4526,10 +4538,11 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
         items={state.isROSCMode
           ? [{ name: 'Rearrest', color: 'orange' }]
           : [
-              { name: 'Rhythm check', displayName: 'No ROSC', color: 'red' },
-              { name: 'Disarm - ROSC', displayName: 'ROSC', color: 'emerald' }
+              { name: 'Shock', color: 'red' },
+              { name: 'Disarm', color: 'blue' },
+              { name: 'ROSC', color: 'emerald' }
             ]}
-        onSelect={(n) => (n === 'Rhythm check' ? noRosc() : addTreatment(n))}
+        onSelect={(n) => addTreatment(n)}
       />
       <TxSection
         title="Medications"
@@ -4854,6 +4867,11 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
       const rest = name.slice('Sodium bicarbonate'.length).trim();
       return { med: 'Sodium bic.', dose: rest || null };
     }
+    // ROSC, including one saved the old way as 'Disarm - ROSC': shown as ROSC
+    if (isRoscName(name)) {
+      const roscNum = name.match(/ROSC #(\d+)$/);
+      return { med: roscNum ? `ROSC #${roscNum[1]}` : 'ROSC', dose: null };
+    }
     // Shock/Disarm: split on first ' - ' (handles both plain 'Shock - VF' and
     // numbered 'Shock #3 - VF' forms)
     if (/^Shock( #\d+)? - /.test(name)) {
@@ -4998,7 +5016,8 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
 
 function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
-  const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
+  const disarmCount = state.treatments.filter(t => t.name.includes('Disarm') && !isRoscName(t.name)).length;
+  const roscCount = state.treatments.filter(t => isRoscName(t.name)).length;
   const patientLabel = state.patientType === 'adult'
     ? `Adult · ${state.patientWeight}kg`
     : state.patientType === 'paed'
@@ -5021,6 +5040,7 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
           <StatRow label="CPR Rounds" value={state.cprRound} />
           <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
           <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+          <StatRow label="ROSC" value={roscCount} color="text-emerald-600" />
         </div>
       </div>
 
@@ -5073,7 +5093,8 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 
 function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration, alwaysShowArrestSummary }: { state: AppState, showRecordingDuration?: boolean, showFinalDuration?: boolean, alwaysShowArrestSummary?: boolean }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
-  const disarmCount = state.treatments.filter(t => t.name.includes('Disarm')).length;
+  const disarmCount = state.treatments.filter(t => t.name.includes('Disarm') && !isRoscName(t.name)).length;
+  const roscCount = state.treatments.filter(t => isRoscName(t.name)).length;
   const isPaedWithAge = state.patientType === 'paed' && !!state.patientAge;
   const patientTypeLabel = state.patientType === 'adult' ? 'Adult' : state.patientType === 'paed' ? 'Paediatric' : null;
   // Single-line label for adult, or paediatric with a custom (non-age-based) weight
@@ -5127,12 +5148,9 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
             {state.cprRound > 0 ? (
               <>
                 <StatRow label="CPR Rounds" value={state.cprRound} />
-                {(state.timingMode !== 'minimal' || shockCount > 0) && (
-                  <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
-                )}
-                {(state.timingMode !== 'minimal' || disarmCount > 0) && (
-                  <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
-                )}
+                <StatRow label="Shocks given" value={shockCount} color="text-red-600" />
+                <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
+                <StatRow label="ROSC" value={roscCount} color="text-emerald-600" />
               </>
             ) : (
               <div className="p-4 text-neutral-300 italic text-sm">No CPR rounds recorded</div>
@@ -5677,13 +5695,13 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           { name: 'Disarm - PEA', color: 'blue' },
           state.isROSCMode
             ? { name: 'Rearrest', color: 'orange' }
-            : { name: 'Disarm - ROSC', color: 'emerald' }
+            : { name: 'ROSC', color: 'emerald' }
         ]} 
         onSelect={addTreatment}
         disabledItems={
-          tutorialOutcomeRestriction === 'redblue' ? ['Disarm - ROSC', 'Rearrest']
+          tutorialOutcomeRestriction === 'redblue' ? ['ROSC', 'Rearrest']
           : tutorialOutcomeRestriction === 'rosc' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA']
-          : tutorialOutcomeRestriction === 'delay' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA', 'Disarm - ROSC', 'Rearrest']
+          : tutorialOutcomeRestriction === 'delay' ? ['Shock - VF', 'Shock - pVT', 'Disarm - Asystole', 'Disarm - PEA', 'ROSC', 'Rearrest']
           : undefined
         }
       />
@@ -5691,7 +5709,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       {/* Delay rhythm check - same size/position as the Rhythm Check buttons
           above (matches their p-3/rounded-xl/text-sm styling and grid gap
           exactly), but with one blank button-height slot between it and
-          Disarm - ROSC / Rearrest so it can't be hit by accident reaching
+          ROSC / Rearrest so it can't be hit by accident reaching
           for that button. */}
       {isShockForced && onDelayRhythmCheck && (
         <div className="bg-white p-3 pt-0 grid grid-cols-1 gap-2">
