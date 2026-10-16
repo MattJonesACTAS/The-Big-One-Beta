@@ -22,8 +22,17 @@ export interface HandoverFields {
   name: string;
   age: string;
   gender: string;
+  witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
+  bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
+  downtime: string;
+  suspectedCause: string;
   mechanism: string;
   information: string;
+  // AMBO: useful if there's time, kept apart from IMIST
+  allergies: string;
+  medications: string;
+  background: string;
+  otherInfo: string;
 }
 
 export interface AppState {

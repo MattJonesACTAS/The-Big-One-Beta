@@ -235,6 +235,14 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
 
 const INFUSION_DRUGS = ['Adrenaline infusion', 'Ketamine infusion', 'Morph/midaz infusion'];
 
+// When a drug was given, as a time of day: the last dose, or for an infusion when it was started.
+// Doses added at setup or with an unknown time are skipped. (Shown on screen and in the Handover only.)
+const doseTimeNote = (treatments: Treatment[], med: string): { label: string, time: string } | null => {
+  const mine = treatments.filter(t => t.name.startsWith(med) && !t.timeUnknown && !t.prior && t.clock);
+  if (!mine.length) return null;
+  return INFUSION_DRUGS.includes(med) ? { label: 'Started', time: mine[0].clock } : { label: 'Last', time: mine[mine.length - 1].clock };
+};
+
 // Default unit for a drug's custom ("Other") dose entry: an explicit
 // customUnit override, or extracted from its preset doses. /kg is stripped
 // since a manually-typed custom dose is always an absolute dose, not a
@@ -2533,7 +2541,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          {state.timingMode !== 'minimal' && <HandoverButton onClick={() => setShowHandover(true)} className="col-span-2" />}
+          {state.timingMode !== 'minimal' && !tutorialMode && <HandoverButton onClick={() => setShowHandover(true)} className="col-span-2" />}
           <button 
             onClick={() => exportCasePdf(state.caseClosedAt)}
             className="flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 py-3 px-2 rounded-xl font-bold btn-base border border-emerald-100"
@@ -2555,7 +2563,7 @@ export default function App() {
 
         <VitalSignsSection vitals={state.vitals} />
 
-        <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
+        <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
         
         <div className="rounded-xl border border-neutral-100">
           <div data-tutorial-anchor="closed-treatment-log-banner" className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
@@ -2789,7 +2797,7 @@ export default function App() {
               {/* In the tutorial the Arrest Summary is always shown, since its note is about it and no rhythm check has happened yet to bring it up on its own */}
               <div data-tutorial-section="arrestSummary"><ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary={tutorialMode} /></div>
               <div data-tutorial-section="vitalSigns"><VitalSignsSection vitals={state.vitals} /></div>
-              <div data-tutorial-section="pharmaSummary"><PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} /></div>
+              <div data-tutorial-section="pharmaSummary"><PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} /></div>
               <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
                 <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
@@ -3384,6 +3392,7 @@ export default function App() {
                     <VitalSignsSection vitals={viewingPreviousCase.vitals} />
 
                     <PharmaSummarySection
+                      treatments={viewingPreviousCase.treatments}
                       pharmaSummary={computePharmaSummary(viewingPreviousCase.treatments)}
                       infusionDoses={viewingPreviousCase.infusionDoses}
                       activeInfusions={INFUSION_DRUGS.filter(d => viewingPreviousCase.treatments.some(t => t.name.startsWith(d)))}
@@ -5114,10 +5123,15 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Handover (IMIST). Name, age, gender, mechanism and extra information are typed by the crew; weight,
-// signs, information from the case and treatment are filled in from what the app recorded.
+// Handover (IMIST, then AMBO). Name, age, gender, whether it was witnessed, bystander CPR, downtime, the
+// suspected cause, the mechanism and the AMBO details are entered by the crew; weight, A/B/C, signs,
+// information from the case and treatment are filled in from what the app recorded.
 // ---------------------------------------------------------------------------------------------
-const HANDOVER_EMPTY: HandoverFields = { name: '', age: '', gender: '', mechanism: '', information: '' };
+const HANDOVER_EMPTY: HandoverFields = {
+  name: '', age: '', gender: '', witnessed: '', bystanderCpr: '', downtime: '', suspectedCause: '',
+  mechanism: '', information: '', allergies: '', medications: '', background: '', otherInfo: ''
+};
+const HANDOVER_CHOICES = ['Yes', 'No', 'Unknown'];
 const HANDOVER_NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 // Airways from least to most advanced: only the most advanced one that worked is listed
 const HANDOVER_AIRWAY_LADDER = ['NPA', 'OPA', 'LMA', 'ETT', 'FONA'];
@@ -5131,6 +5145,7 @@ const rhythmFromName = (name: string): string | null => {
 type HandoverContent = {
   weight: string;
   defaultAge: string;
+  status: string[];
   information: string[];
   signs: [string, string][];
   treatment: string[];
@@ -5146,6 +5161,14 @@ const buildHandoverContent = (
     const id = getTreatmentIdentity(n);
     return id === 'Shock' || id === 'Disarm' || isRoscName(n) || /^Rhythm check( #\d+)?$/.test(n.trim());
   };
+
+  // --- Airway and oxygen (used for A / B / C and again under Treatment)
+  const airwayDone = (id: string) => tx.some(x => getTreatmentIdentity(x.name) === id && succeeded(x.name));
+  const topAirway = [...HANDOVER_AIRWAY_LADDER].reverse().find(airwayDone);
+  const airway = [topAirway, airwayDone('IGT') ? 'IGT' : null].filter((a): a is string => !!a);
+  const oxygen = tx.filter(x => getTreatmentIdentity(x.name) === 'Oxygen' && succeeded(x.name));
+  const oxygenDevices: string[] = [];
+  oxygen.forEach(x => { const d = x.name.replace(/^Oxygen\s*(#\d+\s*)?/, '').trim(); if (d && !oxygenDevices.includes(d)) oxygenDevices.push(d); });
 
   // --- Information
   const roscIdx = tx.map((x, i) => (isRoscName(x.name) ? i : -1)).filter(i => i >= 0);
@@ -5186,6 +5209,16 @@ const buildHandoverContent = (
     information.push(`ROSC: ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}`);
   }
 
+  // --- A / B / C: automatic, from what was recorded
+  const corpuls = tx.some(x => x.name.startsWith('Corpuls'));
+  const status = [
+    `A – Airway: ${airway.length ? airway.join(', ') : 'none recorded'}`,
+    `B – Oxygen: ${oxygen.length ? (oxygenDevices.join(', ') || 'given') : 'none recorded'}`,
+    state.isROSCMode
+      ? `C – ROSC${lastRosc ? ` at ${lastRosc.clock}` : ''}`
+      : `C – CPR ongoing${corpuls ? ', mechanical (Corpuls)' : ''}`,
+  ];
+
   // --- Signs: the full list, blank when nothing was entered
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const signs: [string, string][] = [
@@ -5199,18 +5232,18 @@ const buildHandoverContent = (
     ['Temp', v.temp ? `${v.temp}°C` : ''],
   ];
 
-  // --- Treatment: drugs, oxygen, the most advanced airway, access that worked, and anything else given
+  // --- Treatment: drugs (with when they were last given), oxygen, the most advanced airway, access that worked, anything else
   const treatment: string[] = [];
-  Object.entries(pharmaSummary).forEach(([med, info]) => treatment.push(`${med} ${info.display}`));
-  const oxygen = tx.filter(x => getTreatmentIdentity(x.name) === 'Oxygen' && succeeded(x.name));
-  if (oxygen.length) {
-    const devices: string[] = [];
-    oxygen.forEach(x => { const d = x.name.replace(/^Oxygen\s*(#\d+\s*)?/, '').trim(); if (d && !devices.includes(d)) devices.push(d); });
-    treatment.push(devices.length ? `Oxygen: ${devices.join(', ')}` : 'Oxygen');
-  }
-  const airwayDone = (id: string) => tx.some(x => getTreatmentIdentity(x.name) === id && succeeded(x.name));
-  const topAirway = [...HANDOVER_AIRWAY_LADDER].reverse().find(airwayDone);
-  const airway = [topAirway, airwayDone('IGT') ? 'IGT' : null].filter((a): a is string => !!a);
+  Object.entries(pharmaSummary).forEach(([med, info]) => {
+    const dt = doseTimeNote(tx, med);
+    if (INFUSION_DRUGS.includes(med)) {
+      const dose = state.infusionDoses?.[med];
+      treatment.push(`${med}${dose ? ` ${dose}${med === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : ''}${dt ? `, started ${dt.time}` : ''}`);
+    } else {
+      treatment.push(`${med} ${info.display}${dt ? `, last ${dt.time}` : ''}`);
+    }
+  });
+  if (oxygen.length) treatment.push(oxygenDevices.length ? `Oxygen: ${oxygenDevices.join(', ')}` : 'Oxygen');
   if (airway.length) treatment.push(`Airway: ${airway.join(', ')}`);
   const accessCount = (id: string) => tx.filter(x => getTreatmentIdentity(x.name) === id && succeeded(x.name)).length;
   const word = (n: number) => (n < HANDOVER_NUMBER_WORDS.length ? HANDOVER_NUMBER_WORDS[n] : String(n));
@@ -5234,6 +5267,7 @@ const buildHandoverContent = (
   return {
     weight: state.patientWeight ? `${state.patientWeight}kg` : '',
     defaultAge: state.patientType === 'paed' && state.patientAge ? String(state.patientAge) : '',
+    status,
     information,
     signs,
     treatment,
@@ -5242,12 +5276,18 @@ const buildHandoverContent = (
 
 const handoverText = (content: HandoverContent, h: HandoverFields): string => {
   const typed = (txt: string) => { const ls = txt.split('\n').map(l => l.trim()).filter(Boolean); return ls.length ? ls.map(l => `• ${l}`) : ['• ']; };
+  const oneLine = (txt: string) => txt.split('\n').map(l => l.trim()).filter(Boolean).join('; ');
   const lines: string[] = [];
   lines.push('IMIST HANDOVER', '');
   lines.push('I – Identification');
   lines.push(`• Name: ${h.name}`, `• Age: ${h.age}`, `• Gender: ${h.gender}`, `• Weight: ${content.weight}`, '');
+  lines.push('A / B / C');
+  content.status.forEach(l => lines.push(`• ${l}`));
+  lines.push('');
   lines.push('M – Mechanism / medical complaint');
-  lines.push(...typed(h.mechanism), '');
+  lines.push(`• Witnessed: ${h.witnessed}`, `• Bystander CPR: ${h.bystanderCpr}`, `• Downtime: ${oneLine(h.downtime)}`, `• Suspected cause of arrest: ${oneLine(h.suspectedCause)}`);
+  if (h.mechanism.trim()) lines.push(...typed(h.mechanism));
+  lines.push('');
   lines.push('I – Information');
   content.information.forEach(l => lines.push(`• ${l}`));
   if (h.information.trim()) lines.push(...typed(h.information));
@@ -5257,6 +5297,9 @@ const handoverText = (content: HandoverContent, h: HandoverFields): string => {
   lines.push('');
   lines.push('T – Treatment');
   content.treatment.forEach(l => lines.push(`• ${l}`));
+  lines.push('');
+  lines.push('AMBO (if time allows)');
+  lines.push(`• Allergies: ${oneLine(h.allergies)}`, `• Medications: ${oneLine(h.medications)}`, `• Background history: ${oneLine(h.background)}`, `• Other information: ${oneLine(h.otherInfo)}`);
   return lines.join('\n');
 };
 
@@ -5272,11 +5315,30 @@ function HandoverButton({ onClick, className = '' }: { onClick: () => void, clas
   );
 }
 
-function HandoverSection({ letter, title, children }: { letter: string, title: string, children: React.ReactNode }) {
+function HandoverSection({ letter, title, children, muted = false }: { letter: string, title: string, children: React.ReactNode, muted?: boolean }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
-      <div className="bg-blue-50 text-blue-800 px-4 py-3 font-bold text-sm tracking-wider text-center uppercase">{letter} – {title}</div>
+    <div className={`rounded-xl bg-white overflow-hidden ${muted ? 'border-2 border-dashed border-neutral-300' : 'border border-neutral-200'}`}>
+      <div className={`px-4 py-3 font-bold text-sm tracking-wider text-center uppercase ${muted ? 'bg-neutral-100 text-neutral-500' : 'bg-blue-50 text-blue-800'}`}>{letter}{letter ? ' – ' : ''}{title}</div>
       <div className="p-4 space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function HandoverChoice({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
+  return (
+    <div>
+      <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">{label}</span>
+      <div className="grid grid-cols-3 gap-2 mt-1">
+        {HANDOVER_CHOICES.map(c => (
+          <button
+            key={c}
+            data-handover-choice={`${label}: ${c}`}
+            aria-pressed={value === c}
+            onClick={() => onChange(value === c ? '' : c)}
+            className={`py-3 rounded-lg font-bold text-[15px] border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
+          >{c}</button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -5297,26 +5359,40 @@ function HandoverOverlay({ state, pharmaSummary, onField, onClose }: {
     navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
   };
   const inputClass = 'w-full bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-3 text-[16px] text-neutral-900 outline-none focus:border-blue-400';
+  const labelClass = 'text-xs font-bold text-neutral-500 uppercase tracking-wide';
   const bullets = (lines: string[]) => (
     <ul className="space-y-1">{lines.map((l, i) => <li key={i} className="text-[15px] text-neutral-800 flex gap-2"><span>•</span><span>{l}</span></li>)}</ul>
+  );
+  const field = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean }) => (
+    <label className="block"><span className={labelClass}>{label}</span>
+      {extra?.rows
+        ? <textarea aria-label={label} value={typed[key]} onChange={e => onField(key, e.target.value)} rows={extra.rows} className={inputClass} />
+        : <input aria-label={label} value={typed[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off" className={inputClass} />}
+    </label>
   );
   return (
     <div data-handover className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
       <div className="bg-blue-600 text-white p-4 text-center font-bold tracking-wide flex-shrink-0">IMIST HANDOVER</div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <HandoverSection letter="I" title="Identification">
-          <label className="block"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Name</span>
-            <input aria-label="Name" value={typed.name} onChange={e => onField('name', e.target.value)} autoCapitalize="words" autoComplete="off" className={inputClass} /></label>
+          {field('name', 'Name', { words: true })}
           <div className="grid grid-cols-2 gap-3">
-            <label className="block"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Age</span>
+            <label className="block"><span className={labelClass}>Age</span>
               <input aria-label="Age" value={age} onChange={e => onField('age', e.target.value)} autoComplete="off" className={inputClass} /></label>
-            <label className="block"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Gender</span>
-              <input aria-label="Gender" value={typed.gender} onChange={e => onField('gender', e.target.value)} autoCapitalize="words" autoComplete="off" className={inputClass} /></label>
+            {field('gender', 'Gender', { words: true })}
           </div>
-          <div className="text-[15px] text-neutral-800"><span className="text-xs font-bold text-neutral-500 uppercase tracking-wide mr-2">Weight</span>{content.weight}</div>
+          <div className="text-[15px] text-neutral-800"><span className={`${labelClass} mr-2`}>Weight</span>{content.weight}</div>
+        </HandoverSection>
+        <HandoverSection letter="" title="A / B / C">
+          {bullets(content.status)}
         </HandoverSection>
         <HandoverSection letter="M" title="Mechanism / medical complaint">
-          <textarea aria-label="Mechanism" value={typed.mechanism} onChange={e => onField('mechanism', e.target.value)} rows={3} className={inputClass} />
+          <HandoverChoice label="Witnessed" value={typed.witnessed} onChange={v => onField('witnessed', v)} />
+          <HandoverChoice label="Bystander CPR" value={typed.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
+          {field('downtime', 'Downtime')}
+          {field('suspectedCause', 'Suspected cause of arrest')}
+          <label className="block"><span className={labelClass}>Notes</span>
+            <textarea aria-label="Mechanism" value={typed.mechanism} onChange={e => onField('mechanism', e.target.value)} rows={3} className={inputClass} /></label>
         </HandoverSection>
         <HandoverSection letter="I" title="Information">
           {bullets(content.information)}
@@ -5335,6 +5411,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onClose }: {
         <HandoverSection letter="T" title="Treatment">
           {bullets(content.treatment)}
         </HandoverSection>
+        <div className="pt-2 space-y-2">
+          <div className="text-center text-xs font-bold tracking-wider uppercase text-neutral-400">If time allows</div>
+          <HandoverSection letter="" title="AMBO" muted>
+            {field('allergies', 'Allergies')}
+            {field('medications', 'Medications', { rows: 2 })}
+            {field('background', 'Background history', { rows: 2 })}
+            {field('otherInfo', 'Other information', { rows: 2 })}
+          </HandoverSection>
+        </div>
       </div>
       <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
         <button onClick={onClose} data-button="handover-close" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Close</button>
@@ -5415,7 +5500,8 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
   );
 }
 
-function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, onUpdateInfusionDose }: { 
+function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, onUpdateInfusionDose, treatments }: { 
+  treatments?: Treatment[],
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   infusionDoses?: Record<string, string>,
   activeInfusions?: string[],
@@ -5432,12 +5518,13 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
           <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
         ) : (
           <>
-            {nonInfusionEntries.map(([name, info]) => (
-              <StatRow key={name} label={name} value={info.display} />
-            ))}
+            {nonInfusionEntries.map(([name, info]) => {
+              const dt = treatments ? doseTimeNote(treatments, name) : null;
+              return <StatRow key={name} label={name} value={info.display} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
+            })}
             {activeInfusions && activeInfusions.map(drug => (
               <div key={drug} className="flex items-center justify-between p-2 px-3">
-                <span className="text-neutral-500 text-[16px] font-medium">{drug}</span>
+                <span className="text-neutral-500 text-[16px] font-medium">{drug}{(() => { const dt = treatments ? doseTimeNote(treatments, drug) : null; return dt ? <span className="block text-[12px] text-neutral-400 font-medium tabular-nums print:hidden">{dt.label} {dt.time}</span> : null; })()}</span>
                 {onUpdateInfusionDose ? (
                   <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded-lg overflow-hidden focus-within:border-emerald-400">
                     <input
@@ -5476,7 +5563,7 @@ function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpda
         <VitalSignsSection vitals={state.vitals} />
       </div>
       <div data-tutorial-section="pharmaSummary">
-        <PharmaSummarySection pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
+        <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
       </div>
       <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
         <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
@@ -5492,9 +5579,10 @@ interface StatRowProps {
   color?: string;
   key?: React.Key;
   stacked?: boolean;
+  sub?: string;
 }
 
-function StatRow({ label, value, color = "text-neutral-900", stacked = false }: StatRowProps) {
+function StatRow({ label, value, color = "text-neutral-900", stacked = false, sub }: StatRowProps) {
   if (stacked) {
     return (
       <div className="p-2 px-3">
@@ -5505,7 +5593,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false }: 
   }
   return (
     <div className="flex justify-between items-center p-2 px-3">
-      <span className="text-neutral-500 text-[16px] font-medium">{label}</span>
+      <span className="text-neutral-500 text-[16px] font-medium">{label}{sub && <span className="block text-[12px] text-neutral-400 font-medium tabular-nums print:hidden">{sub}</span>}</span>
       <span className={`text-[16px] font-black tabular-nums ${color}`}>{value}</span>
     </div>
   );
