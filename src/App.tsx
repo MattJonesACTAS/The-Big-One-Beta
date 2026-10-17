@@ -855,7 +855,13 @@ export default function App() {
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showHandover, setShowHandover] = useState(false);
-  const handoverViewRef = useRef<'fill' | 'read'>('fill');   // which Handover view is open (the Read out view isn't closed at 0:20)
+  const handoverViewRef = useRef<'fill' | 'read'>('fill');
+  // The Handover's Close / Back / Next buttons are drawn in the bottom bar, outside the box (a portal into this element)
+  const [handoverBar, setHandoverBar] = useState<HTMLElement | null>(null);
+  // Which Fill in page the crew had reached, so being interrupted (the 0:20 close, another screen) doesn't lose their place.
+  // Closing it deliberately clears it, and a started handover then reopens on Review.
+  const handoverResumeRef = useRef<string | null>(null);
+  const closeHandover = () => { handoverResumeRef.current = null; setShowHandover(false); };   // which Handover view is open (the Read out view isn't closed at 0:20)
   const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
   const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
   const [viewingPreviousCase, setViewingPreviousCase] = useState<AppState | null>(null);
@@ -1532,7 +1538,7 @@ export default function App() {
     if (ev.detail.handled) return;
 
     // 2. The Handover page closes first (it sits over the summary or the closed case page)
-    if (showHandover && !(state.currentOverlay && state.currentOverlay !== 'tutorial')) { setShowHandover(false); return; }
+    if (showHandover && !(state.currentOverlay && state.currentOverlay !== 'tutorial')) { closeHandover(); return; }
 
     // 2b. Warnings and notices: back works like their Cancel / OK
     if (showTutorialModeBlocked) { setShowTutorialModeBlocked(false); return; }
@@ -2798,6 +2804,7 @@ export default function App() {
 
       {/* Main Center Display */}
       <div data-green-box className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
+        showHandover && !state.currentOverlay && !tutorialMode ? 'border-blue-500' :
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' :
@@ -3193,12 +3200,15 @@ export default function App() {
         </div>
         )} {/* end else (non-log mode) */}
         {showHandover && !tutorialMode && (
-          <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} onFinish={() => { setShowHandover(false); setState(p => ({ ...p, currentOverlay: null })); }} onClose={() => setShowHandover(false)} onChangeWeight={openWeightChange} />
+          <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onChangeWeight={openWeightChange} />
         )}
       </div>
 
       {/* Bottom Main Controls */}
-      <div className={`grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      {showHandover && !state.currentOverlay && !tutorialMode && timingMode !== 'minimal' && (
+        <div ref={setHandoverBar} data-handover-bar className="grid grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0" />
+      )}
+      <div className={`${showHandover && !state.currentOverlay && !tutorialMode && timingMode !== 'minimal' ? 'hidden' : ''} grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
         {timingMode !== 'log' && timingMode !== 'minimal' && (
           <button 
             onClick={() => {
@@ -5503,7 +5513,10 @@ function HandoverRhythmStrip({ rhythm }: { rhythm: { text: string, urgent: boole
   );
 }
 
-function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onFinish, onClose, embedded = false }: {
+function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onFinish, onClose, embedded = false, barEl, resumeKey, onPage }: {
+  barEl?: HTMLElement | null,
+  resumeKey?: string | null,
+  onPage?: (k: string) => void,
   embedded?: boolean,
   onFinish?: () => void,
   onView?: (v: 'fill' | 'read') => void,
@@ -5518,7 +5531,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const frame = embedded ? 'absolute inset-0 z-[45]' : 'fixed inset-0 z-[2000]';
   const [view, setView] = useState<'fill' | 'read'>('fill');
   const [card, setCard] = useState(0);
-  const [pageKey, setPageKey] = useState<string>(() => (state.handover?.type === 'Arrest' ? 'review' : 'type'));
+  const [pageKey, setPageKey] = useState<string>(() => resumeKey ?? (state.handover?.type === 'Arrest' ? 'review' : 'type'));
+  useEffect(() => { onPage?.(pageKey); }, [pageKey]);
   const [rrOtherOpen, setRrOtherOpen] = useState(false);
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
@@ -5760,19 +5774,24 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     return (
       <HandoverDensity.Provider value={compact}>
       <div data-handover data-handover-view="read" className={`${frame} bg-neutral-100 flex flex-col`}>
-        <div className={`flex-shrink-0 ${compact ? 'p-2.5' : 'p-4'} flex items-center justify-between font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
-          <button onClick={() => { const k = pageForCard[c.key] ?? 'review'; setPageKey(pageKeys.includes(k) ? k : 'review'); setView('fill'); }} data-button="handover-edit" className="px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
+        <div className={`flex-shrink-0 ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
+          <button onClick={() => { const k = pageForCard[c.key] ?? 'review'; setPageKey(pageKeys.includes(k) ? k : 'review'); setView('fill'); }} data-button="handover-edit" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
           <span className="text-center leading-tight"><span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span><span data-handover-title>{c.title}</span></span>
-          <span className="text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
+          <span className="justify-self-end text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
         <HandoverRhythmStrip rhythm={content.rhythm} />
         <div data-handover-card={c.key} className={`flex-1 overflow-y-auto ${compact ? 'p-4 space-y-3 text-[22px]' : 'p-6 space-y-5 text-[28px]'} leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
           {c.body}
         </div>
-        <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>
-          <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className={`bg-neutral-200 ${compact ? 'p-3' : 'p-4'} rounded-xl font-bold text-neutral-700 btn-base`}>Back</button>
-          <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className={`bg-blue-600 ${compact ? 'p-3' : 'p-4'} rounded-xl font-bold text-white btn-base`}>{last ? 'Done' : 'Next'}</button>
-        </div>
+        {(() => {
+          const btn = embedded ? 'p-3 sm:p-5 rounded-2xl text-base sm:text-xl' : `${compact ? 'p-3' : 'p-4'} rounded-xl`;
+          const closeB = <button onClick={onClose} data-button="handover-close" className={`${btn} font-bold bg-red-100 text-red-800 btn-base`}>Close</button>;
+          const prevB = <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className={`bg-neutral-200 ${btn} font-bold text-neutral-700 btn-base`}>Back</button>;
+          const nextB = <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className={`bg-blue-600 ${btn} font-bold text-white btn-base`}>{last ? 'Done' : 'Next'}</button>;
+          return embedded
+            ? (barEl ? createPortal(<>{closeB}{prevB}{nextB}</>, barEl) : null)
+            : <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>{prevB}{nextB}</div>;
+        })()}
       </div>
       </HandoverDensity.Provider>
     );
@@ -5949,13 +5968,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   return (
     <HandoverDensity.Provider value={compact}>
     <div data-handover data-handover-view="fill" className={`${frame} bg-neutral-100 flex flex-col`}>
-      <div className={`bg-blue-600 text-white ${compact ? 'p-2.5' : 'p-4'} flex items-center justify-between font-bold tracking-wide flex-shrink-0`}>
-        <button onClick={onClose} data-button="handover-close" className="px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>
+      <div className={`bg-blue-600 text-white ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
+        {embedded ? <span /> : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
         <span className="text-center leading-tight">
           {h.type && <span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span>}
           <span data-handover-page-title>{pageTitle[curKey]}</span>
         </span>
-        <span className="text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>
+        <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>
       </div>
       <HandoverRhythmStrip rhythm={content.rhythm} />
       <div data-handover-dots data-handover-page-current={curKey} className="flex-shrink-0 flex items-center justify-center bg-neutral-100">
@@ -5967,12 +5986,17 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         ))}
       </div>
       <div className={`flex-1 overflow-y-auto ${compact ? 'p-3 space-y-3' : 'p-4 space-y-4'}`}>{pageBody()}</div>
-      <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>
-        <button onClick={curIdx === 0 ? onClose : goBack} data-button="handover-back" className={`bg-neutral-200 ${compact ? 'p-3' : 'p-4'} rounded-xl font-bold text-neutral-700 btn-base`}>{curIdx === 0 ? 'Close' : 'Back'}</button>
-        {curKey === 'review'
-          ? <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className={`${compact ? 'p-3' : 'p-4'} rounded-xl font-bold btn-base bg-blue-600 text-white`}>Read out</button>
-          : <button onClick={goNext} disabled={!canNext} data-button="handover-next-page" className={`${compact ? 'p-3' : 'p-4'} rounded-xl font-bold btn-base ${canNext ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-400'}`}>Next</button>}
-      </div>
+      {(() => {
+        const btn = embedded ? 'p-3 sm:p-5 rounded-2xl text-base sm:text-xl' : `${compact ? 'p-3' : 'p-4'} rounded-xl`;
+        const closeB = <button onClick={onClose} data-button="handover-close" className={`${btn} font-bold bg-red-100 text-red-800 btn-base`}>Close</button>;
+        const backB = <button onClick={curIdx === 0 ? onClose : goBack} disabled={embedded && curIdx === 0} data-button="handover-back" className={`${btn} font-bold btn-base ${embedded && curIdx === 0 ? 'bg-neutral-100 text-neutral-300' : 'bg-neutral-200 text-neutral-700'}`}>{!embedded && curIdx === 0 ? 'Close' : 'Back'}</button>;
+        const nextB = curKey === 'review'
+          ? <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className={`${btn} font-bold btn-base bg-blue-600 text-white`}>Read out</button>
+          : <button onClick={goNext} disabled={!canNext} data-button="handover-next-page" className={`${btn} font-bold btn-base ${canNext ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-400'}`}>Next</button>;
+        return embedded
+          ? (barEl ? createPortal(<>{closeB}{backB}{nextB}</>, barEl) : null)
+          : <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>{backB}{nextB}</div>;
+      })()}
     </div>
     </HandoverDensity.Provider>
   );
