@@ -5607,6 +5607,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   if (a.latest && (a.firstState !== 'known' || a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
   if (h.information.trim()) arrestNodes.push(<div key="n">Also:{sub(lines(h.information))}</div>);
 
+  // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
+  const splitAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p') + 1;
+  const arrestPage1 = arrestNodes.slice(0, splitAt);
+  const arrestPage2 = arrestNodes.slice(splitAt);
+
   const recorded = content.signs.filter(s => s.value);
   const notRecorded = content.signs.filter(s => !s.value);
   const vitalsNodes: React.ReactNode[] = [
@@ -5661,10 +5666,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     { key: 'I', title: 'I – Identification', body: withCommas(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     { key: 'M', title: 'M – What happened', body: withCommas([startLine, witnessedLine, cprLine, causeLine]) },
-    { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestNodes },
+    { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestPage1 },
+    ...(arrestPage2.length ? [{ key: 'I3', title: 'I – Info / Arrest Summary', body: arrestPage2 }] : []),
     { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
     { key: 'T', title: 'T – Treatment', body: treatmentNodes },
-    { key: 'AMBO', title: 'AMBO', muted: true, body: ambo },
+    { key: 'AMBO', title: 'AMBO', body: ambo },
     { key: 'END', title: 'Finish', body: <div className="text-center text-[44px] pt-20">Any questions?</div> },
   ];
 
