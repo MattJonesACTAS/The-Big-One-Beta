@@ -1516,8 +1516,9 @@ export default function App() {
     else { setNewPaedWeightMethod('weight'); setNewPaedAgeLabel(null); }
     setShowWeightChange(true);
   };
-  // The rhythm check popup is behind the Handover page, so when it comes up (at 0:00) the page closes to let it be answered
-  useEffect(() => { if (isShockForced && showHandover) setShowHandover(false); }, [isShockForced, showHandover]);
+  // The Handover sits in the home screen box, under any screen that opens over it. The forced rhythm check popup simply covers it
+  // (and it's still there when the popup is answered); a screen the crew opens themselves (a tab, Add Tx) takes its place.
+  useEffect(() => { if (showHandover && state.currentOverlay && state.currentOverlay !== 'tutorial' && !isShockForced) setShowHandover(false); }, [state.currentOverlay]);
   const setVital = (key: keyof AppState['vitals'], value: string) =>
     setState(p => ({ ...p, vitals: { ...p.vitals, [key]: value } }));
   const setHandoverField = (key: keyof HandoverFields, value: string) =>
@@ -1531,7 +1532,7 @@ export default function App() {
     if (ev.detail.handled) return;
 
     // 2. The Handover page closes first (it sits over the summary or the closed case page)
-    if (showHandover) { setShowHandover(false); return; }
+    if (showHandover && !(state.currentOverlay && state.currentOverlay !== 'tutorial')) { setShowHandover(false); return; }
 
     // 2b. Warnings and notices: back works like their Cancel / OK
     if (showTutorialModeBlocked) { setShowTutorialModeBlocked(false); return; }
@@ -2843,7 +2844,7 @@ export default function App() {
                   onEditTreatment={handleEditTreatment}
                   editingTreatmentIndex={editingTreatmentIndex}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
-                onHandover={tutorialMode ? undefined : () => setShowHandover(true)}
+                onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
                 />
               )}
             </AnimatePresence>
@@ -3058,7 +3059,7 @@ export default function App() {
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
                 onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
-                onHandover={tutorialMode ? undefined : () => setShowHandover(true)}
+                onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
               />
             )}
           </AnimatePresence>
@@ -3089,7 +3090,7 @@ export default function App() {
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
-                onHandover={tutorialMode ? undefined : () => setShowHandover(true)}
+                onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
               />
             )}
           </AnimatePresence>
@@ -3191,6 +3192,9 @@ export default function App() {
           </div>
         </div>
         )} {/* end else (non-log mode) */}
+        {showHandover && !tutorialMode && (
+          <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} onFinish={() => { setShowHandover(false); setState(p => ({ ...p, currentOverlay: null })); }} onClose={() => setShowHandover(false)} onChangeWeight={openWeightChange} />
+        )}
       </div>
 
       {/* Bottom Main Controls */}
@@ -3199,14 +3203,15 @@ export default function App() {
           <button 
             onClick={() => {
               if (isShockForced) return;
+              if (showHandover && !state.currentOverlay) { setShowHandover(false); return; }    // the Handover is open in the box: this closes it
               setState(p => ({ ...p, currentOverlay: p.currentOverlay === 'summary' ? null : 'summary' }))
             }}
             disabled={isShockForced || tutorialRhythmDemoActive}
-            className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
+            className={`p-3 sm:p-5 rounded-2xl text-base sm:text-xl font-bold flex items-center justify-center gap-2 sm:gap-3 btn-base transition-colors ${state.currentOverlay === 'summary' || (showHandover && !state.currentOverlay) ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-white'}`}
             data-button="summary"
           >
-            {state.currentOverlay === 'summary' ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
-            {state.currentOverlay === 'summary' ? 'Close' : 'Summary'}
+            {state.currentOverlay === 'summary' || (showHandover && !state.currentOverlay) ? <XCircle size={18} className="sm:w-6 sm:h-6" /> : <FileText size={18} className="sm:w-6 sm:h-6" />}
+            {state.currentOverlay === 'summary' || (showHandover && !state.currentOverlay) ? 'Close' : 'Summary'}
           </button>
         )}
         {timingMode === 'log' && state.isROSCMode && (
@@ -3888,9 +3893,6 @@ export default function App() {
 
 
       {/* Warning Modals */}
-      {showHandover && (
-        <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} onFinish={() => { setShowHandover(false); setState(p => ({ ...p, currentOverlay: null })); }} onClose={() => setShowHandover(false)} onChangeWeight={openWeightChange} />
-      )}
 
       {showEndWarning && (
         <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
@@ -5162,8 +5164,11 @@ const HANDOVER_CHECK_SECONDS = 120;
 // The middle of each "how long before we arrived" band, in minutes (Over 20 has no middle, so it only gives a limit)
 const HANDOVER_BEFORE_MIDPOINT: Record<string, number> = { 'Under 5 min': 2.5, '5–10 min': 7.5, '10–15 min': 12.5, '15–20 min': 17.5 };
 const HANDOVER_BREATHING = ['Breathing', 'Ventilated', 'Unknown'];
+// True when the Handover sits inside the home screen box (squished to fit) rather than filling the screen
+const HandoverDensity = React.createContext(false);
 // The question headings on the Fill in pages: large and centred
 const HANDOVER_HEADING = 'block text-center text-[17px] font-bold text-neutral-700 uppercase tracking-wide mb-3';
+const HANDOVER_HEADING_COMPACT = 'block text-center text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1.5';
 const HANDOVER_GCS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
 const HANDOVER_RR = ['6', '8', '10', '12', '14', '16', '18', '20', '24', '30'];
 const HANDOVER_ALLERGIES = ['NKA', 'Unknown', 'Other'];
@@ -5438,30 +5443,33 @@ function HandoverSection({ letter, title, children, muted = false, done }: { let
 
 // A row of buttons to choose from. An unanswered question has an amber dot beside its label.
 function HandoverPageCard({ children, muted = false }: { children: React.ReactNode, muted?: boolean }) {
-  return <div className={`rounded-xl bg-white p-6 space-y-9 ${muted ? 'border-2 border-dashed border-neutral-300' : 'border border-neutral-200'}`}>{children}</div>;
+  const compact = React.useContext(HandoverDensity);
+  return <div className={`rounded-xl bg-white ${compact ? 'p-3.5 space-y-4' : 'p-6 space-y-9'} ${muted ? 'border-2 border-dashed border-neutral-300' : 'border border-neutral-200'}`}>{children}</div>;
 }
 
 // A big Unknown button, so every question can be answered
 function HandoverUnknown({ label, on, onClick }: { label: string, on: boolean, onClick: () => void }) {
+  const compact = React.useContext(HandoverDensity);
   return (
     <button data-handover-choice={`${label}: Unknown`} aria-pressed={on} onClick={onClick}
-      className={`w-full py-4 rounded-lg font-bold text-[16px] border btn-base ${on ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
+      className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${on ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
   );
 }
 
 function HandoverChoice({ label, options, value, onChange, columns = 3 }: { label: string, options: string[], value: string, onChange: (v: string) => void, columns?: 2 | 3 | 5 }) {
   const cols = columns === 2 ? 'grid-cols-2' : columns === 5 ? 'grid-cols-5' : 'grid-cols-3';
+  const compact = React.useContext(HandoverDensity);
   return (
     <div>
-      <span className={HANDOVER_HEADING}>{label}{!value && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
-      <div className={`grid ${cols} gap-3`}>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{!value && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
+      <div className={`grid ${cols} ${compact ? 'gap-2' : 'gap-3'}`}>
         {options.map(c => (
           <button
             key={c}
             data-handover-choice={`${label}: ${c}`}
             aria-pressed={value === c}
             onClick={() => onChange(value === c ? '' : c)}
-            className={`py-4 text-[16px] rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
+            className={`${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
           >{c}</button>
         ))}
       </div>
@@ -5472,30 +5480,33 @@ function HandoverChoice({ label, options, value, onChange, columns = 3 }: { labe
 // A number box (number pad on a phone), with an optional Unknown button. Empty ones are amber so they're noticed.
 function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean }) {
   const off = unknownOn || disabled;
+  const compact = React.useContext(HandoverDensity);
   return (
     <div>
       <label className="block">
-        <span className={HANDOVER_HEADING}>{label}{!value && !off && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
+        <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{!value && !off && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
         <div className="relative">
           <input aria-label={label} inputMode="decimal" value={value} disabled={off} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
-            className={`w-full border rounded-lg px-4 pr-14 py-4 text-[18px] text-center text-neutral-900 outline-none focus:border-blue-400 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-amber-50 border-amber-300'} ${off ? 'opacity-50' : ''}`} />
+            className={`w-full border rounded-lg px-4 pr-14 ${compact ? 'py-2.5 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-blue-400 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-amber-50 border-amber-300'} ${off ? 'opacity-50' : ''}`} />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
       </label>
-      {onUnknown && <div className="mt-3"><HandoverUnknown label={label} on={!!unknownOn} onClick={onUnknown} /></div>}
+      {onUnknown && <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label={label} on={!!unknownOn} onClick={onUnknown} /></div>}
     </div>
   );
 }
 
 // A strip that keeps the next rhythm check in view (arrest only)
 function HandoverRhythmStrip({ rhythm }: { rhythm: { text: string, urgent: boolean } | null }) {
+  const compact = React.useContext(HandoverDensity);
   if (!rhythm) return null;
   return (
-    <div data-handover-rhythm className={`flex-shrink-0 px-4 py-2 text-center text-[15px] font-bold tabular-nums ${rhythm.urgent ? 'bg-red-600 text-white' : 'bg-neutral-800 text-white'}`}>{rhythm.text}</div>
+    <div data-handover-rhythm className={`flex-shrink-0 px-4 ${compact ? 'py-1' : 'py-2'} text-center ${compact ? 'text-[13px]' : 'text-[15px]'} font-bold tabular-nums ${rhythm.urgent ? 'bg-red-600 text-white' : 'bg-neutral-800 text-white'}`}>{rhythm.text}</div>
   );
 }
 
-function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onFinish, onClose }: {
+function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onFinish, onClose, embedded = false }: {
+  embedded?: boolean,
   onFinish?: () => void,
   onView?: (v: 'fill' | 'read') => void,
   onChangeWeight?: () => void,
@@ -5505,6 +5516,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   onVital: (key: VitalKey, value: string) => void,
   onClose: () => void
 }) {
+  const compact = embedded;
+  const frame = embedded ? 'absolute inset-0 z-[45]' : 'fixed inset-0 z-[2000]';
   const [view, setView] = useState<'fill' | 'read'>('fill');
   const [card, setCard] = useState(0);
   const [pageKey, setPageKey] = useState<string>(() => (state.handover?.type === 'Arrest' ? 'review' : 'type'));
@@ -5548,8 +5561,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     return () => window.removeEventListener('bigone:back', onBack);
   }, [view, card, curIdx, pageKeys.join(',')]);
 
-  const inputClass = 'w-full bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-4 text-[17px] text-neutral-900 outline-none focus:border-blue-400';
-  const labelClass = HANDOVER_HEADING;
+  const inputClass = `w-full bg-neutral-50 border border-neutral-200 rounded-lg px-4 ${compact ? 'py-2.5 text-[16px]' : 'py-4 text-[17px]'} text-neutral-900 outline-none focus:border-blue-400`;
+  const labelClass = compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING;
   const smallLabel = 'text-xs font-bold text-neutral-500 uppercase tracking-wide';
   const bullets = (lines: (string | HandoverInfoItem)[]) => (
     <ul className="space-y-1">{lines.map((item, i) => {
@@ -5563,7 +5576,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     })}</ul>
   );
   const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean, prompt?: boolean, clearUnknown?: string }) => (
-    <label className="block"><span className={HANDOVER_HEADING}>{label}{extra?.prompt && !h[key].trim() && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
+    <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{extra?.prompt && !h[key].trim() && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
       {extra?.rows
         ? <textarea aria-label={label} value={h[key]} onChange={e => { onField(key, e.target.value); if (extra.clearUnknown && e.target.value && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); }} rows={extra.rows} className={inputClass} />
         : <input aria-label={label} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
@@ -5614,12 +5627,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const withCommas = (lines: React.ReactNode[]) => lines.map((n, i) => <div key={i}>{n}{i < lines.length - 1 ? ',' : '.'}</div>);
   const cap = (x: React.ReactNode) => (typeof x === 'string' && x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
   const sub = (items: React.ReactNode[]) => (
-    <div className="mt-2 ml-5 space-y-2 text-[24px] font-semibold text-neutral-700">{items.map((x, i) => <div key={i}>• {cap(x)}</div>)}</div>
+    <div className={`mt-2 ml-5 ${compact ? 'space-y-1 text-[18px]' : 'space-y-2 text-[24px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i}>• {cap(x)}</div>)}</div>
   );
   // Medication-style dot points with a smaller line underneath (when it was last given, or started)
   const subWithNote = (items: { text: string, note?: string }[]) => (
-    <div className="mt-2 ml-5 space-y-3 text-[24px] font-semibold text-neutral-700">
-      {items.map((x, i) => <div key={i}>• {cap(x.text)}{x.note && <div className="ml-4 text-[19px] font-medium text-neutral-500">{x.note}</div>}</div>)}
+    <div className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[18px]' : 'space-y-3 text-[24px]'} font-semibold text-neutral-700`}>
+      {items.map((x, i) => <div key={i}>• {cap(x.text)}{x.note && <div className={`ml-4 ${compact ? 'text-[14px]' : 'text-[19px]'} font-medium text-neutral-500`}>{x.note}</div>}</div>)}
     </div>
   );
   const noteWords = (n: string) => (n.startsWith('last ') ? `Last given ${n.slice(5)}` : n.charAt(0).toUpperCase() + n.slice(1));
@@ -5741,28 +5754,30 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
     { key: 'T', title: 'T – Treatment', body: treatmentNodes },
     { key: 'AMBO', title: 'AMBO', body: ambo },
-    { key: 'END', title: 'Finish', body: <div className="text-center text-[44px] pt-20">Any questions?</div> },
+    { key: 'END', title: 'Finish', body: <div className={`text-center ${compact ? 'text-[34px] pt-10' : 'text-[44px] pt-20'}`}>Any questions?</div> },
   ];
 
   if (view === 'read') {
     const c = cards[card];
     const last = card === cards.length - 1;
     return (
-      <div data-handover data-handover-view="read" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
-        <div className={`flex-shrink-0 p-4 flex items-center justify-between font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
+      <HandoverDensity.Provider value={compact}>
+      <div data-handover data-handover-view="read" className={`${frame} bg-neutral-100 flex flex-col`}>
+        <div className={`flex-shrink-0 ${compact ? 'p-2.5' : 'p-4'} flex items-center justify-between font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
           <button onClick={() => { const k = pageForCard[c.key] ?? 'review'; setPageKey(pageKeys.includes(k) ? k : 'review'); setView('fill'); }} data-button="handover-edit" className="px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
           <span className="text-center leading-tight"><span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span><span data-handover-title>{c.title}</span></span>
           <span className="text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
         <HandoverRhythmStrip rhythm={content.rhythm} />
-        <div data-handover-card={c.key} className={`flex-1 overflow-y-auto p-6 space-y-5 text-[28px] leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
+        <div data-handover-card={c.key} className={`flex-1 overflow-y-auto ${compact ? 'p-4 space-y-3 text-[22px]' : 'p-6 space-y-5 text-[28px]'} leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
           {c.body}
         </div>
-        <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
-          <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Back</button>
-          <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">{last ? 'Done' : 'Next'}</button>
+        <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>
+          <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className={`bg-neutral-200 ${compact ? 'p-3' : 'p-4'} rounded-xl font-bold text-neutral-700 btn-base`}>Back</button>
+          <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className={`bg-blue-600 ${compact ? 'p-3' : 'p-4'} rounded-xl font-bold text-white btn-base`}>{last ? 'Done' : 'Next'}</button>
         </div>
       </div>
+      </HandoverDensity.Provider>
     );
   }
 
@@ -5780,10 +5795,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           <div data-handover-types className="grid grid-cols-3 gap-3">
             {HANDOVER_TYPES.map(t => (
               <button key={t} data-handover-type={t} aria-pressed={h.type === t} onClick={() => { onField('type', t); setCard(0); if (t === 'Arrest') setPageKey('id'); }}
-                className={`py-5 rounded-xl font-bold text-[17px] border-2 btn-base ${h.type === t ? 'bg-blue-600 text-white border-blue-600' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-amber-300'}`}>{t}</button>
+                className={`${compact ? 'py-4' : 'py-5'} rounded-xl font-bold text-[17px] border-2 btn-base ${h.type === t ? 'bg-blue-600 text-white border-blue-600' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-amber-300'}`}>{t}</button>
             ))}
           </div>
-          <div data-handover-empty className={`rounded-xl p-6 text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
+          <div data-handover-empty className={`rounded-xl ${compact ? 'p-4' : 'p-6'} text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
             {h.type ? `The ${h.type} handover prompts are still to be added.` : 'Choose Arrest, PHEA or Both. The handover prompts are different for each.'}
           </div>
         </div>
@@ -5792,7 +5807,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         <HandoverPageCard>
           {text('name', 'Name (optional)', { words: true })}
           <div>
-            <span className={HANDOVER_HEADING}>Age{!ageValue && h.ageUnknown !== 'Yes' && <span data-handover-missing="Age" className="text-amber-500 ml-1">●</span>}</span>
+            <span className={labelClass}>Age{!ageValue && h.ageUnknown !== 'Yes' && <span data-handover-missing="Age" className="text-amber-500 ml-1">●</span>}</span>
             <div className="grid grid-cols-2 gap-3">
               <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
                 className={`${inputClass} text-center ${ageValue || h.ageUnknown === 'Yes' ? '' : '!bg-amber-50 !border-amber-300'}`} />
@@ -5806,7 +5821,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             <div className="mt-3">
               <button data-handover-choice="Age: Unknown" aria-pressed={h.ageUnknown === 'Yes'}
                 onClick={() => { if (h.ageUnknown === 'Yes') onField('ageUnknown', ''); else { onField('ageUnknown', 'Yes'); onField('age', ''); } }}
-                className={`w-full py-4 rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Age unknown</button>
+                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Age unknown</button>
             </div>
           </div>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
@@ -5876,7 +5891,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             <div className="mt-3">
               <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
                 onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
-                className={`w-full py-4 rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
+                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
             </div>
           </div>
         </HandoverPageCard>
@@ -5936,8 +5951,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     }
   };
   return (
-    <div data-handover data-handover-view="fill" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
-      <div className="bg-blue-600 text-white p-4 flex items-center justify-between font-bold tracking-wide flex-shrink-0">
+    <HandoverDensity.Provider value={compact}>
+    <div data-handover data-handover-view="fill" className={`${frame} bg-neutral-100 flex flex-col`}>
+      <div className={`bg-blue-600 text-white ${compact ? 'p-2.5' : 'p-4'} flex items-center justify-between font-bold tracking-wide flex-shrink-0`}>
         <button onClick={onClose} data-button="handover-close" className="px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>
         <span className="text-center leading-tight">
           {h.type && <span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span>}
@@ -5949,19 +5965,20 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       <div data-handover-dots data-handover-page-current={curKey} className="flex-shrink-0 flex items-center justify-center bg-neutral-100">
         {pageKeys.map((k, i) => (
           <button key={k} data-handover-page-dot={k} data-handover-page-done={pageDone[k] ? 'done' : 'todo'} aria-label={pageTitle[k]} aria-current={k === curKey}
-            disabled={!reachable(k, i)} onClick={() => setPageKey(k)} className={`p-1.5 ${reachable(k, i) ? '' : 'opacity-40'}`}>
+            disabled={!reachable(k, i)} onClick={() => setPageKey(k)} className={`${compact ? 'p-1' : 'p-1.5'} ${reachable(k, i) ? '' : 'opacity-40'}`}>
             <span className={`block h-3 rounded-full ${k === curKey ? 'w-6 bg-blue-600' : pageDone[k] ? 'w-3 bg-emerald-500' : k === 'review' ? 'w-3 bg-neutral-400' : 'w-3 bg-amber-400'}`} />
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">{pageBody()}</div>
-      <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
-        <button onClick={curIdx === 0 ? onClose : goBack} data-button="handover-back" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">{curIdx === 0 ? 'Close' : 'Back'}</button>
+      <div className={`flex-1 overflow-y-auto ${compact ? 'p-3 space-y-3' : 'p-4 space-y-4'}`}>{pageBody()}</div>
+      <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>
+        <button onClick={curIdx === 0 ? onClose : goBack} data-button="handover-back" className={`bg-neutral-200 ${compact ? 'p-3' : 'p-4'} rounded-xl font-bold text-neutral-700 btn-base`}>{curIdx === 0 ? 'Close' : 'Back'}</button>
         {curKey === 'review'
-          ? <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className="p-4 rounded-xl font-bold btn-base bg-blue-600 text-white">Read out</button>
-          : <button onClick={goNext} disabled={!canNext} data-button="handover-next-page" className={`p-4 rounded-xl font-bold btn-base ${canNext ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-400'}`}>Next</button>}
+          ? <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className={`${compact ? 'p-3' : 'p-4'} rounded-xl font-bold btn-base bg-blue-600 text-white`}>Read out</button>
+          : <button onClick={goNext} disabled={!canNext} data-button="handover-next-page" className={`${compact ? 'p-3' : 'p-4'} rounded-xl font-bold btn-base ${canNext ? 'bg-blue-600 text-white' : 'bg-neutral-200 text-neutral-400'}`}>Next</button>}
       </div>
     </div>
+    </HandoverDensity.Provider>
   );
 }
 
