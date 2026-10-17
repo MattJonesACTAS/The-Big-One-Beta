@@ -5145,7 +5145,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  type: '', name: '', gender: '', genderOther: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
+  type: '', name: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', runningMinutes: '', firstRhythm: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
   suspectedCause: '', information: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5154,6 +5154,9 @@ const HANDOVER_YNU = ['Yes', 'No', 'Unknown'];
 const HANDOVER_GENDERS = ['Male', 'Female', 'Other'];
 // Time between collapse and the start of CPR
 const HANDOVER_DOWNTIMES = ['Under 2 min', '2–5 min', '5–10 min', 'Over 10 min', 'Unknown'];
+// How long before we arrived the arrest started
+const HANDOVER_STARTED_BEFORE = ['Under 5 min', '5–10 min', '10–15 min', '15–20 min', 'Over 20 min', 'Unknown'];
+const HANDOVER_FIRST_RHYTHMS = ['VF', 'pVT', 'Asystole', 'PEA', 'Unknown'];
 const HANDOVER_BREATHING = ['Breathing', 'Ventilated'];
 const HANDOVER_GCS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
 const HANDOVER_RR = ['6', '8', '10', '12', '14', '16', '18', '20', '24', '30'];
@@ -5167,6 +5170,15 @@ const HANDOVER_LEFT_OUT = ['CPR', 'Pads on', 'BVM'];
 
 type VitalKey = keyof AppState['vitals'];
 type HandoverSign = { label: string, key: VitalKey, unit: string, value: string };
+
+// "approximately 25 minutes", "approximately 1 hour and 5 minutes": to the nearest minute, never seconds
+const approxPhrase = (seconds: number): string => {
+  const m = Math.round(seconds / 60);
+  if (m < 1) return 'less than a minute';
+  if (m < 60) return `approximately ${m} minute${m === 1 ? '' : 's'}`;
+  const hr = Math.floor(m / 60), rest = m % 60;
+  return `approximately ${hr} hour${hr === 1 ? '' : 's'}${rest ? ` and ${rest} minute${rest === 1 ? '' : 's'}` : ''}`;
+};
 
 const rhythmFromName = (name: string): string | null => {
   const m = name.match(/^(?:Shock|Disarm)(?: #\d+)? - (.+)$/);
@@ -5201,7 +5213,9 @@ type HandoverArrest = {
   latest: string;                                     // latest rhythm, or the last one before ROSC
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
-  collapseClock: string;                              // 5 minutes before the elapsed time would have been 0:00:00
+  priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
+  firstState: 'known' | 'unknown' | 'ask' | 'none';   // the first rhythm: from the log, answered by the crew, or still to ask
+  durationNeeded: boolean;                            // Tx log only: the crew hasn't typed how long arrest management has been running
 };
 type HandoverTreatment = {
   airway: string[];                                   // the most advanced airway that worked, then IGT
@@ -5235,7 +5249,8 @@ const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean 
 
 const buildHandoverContent = (
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
+  h: HandoverFields
 ): HandoverContent => {
   const tx = state.treatments;
   const succeeded = (n: string) => !n.includes('Unsuccessful');
@@ -5257,48 +5272,51 @@ const buildHandoverContent = (
   const roscIdx = tx.map((x, i) => (isRoscName(x.name) ? i : -1)).filter(i => i >= 0);
   const lastRoscIdx = roscIdx.length ? roscIdx[roscIdx.length - 1] : -1;
   const lastRosc = lastRoscIdx >= 0 ? tx[lastRoscIdx] : null;
-  // The arrest is counted from the first rhythm check logged during the case (not one entered at setup)
+  // Shocks or disarms entered at setup happened before the app started, so the first rhythm check logged isn't the first check
+  const priorChecks = tx.some(x => x.prior && (getTreatmentIdentity(x.name) === 'Shock' || getTreatmentIdentity(x.name) === 'Disarm'));
   const firstCheck = tx.find(x => !x.prior && !x.timeUnknown && isOutcome(x.name));
+  const endAtRosc = !!(state.isROSCMode && lastRosc && !lastRosc.timeUnknown);
+  const endElapsed = endAtRosc ? lastRosc!.elapsed : state.elapsedSeconds;
   let durationSeconds: number | null = null;
-  if (firstCheck) {
-    const endAtRosc = state.isROSCMode && lastRosc && !lastRosc.timeUnknown;
-    if (state.timingMode === 'log') {
-      const start = firstCheck.loggedAt;
-      const end = endAtRosc ? lastRosc!.loggedAt : (state.caseClosedAt ?? Date.now());
-      if (start != null && end != null) durationSeconds = Math.max(0, Math.floor((end - start) / 1000));
-    } else {
-      const end = endAtRosc ? lastRosc!.elapsed : state.elapsedSeconds;
-      durationSeconds = Math.max(0, Math.floor(end - firstCheck.elapsed));
-    }
+  let durationNeeded = false;
+  if (state.timingMode === 'log') {
+    // Tx log only has no timer: the crew types how long arrest management has been running
+    const mins = parseInt(h.runningMinutes, 10);
+    if (mins > 0) durationSeconds = mins * 60; else durationNeeded = true;
+  } else if (priorChecks) {
+    // checks happened before the app started: use the monitor's elapsed time (it starts about when the monitor goes on)
+    durationSeconds = Math.max(0, Math.floor(endElapsed));
+  } else if (firstCheck) {
+    durationSeconds = Math.max(0, Math.floor(endElapsed - firstCheck.elapsed));
   }
   const shockCount = tx.filter(x => x.name.includes('Shock') && !x.name.includes('Disarm')).length;
   const disarmCount = tx.filter(x => x.name.includes('Disarm') && !isRoscName(x.name)).length;
   const withRhythm = tx.filter(x => rhythmFromName(x.name));
-  const firstRhythm = withRhythm.length ? rhythmFromName(withRhythm[0].name)! : '';
+  const loggedFirst = withRhythm.length ? rhythmFromName(withRhythm[0].name)! : '';
+  const firstState: 'known' | 'unknown' | 'ask' | 'none' = priorChecks
+    ? (!h.firstRhythm ? 'ask' : h.firstRhythm === 'Unknown' ? 'unknown' : 'known')
+    : (loggedFirst ? 'known' : 'none');
+  const firstRhythm = firstState === 'known' ? (priorChecks ? h.firstRhythm : loggedFirst) : '';
   const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
   const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
   // Rhythms seen apart from the first and the latest (neither is listed twice)
   const others: string[] = [];
   withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && r !== recentRhythm && !others.includes(r)) others.push(r); });
-  // 5 minutes before the elapsed time would have been 0:00:00 (Tx log only has no elapsed time: when recording began)
-  const zeroMs = state.timingMode === 'log'
-    ? state.caseOpenedAt
-    : (state.caseClosedAt ?? Date.now()) - state.elapsedSeconds * 1000;
-  const collapseClock = zeroMs ? getLocalTime(new Date(zeroMs - 5 * 60 * 1000)) : '';
   const rhythm = handoverRhythmStatus(state);
   const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, collapseClock,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, priorChecks, firstState, durationNeeded,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
-  if (durationSeconds != null) information.push({ t: `Arrest management for ${formatTime(durationSeconds)}` });
+  if (durationSeconds != null) information.push({ t: `Arrest management for ${approxPhrase(durationSeconds)}` });
   information.push({ t: `${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}` });
   information.push({ t: `${shockCount} shock${shockCount === 1 ? '' : 's'}` });
   information.push({ t: `${disarmCount} disarm${disarmCount === 1 ? '' : 's'}` });
-  if (firstRhythm) information.push({ t: `First rhythm ${firstRhythm}` });
+  if (firstState === 'known' && firstRhythm) information.push({ t: `First rhythm ${firstRhythm}` });
+  if (firstState === 'unknown') information.push({ t: 'First rhythm unknown' });
   if (others.length) information.push({ t: 'Other rhythms', sub: others });
   if (recentRhythm) information.push({ t: `${state.isROSCMode ? 'Last rhythm before ROSC' : 'Latest rhythm'} ${recentRhythm}` });
   if (lastRosc) information.push({ t: `ROSC ${lastRosc.clock}${rearrestSince ? ', rearrested since' : ''}` });
@@ -5455,8 +5473,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const [card, setCard] = useState(0);
   const [rrOtherOpen, setRrOtherOpen] = useState(false);
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
-  const content = buildHandoverContent(state, pharmaSummary);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
+  const content = buildHandoverContent(state, pharmaSummary, h);
   const vit = state.vitals;
   const inRosc = state.isROSCMode;
   // A paediatric age the app already knows is filled in until it's changed
@@ -5516,9 +5534,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     if (!vit.hr) toFill.push('HR');
     if (!vit.bpSys || !vit.bpDia) toFill.push('BP');
   }
+  if (!h.arrestStart) toFill.push('When arrest started');
+  else if (h.arrestStart === 'Before' && !h.startedBefore) toFill.push('How long before');
   if (!h.witnessed) toFill.push('Witnessed');
   if (!h.bystanderCpr) toFill.push('Bystander CPR');
-  if (!h.downtime) toFill.push('Collapse to CPR');
+  else if (h.bystanderCpr === 'Yes' && !h.downtime) toFill.push('Collapse to CPR');
+  if (content.arrest.durationNeeded) toFill.push('Arrest management time');
+  if (content.arrest.firstState === 'ask') toFill.push('First rhythm');
   if (!h.suspectedCause.trim()) toFill.push('Suspected cause');
   content.signs.forEach(s => { if (!s.value) toFill.push(s.label); });
 
@@ -5547,14 +5569,19 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     <>{ageWords ?? miss('Age ?')} {h.gender ? genderText(h).toLowerCase() : miss('Gender ?')}</>,
     ...(content.weight ? [`estimated weight ${content.weight}`] : []),
   ];
+  const beforeWords: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': 'approximately 5 to 10 minutes', '10–15 min': 'approximately 10 to 15 minutes', '15–20 min': 'approximately 15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
+  const startLine: React.ReactNode = !h.arrestStart ? miss('When the arrest started ?')
+    : h.arrestStart === 'During' ? 'This arrest happened after we arrived'
+    : !h.startedBefore ? <>This arrest happened before we arrived {miss('How long before ?')}</>
+    : h.startedBefore === 'Unknown' ? "This arrest happened before we arrived, we don't know how long before"
+    : `This arrest happened ${beforeWords[h.startedBefore]} before we arrived`;
   const witnessedLine: React.ReactNode = !h.witnessed ? miss('Witnessed ?')
-    : h.witnessed === 'Yes' ? `This was a witnessed arrest${content.arrest.collapseClock ? ` at approximately ${content.arrest.collapseClock}` : ''}`
-    : h.witnessed === 'No' ? 'This was an unwitnessed arrest' : "It's not known whether this arrest was witnessed";
-  const cprWhen = h.downtime && h.downtime !== 'Unknown' ? bandWords[h.downtime] : null;
+    : h.witnessed === 'Yes' ? 'it was witnessed' : h.witnessed === 'No' ? 'it was unwitnessed' : "we don't know if it was witnessed";
+  const cprAfter: Record<string, string> = { 'Under 2 min': ' in under 2 minutes', '2–5 min': ' after approximately 2 to 5 minutes', '5–10 min': ' after approximately 5 to 10 minutes', 'Over 10 min': ' after more than 10 minutes', 'Unknown': ' (time to CPR unknown)' };
   const cprLine: React.ReactNode = !h.bystanderCpr ? miss('Bystander CPR ?')
     : h.bystanderCpr === 'Unknown' ? 'bystander CPR is unknown'
-    : <>{h.bystanderCpr === 'Yes' ? 'patient received bystander CPR' : 'no bystander CPR'}{' '}
-        {h.downtime === 'Unknown' ? '(time to CPR unknown)' : cprWhen ? (h.bystanderCpr === 'Yes' ? `in ${cprWhen}` : `and CPR started after ${cprWhen}`) : miss('Collapse to CPR ?')}</>;
+    : h.bystanderCpr === 'No' ? 'no bystander CPR'
+    : <>patient received bystander CPR{h.downtime ? cprAfter[h.downtime] : <> {miss('Collapse to CPR ?')}</>}</>;
   const causeLine: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'cause of arrest is unknown' : `suspected cause of arrest is ${h.suspectedCause.trim()}`;
 
@@ -5562,15 +5589,21 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const arrestNodes: React.ReactNode[] = [];
   if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text.startsWith('Next rhythm check in ') ? `Next rhythm check is in ${a.rhythm.text.slice('Next rhythm check in '.length)}` : a.rhythm.text}.</div>);
-  if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `We ran arrest management for ${formatTime(a.durationSeconds)}${a.rosc ? ` before ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `We have been running arrest management for ${formatTime(a.durationSeconds)}.`}</div>);
+  if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` before ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
+  else if (a.durationNeeded) arrestNodes.push(<div key="d">{miss('Arrest management time ?')}</div>);
   else if (a.inRosc && a.rosc) arrestNodes.push(<div key="d">{`ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
   arrestNodes.push(<div key="p">Pt has received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), plural(a.disarms, 'disarm', 'disarms')])}</div>);
-  if (a.firstRhythm) {
+  if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
+  if (a.firstState === 'unknown') {
+    arrestNodes.push(<div key="f">We don't know the first rhythm.</div>);
+    if (a.others.length) arrestNodes.push(<div key="o">Rhythms since then:{sub(a.others.map(rhythmWords))}</div>);
+  }
+  if (a.firstState === 'known' && a.firstRhythm) {
     if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
     else if (a.latest && a.latest !== a.firstRhythm) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
     else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
-    if (a.latest && (a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
   }
+  if (a.latest && (a.firstState !== 'known' || a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
   if (h.information.trim()) arrestNodes.push(<div key="n">Also:{sub(lines(h.information))}</div>);
 
   const recorded = content.signs.filter(s => s.value);
@@ -5623,7 +5656,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: withCommas(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
-    { key: 'M', title: 'M – What happened', body: withCommas([witnessedLine, cprLine, causeLine]) },
+    { key: 'M', title: 'M – What happened', body: withCommas([startLine, witnessedLine, cprLine, causeLine]) },
     { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestNodes },
     { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
     { key: 'T', title: 'T – Treatment', body: treatmentNodes },
@@ -5655,7 +5688,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
 
   // --- Fill in
   const doneId = !!ageValue && !!h.gender;
-  const doneM = !!h.witnessed && !!h.bystanderCpr && !!h.downtime && !!h.suspectedCause.trim();
+  const doneM = !!h.arrestStart && (h.arrestStart === 'During' || !!h.startedBefore) && !!h.witnessed && !!h.bystanderCpr && (h.bystanderCpr !== 'Yes' || !!h.downtime) && !!h.suspectedCause.trim();
   const doneAmbo = !!h.allergies && !!h.medications.trim() && !!h.background.trim();
   return (
     <div data-handover data-handover-view="fill" className="fixed inset-0 z-[2000] bg-neutral-100 flex flex-col">
@@ -5722,9 +5755,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           </HandoverSection>
         ) : null}
         <HandoverSection letter="M" title="What happened" done={doneM}>
+          <HandoverChoice label="When did the arrest start?" options={['Before we arrived', 'During the case']} columns={2}
+            value={h.arrestStart === 'Before' ? 'Before we arrived' : h.arrestStart === 'During' ? 'During the case' : ''}
+            onChange={v => { onField('arrestStart', v === 'Before we arrived' ? 'Before' : v === 'During the case' ? 'During' : ''); if (v !== 'Before we arrived') onField('startedBefore', ''); }} />
+          {h.arrestStart === 'Before' && <HandoverChoice label="How long before we arrived" options={HANDOVER_STARTED_BEFORE} value={h.startedBefore} onChange={v => onField('startedBefore', v)} columns={2} />}
           <HandoverChoice label="Witnessed" options={HANDOVER_YNU} value={h.witnessed} onChange={v => onField('witnessed', v)} />
           <HandoverChoice label="Bystander CPR" options={HANDOVER_YNU} value={h.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
-          <HandoverChoice label="Collapse to CPR" options={HANDOVER_DOWNTIMES} value={h.downtime} onChange={v => onField('downtime', v)} columns={2} />
+          {h.bystanderCpr === 'Yes' && <HandoverChoice label="Collapse to CPR" options={HANDOVER_DOWNTIMES} value={h.downtime} onChange={v => onField('downtime', v)} columns={2} />}
           <div className="flex items-end gap-2">
             <div className="flex-1">{text('suspectedCause', 'Suspected cause of arrest', { prompt: true })}</div>
             <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
@@ -5734,6 +5771,18 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         </HandoverSection>
         <HandoverSection letter="I" title="Info / Arrest Summary">
           {bullets(content.information)}
+          {state.timingMode === 'log' && (
+            <div>
+              <HandoverNumber label="Arrest management (minutes)" value={h.runningMinutes} onChange={v => onField('runningMinutes', v.replace(/\D/g, '').slice(0, 4))} unit="min" />
+              <div className="text-[13px] text-neutral-500 mt-1">Tip: consider using the elapsed time in the top right corner of the monitor.</div>
+            </div>
+          )}
+          {content.arrest.priorChecks && (
+            <div>
+              <HandoverChoice label="First rhythm" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />
+              <div className="text-[13px] text-neutral-500 mt-1">Shocks or disarms were entered at setup, so the app can't know the first rhythm.</div>
+            </div>
+          )}
           {text('information', 'Notes', { rows: 2 })}
         </HandoverSection>
         <HandoverSection letter="S" title="Vital Signs">

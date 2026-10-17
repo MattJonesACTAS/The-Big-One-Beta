@@ -29,6 +29,10 @@ export interface HandoverFields {
   witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
   bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
   downtime: string;         // time from collapse to the start of CPR: 'Under 2 min' | '2–5 min' | '5–10 min' | 'Over 10 min' | 'Unknown' | ''
+  arrestStart: string;      // 'Before' (we arrived) | 'During' (the case) | ''
+  startedBefore: string;    // how long before we arrived: 'Under 5 min' | '5–10 min' | '10–15 min' | '15–20 min' | 'Over 20 min' | 'Unknown' | ''
+  runningMinutes: string;   // Tx log only has no timer: minutes of arrest management so far, typed (digits)
+  firstRhythm: string;      // asked when shocks or disarms were entered at setup: 'VF' | 'pVT' | 'Asystole' | 'PEA' | 'Unknown' | ''
   suspectedCause: string;
   information: string;      // optional notes under Information
   // AMBO: useful if there's time, kept apart from IMIST
