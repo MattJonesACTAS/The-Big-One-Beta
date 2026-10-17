@@ -5145,8 +5145,8 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  type: '', name: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
-  suspectedCause: '', information: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
+  type: '', name: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
+  suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
 const HANDOVER_TYPES = ['Arrest', 'PHEA', 'Both'];
@@ -5502,7 +5502,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const age = ageText(ageValue, ageUnit);
 
   // Fill in is a series of pages. Arrest has them all; PHEA and Both are still to be built, so they only have the first.
-  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['rabc'] : []), 'what', 'info', 'vitals', 'ambo', 'review'] : ['type'];
+  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['rabc'] : []), 'what', ...(content.arrest.priorChecks ? ['info'] : []), 'vitals', 'ambo', 'review'] : ['type'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5556,7 +5556,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   // What's still to fill in, page by page (each page's banner, and the Review page's list)
   const missing: Record<string, string[]> = { type: [], id: [], rabc: [], what: [], info: [], vitals: [], ambo: [] };
   if (!h.type) missing.type.push('Handover type');
-  if (!ageValue) missing.id.push('Age');
+  if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
     if (!vit.gcs) missing.rabc.push('GCS');
@@ -5565,7 +5565,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     if (!vit.hr) missing.rabc.push('HR');
     if (!vit.bpSys || !vit.bpDia) missing.rabc.push('BP');
   }
-  if (!h.arrestStart) missing.what.push('When arrest started');
+  if (!h.arrestStart) missing.what.push('When the patient arrested');
   else if (h.arrestStart === 'Before') {
     if (!h.startedBefore) missing.what.push('How long before');
     if (!h.witnessed) missing.what.push('Witnessed');
@@ -5575,7 +5575,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   if (!h.suspectedCause.trim()) missing.what.push('Suspected cause');
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   content.signs.forEach(s => { if (!s.value) missing.vitals.push(s.label); });
-  const doneId = !!ageValue && !!h.gender;
+  if (!h.allergies) missing.ambo.push('Allergies');
+  if (!h.background.trim()) missing.ambo.push('Medical history');
+  if (!h.medications.trim()) missing.ambo.push('Medications');
+  const doneId = (!!ageValue || h.ageUnknown === 'Yes') && !!h.gender;
   const doneM = !!h.arrestStart && (h.arrestStart === 'During' || (!!h.startedBefore && !!h.witnessed && !!h.bystanderCpr && (h.bystanderCpr !== 'Yes' || !!h.downtime))) && !!h.suspectedCause.trim();
   const doneAmbo = !!h.allergies && !!h.medications.trim() && !!h.background.trim();
   const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', rabc: 'R / A / B / C', what: 'What happened', info: 'Info / Arrest Summary', vitals: 'Vital Signs', ambo: 'AMBO', review: 'Review' };
@@ -5605,7 +5608,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const ageWords = !ageValue ? null : (ageValue === '0' && ageUnit === 'Months') ? 'newborn' : `${ageValue} ${ageUnit === 'Months' ? 'month' : 'year'} old`;
   const idLines: React.ReactNode[] = [
     ...(h.name.trim() ? [`This is ${h.name.trim()}`] : []),
-    <>{ageWords ?? miss('Age ?')} {h.gender ? genderText(h).toLowerCase() : miss('Gender ?')}</>,
+    h.ageUnknown === 'Yes'
+      ? <>{h.gender ? genderText(h).toLowerCase() : miss('Gender ?')}, age unknown</>
+      : <>{ageWords ?? miss('Age ?')} {h.gender ? genderText(h).toLowerCase() : miss('Gender ?')}</>,
     ...(content.weight ? [`estimated weight ${content.weight}`] : []),
   ];
   const beforeWords: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': 'approximately 5 to 10 minutes', '10–15 min': 'approximately 10 to 15 minutes', '15–20 min': 'approximately 15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
@@ -5645,7 +5650,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
   }
   if (a.latest && (a.firstState !== 'known' || a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
-  if (h.information.trim()) arrestNodes.push(<div key="n">Also:{sub(lines(h.information))}</div>);
 
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
   const splitAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p') + 1;
@@ -5739,18 +5743,17 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   // --- Fill in: one page at a time
   const goNext = () => { if (curIdx < pageKeys.length - 1) setPageKey(pageKeys[curIdx + 1]); };
   const goBack = () => { if (curIdx > 0) setPageKey(pageKeys[curIdx - 1]); };
-  const pageMissing = curKey === 'review' ? [] : (missing[curKey] ?? []);
   const pageBody = (): React.ReactNode => {
     switch (curKey) {
       case 'type': return (
         <div className="space-y-4">
           <div data-handover-types className="grid grid-cols-3 gap-2">
             {HANDOVER_TYPES.map(t => (
-              <button key={t} data-handover-type={t} aria-pressed={h.type === t} onClick={() => { onField('type', t); setCard(0); }}
+              <button key={t} data-handover-type={t} aria-pressed={h.type === t} onClick={() => { onField('type', t); setCard(0); if (t === 'Arrest') setPageKey('id'); }}
                 className={`py-4 rounded-xl font-bold text-[16px] border-2 btn-base ${h.type === t ? 'bg-blue-600 text-white border-blue-600' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-amber-300'}`}>{t}</button>
             ))}
           </div>
-          <div data-handover-empty className={`rounded-xl p-5 text-center font-semibold ${h.type === 'Arrest' ? 'hidden' : h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
+          <div data-handover-empty className={`rounded-xl p-5 text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
             {h.type ? `The ${h.type} handover prompts are still to be added.` : 'Choose Arrest, PHEA or Both. The handover prompts are different for each.'}
           </div>
         </div>
@@ -5759,10 +5762,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         <HandoverSection letter="I" title="Identification" done={doneId}>
           {text('name', 'Name (optional)', { words: true })}
           <div>
-            <span className={labelClass}>Age{!ageValue && <span data-handover-missing="Age" className="text-amber-500 ml-1">●</span>}</span>
+            <span className={labelClass}>Age{!ageValue && h.ageUnknown !== 'Yes' && <span data-handover-missing="Age" className="text-amber-500 ml-1">●</span>}</span>
             <div className="grid grid-cols-2 gap-2 mt-1">
-              <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={ageValue} onChange={e => onField('age', e.target.value.replace(/\D/g, '').slice(0, 3))} autoComplete="off"
-                className={`${inputClass} ${ageValue ? '' : '!bg-amber-50 !border-amber-300'}`} />
+              <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
+                className={`${inputClass} ${ageValue || h.ageUnknown === 'Yes' ? '' : '!bg-amber-50 !border-amber-300'}`} />
               <div className="grid grid-cols-2 gap-2">
                 {['Years', 'Months'].map(u => (
                   <button key={u} data-handover-choice={`Age unit: ${u}`} aria-pressed={ageUnit === u} onClick={() => onField('ageUnit', u)}
@@ -5771,6 +5774,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
               </div>
             </div>
           </div>
+          <button data-handover-choice="Age: Unknown" aria-pressed={h.ageUnknown === 'Yes'}
+            onClick={() => { if (h.ageUnknown === 'Yes') onField('ageUnknown', ''); else { onField('ageUnknown', 'Yes'); onField('age', ''); } }}
+            className={`w-full py-3 rounded-lg font-bold text-[15px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Age unknown</button>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} />
           {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
           <div className="flex items-center justify-between text-[15px] text-neutral-800">
@@ -5782,7 +5788,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       case 'rabc': return (
         <HandoverSection letter="" title="R / A / B / C" done={roscComplete}>
           <HandoverChoice label="GCS" options={HANDOVER_GCS} value={gcsValue} onChange={v => onVital('gcs', v)} columns={5} />
-          <div className="text-[15px] text-neutral-800"><b>A</b> – Airway: {content.airway}</div>
           <HandoverChoice label="Breathing" options={HANDOVER_BREATHING} value={h.breathing} onChange={v => onField('breathing', v)} columns={2} />
           {h.breathing && (
             <>
@@ -5800,13 +5805,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       );
       case 'what': return (
         <HandoverSection letter="M" title="What happened" done={doneM}>
-          <HandoverChoice label="When did the arrest start?" options={['Before we arrived', 'During the case']} columns={2}
+          <HandoverChoice label="When did the patient arrest?" options={['Before we arrived', 'During the case']} columns={2}
             value={h.arrestStart === 'Before' ? 'Before we arrived' : h.arrestStart === 'During' ? 'During the case' : ''}
             onChange={v => { onField('arrestStart', v === 'Before we arrived' ? 'Before' : v === 'During the case' ? 'During' : ''); if (v !== 'Before we arrived') onField('startedBefore', ''); }} />
           {h.arrestStart === 'Before' && <HandoverChoice label="How long before we arrived" options={HANDOVER_STARTED_BEFORE} value={h.startedBefore} onChange={v => onField('startedBefore', v)} columns={2} />}
           {content.arrest.startEstimate && (
             <div data-handover-estimate className="text-[14px] font-semibold text-neutral-700 bg-neutral-100 rounded-lg px-3 py-2">
-              Estimated time of arrest: {content.arrest.startEstimate.kind === 'before' ? 'before approximately' : 'approximately'} {content.arrest.startEstimate.clock}
+              Estimated time of arrest: {content.arrest.startEstimate.kind === 'before' ? 'before ' : ''}{content.arrest.startEstimate.clock}
             </div>
           )}
           {h.arrestStart === 'Before' && (
@@ -5826,13 +5831,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       );
       case 'info': return (
         <HandoverSection letter="I" title="Info / Arrest Summary">
-          {bullets(content.information)}
-          {content.arrest.priorChecks && (
-            <div>
-              <HandoverChoice label="First rhythm" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />
-            </div>
-          )}
-          {text('information', 'Notes', { rows: 2 })}
+          <HandoverChoice label="What was the first rhythm?" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />
         </HandoverSection>
       );
       case 'vitals': return (
@@ -5873,9 +5872,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             ) : (
               <div data-handover-allfilled className="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 font-semibold text-center">Everything is filled in</div>
             )}
-            <HandoverSection letter="T" title="Treatment (from the log)">
-              {bullets(content.treatment)}
-            </HandoverSection>
           </div>
         );
       }
@@ -5900,11 +5896,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           </button>
         ))}
       </div>
-      {pageMissing.length > 0 && (
-        <div data-handover-banner className="flex-shrink-0 bg-amber-100 border-y border-amber-300 text-amber-900 px-4 py-2 text-[13px] font-semibold">
-          Still to fill: {pageMissing.join(', ')}
-        </div>
-      )}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">{pageBody()}</div>
       <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
         <button onClick={curIdx === 0 ? onClose : goBack} data-button="handover-back" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">{curIdx === 0 ? 'Close' : 'Back'}</button>

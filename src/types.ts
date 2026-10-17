@@ -21,6 +21,7 @@ export interface Treatment {
 export interface HandoverFields {
   type: string;             // 'Arrest' | 'PHEA' | 'Both' | '' (chosen at the top of the Handover page)
   name: string;
+  ageUnknown: string;       // 'Yes' when the age isn't known
   age?: string;             // digits only; the unit is separate. Not set until the crew types or clears it, so a paediatric age from setup shows until then
   ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
   gender: string;           // 'Male' | 'Female' | 'Other' | ''
@@ -33,7 +34,6 @@ export interface HandoverFields {
   startedBefore: string;    // how long before we arrived: 'Under 5 min' | '5–10 min' | '10–15 min' | '15–20 min' | 'Over 20 min' | 'Unknown' | ''
   firstRhythm: string;      // asked when shocks or disarms were entered at setup: 'VF' | 'pVT' | 'Asystole' | 'PEA' | 'Unknown' | ''
   suspectedCause: string;
-  information: string;      // optional notes under Information
   // AMBO: useful if there's time, kept apart from IMIST
   allergies: string;        // 'NKA' | 'Unknown' | 'Other' | ''
   allergiesOther: string;
