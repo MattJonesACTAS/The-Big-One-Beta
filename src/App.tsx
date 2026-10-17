@@ -859,9 +859,9 @@ export default function App() {
   // The Handover's Close / Back / Next buttons are drawn in the bottom bar, outside the box (a portal into this element)
   const [handoverBar, setHandoverBar] = useState<HTMLElement | null>(null);
   // Which Fill in page the crew had reached, so being interrupted (the 0:20 close, another screen) doesn't lose their place.
-  // Closing it deliberately clears it, and a started handover then reopens on Review.
+  // Closing it (or being interrupted) keeps it, so it reopens where they were; a handover that's begun but never opened comes up on Review.
   const handoverResumeRef = useRef<string | null>(null);
-  const closeHandover = () => { handoverResumeRef.current = null; setShowHandover(false); };   // which Handover view is open (the Read out view isn't closed at 0:20)
+  const closeHandover = () => { setShowHandover(false); };   // which Handover view is open (the Read out view isn't closed at 0:20)
   const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
   const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
   const [viewingPreviousCase, setViewingPreviousCase] = useState<AppState | null>(null);
@@ -5495,7 +5495,7 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
         <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{!value && !off && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
         <div className="relative">
           <input aria-label={label} inputMode="decimal" value={value} disabled={off} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
-            className={`w-full border rounded-lg px-4 pr-14 ${compact ? 'py-2.5 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-blue-400 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-amber-50 border-amber-300'} ${off ? 'opacity-50' : ''}`} />
+            className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2.5 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-blue-400 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-amber-50 border-amber-300'} ${off ? 'opacity-50' : ''}`} />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
       </label>
@@ -5551,7 +5551,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const toggleUnknownVital = (flag: string, keys: VitalKey[]) => { const on = !unk(flag); setUnk(flag, on); if (on) keys.forEach(k => onVital(k, '')); };
 
   // Fill in is a series of pages. Arrest has them all; PHEA and Both are still to be built, so they only have the first.
-  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['resp', 'breath', 'circ'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'allergies', 'history', 'review'] : ['type'];
+  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'allergies', 'history', 'review'] : ['type'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5603,7 +5603,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const rrLabel = h.breathing === 'Ventilated' ? 'Ventilation rate' : 'Respiratory rate';
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { type: [], id: [], resp: [], breath: [], circ: [], what: [], witness: [], info: [], vitals: [], allergies: [], history: [] };
+  const missing: Record<string, string[]> = { type: [], id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], allergies: [], history: [] };
   if (!h.type) missing.type.push('Handover type');
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
@@ -5611,8 +5611,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
     if (!h.breathing) missing.breath.push('Breathing');
     else if (h.breathing !== 'Unknown' && !vit.rr && !unk('rr')) missing.breath.push(rrLabel);
-    if (!vit.hr && !unk('hr')) missing.circ.push('HR');
-    if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.circ.push('BP');
+    if (!vit.hr && !unk('hr')) missing.vitals.push('HR');
+    if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
   }
   if (!h.arrestStart) missing.what.push('When the patient arrested');
   else if (h.arrestStart === 'Before') {
@@ -5627,7 +5627,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.history.push('Medical history');
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Medications');
-  const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', resp: 'Response', breath: 'Breathing', circ: 'Circulation', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
   const pageDone: Record<string, boolean> = { type: !!h.type, review: false };
   Object.keys(missing).forEach(k => { if (k !== 'type') pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -5717,7 +5717,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const airwayPhrase = t.airway.length ? (t.airway.length === 2 ? `${airwayName[t.airway[0]]} with an IGT` : airwayName[t.airway[0]]) : '';
   const treatmentNodes: React.ReactNode[] = [
     <div key="a">{airwayPhrase ? `For airway we have ${airwayPhrase}.` : 'No airway device recorded.'}</div>,
-    t.io || t.iv ? <div key="x">For access we have:{sub([...(t.io ? [`${t.io} x IO`] : []), ...(t.iv ? [`${t.iv} x IV`] : [])])}</div> : <div key="x">No access recorded.</div>,
+    t.io || t.iv ? <div key="x">For access we have:{sub([...(t.io ? [`${t.io} x IO`] : []), ...(t.iv ? [`${t.iv} x IV`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>,
     t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>,
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
@@ -5779,7 +5779,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           <span className="text-center leading-tight"><span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span><span data-handover-title>{c.title}</span></span>
           <span className="justify-self-end text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
-        <HandoverRhythmStrip rhythm={content.rhythm} />
         <div data-handover-card={c.key} className={`flex-1 overflow-y-auto ${compact ? 'p-4 space-y-3 text-[22px]' : 'p-6 space-y-5 text-[28px]'} leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
           {c.body}
         </div>
@@ -5867,18 +5866,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           )}
         </HandoverPageCard>
       );
-      case 'circ': return (
-        <HandoverPageCard>
-          <HandoverNumber label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />
-          <div>
-            <div className="grid grid-cols-2 gap-3">
-              <HandoverNumber label="BP systolic" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
-              <HandoverNumber label="BP diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
-            </div>
-            <div className="mt-3"><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
-          </div>
-        </HandoverPageCard>
-      );
       case 'what': return (
         <HandoverPageCard>
           <HandoverChoice label="When did the patient arrest?" options={['Before we arrived', 'During the case', 'Unknown']} columns={3}
@@ -5913,7 +5900,19 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       );
       case 'vitals': return (
         <HandoverPageCard>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-6">
+          {inRosc && (
+            <div className="grid grid-cols-3 gap-x-2 gap-y-3">
+              <div><HandoverNumber label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} /></div>
+              <div className="col-span-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <HandoverNumber label="BP sys" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
+                  <HandoverNumber label="BP dia" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
+                </div>
+                <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-4">
             {content.signs.map(s => (
               <div key={s.key}>
                 <HandoverNumber label={s.label} value={s.value} onChange={v => setVitalValue(s.key, s.key, v)} unit={s.unit} unknownOn={unk(s.key)} onUnknown={() => toggleUnknownVital(s.key, [s.key])} />
@@ -5976,7 +5975,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         </span>
         <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>
       </div>
-      <HandoverRhythmStrip rhythm={content.rhythm} />
       <div data-handover-dots data-handover-page-current={curKey} className="flex-shrink-0 flex items-center justify-center bg-neutral-100">
         {pageKeys.map((k, i) => (
           <button key={k} data-handover-page-dot={k} data-handover-page-done={pageDone[k] ? 'done' : 'todo'} aria-label={pageTitle[k]} aria-current={k === curKey}
