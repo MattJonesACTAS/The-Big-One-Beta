@@ -5436,7 +5436,7 @@ function HandoverSection({ letter, title, children, muted = false, done }: { let
 
 // A row of buttons to choose from. An unanswered question has an amber dot beside its label.
 function HandoverPageCard({ children, muted = false }: { children: React.ReactNode, muted?: boolean }) {
-  return <div className={`rounded-xl bg-white p-3 space-y-3 ${muted ? 'border-2 border-dashed border-neutral-300' : 'border border-neutral-200'}`}>{children}</div>;
+  return <div className={`rounded-xl bg-white p-4 space-y-5 ${muted ? 'border-2 border-dashed border-neutral-300' : 'border border-neutral-200'}`}>{children}</div>;
 }
 
 function HandoverChoice({ label, options, value, onChange, columns = 3, compact = false }: { label: string, options: string[], value: string, onChange: (v: string) => void, columns?: 2 | 3 | 5, compact?: boolean }) {
@@ -5451,7 +5451,7 @@ function HandoverChoice({ label, options, value, onChange, columns = 3, compact 
             data-handover-choice={`${label}: ${c}`}
             aria-pressed={value === c}
             onClick={() => onChange(value === c ? '' : c)}
-            className={`${compact ? 'py-2 text-[14px]' : 'py-3 text-[15px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
+            className={`${compact ? 'py-3 text-[15px]' : 'py-3.5 text-[15px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
           >{c}</button>
         ))}
       </div>
@@ -5506,7 +5506,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const age = ageText(ageValue, ageUnit);
 
   // Fill in is a series of pages. Arrest has them all; PHEA and Both are still to be built, so they only have the first.
-  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['rabc'] : []), 'what', 'info', 'vitals', 'ambo', 'review'] : ['type'];
+  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['rabc'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'ambo', 'review'] : ['type'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5558,7 +5558,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const roscComplete = !!vit.gcs && !!h.breathing && !!vit.rr && !!vit.hr && !!vit.bpSys && !!vit.bpDia;
 
   // What's still to fill in, page by page (each page's banner, and the Review page's list)
-  const missing: Record<string, string[]> = { type: [], id: [], rabc: [], what: [], info: [], vitals: [], ambo: [] };
+  const missing: Record<string, string[]> = { type: [], id: [], rabc: [], what: [], witness: [], info: [], vitals: [], ambo: [] };
   if (!h.type) missing.type.push('Handover type');
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
@@ -5572,9 +5572,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   if (!h.arrestStart) missing.what.push('When the patient arrested');
   else if (h.arrestStart === 'Before') {
     if (!h.startedBefore) missing.what.push('How long before');
-    if (!h.witnessed) missing.what.push('Witnessed');
-    if (!h.bystanderCpr) missing.what.push('Bystander CPR');
-    else if (h.bystanderCpr === 'Yes' && !h.downtime) missing.what.push('Collapse to CPR');
+    if (!h.witnessed) missing.witness.push('Witnessed');
+    if (!h.bystanderCpr) missing.witness.push('Bystander CPR');
+    else if (h.bystanderCpr === 'Yes' && !h.downtime) missing.witness.push('Collapse to CPR');
   }
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   if (!h.suspectedCause.trim()) missing.info.push('Suspected cause');
@@ -5583,10 +5583,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   if (!h.background.trim()) missing.ambo.push('Medical history');
   if (!h.medications.trim()) missing.ambo.push('Medications');
   const doneId = (!!ageValue || h.ageUnknown === 'Yes') && !!h.gender;
-  const doneM = !!h.arrestStart && (h.arrestStart === 'During' || (!!h.startedBefore && !!h.witnessed && !!h.bystanderCpr && (h.bystanderCpr !== 'Yes' || !!h.downtime)));
+  const doneM = !!h.arrestStart && (h.arrestStart === 'During' || !!h.startedBefore);
+  const doneWitness = !!h.witnessed && !!h.bystanderCpr && (h.bystanderCpr !== 'Yes' || !!h.downtime);
   const doneAmbo = !!h.allergies && !!h.medications.trim() && !!h.background.trim();
-  const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', rabc: 'R / A / B / C', what: 'What happened', info: 'Info / Arrest Summary', vitals: 'Vital Signs', ambo: 'AMBO', review: 'Review' };
-  const pageDone: Record<string, boolean> = { type: !!h.type, id: doneId, rabc: roscComplete, what: doneM, info: missing.info.length === 0, vitals: missing.vitals.length === 0, ambo: doneAmbo, review: false };
+  const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', rabc: 'R / A / B / C', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', ambo: 'AMBO', review: 'Review' };
+  const pageDone: Record<string, boolean> = { type: !!h.type, id: doneId, rabc: roscComplete, what: doneM, witness: doneWitness, info: missing.info.length === 0, vitals: missing.vitals.length === 0, ambo: doneAmbo, review: false };
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
   const pageForCard: Record<string, string> = { I: 'id', RABC: 'rabc', M: 'what', I2: 'info', I3: 'info', S: 'vitals', T: 'review', AMBO: 'ambo', END: 'review' };
 
@@ -5814,17 +5815,17 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             onChange={v => { onField('arrestStart', v === 'Before we arrived' ? 'Before' : v === 'During the case' ? 'During' : ''); if (v !== 'Before we arrived') onField('startedBefore', ''); }} />
           {h.arrestStart === 'Before' && <HandoverChoice label="How long before we arrived?" options={HANDOVER_STARTED_BEFORE} value={h.startedBefore} onChange={v => onField('startedBefore', v)} columns={3} compact />}
           {content.arrest.startEstimate && (
-            <div data-handover-estimate className="text-[14px] font-semibold text-neutral-700 bg-neutral-100 rounded-lg px-3 py-1.5">
+            <div data-handover-estimate className="text-[14px] font-semibold text-neutral-700 bg-neutral-100 rounded-lg px-3 py-2.5">
               Estimated time of arrest: {content.arrest.startEstimate.kind === 'before' ? 'before ' : ''}{content.arrest.startEstimate.clock}
             </div>
           )}
-          {h.arrestStart === 'Before' && (
-            <>
+        </HandoverPageCard>
+      );
+      case 'witness': return (
+        <HandoverPageCard>
               <HandoverChoice label="Witnessed?" options={HANDOVER_YNU} value={h.witnessed} onChange={v => onField('witnessed', v)} compact />
               <HandoverChoice label="Bystander CPR?" options={HANDOVER_YNU} value={h.bystanderCpr} onChange={v => onField('bystanderCpr', v)} compact />
               {h.bystanderCpr === 'Yes' && <HandoverChoice label="How long from collapse to CPR?" options={HANDOVER_DOWNTIMES} value={h.downtime} onChange={v => onField('downtime', v)} columns={3} compact />}
-            </>
-          )}
         </HandoverPageCard>
       );
       case 'info': return (
@@ -5900,7 +5901,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">{pageBody()}</div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">{pageBody()}</div>
       <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
         <button onClick={curIdx === 0 ? onClose : goBack} data-button="handover-back" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">{curIdx === 0 ? 'Close' : 'Back'}</button>
         {curKey === 'review'
