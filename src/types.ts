@@ -21,6 +21,7 @@ export interface Treatment {
 export interface HandoverFields {
   type: string;             // 'Arrest' | 'PHEA' | 'Both' | '' (chosen at the top of the Handover page)
   name: string;
+  unknowns: string;         // comma-separated list of the things marked Unknown (e.g. 'gcs,hr,bp,history')
   ageUnknown: string;       // 'Yes' when the age isn't known
   age?: string;             // digits only; the unit is separate. Not set until the crew types or clears it, so a paediatric age from setup shows until then
   ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
