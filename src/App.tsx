@@ -5147,15 +5147,13 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  type: '', name: '', unknowns: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', downtime: '', breathing: '',
+  type: '', name: '', unknowns: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
 const HANDOVER_TYPES = ['Arrest', 'PHEA', 'Both'];
 const HANDOVER_YNU = ['Yes', 'No', 'Unknown'];
 const HANDOVER_GENDERS = ['Male', 'Female', 'Other', 'Unknown'];
-// Time between collapse and the start of CPR
-const HANDOVER_DOWNTIMES = ['Under 2 min', '2–5 min', '5–10 min', 'Over 10 min', 'Unknown'];
 // How long before we arrived the arrest started
 const HANDOVER_STARTED_BEFORE = ['Under 5 min', '5–10 min', '10–15 min', '15–20 min', 'Over 20 min', 'Unknown'];
 const HANDOVER_FIRST_RHYTHMS = ['VF', 'pVT', 'Asystole', 'PEA', 'Unknown'];
@@ -5171,7 +5169,7 @@ const HANDOVER_HEADING = 'block text-center text-[17px] font-bold text-neutral-7
 const HANDOVER_HEADING_COMPACT = 'block text-center text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1.5';
 const HANDOVER_GCS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
 const HANDOVER_RR = ['6', '8', '10', '12', '14', '16', '18', '20', '24', '30'];
-const HANDOVER_ALLERGIES = ['NKA', 'Unknown', 'Other'];
+const HANDOVER_ALLERGIES = ['Yes', 'No', 'Unknown'];
 const HANDOVER_NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 // Airways from least to most advanced: only the most advanced one that worked is listed
 const HANDOVER_AIRWAY_LADDER = ['NPA', 'OPA', 'LMA', 'ETT', 'FONA'];
@@ -5210,7 +5208,7 @@ const ageText = (value: string, unit: string): string => {
   return `${value} ${u}${value === '1' ? '' : 's'}`;
 };
 const genderText = (h: HandoverFields): string => (h.gender === 'Other' ? (h.genderOther.trim() || 'Other') : h.gender);
-const allergyText = (h: HandoverFields): string => (h.allergies === 'Other' ? (h.allergiesOther.trim() || 'Other') : h.allergies);
+const allergyText = (h: HandoverFields): string => (h.allergies === 'Yes' ? (h.allergiesOther.trim() || 'allergies (not specified)') : h.allergies);
 
 type HandoverInfoItem = { t: string, sub?: string[] };
 type HandoverArrest = {
@@ -5607,12 +5605,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     if (!h.startedBefore) missing.what.push('How long before');
     if (!h.witnessed) missing.witness.push('Witnessed');
     if (!h.bystanderCpr) missing.witness.push('Bystander CPR');
-    else if (h.bystanderCpr === 'Yes' && !h.downtime) missing.witness.push('Collapse to CPR');
   }
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   if (!h.suspectedCause.trim()) missing.info.push('Suspected cause');
   content.signs.forEach(s => { if (!s.value && !unk(s.key)) missing.vitals.push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
+  else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.history.push('Medical history');
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Medications');
   const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', resp: 'Response', breath: 'Breathing', circ: 'Circulation', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
@@ -5661,11 +5659,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     : `This arrest happened ${beforeWords[h.startedBefore]} before we arrived`;
   const witnessedLine: React.ReactNode = !h.witnessed ? miss('Witnessed ?')
     : h.witnessed === 'Yes' ? 'it was witnessed' : h.witnessed === 'No' ? 'it was unwitnessed' : "we don't know if it was witnessed";
-  const cprAfter: Record<string, string> = { 'Under 2 min': ' in under 2 minutes', '2–5 min': ' after approximately 2 to 5 minutes', '5–10 min': ' after approximately 5 to 10 minutes', 'Over 10 min': ' after more than 10 minutes', 'Unknown': ' (time to CPR unknown)' };
   const cprLine: React.ReactNode = !h.bystanderCpr ? miss('Bystander CPR ?')
     : h.bystanderCpr === 'Unknown' ? 'bystander CPR is unknown'
     : h.bystanderCpr === 'No' ? 'no bystander CPR'
-    : <>patient received bystander CPR{h.downtime ? cprAfter[h.downtime] : <> {miss('Collapse to CPR ?')}</>}</>;
+    : 'patient received bystander CPR';
   const causeLine: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'cause of arrest is unknown' : `suspected cause of arrest is ${h.suspectedCause.trim()}`;
 
@@ -5726,8 +5723,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const knownClauses: string[] = [];
   const unknownItems: string[] = [];
   let blankUnknown = false;
-  if (h.allergies === 'NKA') knownClauses.push('they have no known allergies');
-  else if (h.allergies === 'Other') knownClauses.push(`they are allergic to ${allergyText(h)}`);
+  if (h.allergies === 'No' || h.allergies === 'NKA') knownClauses.push('they have no known allergies');
+  else if (h.allergies === 'Yes') knownClauses.push(h.allergiesOther.trim() ? `they are allergic to ${h.allergiesOther.trim()}` : 'they have allergies (not specified)');
   else if (h.allergies === 'Unknown') unknownItems.push('allergies');
   if (h.background.trim()) {
     const hx = lines(h.background);
@@ -5880,7 +5877,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         <HandoverPageCard>
           <HandoverChoice label="Witnessed?" options={HANDOVER_YNU} value={h.witnessed} onChange={v => onField('witnessed', v)} />
           <HandoverChoice label="Bystander CPR?" options={HANDOVER_YNU} value={h.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
-          {h.bystanderCpr === 'Yes' && <HandoverChoice label="How long from collapse to CPR?" options={HANDOVER_DOWNTIMES} value={h.downtime} onChange={v => onField('downtime', v)} columns={3} />}
         </HandoverPageCard>
       );
       case 'info': return (
@@ -5910,7 +5906,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       case 'allergies': return (
         <HandoverPageCard>
           <HandoverChoice label="Allergies?" options={HANDOVER_ALLERGIES} value={h.allergies} onChange={v => onField('allergies', v)} />
-          {h.allergies === 'Other' && text('allergiesOther', 'Allergies (other)')}
+          {h.allergies === 'Yes' && text('allergiesOther', 'What are they allergic to?')}
         </HandoverPageCard>
       );
       case 'history': return (
