@@ -5597,11 +5597,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       : <>{h.breathing === 'Breathing' ? 'Breathing' : 'Ventilated'} {vit.rr ? `${vit.rr}/min` : <span className="text-amber-500" data-handover-missing-frag="rate ?">rate ?</span>}</>}</div>,
     <div key="C" className="flex items-baseline"><span className="text-neutral-400 mr-3">C</span><span>{vit.hr ? `HR ${vit.hr}` : miss('HR ?')} · {(vit.bpSys && vit.bpDia) ? `BP ${vit.bpSys}/${vit.bpDia}` : miss('BP ?')}</span></div>,
   ];
+  // AMBO, in full words. Anything not filled in is prompted for in amber, with the words to say if there's nothing to add.
+  const amberLine = (key: string, text: string) => <div key={key} className="text-amber-500" data-handover-missing-frag={text}>{text}</div>;
   const ambo: React.ReactNode[] = [
-    <div key="a">{h.allergies ? (h.allergies === 'NKA' ? 'NKA' : `Allergies: ${allergyText(h)}`) : <span className="text-amber-500" data-handover-missing-frag="Allergies ?">Allergies ?</span>}</div>,
-    ...(h.medications.trim() ? [<div key="m">Meds: {lines(h.medications).join(', ')}</div>] : []),
-    ...(h.background.trim() ? [<div key="h">Hx: {lines(h.background).join(', ')}</div>] : []),
-    ...(h.otherInfo.trim() ? [<div key="o">Other: {lines(h.otherInfo).join(', ')}</div>] : []),
+    h.allergies ? <div key="a">{h.allergies === 'NKA' ? 'No known allergies' : `Allergies: ${allergyText(h)}`}</div> : <div key="a"><span className="text-amber-500" data-handover-missing-frag="Allergies ?">Allergies ?</span></div>,
+    h.medications.trim() ? <div key="m">Medications: {lines(h.medications).join(', ')}</div> : amberLine('m', "We don't have information on their medications."),
+    h.background.trim() ? <div key="h">Background history: {lines(h.background).join(', ')}</div> : amberLine('h', "We don't have information on their medical history."),
+    ...(h.otherInfo.trim() ? [<div key="o">Other information: {lines(h.otherInfo).join(', ')}</div>] : []),
   ];
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: withCommas(idLines) },
