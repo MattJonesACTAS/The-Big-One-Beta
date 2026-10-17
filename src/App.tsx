@@ -5460,7 +5460,7 @@ function HandoverUnknown({ label, on, onClick }: { label: string, on: boolean, o
   const compact = React.useContext(HandoverDensity);
   return (
     <button data-handover-choice={`${label}: Unknown`} aria-pressed={on} onClick={onClick}
-      className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${on ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
+      className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${on ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-200 text-neutral-800 border-neutral-300'}`}>Unknown</button>
   );
 }
 
@@ -5477,7 +5477,7 @@ function HandoverChoice({ label, options, value, onChange, columns = 3 }: { labe
             data-handover-choice={`${label}: ${c}`}
             aria-pressed={value === c}
             onClick={() => onChange(value === c ? '' : c)}
-            className={`${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
+            className={`${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : c === 'Unknown' ? 'bg-neutral-200 text-neutral-800 border-neutral-300' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
           >{c}</button>
         ))}
       </div>
@@ -5684,8 +5684,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const arrestNodes: React.ReactNode[] = [];
   if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text.startsWith('Next rhythm check in ') ? `Next rhythm check is in ${a.rhythm.text.slice('Next rhythm check in '.length)}` : a.rhythm.text}.</div>);
-  if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` before ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
-  else if (a.inRosc && a.rosc) arrestNodes.push(<div key="d">{`ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
+  if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
+  else if (a.inRosc && a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${a.rosc.clock}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
   arrestNodes.push(<div key="p">Pt has received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), plural(a.disarms, 'disarm', 'disarms')])}</div>);
   if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
   if (a.firstState === 'unknown') {
@@ -5722,14 +5722,24 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
 
-  const roscBlock: React.ReactNode[] = [
-    <div key="R"><span className="text-neutral-400 mr-3">R</span>{vit.gcs ? `GCS ${vit.gcs}` : unk('gcs') ? 'GCS unknown' : <span className="text-amber-500" data-handover-missing-frag="GCS ?">GCS ?</span>}</div>,
-    <div key="A"><span className="text-neutral-400 mr-3">A</span>{content.airway}</div>,
-    <div key="B"><span className="text-neutral-400 mr-3">B</span>{!h.breathing ? <span className="text-amber-500" data-handover-missing-frag="Breathing ?">Breathing ?</span>
-      : h.breathing === 'Unknown' ? 'Breathing unknown'
-      : <>{h.breathing === 'Breathing' ? 'Breathing' : 'Ventilated'} {vit.rr ? `${vit.rr}/min` : unk('rr') ? 'rate unknown' : <span className="text-amber-500" data-handover-missing-frag="rate ?">rate ?</span>}</>}</div>,
-    <div key="C" className="flex items-baseline"><span className="text-neutral-400 mr-3">C</span><span>{vit.hr ? `HR ${vit.hr}` : unk('hr') ? 'HR unknown' : miss('HR ?')} · {(vit.bpSys && vit.bpDia) ? `BP ${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'BP unknown' : miss('BP ?')}</span></div>,
-  ];
+  // The primary survey (ROSC), as sentences: "For our primary survey we have GCS 6, airway is an ETT tube, we are ventilating at a rate of 10,
+  // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
+  const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
+  const gcsPart: React.ReactNode = vit.gcs ? `GCS ${vit.gcs}` : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
+  const airwayPart = `airway is ${airwayPhrase || 'not yet secured (no airway device)'}`;
+  const rateOf = (kind: 'breath' | 'vent') => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
+  const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
+    : h.breathing === 'Unknown' ? "we don't know if pt is breathing"
+    : <>{h.breathing === 'Breathing' ? 'pt is spontaneously ventilating' : 'we are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
+  const hrKnown = !!vit.hr, bpKnown = !!(vit.bpSys && vit.bpDia);
+  const hrText = `a heart rate of ${vit.hr}`, bpText = `a blood pressure of ${vit.bpSys}/${vit.bpDia}`;
+  const circPart: React.ReactNode =
+    (hrKnown && bpKnown) ? `for circulation we have ${hrText} and ${bpText}`
+    : (hrKnown && unk('bp')) ? `for circulation we have ${hrText}, blood pressure unknown`
+    : (bpKnown && unk('hr')) ? `for circulation we have ${bpText}, heart rate unknown`
+    : (unk('hr') && unk('bp')) ? "for circulation we don't know the heart rate or blood pressure"
+    : <>for circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
+  const roscBlock: React.ReactNode[] = withCommas([<>For our primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart]);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
   const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
@@ -5836,7 +5846,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             <div className="mt-3">
               <button data-handover-choice="Age: Unknown" aria-pressed={h.ageUnknown === 'Yes'}
                 onClick={() => { if (h.ageUnknown === 'Yes') onField('ageUnknown', ''); else { onField('ageUnknown', 'Yes'); onField('age', ''); } }}
-                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Age unknown</button>
+                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-200 text-neutral-800 border-neutral-300'}`}>Age unknown</button>
             </div>
           </div>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
@@ -5893,7 +5903,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             <div className="mt-3">
               <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
                 onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
-                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>Unknown</button>
+                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-200 text-neutral-800 border-neutral-300'}`}>Unknown</button>
             </div>
           </div>
         </HandoverPageCard>
@@ -5905,8 +5915,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
               <div><HandoverNumber label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} /></div>
               <div className="col-span-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <HandoverNumber label="BP sys" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
-                  <HandoverNumber label="BP dia" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
+                  <HandoverNumber label="Systolic" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
+                  <HandoverNumber label="Diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
                 </div>
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
               </div>
