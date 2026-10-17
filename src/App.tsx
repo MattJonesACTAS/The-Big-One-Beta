@@ -3889,7 +3889,7 @@ export default function App() {
 
       {/* Warning Modals */}
       {showHandover && (
-        <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} onClose={() => setShowHandover(false)} onChangeWeight={openWeightChange} />
+        <HandoverOverlay state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} onFinish={() => { setShowHandover(false); setState(p => ({ ...p, currentOverlay: null })); }} onClose={() => setShowHandover(false)} onChangeWeight={openWeightChange} />
       )}
 
       {showEndWarning && (
@@ -5460,7 +5460,8 @@ function HandoverRhythmStrip({ rhythm }: { rhythm: { text: string, urgent: boole
   );
 }
 
-function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onClose }: {
+function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onFinish, onClose }: {
+  onFinish?: () => void,
   onView?: (v: 'fill' | 'read') => void,
   onChangeWeight?: () => void,
   state: AppState,
@@ -5595,7 +5596,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   arrestNodes.push(<div key="p">Pt has received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), plural(a.disarms, 'disarm', 'disarms')])}</div>);
   if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
   if (a.firstState === 'unknown') {
-    arrestNodes.push(<div key="f">We don't know the first rhythm.</div>);
+    arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
     if (a.others.length) arrestNodes.push(<div key="o">Rhythms since then:{sub(a.others.map(rhythmWords))}</div>);
   }
   if (a.firstState === 'known' && a.firstRhythm) {
@@ -5640,7 +5641,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   if (h.allergies === 'NKA') knownClauses.push('they have no known allergies');
   else if (h.allergies === 'Other') knownClauses.push(`they are allergic to ${allergyText(h)}`);
   else if (h.allergies === 'Unknown') unknownItems.push('allergies');
-  if (h.background.trim()) knownClauses.push(`their medical history includes ${joinList(lines(h.background), 'and')}`);
+  if (h.background.trim()) {
+    const hx = lines(h.background);
+    knownClauses.push(hx.length === 1 ? `the only medical history we know of is ${hx[0]}` : `their medical history includes ${joinList(hx, 'and')}`);
+  }
   else { unknownItems.push('medical history'); blankUnknown = true; }
   if (h.medications.trim()) knownClauses.push(`they take ${joinList(lines(h.medications), 'and')}`);
   else { unknownItems.push('medications'); blankUnknown = true; }
@@ -5680,7 +5684,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         </div>
         <div className="flex-shrink-0 grid grid-cols-2 gap-3 p-4 bg-neutral-100 border-t border-neutral-200">
           <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className="bg-neutral-200 p-4 rounded-xl font-bold text-neutral-700 btn-base">Back</button>
-          <button onClick={() => (last ? setView('fill') : setCard(card + 1))} data-button="handover-next" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">{last ? 'Done' : 'Next'}</button>
+          <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className="bg-blue-600 p-4 rounded-xl font-bold text-white btn-base">{last ? 'Done' : 'Next'}</button>
         </div>
       </div>
     );
@@ -5780,7 +5784,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           {content.arrest.priorChecks && (
             <div>
               <HandoverChoice label="First rhythm" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />
-              <div className="text-[13px] text-neutral-500 mt-1">Shocks or disarms were entered at setup, so the app can't know the first rhythm.</div>
             </div>
           )}
           {text('information', 'Notes', { rows: 2 })}
