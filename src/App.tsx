@@ -5597,12 +5597,27 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       : <>{h.breathing === 'Breathing' ? 'Breathing' : 'Ventilated'} {vit.rr ? `${vit.rr}/min` : <span className="text-amber-500" data-handover-missing-frag="rate ?">rate ?</span>}</>}</div>,
     <div key="C" className="flex items-baseline"><span className="text-neutral-400 mr-3">C</span><span>{vit.hr ? `HR ${vit.hr}` : miss('HR ?')} · {(vit.bpSys && vit.bpDia) ? `BP ${vit.bpSys}/${vit.bpDia}` : miss('BP ?')}</span></div>,
   ];
-  // AMBO, in full words. Anything not filled in is prompted for in amber, with the words to say if there's nothing to add.
-  const amberLine = (key: string, text: string) => <div key={key} className="text-amber-500" data-handover-missing-frag={text}>{text}</div>;
+  // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
+  // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
+  const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
+  const capFirst = (x: string) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
+  const knownClauses: string[] = [];
+  const unknownItems: string[] = [];
+  let blankUnknown = false;
+  if (h.allergies === 'NKA') knownClauses.push('they have no known allergies');
+  else if (h.allergies === 'Other') knownClauses.push(`they are allergic to ${allergyText(h)}`);
+  else if (h.allergies === 'Unknown') unknownItems.push('allergies');
+  if (h.background.trim()) knownClauses.push(`their medical history includes ${joinList(lines(h.background), 'and')}`);
+  else { unknownItems.push('medical history'); blankUnknown = true; }
+  if (h.medications.trim()) knownClauses.push(`they take ${joinList(lines(h.medications), 'and')}`);
+  else { unknownItems.push('medications'); blankUnknown = true; }
+  const knownStr = knownClauses.join(', ');
+  const unknownStr = unknownItems.length ? `we don't know their ${joinList(unknownItems, 'or')}` : '';
+  const leadStr = knownStr ? capFirst(knownStr) : '';
+  const tailStr = knownStr ? unknownStr : capFirst(unknownStr);
   const ambo: React.ReactNode[] = [
-    h.allergies ? <div key="a">{h.allergies === 'NKA' ? 'No known allergies' : `Allergies: ${allergyText(h)}`}</div> : <div key="a"><span className="text-amber-500" data-handover-missing-frag="Allergies ?">Allergies ?</span></div>,
-    h.medications.trim() ? <div key="m">Medications: {lines(h.medications).join(', ')}</div> : amberLine('m', "We don't have information on their medications."),
-    h.background.trim() ? <div key="h">Background history: {lines(h.background).join(', ')}</div> : amberLine('h', "We don't have information on their medical history."),
+    ...(!h.allergies ? [<div key="a"><span className="text-amber-500" data-handover-missing-frag="Allergies ?">Allergies ?</span></div>] : []),
+    <div key="s">{leadStr}{leadStr && tailStr ? ', ' : ''}{tailStr && (blankUnknown ? <span className="text-amber-500" data-handover-missing-frag={tailStr}>{tailStr}</span> : tailStr)}.</div>,
     ...(h.otherInfo.trim() ? [<div key="o">Other information: {lines(h.otherInfo).join(', ')}</div>] : []),
   ];
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
@@ -5734,8 +5749,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           <HandoverSection letter="" title="AMBO" muted done={doneAmbo}>
             <HandoverChoice label="Allergies" options={HANDOVER_ALLERGIES} value={h.allergies} onChange={v => onField('allergies', v)} />
             {h.allergies === 'Other' && text('allergiesOther', 'Allergies (other)')}
+            {text('background', 'Medical history', { rows: 2 })}
             {text('medications', 'Medications', { rows: 2 })}
-            {text('background', 'Background history', { rows: 2 })}
             {text('otherInfo', 'Other information', { rows: 2 })}
           </HandoverSection>
         </div>
