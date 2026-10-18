@@ -326,11 +326,7 @@ const ModeShortName = ({ mode }: { mode: 'log' | 'minimal' | 'elapsed' }) => {
   return parts.length === 2 ? <><span className="whitespace-nowrap">{parts[0]} +</span> <span className="whitespace-nowrap">{parts[1]}</span></> : <span className="whitespace-nowrap">{MODE_SHORT_NAMES[mode]}</span>;
 };
 const ModeGroupHeading = ({ text }: { text: string }) => (
-  <div data-mode-group-heading className="flex items-center gap-3 pt-2">
-    <span className="w-1.5 h-7 rounded-full bg-emerald-500 flex-shrink-0" />
-    <span className="text-xl font-extrabold text-neutral-900">{text}</span>
-    <span className="flex-1 h-px bg-neutral-300" />
-  </div>
+  <div data-mode-group-heading className="text-xl font-extrabold text-neutral-900 text-left px-1">{text}</div>
 );
 
 // The icon for each App Mode: the notepad for the Tx log, the stopwatch for the
@@ -3817,7 +3813,7 @@ export default function App() {
               )}
 
               {!catchupTxMode && catchupStep === 6 && (
-                <div className="space-y-6 px-4 pb-1 max-w-md mx-auto text-center max-h-[calc(100dvh-6rem)] overflow-y-auto overflow-x-hidden">
+                <div className="space-y-4 px-4 pb-1 max-w-md mx-auto text-center max-h-[calc(100dvh-6rem)] overflow-y-auto overflow-x-hidden">
                   <h2 className="text-2xl font-bold text-neutral-900">Select App Mode</h2>
 
                   {/* Three stacked landscape cards. Tap one to choose it: it
@@ -3830,7 +3826,10 @@ export default function App() {
                       Next buttons stay reachable on a short screen once a card
                       has expanded. */}
                   <div className="flex flex-col gap-3 -mx-2">
-                    {TIMING_MODE_ORDER.map(mode => {
+                    {([{ title: 'Cardiac arrest', modes: ['minimal', 'elapsed'] }, { title: 'Something else', modes: ['log'] }] as const).map(group => (
+                    <div key={group.title} data-mode-group className="rounded-3xl border border-neutral-200 bg-neutral-50 p-2.5 space-y-2">
+                    <ModeGroupHeading text={group.title} />
+                    {group.modes.map(mode => {
                       const selected = timingMode === mode;
                       // Only ever expanded while it's also the chosen mode, so a
                       // stale value left over from an earlier run can't show a
@@ -3838,10 +3837,8 @@ export default function App() {
                       const expanded = selected && expandedMode === mode;
                       const details = TIMING_MODE_DETAILS[mode];
                       return (
-                        <React.Fragment key={mode}>
-                        {mode === 'minimal' && <ModeGroupHeading text="Cardiac arrest" />}
-                        {mode === 'log' && <ModeGroupHeading text="Something else" />}
                         <div
+                          key={mode}
                           className={`rounded-2xl border-2 overflow-hidden transition-colors duration-200 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                         >
                           <button
@@ -3856,7 +3853,7 @@ export default function App() {
                             }}
                             disabled={showInteractiveTutorial && !timingNodesComplete}
                             aria-expanded={expanded}
-                            className="w-full h-[80px] px-4 flex items-center gap-4 text-left"
+                            className="w-full h-[72px] px-4 flex items-center gap-4 text-left"
                           >
                             <div className="w-[88px] flex-shrink-0 flex items-center justify-center">
                               <ModeIcon mode={mode} />
@@ -3913,9 +3910,10 @@ export default function App() {
                             )}
                           </AnimatePresence>
                         </div>
-                        </React.Fragment>
                       );
                     })}
+                    </div>
+                    ))}
                   </div>
 
                   <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-2">
