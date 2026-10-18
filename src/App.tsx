@@ -5161,7 +5161,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5614,7 +5614,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const toggleUnknownVital = (flag: string, keys: VitalKey[]) => { const on = !unk(flag); setUnk(flag, on); if (on) keys.forEach(k => onVital(k, '')); };
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
-  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'allergies', 'history', 'review'] : ['other'];
+  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'treatment', 'allergies', 'history', 'review'] : ['other'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5673,8 +5673,21 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const rrChoice = rrOtherOpen ? 'Other' : (rrIsPreset ? vit.rr : (vit.rr ? 'Other' : ''));
   const rrLabel = h.breathing === 'Ventilated' ? 'Ventilation rate' : 'Respiratory rate';
 
+  // Airway and access: the Tx log fills these in; the crew can correct them for the handover (the Tx log itself is never changed).
+  const txLog = content.tx;
+  const logAirwayDev = txLog.airway.find(a => a !== 'IGT') ?? '';
+  const logIgt = txLog.airway.includes('IGT');
+  const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev);
+  const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
+  const igtVal = !airwayHasDevice ? '' : (h.airwayIgt || (logIgt ? 'Yes' : (airwayVal === logAirwayDev ? 'No' : '')));
+  const logAccessAny = txLog.io + txLog.iv > 0;
+  const ivVal = unk('access') ? '' : (h.accessIv !== '' ? h.accessIv : (logAccessAny ? String(txLog.iv) : ''));
+  const ioVal = unk('access') ? '' : (h.accessIo !== '' ? h.accessIo : (logAccessAny ? String(txLog.io) : ''));
+  const airwayDone = !!airwayVal && (!airwayHasDevice || !!igtVal);
+  const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
+
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], allergies: [], history: [] };
+  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], allergies: [], history: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
@@ -5697,11 +5710,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.history.push('Medical history');
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Medications');
-  const pageTitle: Record<string, string> = { other: 'Handover', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
+  if (!accessDone) missing.treatment.push('Access');
+  const pageTitle: Record<string, string> = { other: 'Handover', treatment: 'Treatment', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
-  const pageForCard: Record<string, string> = { I: 'id', RABC: 'resp', M: 'what', I2: 'info', I3: 'info', S: 'vitals', T: 'review', AMBO: 'allergies', END: 'review' };
+  const pageForCard: Record<string, string> = { I: 'id', RABC: 'resp', M: 'what', I2: 'info', I3: 'info', S: 'vitals', T: 'treatment', AMBO: 'allergies', END: 'review' };
 
   // --- Read out: one card at a time, written as the words to say. Anything missing is shown amber with a question mark.
   const miss = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
@@ -5797,10 +5812,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   const t = content.tx;
   const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA', IGT: 'an IGT' };
-  const airwayPhrase = t.airway.length ? (t.airway.length === 2 ? `${airwayName[t.airway[0]]} with an IGT` : airwayName[t.airway[0]]) : '';
+  // (the crew's airway and access answers, or what the Tx log says)
+  const airwayPhrase = airwayHasDevice ? `${airwayName[airwayVal]}${igtVal === 'Yes' ? ' with an IGT' : ''}` : '';
+  const ivN = parseInt(ivVal, 10) || 0, ioN = parseInt(ioVal, 10) || 0;
   const treatmentNodes: React.ReactNode[] = [
-    <div key="a">{airwayPhrase ? `For airway we have ${airwayPhrase}.` : 'Airway is not yet secured.'}</div>,
-    t.io || t.iv ? <div key="x">For access we have:{sub([...(t.io ? [`${t.io} x IO`] : []), ...(t.iv ? [`${t.iv} x IV`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>,
+    <div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>,
+    unk('access') ? <div key="x">We don't know what access is in place.</div>
+      : !accessDone ? <div key="x">{miss('Access ?')}</div>
+      : ioN || ivN ? <div key="x">For access we have:{sub([...(ioN ? [`${ioN} x IO`] : []), ...(ivN ? [`${ivN} x IV`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>,
     t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>,
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
@@ -5809,7 +5828,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   const gcsPart: React.ReactNode = vit.gcs ? `GCS ${vit.gcs}` : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
-  const airwayPart = `airway is ${airwayPhrase || 'not yet secured'}`;
+  const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'airway is unknown' : airwayPhrase ? `airway is ${airwayPhrase}` : airwayVal === 'None' ? 'airway is not yet secured' : <>airway is {ampm('Airway ?')}</>;
   const rateOf = (kind: 'breath' | 'vent') => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
   const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
     : h.breathing === 'Unknown' ? "we don't know if pt is breathing"
@@ -6001,6 +6020,49 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           </div>
         </HandoverPageCard>
       );
+      case 'treatment': {
+        const pick = (cur: string, field: 'airway' | 'airwayIgt' | 'accessIv' | 'accessIo', v: string, group: 'airway' | 'access') => {
+          if (unk(group)) setUnk(group, false);
+          onField(field, (cur === v && h[field] === v) ? '' : v);          // tapping the chosen one again goes back to what the Tx log says
+        };
+        const bcls = (on: boolean) => `${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
+        const head = compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING;
+        const sub2 = `${compact ? 'mt-2' : 'mt-3'} ${HANDOVER_HEADING_PLAIN}`;
+        const COUNTS = ['0', '1', '2', '3', '4'];
+        return (
+          <HandoverPageCard>
+            <HandoverBox label="Airway" state={airwayDone ? 'done' : 'missing'}>
+              <span className={head}>Airway</span>
+              <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
+                {['ETT', 'LMA', 'FONA', 'OPA', 'NPA', 'None'].map(o => (
+                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => { if (airwayHasDevice && o === 'None') onField('airwayIgt', ''); pick(airwayVal, 'airway', o, 'airway'); }} className={bcls(airwayVal === o)}>{o}</button>
+                ))}
+              </div>
+              {airwayHasDevice && (
+                <div>
+                  <span className={sub2}>IGT?</span>
+                  <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+                    {['Yes', 'No'].map(o => <button key={o} data-handover-choice={`IGT?: ${o}`} aria-pressed={igtVal === o} onClick={() => pick(igtVal, 'airwayIgt', o, 'airway')} className={bcls(igtVal === o)}>{o}</button>)}
+                  </div>
+                </div>
+              )}
+              <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) { onField('airway', ''); onField('airwayIgt', ''); } }} /></div>
+            </HandoverBox>
+            <HandoverBox label="Access" state={accessDone ? 'done' : 'missing'}>
+              <span className={head}>Access</span>
+              {([['IV', ivVal, 'accessIv'], ['IO', ioVal, 'accessIo']] as const).map(([lab, val, field], i) => (
+                <div key={lab} className={i ? (compact ? 'mt-2' : 'mt-3') : ''}>
+                  <span className={`${HANDOVER_HEADING_PLAIN} !mb-1`}>{lab}</span>
+                  <div className={`grid grid-cols-5 ${compact ? 'gap-2' : 'gap-3'}`}>
+                    {COUNTS.map(o => <button key={o} data-handover-choice={`${lab}: ${o}`} aria-pressed={val === o} onClick={() => pick(val, field, o, 'access')} className={bcls(val === o)}>{o}</button>)}
+                  </div>
+                </div>
+              ))}
+              <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Access" on={unk('access')} onClick={() => { const on = !unk('access'); setUnk('access', on); if (on) { onField('accessIv', ''); onField('accessIo', ''); } }} /></div>
+            </HandoverBox>
+          </HandoverPageCard>
+        );
+      }
       case 'allergies': return (
         <HandoverPageCard>
           <HandoverChoice label="Allergies?" options={HANDOVER_ALLERGIES} value={h.allergies} onChange={v => onField('allergies', v)} />

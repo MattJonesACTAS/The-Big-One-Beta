@@ -19,6 +19,10 @@ export interface Treatment {
 // What the crew types on the Handover page. Kept with the open case only: cleared when the case is
 // closed, and never saved with a previous case or printed in the PDF.
 export interface HandoverFields {
+  airway: string;           // what the crew say the airway is ('ETT' | 'LMA' | 'FONA' | 'OPA' | 'NPA' | 'None'); '' = what the Tx log says. Never changes the Tx log.
+  airwayIgt: string;        // 'Yes' | 'No' | '' (with an airway device)
+  accessIv: string;         // how many IVs, '0'-'4'; '' = what the Tx log says
+  accessIo: string;         // how many IOs, '0'-'4'; '' = what the Tx log says
   unknowns: string;         // comma-separated list of the things marked Unknown (e.g. 'gcs,hr,bp,history')
   ageUnknown: string;       // 'Yes' when the age isn't known
   age?: string;             // digits only; the unit is separate. Not set until the crew types or clears it, so a paediatric age from setup shows until then
