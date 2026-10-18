@@ -5179,6 +5179,16 @@ const HANDOVER_BREATHING = ['Breathing', 'Ventilated', 'Unknown'];
 // True when the Handover sits inside the home screen box (squished to fit) rather than filling the screen
 const HandoverDensity = React.createContext(false);
 // The question headings on the Fill in pages: large and centred
+// Pressing Enter in a one-line box closes the keyboard
+const isEnter = (e: React.KeyboardEvent) => e.key === 'Enter' || e.keyCode === 13;       // (some phone keyboards only report the key code)
+const closeKeyboardOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => { if (isEnter(e)) { e.preventDefault(); e.currentTarget.blur(); } };
+// In a list box (one item per line) Enter starts a new item; Enter again on the empty line closes the keyboard
+const closeKeyboardOnDoubleEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>, value: string, setValue: (v: string) => void) => {
+  if (!isEnter(e)) return;
+  const t = e.currentTarget;
+  if (t.selectionStart === value.length && (value === '' || value.endsWith('\n'))) { e.preventDefault(); setValue(value.replace(/\n+$/, '')); t.blur(); }
+};
+
 // Every question lives in its own box. A box that hasn't been answered yet has an amber edge and tint; once answered it goes plain.
 // (state 'none' = an optional question)
 function HandoverBox({ label, state, children, className = '', narrow = false }: { label: string, state: 'missing' | 'done' | 'none', children: React.ReactNode, className?: string, narrow?: boolean }) {
@@ -5527,7 +5537,7 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
       <label className="block">
         <span className={!boxed ? HANDOVER_HEADING_PLAIN : (compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING)}>{label}</span>
         <div className="relative">
-          <input aria-label={label} inputMode="decimal" value={value} disabled={off} onBlur={onBlur} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
+          <input aria-label={label} inputMode="decimal" enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} value={value} disabled={off} onBlur={onBlur} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
             className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-[#4a6fa5] ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-[#4a6fa5]'} ${off ? 'opacity-50' : ''}`} />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
@@ -5642,8 +5652,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}</span>
       <div className="relative" data-handover-textfield>
         {extra?.rows
-          ? <textarea aria-label={label} placeholder="Type here…" value={h[key]} onChange={e => { onField(key, e.target.value); if (extra.clearUnknown && e.target.value && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); }} rows={extra.rows} className={textFieldClass} />
-          : <input aria-label={label} placeholder="Type here…" value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
+          ? <textarea aria-label={label} placeholder="Type here…" value={h[key]} onKeyDown={e => closeKeyboardOnDoubleEnter(e, h[key], v => onField(key, v))} onChange={e => { let v = e.target.value; const done = /\n\n$/.test(v); if (done) v = v.replace(/\n+$/, ''); onField(key, v); if (extra.clearUnknown && v && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); if (done) e.target.blur(); }} rows={extra.rows} className={textFieldClass} />
+          : <input aria-label={label} placeholder="Type here…" enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
               className={`${textFieldClass} ${extra?.prompt && !h[key].trim() ? '!border-[#4a6fa5]' : ''}`} />}
         <Pencil size={16} className={`absolute right-3 text-neutral-400 pointer-events-none ${extra?.rows ? 'top-3' : 'top-1/2 -translate-y-1/2'}`} />
       </div>
@@ -5902,7 +5912,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           <HandoverBox label="Age" state={(ageValue || h.ageUnknown === 'Yes') ? 'done' : 'missing'}>
             <span className={labelClass}>Age</span>
             <div className="grid grid-cols-2 gap-3">
-              <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
+              <input aria-label="Age" inputMode="numeric" enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} placeholder="Type here…" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
                 className={`${inputClass} text-center ${ageValue || h.ageUnknown === 'Yes' ? '' : '!bg-white !border-[#4a6fa5]'}`} />
               <div className="grid grid-cols-2 gap-3">
                 {['Years', 'Months'].map(u => (
