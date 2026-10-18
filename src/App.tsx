@@ -3857,7 +3857,7 @@ export default function App() {
                               >
                                 <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
                                   <p>{details.summary}</p>
-                                  <p data-mode-card-note className="text-xs font-semibold text-neutral-500">{mode === 'minimal' ? "Can't be changed to another mode once the case starts." : "Can't be changed to Timers only once the case starts."}</p>
+                                  <p data-mode-card-note>{mode === 'minimal' ? "Can't be changed to another mode once the case starts." : `Can be changed to ${TIMING_MODE_LABELS[mode === 'log' ? 'elapsed' : 'log']} mid case.`}</p>
                                   <div
                                     className="pt-3 border-t border-emerald-200"
                                     role="img"
