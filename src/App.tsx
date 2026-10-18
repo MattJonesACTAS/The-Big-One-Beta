@@ -310,9 +310,9 @@ const formatRecordingDuration = (seconds: number): string => {
 // its closed summary falls back to that same wall-clock figure instead -
 // still in this format, just under the "App recording for" label.
 const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
-  log: 'Tx log only',
-  minimal: 'Timers only',
-  elapsed: 'Tx log & timers',
+  log: 'General – Tx log only',
+  minimal: 'Arrest – Timers only',
+  elapsed: 'Arrest – Tx log + timers',
 };
 
 // Order the App Mode cards are stacked in: easiest to use at the top, hardest
@@ -350,6 +350,12 @@ const TIMING_MODE_DETAILS: Record<'log' | 'minimal' | 'elapsed', { summary: stri
 // Timers and Tx log can still be switched between, because both keep a log.) That keeps a case's record, and so its handover, complete.
 const canChangeMode = (from: 'elapsed' | 'log' | 'minimal' | null, to: 'elapsed' | 'log' | 'minimal'): boolean =>
   from === null || (from !== to && from !== 'minimal' && to !== 'minimal');
+
+// A mode's name, written so that if it has to wrap it wraps after the dash ("Arrest –" / "Tx log + timers"), not in the middle of a half
+const ModeLabel = ({ mode }: { mode: 'elapsed' | 'log' | 'minimal' }) => {
+  const [a, b] = TIMING_MODE_LABELS[mode].split(' – ');
+  return <><span className="whitespace-nowrap">{a} –</span> <span className="whitespace-nowrap">{b}</span></>;
+};
 
 const DIFFICULTY_LABELS = ['low', 'medium', 'high'] as const;
 const DIFFICULTY_COLOURS = ['bg-emerald-500', 'bg-amber-400', 'bg-red-500'] as const;
@@ -3839,7 +3845,7 @@ export default function App() {
                             <div className="w-[88px] flex-shrink-0 flex items-center justify-center">
                               <ModeIcon mode={mode} />
                             </div>
-                            <div className="font-bold text-lg text-neutral-900">{TIMING_MODE_LABELS[mode]}</div>
+                            <div className="font-bold text-lg text-neutral-900"><ModeLabel mode={mode} /></div>
                           </button>
 
                           <AnimatePresence initial={false}>
@@ -4176,7 +4182,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Mode</h2>
-            <p data-mode-lock-note className="text-sm text-neutral-500 text-center">Timers only can't be switched to or from a mode with a Tx log partway through a case, so the record stays complete.</p>
+            <p data-mode-lock-note className="text-sm text-neutral-500 text-center">Arrest – Timers only can't be switched to or from a mode with a Tx log partway through a case, so the record stays complete.</p>
             <div className="flex flex-col gap-3">
               {TIMING_MODE_ORDER.map(mode => {
                 const blocked = timingMode !== mode && !canChangeMode(timingMode, mode);
@@ -4194,7 +4200,7 @@ export default function App() {
                       <ModeIcon mode={mode} size={28} dim={off} />
                     </span>
                     <span>
-                      {TIMING_MODE_LABELS[mode]}
+                      <ModeLabel mode={mode} />
                       {blocked && <span className="block text-xs font-medium text-neutral-400">Can't be changed during a case</span>}
                     </span>
                   </button>
