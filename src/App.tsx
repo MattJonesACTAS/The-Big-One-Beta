@@ -31,6 +31,7 @@ import {
   ClipboardList,
   MoreVertical,
   NotebookPen,
+  Pencil,
   Timer,
   Hourglass
 } from 'lucide-react';
@@ -5180,18 +5181,26 @@ const HandoverDensity = React.createContext(false);
 // The question headings on the Fill in pages: large and centred
 // Every question lives in its own box. A box that hasn't been answered yet has an amber edge and tint; once answered it goes plain.
 // (state 'none' = an optional question)
-function HandoverBox({ label, state, children, className = '' }: { label: string, state: 'missing' | 'done' | 'none', children: React.ReactNode, className?: string }) {
+function HandoverBox({ label, state, children, className = '', narrow = false }: { label: string, state: 'missing' | 'done' | 'none', children: React.ReactNode, className?: string, narrow?: boolean }) {
   const compact = React.useContext(HandoverDensity);
   const attr = state === 'missing' ? { 'data-handover-missing': label } : state === 'done' ? { 'data-handover-done': label } : {};
   return (
     <div data-handover-box={label} {...attr}
-      className={`rounded-xl border-2 ${compact ? 'p-2.5' : 'p-4'} ${state === 'missing' ? 'bg-[#edf2f8] border-[#4a6fa5]' : 'bg-white border-neutral-200'} ${className}`}>
+      className={`relative rounded-xl border-2 ${compact ? 'p-2.5' : 'p-4'} ${state === 'missing' ? 'bg-[#edf2f8] border-[#4a6fa5]' : 'bg-white border-neutral-200'} ${narrow ? '[&_.hh]:!px-0' : ''} ${className}`}>
+      {state !== 'none' && (
+        <span data-handover-tag={state === 'missing' ? 'todo' : 'done'}
+          className={`absolute ${narrow ? 'top-1 right-1.5 text-[10px]' : 'top-2 right-2.5 text-[11px]'} font-bold leading-none ${state === 'missing' ? 'bg-[#4a6fa5] text-white rounded-full px-2 py-[3px]' : 'text-[#4a6fa5] py-[3px]'}`}>
+          {state === 'missing' ? 'To do' : '✓ Done'}
+        </span>
+      )}
       {children}
     </div>
   );
 }
-const HANDOVER_HEADING = 'block text-center text-[17px] font-bold text-neutral-700 uppercase tracking-wide mb-3';
-const HANDOVER_HEADING_COMPACT = 'block text-center text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1';
+
+const HANDOVER_HEADING = 'hh block text-center px-[60px] text-[17px] font-bold text-neutral-700 uppercase tracking-wide mb-3';
+const HANDOVER_HEADING_PLAIN = 'block text-center text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1';
+const HANDOVER_HEADING_COMPACT = 'hh block text-center px-[52px] text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1';
 const HANDOVER_GCS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
 const HANDOVER_RR = ['6', '8', '10', '12', '14', '16', '18', '20', '24', '30'];
 const HANDOVER_ALLERGIES = ['Yes', 'No', 'Unknown'];
@@ -5508,15 +5517,15 @@ function HandoverChoice({ label, options, value, onChange, columns = 3, footer, 
 }
 
 // A number box (number pad on a phone), with an optional Unknown button. Empty ones are amber so they're noticed.
-function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur, boxed = true }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void, boxed?: boolean }) {
+function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur, boxed = true, narrow = false }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void, boxed?: boolean, narrow?: boolean }) {
   const off = unknownOn || disabled;
   const compact = React.useContext(HandoverDensity);
   // (a plain function, not a component, so the input keeps focus while typing)
-  const wrap = (children: React.ReactNode) => boxed ? <HandoverBox label={label} state={(value || off) ? 'done' : 'missing'}>{children}</HandoverBox> : <div>{children}</div>;
+  const wrap = (children: React.ReactNode) => boxed ? <HandoverBox label={label} narrow={narrow} state={(value || off) ? 'done' : 'missing'}>{children}</HandoverBox> : <div>{children}</div>;
   return wrap(
     <>
       <label className="block">
-        <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}</span>
+        <span className={!boxed ? HANDOVER_HEADING_PLAIN : (compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING)}>{label}</span>
         <div className="relative">
           <input aria-label={label} inputMode="decimal" value={value} disabled={off} onBlur={onBlur} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
             className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-[#4a6fa5] ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-[#4a6fa5]'} ${off ? 'opacity-50' : ''}`} />
@@ -5612,6 +5621,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     return () => window.removeEventListener('bigone:back', onBack);
   }, [view, card, curIdx, pageKeys.join(',')]);
 
+  // A free-text field: white, left-aligned, inset, with a pencil and a placeholder, so it doesn't look like a button
+  const textFieldClass = `w-full bg-white border-2 border-neutral-400 shadow-inner rounded-lg pl-4 pr-10 ${compact ? 'py-2.5 text-[16px]' : 'py-4 text-[17px]'} text-left text-neutral-900 outline-none focus:border-[#4a6fa5] placeholder:text-neutral-400 placeholder:italic`;
   const inputClass = `w-full bg-neutral-50 border border-neutral-200 rounded-lg px-4 ${compact ? 'py-2.5 text-[16px]' : 'py-4 text-[17px]'} text-neutral-900 outline-none focus:border-[#4a6fa5]`;
   const labelClass = compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING;
   const smallLabel = 'text-xs font-bold text-neutral-500 uppercase tracking-wide';
@@ -5629,10 +5640,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean, prompt?: boolean, clearUnknown?: string, state?: 'missing' | 'done' | 'none', footer?: React.ReactNode }) => (
     <HandoverBox label={label} state={extra?.state ?? (!extra?.prompt ? 'none' : h[key].trim() ? 'done' : 'missing')}>
     <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}</span>
-      {extra?.rows
-        ? <textarea aria-label={label} value={h[key]} onChange={e => { onField(key, e.target.value); if (extra.clearUnknown && e.target.value && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); }} rows={extra.rows} className={inputClass} />
-        : <input aria-label={label} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
-            className={`${inputClass} ${extra?.prompt && !h[key].trim() ? '!bg-white !border-[#4a6fa5]' : ''}`} />}
+      <div className="relative" data-handover-textfield>
+        {extra?.rows
+          ? <textarea aria-label={label} placeholder="Type here…" value={h[key]} onChange={e => { onField(key, e.target.value); if (extra.clearUnknown && e.target.value && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); }} rows={extra.rows} className={textFieldClass} />
+          : <input aria-label={label} placeholder="Type here…" value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
+              className={`${textFieldClass} ${extra?.prompt && !h[key].trim() ? '!border-[#4a6fa5]' : ''}`} />}
+        <Pencil size={16} className={`absolute right-3 text-neutral-400 pointer-events-none ${extra?.rows ? 'top-3' : 'top-1/2 -translate-y-1/2'}`} />
+      </div>
     </label>
     {extra?.footer && <div className={compact ? 'mt-2' : 'mt-3'}>{extra.footer}</div>}
     </HandoverBox>
@@ -5839,7 +5853,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     return (
       <HandoverDensity.Provider value={compact}>
       <div data-handover data-handover-view="read" className={`${frame} bg-neutral-100 flex flex-col`}>
-        <div className={`flex-shrink-0 ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-[#4a6fa5] text-white'}`}>
+        <div className={`flex-shrink-0 ${compact ? 'h-12 px-2.5' : 'h-16 px-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-[#4a6fa5] text-white'}`}>
           <button onClick={() => { const k = pageForCard[c.key] ?? 'review'; setPageKey(pageKeys.includes(k) ? k : 'review'); setView('fill'); }} data-button="handover-edit" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
           <span className="text-center leading-tight"><span data-handover-title>{c.title}</span></span>
           <span className="justify-self-end text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
@@ -5960,8 +5974,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       case 'vitals': return (
         <HandoverPageCard>
           <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-            {inRosc && <HandoverNumber label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />}
-            {content.signs.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {inRosc && <HandoverNumber narrow label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />}
+            {content.signs.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
             {inRosc && (
               <HandoverBox label="BP" state={((vit.bpSys && vit.bpDia) || unk('bp')) ? 'done' : 'missing'} className="col-span-2">
                 <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>BP</span>
@@ -5972,7 +5986,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
               </HandoverBox>
             )}
-            {content.signs.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {content.signs.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>
         </HandoverPageCard>
       );
@@ -6023,7 +6037,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   return (
     <HandoverDensity.Provider value={compact}>
     <div data-handover data-handover-view="fill" className={`${frame} bg-neutral-100 flex flex-col`}>
-      <div className={`bg-[#4a6fa5] text-white ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
+      <div data-handover-bar-top className={`bg-[#4a6fa5] text-white ${compact ? 'h-12 px-2.5' : 'h-16 px-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
         {embedded
           ? (h.type && curKey !== 'type' ? <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">{typeLabel(h.type)} ▾</button> : <span />)
           : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
@@ -6031,7 +6045,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           {h.type && !embedded && curKey !== 'type' && <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="mb-0.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold tracking-widest uppercase">{typeLabel(h.type)} ▾</button>}
           <span className="block" data-handover-page-title>{pageTitle[curKey]}</span>
         </span>
-        <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>
+        {curKey === 'type' ? <span /> : <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>}
       </div>
       <div data-handover-dots data-handover-page-current={curKey} className="flex-shrink-0 flex items-center justify-center bg-neutral-100">
         {pageKeys.map((k, i) => (
