@@ -1561,7 +1561,7 @@ export default function App() {
     if (showPatternSwitchModal) { setShowPatternSwitchModal(false); return; }
 
     // 3. Recalibrate: its pages go back to the Recalibrate menu, which goes back to the home page
-    if (showElapsedRecalibrate) { setShowElapsedRecalibrate(false); setStagedMode(null); setShowRecalibrateMenu(true); return; }
+    if (showElapsedRecalibrate) { setShowElapsedRecalibrate(false); setStagedMode(null); if (timingMode !== 'minimal') setShowRecalibrateMenu(true); return; }
     if (showWeightChange) { setPendingWeightForMode(null); setShowWeightChange(false); setShowRecalibrateMenu(true); return; }
     if (showModeChange) { setShowModeChange(false); setShowRecalibrateMenu(true); return; }
     if (showRecalibrateMenu) { setShowRecalibrateMenu(false); return; }
@@ -2506,6 +2506,16 @@ export default function App() {
   // one), and backing out of that leaves the mode as it was. There is no
   // "treatments already applied" page here: whatever was done is already in
   // the log.
+  // The timer page of the Recalibrate menu. In Timers only that's all the menu would offer (no weight, and the mode can't be changed),
+  // so the Recalibrate button goes straight here.
+  const openTimerRecalibrate = () => {
+    setShowRecalibrateMenu(false);
+    setStagedElapsedSeconds(state.elapsedSeconds);
+    setStagedRhythmInterval(rhythmInterval || 'evens');
+    setElapsedManuallyEdited(false);
+    setShowElapsedRecalibrate(true);
+  };
+
   const beginModeChange = (target: 'log' | 'minimal' | 'elapsed') => {
     if (target === 'log') {
       // Choosing Tx log only commits straight away, so this is where the tutorial stops it
@@ -2740,7 +2750,7 @@ export default function App() {
           </button>
         )}
         <button 
-          onClick={() => setShowRecalibrateMenu(true)} 
+          onClick={() => (timingMode === 'minimal' ? openTimerRecalibrate() : setShowRecalibrateMenu(true))} 
           disabled={tutorialRhythmDemoActive}
           data-button="recalibrate"
           className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
@@ -3985,6 +3995,7 @@ export default function App() {
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {state.patientWeight}kg</div>
             </button>
             )}
+            {timingMode !== 'minimal' && (
             <button
               onClick={() => {
                 setShowRecalibrateMenu(false);
@@ -3995,6 +4006,7 @@ export default function App() {
               <div className="text-base">Change Mode</div>
               <div className="text-xs text-neutral-500 font-medium mt-0.5">Currently {timingMode ? TIMING_MODE_LABELS[timingMode] : '—'}</div>
             </button>
+            )}
             <button onClick={() => setShowRecalibrateMenu(false)} className="w-full p-3 rounded-xl bg-white border border-neutral-200 text-neutral-500 font-bold">
               Cancel
             </button>
