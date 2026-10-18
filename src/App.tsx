@@ -236,11 +236,12 @@ const DOSE_CONFIG: Record<string, { doses: DoseOption[], customUnit?: string }> 
 const INFUSION_DRUGS = ['Adrenaline infusion', 'Ketamine infusion', 'Morph/midaz infusion'];
 
 // When a drug was given, as a time of day: the last dose, or for an infusion when it was started.
-// Doses added at setup or with an unknown time are skipped. (Shown on screen and in the Handover only.)
+// Doses with an unknown time are skipped; catch-up doses show as "< hh:mm". (Shown on screen and in the Handover only.)
 const doseTimeNote = (treatments: Treatment[], med: string): { label: string, time: string } | null => {
-  const mine = treatments.filter(t => t.name.startsWith(med) && !t.timeUnknown && !t.prior && t.clock);
+  const mine = treatments.filter(t => t.name.startsWith(med) && !t.timeUnknown && t.clock);
   if (!mine.length) return null;
-  return INFUSION_DRUGS.includes(med) ? { label: 'Started', time: mine[0].clock } : { label: 'Last', time: mine[mine.length - 1].clock };
+  const at = (t: Treatment) => (t.prior ? `< ${t.clock}` : t.clock);       // a catch-up dose is shown as before that time, like the Tx log
+  return INFUSION_DRUGS.includes(med) ? { label: 'Started', time: at(mine[0]) } : { label: 'Last', time: at(mine[mine.length - 1]) };
 };
 
 // Default unit for a drug's custom ("Other") dose entry: an explicit
@@ -861,7 +862,12 @@ export default function App() {
   // Which Fill in page the crew had reached, so being interrupted (the 0:20 close, another screen) doesn't lose their place.
   // Closing it (or being interrupted) keeps it, so it reopens where they were; a handover that's begun but never opened comes up on Review.
   const handoverResumeRef = useRef<string | null>(null);
-  const closeHandover = () => { setShowHandover(false); };   // which Handover view is open (the Read out view isn't closed at 0:20)
+  const closeHandover = () => { setShowHandover(false); };
+  // The weight box on the Handover page: the same change as the Recalibrate menu's weight, logged the same way
+  const setHandoverWeight = (w: number) => {
+    if (state.patientWeight != null && w !== state.patientWeight) addTreatment(`Weight changed: ${state.patientWeight}kg → ${w}kg`);
+    setState(prev => ({ ...prev, patientWeight: w, patientAge: null }));
+  };   // which Handover view is open (the Read out view isn't closed at 0:20)
   const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
   const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
   const [viewingPreviousCase, setViewingPreviousCase] = useState<AppState | null>(null);
@@ -3200,7 +3206,7 @@ export default function App() {
         </div>
         )} {/* end else (non-log mode) */}
         {showHandover && !tutorialMode && (
-          <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onChangeWeight={openWeightChange} />
+          <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
         )}
       </div>
 
@@ -5175,6 +5181,10 @@ const HANDOVER_BREATHING = ['Breathing', 'Ventilated', 'Unknown'];
 // True when the Handover sits inside the home screen box (squished to fit) rather than filling the screen
 const HandoverDensity = React.createContext(false);
 // The question headings on the Fill in pages: large and centred
+// A question that hasn't been answered yet: its heading is highlighted
+const HeadingText = ({ label, missing }: { label: string, missing: boolean }) => missing
+  ? <span data-handover-missing={label} className="inline-block bg-amber-200 text-amber-900 rounded-lg px-3 py-0.5">{label}</span>
+  : <>{label}</>;
 const HANDOVER_HEADING = 'block text-center text-[17px] font-bold text-neutral-700 uppercase tracking-wide mb-3';
 const HANDOVER_HEADING_COMPACT = 'block text-center text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1.5';
 const HANDOVER_GCS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
@@ -5384,8 +5394,8 @@ const buildHandoverContent = (
   ['Corpuls', 'Pacing'].forEach(n => {
     const i = firstIdx(x => getTreatmentIdentity(x) === n || x.startsWith(n));
     if (i < 0) return;
-    const timed = tx.find(x => (getTreatmentIdentity(x.name) === n || x.name.startsWith(n)) && !x.timeUnknown && !x.prior && x.clock);
-    otherList.push({ idx: i, line: n, note: timed ? `Started ${timed.clock}` : '' });
+    const timed = tx.find(x => (getTreatmentIdentity(x.name) === n || x.name.startsWith(n)) && !x.timeUnknown && x.clock);
+    otherList.push({ idx: i, line: n, note: timed ? `Started ${timed.prior ? '< ' : ''}${timed.clock}` : '' });
   });
   tx.forEach((x, i) => {
     const n = x.name;
@@ -5474,7 +5484,7 @@ function HandoverChoice({ label, options, value, onChange, columns = 3 }: { labe
   const idle = 'bg-neutral-50 text-neutral-700 border-neutral-200';
   return (
     <div>
-      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{!value && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} missing={!value} /></span>
       <div className={`grid ${cols} ${compact ? 'gap-2' : 'gap-3'}`}>
         {main.map(c => (
           <button
@@ -5492,15 +5502,15 @@ function HandoverChoice({ label, options, value, onChange, columns = 3 }: { labe
 }
 
 // A number box (number pad on a phone), with an optional Unknown button. Empty ones are amber so they're noticed.
-function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean }) {
+function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void }) {
   const off = unknownOn || disabled;
   const compact = React.useContext(HandoverDensity);
   return (
     <div>
       <label className="block">
-        <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{!value && !off && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
+        <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} missing={!value && !off} /></span>
         <div className="relative">
-          <input aria-label={label} inputMode="decimal" value={value} disabled={off} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
+          <input aria-label={label} inputMode="decimal" value={value} disabled={off} onBlur={onBlur} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
             className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2.5 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-blue-400 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-amber-50 border-amber-300'} ${off ? 'opacity-50' : ''}`} />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
@@ -5508,6 +5518,19 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
       {onUnknown && <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label={label} on={!!unknownOn} onClick={onUnknown} /></div>}
     </div>
   );
+}
+
+// The patient's weight: filled in from the case, editable. The case's weight changes when the crew leave the box with a valid number
+// (not on every key, so typing 85 doesn't log a change to 8 first). A blank or invalid entry goes back to the case's weight.
+function HandoverWeight({ current, onCommit }: { current: number | null | undefined, onCommit: (w: number) => void }) {
+  const [text, setText] = useState(current != null ? String(current) : '');
+  useEffect(() => { setText(current != null ? String(current) : ''); }, [current]);
+  const commit = () => {
+    const w = parseFloat(text);
+    if (!isNaN(w) && w > 0) { if (w !== current) onCommit(w); setText(String(w)); }
+    else setText(current != null ? String(current) : '');
+  };
+  return <HandoverNumber label="Weight" value={text} onChange={setText} unit="kg" onBlur={commit} />;
 }
 
 // A strip that keeps the next rhythm check in view (arrest only)
@@ -5519,14 +5542,14 @@ function HandoverRhythmStrip({ rhythm }: { rhythm: { text: string, urgent: boole
   );
 }
 
-function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeight, onView, onFinish, onClose, embedded = false, barEl, resumeKey, onPage }: {
+function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onView, onFinish, onClose, embedded = false, barEl, resumeKey, onPage }: {
   barEl?: HTMLElement | null,
   resumeKey?: string | null,
   onPage?: (k: string) => void,
   embedded?: boolean,
   onFinish?: () => void,
   onView?: (v: 'fill' | 'read') => void,
-  onChangeWeight?: () => void,
+  onWeight?: (w: number) => void,
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   onField: (key: keyof HandoverFields, value: string) => void,
@@ -5594,7 +5617,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     })}</ul>
   );
   const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean, prompt?: boolean, clearUnknown?: string }) => (
-    <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{extra?.prompt && !h[key].trim() && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
+    <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} missing={!!extra?.prompt && !h[key].trim()} /></span>
       {extra?.rows
         ? <textarea aria-label={label} value={h[key]} onChange={e => { onField(key, e.target.value); if (extra.clearUnknown && e.target.value && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); }} rows={extra.rows} className={inputClass} />
         : <input aria-label={label} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
@@ -5850,7 +5873,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
         <HandoverPageCard>
           {text('name', 'Name (optional)', { words: true })}
           <div>
-            <span className={labelClass}>Age{!ageValue && h.ageUnknown !== 'Yes' && <span data-handover-missing="Age" className="text-amber-500 ml-1">●</span>}</span>
+            <span className={labelClass}><HeadingText label="Age" missing={!ageValue && h.ageUnknown !== 'Yes'} /></span>
             <div className="grid grid-cols-2 gap-3">
               <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
                 className={`${inputClass} text-center ${ageValue || h.ageUnknown === 'Yes' ? '' : '!bg-amber-50 !border-amber-300'}`} />
@@ -5869,10 +5892,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
           </div>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
           {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
-          <div className="flex items-center justify-between text-[16px] text-neutral-800">
-            <span><span className={`${smallLabel} mr-2`}>Weight</span>{content.weight}</span>
-            {onChangeWeight && <button data-button="handover-weight" onClick={onChangeWeight} className="px-5 py-3 rounded-lg font-bold text-[15px] border border-blue-300 text-blue-700 bg-white btn-base">Change</button>}
-          </div>
+          {onWeight
+            ? <HandoverWeight current={state.patientWeight} onCommit={onWeight} />
+            : <div className="text-[16px] text-neutral-800"><span className={`${smallLabel} mr-2`}>Weight</span>{content.weight}</div>}
         </HandoverPageCard>
       );
       case 'resp': return (
@@ -6001,9 +6023,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     <HandoverDensity.Provider value={compact}>
     <div data-handover data-handover-view="fill" className={`${frame} bg-neutral-100 flex flex-col`}>
       <div className={`bg-blue-600 text-white ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
-        {embedded ? <span /> : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
+        {embedded
+          ? (h.type && curKey !== 'type' ? <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Mode</button> : <span />)
+          : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
         <span className="text-center leading-tight">
-          {h.type && (curKey === 'type'
+          {h.type && (embedded || curKey === 'type'
             ? <span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span>
             : <button onClick={() => setPageKey('type')} data-button="handover-change-type" data-handover-type-label className="mb-0.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold tracking-widest uppercase">{h.type} ▾</button>)}
           <span className="block" data-handover-page-title>{pageTitle[curKey]}</span>
