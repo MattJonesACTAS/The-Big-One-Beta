@@ -311,13 +311,27 @@ const formatRecordingDuration = (seconds: number): string => {
 // still in this format, just under the "App recording for" label.
 const TIMING_MODE_LABELS: Record<'elapsed' | 'log' | 'minimal', string> = {
   log: 'General – Tx log only',
-  minimal: 'Arrest – Timers only',
-  elapsed: 'Arrest – Tx log + timers',
+  minimal: 'Arrest – Timers',
+  elapsed: 'Arrest – Timers + Tx log',
 };
 
 // Order the App Mode cards are stacked in: easiest to use at the top, hardest
 // at the bottom (matches the difficulty levels in TIMING_MODE_DETAILS).
-const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['minimal', 'log', 'elapsed'];
+const TIMING_MODE_ORDER: Array<'log' | 'minimal' | 'elapsed'> = ['minimal', 'elapsed', 'log'];
+// On the start screen the cards sit under "Cardiac arrest" and "Something else", so each card only needs its short name
+const MODE_SHORT_NAMES: Record<'log' | 'minimal' | 'elapsed', string> = { minimal: 'Timers', elapsed: 'Timers + Tx log', log: 'Tx log only' };
+// (a short name wraps after the "+" if it has to, never in the middle of "Tx log")
+const ModeShortName = ({ mode }: { mode: 'log' | 'minimal' | 'elapsed' }) => {
+  const parts = MODE_SHORT_NAMES[mode].split(' + ');
+  return parts.length === 2 ? <><span className="whitespace-nowrap">{parts[0]} +</span> <span className="whitespace-nowrap">{parts[1]}</span></> : <span className="whitespace-nowrap">{MODE_SHORT_NAMES[mode]}</span>;
+};
+const ModeGroupHeading = ({ text }: { text: string }) => (
+  <div data-mode-group-heading className="flex items-center gap-3 pt-2">
+    <span className="w-1.5 h-7 rounded-full bg-emerald-500 flex-shrink-0" />
+    <span className="text-xl font-extrabold text-neutral-900">{text}</span>
+    <span className="flex-1 h-px bg-neutral-300" />
+  </div>
+);
 
 // The icon for each App Mode: the notepad for the Tx log, the stopwatch for the
 // timers, and both together. Shared by the setup cards and the Change Mode
@@ -3824,8 +3838,10 @@ export default function App() {
                       const expanded = selected && expandedMode === mode;
                       const details = TIMING_MODE_DETAILS[mode];
                       return (
+                        <React.Fragment key={mode}>
+                        {mode === 'minimal' && <ModeGroupHeading text="Cardiac arrest" />}
+                        {mode === 'log' && <ModeGroupHeading text="Something else" />}
                         <div
-                          key={mode}
                           className={`rounded-2xl border-2 overflow-hidden transition-colors duration-200 ${selected ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                         >
                           <button
@@ -3845,7 +3861,7 @@ export default function App() {
                             <div className="w-[88px] flex-shrink-0 flex items-center justify-center">
                               <ModeIcon mode={mode} />
                             </div>
-                            <div className="font-bold text-lg text-neutral-900"><ModeLabel mode={mode} /></div>
+                            <div className="font-bold text-lg text-neutral-900"><ModeShortName mode={mode} /></div>
                           </button>
 
                           <AnimatePresence initial={false}>
@@ -3897,6 +3913,7 @@ export default function App() {
                             )}
                           </AnimatePresence>
                         </div>
+                        </React.Fragment>
                       );
                     })}
                   </div>
@@ -4182,7 +4199,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Mode</h2>
-            <p data-mode-lock-note className="text-sm text-neutral-500 text-center">Arrest – Timers only can't be switched to or from a mode with a Tx log partway through a case, so the record stays complete.</p>
+            <p data-mode-lock-note className="text-sm text-neutral-500 text-center">Arrest – Timers can't be switched to or from a mode with a Tx log partway through a case, so the record stays complete.</p>
             <div className="flex flex-col gap-3">
               {TIMING_MODE_ORDER.map(mode => {
                 const blocked = timingMode !== mode && !canChangeMode(timingMode, mode);
