@@ -5465,22 +5465,28 @@ function HandoverUnknown({ label, on, onClick }: { label: string, on: boolean, o
 }
 
 function HandoverChoice({ label, options, value, onChange, columns = 3 }: { label: string, options: string[], value: string, onChange: (v: string) => void, columns?: 2 | 3 | 5 }) {
-  const cols = columns === 2 ? 'grid-cols-2' : columns === 5 ? 'grid-cols-5' : 'grid-cols-3';
   const compact = React.useContext(HandoverDensity);
+  // "Unknown" is never one of the buttons in the row: it's a full-width button underneath, the same place on every page
+  const hasUnknown = options.includes('Unknown');
+  const main = options.filter(o => o !== 'Unknown');
+  const n = hasUnknown ? (main.length <= 3 ? main.length : main.length === 4 ? 2 : 3) : columns;
+  const cols = n === 1 ? 'grid-cols-1' : n === 2 ? 'grid-cols-2' : n === 5 ? 'grid-cols-5' : 'grid-cols-3';
+  const idle = 'bg-neutral-50 text-neutral-700 border-neutral-200';
   return (
     <div>
       <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}{!value && <span data-handover-missing={label} className="text-amber-500 ml-1">●</span>}</span>
       <div className={`grid ${cols} ${compact ? 'gap-2' : 'gap-3'}`}>
-        {options.map(c => (
+        {main.map(c => (
           <button
             key={c}
             data-handover-choice={`${label}: ${c}`}
             aria-pressed={value === c}
             onClick={() => onChange(value === c ? '' : c)}
-            className={`${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : c === 'Unknown' ? 'bg-neutral-200 text-neutral-800 border-neutral-300' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}
+            className={`${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${value === c ? 'bg-blue-600 text-white border-blue-600' : idle}`}
           >{c}</button>
         ))}
       </div>
+      {hasUnknown && <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label={label} on={value === 'Unknown'} onClick={() => onChange(value === 'Unknown' ? '' : 'Unknown')} /></div>}
     </div>
   );
 }
@@ -5663,22 +5669,31 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   ];
   const beforeWords: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': 'approximately 5 to 10 minutes', '10–15 min': 'approximately 10 to 15 minutes', '15–20 min': 'approximately 15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
   const est = content.arrest.startEstimate;
-  const startLine: React.ReactNode = !h.arrestStart ? miss('When the arrest started ?')
-    : h.arrestStart === 'During' ? `This arrest happened after we arrived${est ? `, at approximately ${est.clock}` : ''}`
-    : h.arrestStart === 'Unknown' ? "We don't know when this arrest happened"
-    : !h.startedBefore ? <>This arrest happened before we arrived {miss('How long before ?')}</>
-    : h.startedBefore === 'Unknown' ? "This arrest happened before we arrived, we don't know when"
-    : h.startedBefore === 'Over 20 min' ? `This arrest happened more than 20 minutes before we arrived${est ? `, so before approximately ${est.clock}` : ''}`
-    : est ? `This arrest happened before we arrived, at approximately ${est.clock}`
-    : `This arrest happened ${beforeWords[h.startedBefore]} before we arrived`;
-  const witnessedLine: React.ReactNode = !h.witnessed ? miss('Witnessed ?')
-    : h.witnessed === 'Yes' ? 'it was witnessed' : h.witnessed === 'No' ? 'it was unwitnessed' : "we don't know if it was witnessed";
-  const cprLine: React.ReactNode = !h.bystanderCpr ? miss('Bystander CPR ?')
-    : h.bystanderCpr === 'Unknown' ? 'bystander CPR is unknown'
-    : h.bystanderCpr === 'No' ? 'no bystander CPR'
-    : 'patient received bystander CPR';
-  const causeLine: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
-    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'cause of arrest is unknown' : `suspected cause of arrest is ${h.suspectedCause.trim()}`;
+  // "Patient arrested at approximately 10:20, before our arrival. It was a witnessed arrest, but the patient received no bystander CPR.
+  // Our suspected cause of arrest is sepsis."
+  const startSentence: React.ReactNode = !h.arrestStart ? miss('When the arrest started ?')
+    : h.arrestStart === 'Unknown' ? "We don't know when the patient arrested."
+    : h.arrestStart === 'During' ? (est ? `Patient arrested at approximately ${est.clock}, after our arrival.` : 'Patient arrested after our arrival.')
+    : !h.startedBefore ? <>Patient arrested before our arrival {miss('How long before ?')}</>
+    : h.startedBefore === 'Unknown' ? "Patient arrested before our arrival, we don't know when."
+    : h.startedBefore === 'Over 20 min' ? `Patient arrested more than 20 minutes before our arrival${est ? `, so before approximately ${est.clock}` : ''}.`
+    : est ? `Patient arrested at approximately ${est.clock}, before our arrival.`
+    : `Patient arrested ${beforeWords[h.startedBefore]} before our arrival.`;
+  const wit = h.witnessed, byc = h.bystanderCpr;
+  const witText = wit === 'Yes' ? 'a witnessed' : wit === 'No' ? 'an unwitnessed' : '';
+  const bycText = byc === 'Yes' ? 'received bystander CPR' : byc === 'No' ? 'received no bystander CPR' : '';
+  const witnessSentences: React.ReactNode[] = [];
+  if ((wit === 'Yes' || wit === 'No') && (byc === 'Yes' || byc === 'No')) {
+    // both known: one sentence, "but" when they pull in opposite directions
+    const conn = (wit === 'Yes') === (byc === 'Yes') ? ', and' : ', but';
+    witnessSentences.push(`It was ${witText} arrest${conn} the patient ${bycText}.`);
+  } else {
+    witnessSentences.push(!wit ? miss('Witnessed ?') : wit === 'Unknown' ? "We don't know if it was witnessed." : `It was ${witText} arrest.`);
+    witnessSentences.push(!byc ? miss('Bystander CPR ?') : byc === 'Unknown' ? "We don't know if the patient received bystander CPR." : `The patient ${bycText}.`);
+  }
+  const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
+    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `Our suspected cause of arrest is ${h.suspectedCause.trim()}.`;
+  const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>);
 
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -5716,7 +5731,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA', IGT: 'an IGT' };
   const airwayPhrase = t.airway.length ? (t.airway.length === 2 ? `${airwayName[t.airway[0]]} with an IGT` : airwayName[t.airway[0]]) : '';
   const treatmentNodes: React.ReactNode[] = [
-    <div key="a">{airwayPhrase ? `For airway we have ${airwayPhrase}.` : 'No airway device recorded.'}</div>,
+    <div key="a">{airwayPhrase ? `For airway we have ${airwayPhrase}.` : 'Airway is not yet secured.'}</div>,
     t.io || t.iv ? <div key="x">For access we have:{sub([...(t.io ? [`${t.io} x IO`] : []), ...(t.iv ? [`${t.iv} x IV`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>,
     t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>,
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
@@ -5726,7 +5741,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   const gcsPart: React.ReactNode = vit.gcs ? `GCS ${vit.gcs}` : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
-  const airwayPart = `airway is ${airwayPhrase || 'not yet secured (no airway device)'}`;
+  const airwayPart = `airway is ${airwayPhrase || 'not yet secured'}`;
   const rateOf = (kind: 'breath' | 'vent') => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
   const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
     : h.breathing === 'Unknown' ? "we don't know if pt is breathing"
@@ -5769,7 +5784,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: withCommas(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
-    { key: 'M', title: 'M – What happened', body: withCommas(h.arrestStart === 'During' || h.arrestStart === 'Unknown' ? [startLine, causeLine] : [startLine, witnessedLine, cprLine, causeLine]) },
+    { key: 'M', title: 'M – What happened', body: whatNodes },
     { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestPage1 },
     ...(arrestPage2.length ? [{ key: 'I3', title: 'I – Info / Arrest Summary', body: arrestPage2 }] : []),
     { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
@@ -5846,7 +5861,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             <div className="mt-3">
               <button data-handover-choice="Age: Unknown" aria-pressed={h.ageUnknown === 'Yes'}
                 onClick={() => { if (h.ageUnknown === 'Yes') onField('ageUnknown', ''); else { onField('ageUnknown', 'Yes'); onField('age', ''); } }}
-                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-200 text-neutral-800 border-neutral-300'}`}>Age unknown</button>
+                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-neutral-200 text-neutral-800 border-neutral-300'}`}>Unknown</button>
             </div>
           </div>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
@@ -5967,7 +5982,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
                 </div>
               </HandoverSection>
             ) : (
-              <div data-handover-allfilled className="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 font-semibold text-center">Everything is filled in</div>
+              <div data-handover-allfilled className="space-y-4 pt-2">
+                <button data-button="handover-edit-all" onClick={() => setPageKey(pageKeys[1] ?? 'type')}
+                  className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold border-2 border-blue-600 text-blue-700 bg-white btn-base`}>Edit handover</button>
+                <button data-button="handover-deliver" onClick={() => { setCard(0); setView('read'); }}
+                  className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold bg-blue-600 text-white btn-base`}>Deliver handover</button>
+              </div>
             )}
           </div>
         );
