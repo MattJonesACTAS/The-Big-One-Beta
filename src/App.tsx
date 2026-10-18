@@ -5161,11 +5161,10 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  type: '', unknowns: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
-const HANDOVER_TYPES = ['Arrest', 'PHEA', 'Both'];
 const HANDOVER_YNU = ['Yes', 'No', 'Unknown'];
 const HANDOVER_GENDERS = ['Male', 'Female', 'Other', 'Unknown'];
 // How long before we arrived the arrest started
@@ -5584,12 +5583,18 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   onClose: () => void
 }) {
   const compact = embedded;
-  // The Arrest handover is a ROSC handover when the app is in ROSC mode (the stored type stays 'Arrest')
-  const typeLabel = (t: string) => (t === 'Arrest' && state.isROSCMode ? 'ROSC' : t);
+  // Which handover this is is worked out from the case, not chosen: an arrest if the app is running its rhythm check timers (Timers and Tx log),
+  // or if anything that only happens in an arrest has been logged (a shock, disarm or other rhythm check, ROSC, or shocks/disarms entered at setup).
+  // Anything else (Tx log only with none of those) is not an arrest: its prompts are still to be added.
+  const isArrestCase = state.isROSCMode || state.timingMode !== 'log' || state.treatments.some(x => {
+    const id = getTreatmentIdentity(x.name);
+    return id === 'Shock' || id === 'Disarm' || isRoscName(x.name) || x.name.trim() === NOTHING_LOGGED_NAME || /^Rhythm check( #\d+)?$/.test(x.name.trim());
+  });
+  const modeLabel = !isArrestCase ? 'Not arrest' : state.isROSCMode ? 'ROSC' : 'Arrest';
   const frame = embedded ? 'absolute inset-0 z-[45]' : 'fixed inset-0 z-[2000]';
   const [view, setView] = useState<'fill' | 'read'>('fill');
   const [card, setCard] = useState(0);
-  const [pageKey, setPageKey] = useState<string>(() => resumeKey ?? (state.handover?.type === 'Arrest' ? 'review' : 'type'));
+  const [pageKey, setPageKey] = useState<string>(() => resumeKey ?? (Object.values(state.handover ?? {}).some(v => (typeof v === 'string' ? v.trim() !== '' : !!v)) ? 'review' : 'id'));      // a handover that's been started reopens on Review, a new one starts at the first page
   useEffect(() => { onPage?.(pageKey); }, [pageKey]);
   const [rrOtherOpen, setRrOtherOpen] = useState(false);
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
@@ -5608,8 +5613,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const setVitalValue = (key: VitalKey, flag: string, v: string) => { onVital(key, v); if (unk(flag) && v) setUnk(flag, false); };
   const toggleUnknownVital = (flag: string, keys: VitalKey[]) => { const on = !unk(flag); setUnk(flag, on); if (on) keys.forEach(k => onVital(k, '')); };
 
-  // Fill in is a series of pages. Arrest has them all; PHEA and Both are still to be built, so they only have the first.
-  const pageKeys: string[] = h.type === 'Arrest' ? ['type', 'id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'allergies', 'history', 'review'] : ['type'];
+  // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
+  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'allergies', 'history', 'review'] : ['other'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5669,8 +5674,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const rrLabel = h.breathing === 'Ventilated' ? 'Ventilation rate' : 'Respiratory rate';
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { type: [], id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], allergies: [], history: [] };
-  if (!h.type) missing.type.push('Handover type');
+  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], allergies: [], history: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
@@ -5693,9 +5697,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.history.push('Medical history');
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Medications');
-  const pageTitle: Record<string, string> = { type: 'Handover type', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
-  const pageDone: Record<string, boolean> = { type: !!h.type, review: false };
-  Object.keys(missing).forEach(k => { if (k !== 'type') pageDone[k] = missing[k].length === 0; });
+  const pageTitle: Record<string, string> = { other: 'Handover', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  const pageDone: Record<string, boolean> = { review: false, other: false };
+  Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
   const pageForCard: Record<string, string> = { I: 'id', RABC: 'resp', M: 'what', I2: 'info', I3: 'info', S: 'vitals', T: 'review', AMBO: 'allergies', END: 'review' };
 
@@ -5886,7 +5890,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   }
 
   // --- Fill in: one page at a time. A page has to be completed (an answer, or Unknown) before Next works.
-  const pageIncomplete = (k: string) => (k === 'type' ? h.type !== 'Arrest' : k === 'review' ? false : (missing[k]?.length ?? 0) > 0);
+  const pageIncomplete = (k: string) => (k === 'other' ? true : k === 'review' ? false : (missing[k]?.length ?? 0) > 0);
   const firstIncomplete = pageKeys.findIndex(pageIncomplete);          // -1 when every page is complete
   const reachable = (k: string, i: number) => firstIncomplete === -1 || i <= firstIncomplete || k === curKey;
   const canNext = !pageIncomplete(curKey);
@@ -5894,16 +5898,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const goBack = () => { if (curIdx > 0) setPageKey(pageKeys[curIdx - 1]); };
   const pageBody = (): React.ReactNode => {
     switch (curKey) {
-      case 'type': return (
+      case 'other': return (
         <div className="space-y-6">
-          <div data-handover-types className="grid grid-cols-3 gap-3">
-            {HANDOVER_TYPES.map(t => (
-              <button key={t} data-handover-type={t} aria-pressed={h.type === t} onClick={() => { onField('type', t); setCard(0); if (t === 'Arrest') setPageKey('id'); }}
-                className={`${compact ? 'py-4' : 'py-5'} rounded-xl font-bold text-[17px] border-2 btn-base ${h.type === t ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-[#4a6fa5]'}`}>{typeLabel(t)}</button>
-            ))}
+          <div data-handover-empty className={`rounded-xl ${compact ? 'p-4' : 'p-6'} text-center font-semibold bg-white border border-neutral-200 text-neutral-500`}>
+            The handover prompts for a job that isn't a cardiac arrest are still to be added.
           </div>
-          <div data-handover-empty className={`rounded-xl ${compact ? 'p-4' : 'p-6'} text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-[#edf2f8] border border-[#4a6fa5] text-[#4a6fa5]'}`}>
-            {h.type === 'Arrest' ? 'You can change the handover type at any time. Your answers are kept.' : h.type ? `The ${h.type} handover prompts are still to be added.` : `Choose ${typeLabel('Arrest')}, PHEA or Both. The handover prompts are different for each.`}
+          <div className={`rounded-xl ${compact ? 'p-4' : 'p-6'} text-center text-[15px] text-neutral-500`}>
+            If this is an arrest, log a rhythm check (or ROSC) and the arrest handover appears here.
           </div>
         </div>
       );
@@ -6033,7 +6034,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               </HandoverSection>
             ) : (
               <div data-handover-allfilled className="space-y-4 pt-2">
-                <button data-button="handover-edit-all" onClick={() => setPageKey('type')}
+                <button data-button="handover-edit-all" onClick={() => setPageKey('id')}
                   className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold border-2 border-[#4a6fa5] text-[#4a6fa5] bg-white btn-base`}>Edit handover</button>
                 <button data-button="handover-deliver" onClick={() => { setCard(0); setView('read'); }}
                   className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold bg-[#4a6fa5] text-white btn-base`}>Deliver handover</button>
@@ -6049,16 +6050,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     <div data-handover data-handover-view="fill" className={`${frame} bg-neutral-100 flex flex-col`}>
       <div data-handover-bar-top className={`bg-[#4a6fa5] text-white ${compact ? 'h-12 px-2.5' : 'h-16 px-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
         {embedded
-          ? (h.type && curKey !== 'type' ? <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">{typeLabel(h.type)} ▾</button> : <span />)
+          ? <span data-handover-mode className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">{modeLabel}</span>
           : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
         <span className="text-center leading-tight">
-          {h.type && !embedded && curKey !== 'type' && <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="mb-0.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold tracking-widest uppercase">{typeLabel(h.type)} ▾</button>}
           <span className="block" data-handover-page-title>{pageTitle[curKey]}</span>
         </span>
-        {curKey === 'type' ? <span /> : <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>}
+        {pageKeys.length < 2 ? <span /> : <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>}
       </div>
       <div data-handover-dots data-handover-page-current={curKey} className="flex-shrink-0 flex items-center justify-center bg-neutral-100">
-        {pageKeys.map((k, i) => (
+        {pageKeys.length > 1 && pageKeys.map((k, i) => (
           <button key={k} data-handover-page-dot={k} data-handover-page-done={pageDone[k] ? 'done' : 'todo'} aria-label={pageTitle[k]} aria-current={k === curKey}
             disabled={!reachable(k, i)} onClick={() => setPageKey(k)} className={`${compact ? 'p-1' : 'p-1.5'} ${reachable(k, i) ? '' : 'opacity-40'}`}>
             <span className={`block h-3 rounded-full ${k === curKey ? 'w-6 bg-[#4a6fa5]' : pageDone[k] ? 'w-3 bg-[#4a6fa5]' : k === 'review' ? 'w-3 bg-neutral-300' : 'w-3 bg-[#c5d3e6]'}`} />
