@@ -5691,8 +5691,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
     witnessSentences.push(!wit ? miss('Witnessed ?') : wit === 'Unknown' ? "We don't know if it was witnessed." : `It was ${witText} arrest.`);
     witnessSentences.push(!byc ? miss('Bystander CPR ?') : byc === 'Unknown' ? "We don't know if the patient received bystander CPR." : `The patient ${bycText}.`);
   }
+  if (byc === 'No' && h.startedBefore) {
+    witnessSentences.push(h.startedBefore === 'Unknown' ? "We don't know how long the patient had no CPR." : `The patient had no CPR for ${beforeWords[h.startedBefore]} before our arrival.`);
+  }
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
-    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `Our suspected cause of arrest is ${h.suspectedCause.trim()}.`;
+    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}.`;
   const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>);
 
   const a = content.arrest;
@@ -5839,7 +5842,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
             ))}
           </div>
           <div data-handover-empty className={`rounded-xl ${compact ? 'p-4' : 'p-6'} text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
-            {h.type ? `The ${h.type} handover prompts are still to be added.` : 'Choose Arrest, PHEA or Both. The handover prompts are different for each.'}
+            {h.type === 'Arrest' ? 'You can change the handover type at any time. Your answers are kept.' : h.type ? `The ${h.type} handover prompts are still to be added.` : 'Choose Arrest, PHEA or Both. The handover prompts are different for each.'}
           </div>
         </div>
       );
@@ -5983,7 +5986,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
               </HandoverSection>
             ) : (
               <div data-handover-allfilled className="space-y-4 pt-2">
-                <button data-button="handover-edit-all" onClick={() => setPageKey(pageKeys[1] ?? 'type')}
+                <button data-button="handover-edit-all" onClick={() => setPageKey('type')}
                   className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold border-2 border-blue-600 text-blue-700 bg-white btn-base`}>Edit handover</button>
                 <button data-button="handover-deliver" onClick={() => { setCard(0); setView('read'); }}
                   className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold bg-blue-600 text-white btn-base`}>Deliver handover</button>
@@ -6000,8 +6003,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onChangeWeigh
       <div className={`bg-blue-600 text-white ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
         {embedded ? <span /> : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
         <span className="text-center leading-tight">
-          {h.type && <span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span>}
-          <span data-handover-page-title>{pageTitle[curKey]}</span>
+          {h.type && (curKey === 'type'
+            ? <span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span>
+            : <button onClick={() => setPageKey('type')} data-button="handover-change-type" data-handover-type-label className="mb-0.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold tracking-widest uppercase">{h.type} ▾</button>)}
+          <span className="block" data-handover-page-title>{pageTitle[curKey]}</span>
         </span>
         <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>
       </div>
