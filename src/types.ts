@@ -20,7 +20,6 @@ export interface Treatment {
 // closed, and never saved with a previous case or printed in the PDF.
 export interface HandoverFields {
   type: string;             // 'Arrest' | 'PHEA' | 'Both' | '' (chosen at the top of the Handover page)
-  name: string;
   unknowns: string;         // comma-separated list of the things marked Unknown (e.g. 'gcs,hr,bp,history')
   ageUnknown: string;       // 'Yes' when the age isn't known
   age?: string;             // digits only; the unit is separate. Not set until the crew types or clears it, so a paediatric age from setup shows until then
@@ -30,7 +29,6 @@ export interface HandoverFields {
   breathing: string;        // 'Breathing' | 'Ventilated' | '' (ROSC: is the patient breathing, or are we ventilating)
   witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
   bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
-  downtime: string;         // time from collapse to the start of CPR: 'Under 2 min' | '2–5 min' | '5–10 min' | 'Over 10 min' | 'Unknown' | ''
   arrestStart: string;      // 'Before' (we arrived) | 'During' (the case) | ''
   startedBefore: string;    // how long before we arrived: 'Under 5 min' | '5–10 min' | '10–15 min' | '15–20 min' | 'Over 20 min' | 'Unknown' | ''
   firstRhythm: string;      // asked when shocks or disarms were entered at setup: 'VF' | 'pVT' | 'Asystole' | 'PEA' | 'Unknown' | ''
