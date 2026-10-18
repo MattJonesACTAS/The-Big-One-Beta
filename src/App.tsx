@@ -5181,10 +5181,14 @@ const HANDOVER_BREATHING = ['Breathing', 'Ventilated', 'Unknown'];
 // True when the Handover sits inside the home screen box (squished to fit) rather than filling the screen
 const HandoverDensity = React.createContext(false);
 // The question headings on the Fill in pages: large and centred
-// A question that hasn't been answered yet: its heading is highlighted
-const HeadingText = ({ label, missing }: { label: string, missing: boolean }) => missing
-  ? <span data-handover-missing={label} className="inline-block bg-amber-200 text-amber-900 rounded-lg px-3 py-0.5">{label}</span>
-  : <>{label}</>;
+// The heading of a question: a yellow dot while it hasn't been answered, a green tick once it has (no mark for optional ones)
+const HeadingText = ({ label, state, tight = false }: { label: string, state: 'missing' | 'done' | 'none', tight?: boolean }) => (
+  <>
+    {label}
+    {state === 'missing' && <span data-handover-missing={label} aria-label="not answered yet" className={`inline-block align-middle ${tight ? 'ml-1 w-[14px] h-[14px]' : 'ml-2 w-[18px] h-[18px]'} rounded-full bg-amber-400`} />}
+    {state === 'done' && <span data-handover-done={label} aria-label="answered" className={`inline-block align-middle ${tight ? 'ml-1 text-[18px]' : 'ml-2 text-[22px]'} leading-none font-black text-emerald-600`}>✓</span>}
+  </>
+);
 const HANDOVER_HEADING = 'block text-center text-[17px] font-bold text-neutral-700 uppercase tracking-wide mb-3';
 const HANDOVER_HEADING_COMPACT = 'block text-center text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1.5';
 const HANDOVER_GCS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
@@ -5484,7 +5488,7 @@ function HandoverChoice({ label, options, value, onChange, columns = 3 }: { labe
   const idle = 'bg-neutral-50 text-neutral-700 border-neutral-200';
   return (
     <div>
-      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} missing={!value} /></span>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} state={value ? 'done' : 'missing'} /></span>
       <div className={`grid ${cols} ${compact ? 'gap-2' : 'gap-3'}`}>
         {main.map(c => (
           <button
@@ -5502,13 +5506,13 @@ function HandoverChoice({ label, options, value, onChange, columns = 3 }: { labe
 }
 
 // A number box (number pad on a phone), with an optional Unknown button. Empty ones are amber so they're noticed.
-function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void }) {
+function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur, tight = false }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void, tight?: boolean }) {
   const off = unknownOn || disabled;
   const compact = React.useContext(HandoverDensity);
   return (
     <div>
       <label className="block">
-        <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} missing={!value && !off} /></span>
+        <span className={tight ? 'block text-center text-[12px] font-bold text-neutral-700 uppercase mb-1.5 whitespace-nowrap' : (compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING)}><HeadingText label={label} tight={tight} state={(value || off) ? 'done' : 'missing'} /></span>
         <div className="relative">
           <input aria-label={label} inputMode="decimal" value={value} disabled={off} onBlur={onBlur} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
             className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2.5 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-blue-400 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-amber-50 border-amber-300'} ${off ? 'opacity-50' : ''}`} />
@@ -5557,6 +5561,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   onClose: () => void
 }) {
   const compact = embedded;
+  // The Arrest handover is a ROSC handover when the app is in ROSC mode (the stored type stays 'Arrest')
+  const typeLabel = (t: string) => (t === 'Arrest' && state.isROSCMode ? 'ROSC' : t);
   const frame = embedded ? 'absolute inset-0 z-[45]' : 'fixed inset-0 z-[2000]';
   const [view, setView] = useState<'fill' | 'read'>('fill');
   const [card, setCard] = useState(0);
@@ -5617,7 +5623,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     })}</ul>
   );
   const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean, prompt?: boolean, clearUnknown?: string }) => (
-    <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} missing={!!extra?.prompt && !h[key].trim()} /></span>
+    <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}><HeadingText label={label} state={!extra?.prompt ? 'none' : h[key].trim() ? 'done' : 'missing'} /></span>
       {extra?.rows
         ? <textarea aria-label={label} value={h[key]} onChange={e => { onField(key, e.target.value); if (extra.clearUnknown && e.target.value && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); }} rows={extra.rows} className={inputClass} />
         : <input aria-label={label} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
@@ -5827,7 +5833,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       <div data-handover data-handover-view="read" className={`${frame} bg-neutral-100 flex flex-col`}>
         <div className={`flex-shrink-0 ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide ${c.muted ? 'bg-neutral-500 text-white' : 'bg-blue-600 text-white'}`}>
           <button onClick={() => { const k = pageForCard[c.key] ?? 'review'; setPageKey(pageKeys.includes(k) ? k : 'review'); setView('fill'); }} data-button="handover-edit" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Edit</button>
-          <span className="text-center leading-tight"><span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span><span data-handover-title>{c.title}</span></span>
+          <span className="text-center leading-tight"><span data-handover-title>{c.title}</span></span>
           <span className="justify-self-end text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
         <div data-handover-card={c.key} className={`flex-1 overflow-y-auto ${compact ? 'p-4 space-y-3 text-[22px]' : 'p-6 space-y-5 text-[28px]'} leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
@@ -5861,19 +5867,19 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           <div data-handover-types className="grid grid-cols-3 gap-3">
             {HANDOVER_TYPES.map(t => (
               <button key={t} data-handover-type={t} aria-pressed={h.type === t} onClick={() => { onField('type', t); setCard(0); if (t === 'Arrest') setPageKey('id'); }}
-                className={`${compact ? 'py-4' : 'py-5'} rounded-xl font-bold text-[17px] border-2 btn-base ${h.type === t ? 'bg-blue-600 text-white border-blue-600' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-amber-300'}`}>{t}</button>
+                className={`${compact ? 'py-4' : 'py-5'} rounded-xl font-bold text-[17px] border-2 btn-base ${h.type === t ? 'bg-blue-600 text-white border-blue-600' : h.type ? 'bg-white text-neutral-700 border-neutral-200' : 'bg-white text-neutral-700 border-amber-300'}`}>{typeLabel(t)}</button>
             ))}
           </div>
           <div data-handover-empty className={`rounded-xl ${compact ? 'p-4' : 'p-6'} text-center font-semibold ${h.type ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-amber-50 border border-amber-300 text-amber-900'}`}>
-            {h.type === 'Arrest' ? 'You can change the handover type at any time. Your answers are kept.' : h.type ? `The ${h.type} handover prompts are still to be added.` : 'Choose Arrest, PHEA or Both. The handover prompts are different for each.'}
+            {h.type === 'Arrest' ? 'You can change the handover type at any time. Your answers are kept.' : h.type ? `The ${h.type} handover prompts are still to be added.` : `Choose ${typeLabel('Arrest')}, PHEA or Both. The handover prompts are different for each.`}
           </div>
         </div>
       );
       case 'id': return (
         <HandoverPageCard>
-          {text('name', 'Name (optional)', { words: true })}
+          {text('name', 'Patient name (optional)', { words: true })}
           <div>
-            <span className={labelClass}><HeadingText label="Age" missing={!ageValue && h.ageUnknown !== 'Yes'} /></span>
+            <span className={labelClass}><HeadingText label="Age" state={(ageValue || h.ageUnknown === 'Yes') ? 'done' : 'missing'} /></span>
             <div className="grid grid-cols-2 gap-3">
               <input aria-label="Age" inputMode="numeric" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
                 className={`${inputClass} text-center ${ageValue || h.ageUnknown === 'Yes' ? '' : '!bg-amber-50 !border-amber-300'}`} />
@@ -5952,11 +5958,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         <HandoverPageCard>
           {inRosc && (
             <div className="grid grid-cols-3 gap-x-2 gap-y-3">
-              <div><HandoverNumber label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} /></div>
+              <div><HandoverNumber tight label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} /></div>
               <div className="col-span-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <HandoverNumber label="Systolic" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
-                  <HandoverNumber label="Diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
+                  <HandoverNumber tight label="Systolic" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
+                  <HandoverNumber tight label="Diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="" disabled={unk('bp')} />
                 </div>
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
               </div>
@@ -6024,12 +6030,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     <div data-handover data-handover-view="fill" className={`${frame} bg-neutral-100 flex flex-col`}>
       <div className={`bg-blue-600 text-white ${compact ? 'p-2.5' : 'p-4'} grid grid-cols-[1fr_auto_1fr] items-center font-bold tracking-wide flex-shrink-0`}>
         {embedded
-          ? (h.type && curKey !== 'type' ? <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Mode</button> : <span />)
+          ? (h.type && curKey !== 'type' ? <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">{typeLabel(h.type)} ▾</button> : <span />)
           : <button onClick={onClose} data-button="handover-close" className="justify-self-start px-3 py-1 rounded-lg bg-white/20 text-sm">Close</button>}
         <span className="text-center leading-tight">
-          {h.type && (embedded || curKey === 'type'
-            ? <span className="block text-[11px] font-bold tracking-widest opacity-70 uppercase" data-handover-type-label>{h.type}</span>
-            : <button onClick={() => setPageKey('type')} data-button="handover-change-type" data-handover-type-label className="mb-0.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold tracking-widest uppercase">{h.type} ▾</button>)}
+          {h.type && !embedded && curKey !== 'type' && <button onClick={() => setPageKey('type')} data-button="handover-change-type" className="mb-0.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold tracking-widest uppercase">{typeLabel(h.type)} ▾</button>}
           <span className="block" data-handover-page-title>{pageTitle[curKey]}</span>
         </span>
         <span className="justify-self-end text-sm opacity-80 tabular-nums" data-handover-progress>{curIdx + 1} of {pageKeys.length}</span>
