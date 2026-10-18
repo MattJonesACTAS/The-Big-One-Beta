@@ -5493,7 +5493,7 @@ function HandoverUnknown({ label, on, onClick }: { label: string, on: boolean, o
   const compact = React.useContext(HandoverDensity);
   return (
     <button data-handover-choice={`${label}: Unknown`} aria-pressed={on} onClick={onClick}
-      className={`w-full ${compact ? 'py-2' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-[#4a6fa5]'}`}>Unknown</button>
+      className={`w-full ${compact ? 'py-2' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>
   );
 }
 
@@ -5925,7 +5925,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
             <div className="mt-3">
               <button data-handover-choice="Age: Unknown" aria-pressed={h.ageUnknown === 'Yes'}
                 onClick={() => { if (h.ageUnknown === 'Yes') onField('ageUnknown', ''); else { onField('ageUnknown', 'Yes'); onField('age', ''); } }}
-                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-[#4a6fa5]'}`}>Unknown</button>
+                className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>
             </div>
           </HandoverBox>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
@@ -5979,7 +5979,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           {text('suspectedCause', 'Suspected cause of arrest?', { prompt: true, footer: (
             <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
               onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
-              className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-[#4a6fa5]'}`}>Unknown</button>) })}
+              className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>) })}
         </HandoverPageCard>
       );
       case 'vitals': return (
