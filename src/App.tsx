@@ -3342,6 +3342,8 @@ export default function App() {
                   <div className="space-y-3 pt-2">
                     <button 
                       onClick={() => {
+                        setTimingMode(null);          // nothing is pre-chosen: a mode picked in an earlier, abandoned setup isn't kept
+                        setExpandedMode(null);
                         setCatchupStep(6);
                         setUseManualEntry(true);
                       }} 
