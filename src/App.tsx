@@ -1017,7 +1017,7 @@ export default function App() {
   //    for the rest of the tutorial instead of going back to being suppressed.
   const tutorialRhythmDemoActive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx && tutorialNodeIndex <= demoEndIdx;
   // The Handover button in the top row (not in Timers only, and not in the tutorial)
-  const showHandoverBtn = !tutorialMode && (timingMode === 'log' || timingMode === 'elapsed');
+  const showHandoverBtn = !tutorialMode && (timingMode === 'log' || timingMode === 'elapsed' || timingMode === 'minimal');
   const tutorialRhythmLive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx;
   // The tick's own popup-at-0:00 and auto-close-at-0:20 are a third thing
   // again. Inside the walkthrough they must NOT run on their own schedule:
@@ -3266,10 +3266,10 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      {showHandover && !state.currentOverlay && !tutorialMode && timingMode !== 'minimal' && (
+      {showHandover && !state.currentOverlay && !tutorialMode && (
         <div ref={setHandoverBar} data-handover-bar className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0" />
       )}
-      <div className={`${showHandover && !state.currentOverlay && !tutorialMode && timingMode !== 'minimal' ? 'hidden' : ''} grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      <div className={`${showHandover && !state.currentOverlay && !tutorialMode ? 'hidden' : ''} grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
         {timingMode !== 'log' && timingMode !== 'minimal' && (
           <button 
             onClick={() => {
@@ -5239,7 +5239,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5345,6 +5345,7 @@ type HandoverArrest = {
   latest: string;                                     // latest rhythm, or the last one before ROSC
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
+  askFirstRhythm: boolean;                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
   firstState: 'known' | 'unknown' | 'ask' | 'none';   // the first rhythm: from the log, answered by the crew, or still to ask
   startEstimate: { clock: string, kind: 'at' | 'before' } | null;   // best guess of when the arrest happened, to the nearest 5 minutes
@@ -5446,10 +5447,11 @@ const buildHandoverContent = (
   const disarmCount = tx.filter(x => x.name.includes('Disarm') && !isRoscName(x.name)).length;
   const withRhythm = tx.filter(x => rhythmFromName(x.name));
   const loggedFirst = withRhythm.length ? rhythmFromName(withRhythm[0].name)! : '';
-  const firstState: 'known' | 'unknown' | 'ask' | 'none' = priorChecks
+  const askFirst = priorChecks || (state.timingMode === 'minimal' && tx.some(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; }));
+  const firstState: 'known' | 'unknown' | 'ask' | 'none' = askFirst
     ? (!h.firstRhythm ? 'ask' : h.firstRhythm === 'Unknown' ? 'unknown' : 'known')
     : (loggedFirst ? 'known' : 'none');
-  const firstRhythm = firstState === 'known' ? (priorChecks ? h.firstRhythm : loggedFirst) : '';
+  const firstRhythm = firstState === 'known' ? (askFirst ? h.firstRhythm : loggedFirst) : '';
   const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
   const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
   // Rhythms seen apart from the first and the latest (neither is listed twice)
@@ -5460,7 +5462,7 @@ const buildHandoverContent = (
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, priorChecks, firstState, startEstimate,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, priorChecks, askFirstRhythm: askFirst, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
@@ -5757,7 +5759,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // R / A / B / C values (the VSS tab's own values)
   // HR, BP and GCS sit with the other vital signs in ROSC and in Tx log only (where there are no R / A / B / C pages to hold them)
-  const showCirc = inRosc || state.timingMode === 'log';
+  const showCirc = inRosc || state.timingMode === 'log' || state.timingMode === 'minimal';
+  // Arrest – Timers records no weight, airway, access, other medications or devices: the crew are asked for them (the Tx log can't fill them in)
+  const timersOnly = state.timingMode === 'minimal';
+  const othersDone = !timersOnly || !!h.otherTx.trim() || unk('othertx') || content.tx.others.length > 0;
   // GCS as E / V / M. The total is what's kept in the vital signs (the VSS tab shares it); the parts are kept to read out "GCS 14 (E4, V4, M6)".
   const gcsPartsOk = !!(h.gcsE && h.gcsV && h.gcsM) && (parseInt(h.gcsE, 10) + parseInt(h.gcsV, 10) + parseInt(h.gcsM, 10) === parseInt(vit.gcs, 10));
   const gcsText = vit.gcs ? `GCS ${vit.gcs}${gcsPartsOk ? ` (E${h.gcsE}, V${h.gcsV}, M${h.gcsM})` : ''}` : '';
@@ -5798,6 +5803,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
   }
+  if (timersOnly && !state.patientWeight) missing.id.push('Weight');
+  if (timersOnly && !othersDone) missing.treatment.push('Anything else');
   if (!h.arrestStart) missing.what.push('When the patient arrested');
   else if (h.arrestStart === 'Before') {
     if (!h.startedBefore) missing.what.push('How long before');
@@ -5899,7 +5906,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (a.others.length) arrestNodes.push(<div key="o">Rhythms since then:{sub(a.others.map(rhythmWords))}</div>);
   }
   if (a.firstState === 'known' && a.firstRhythm) {
-    if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
+    if (state.timingMode === 'minimal') arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
+    else if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
     else if (a.latest && a.latest !== a.firstRhythm) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
     else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
   }
@@ -5930,7 +5938,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // (the crew's airway and access answers, or what the Tx log says)
   const airwayPhrase = airwayHasDevice ? `${airwayName[airwayVal]}${igtVal === 'Yes' ? ' with an IGT' : ''}` : '';
   const ivN = parseInt(ivVal, 10) || 0, ioN = parseInt(ioVal, 10) || 0;
-  const treatmentNodes: React.ReactNode[] = [
+  const standardTreatmentNodes: React.ReactNode[] = [
     <div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>,
     unk('access') ? <div key="x">We don't know what access is in place.</div>
       : !accessDone ? <div key="x">{miss('Access ?')}</div>
@@ -5938,6 +5946,24 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>,
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
+
+  // Arrest – Timers: the log has only the adrenaline and amiodarone timers' taps (no doses). The crew confirm airway and access
+  // and tell us what else was given or done; it never says "no medications given", because nothing else is recorded.
+  const timerTaps = (prefix: string) => state.treatments.filter(x => x.name.startsWith(prefix) && !x.name.includes('Unsuccessful'));
+  const lastTap = (list: typeof state.treatments) => { const x = [...list].reverse().find(y => !y.timeUnknown && y.clock); return x ? `last ${t12(x.clock)}` : ''; };
+  const adrTaps = timerTaps('Adrenaline'), amioTaps = timerTaps('Amiodarone');
+  const timerMeds = [
+    ...(adrTaps.length ? [{ text: `Adrenaline x${adrTaps.length}`, note: lastTap(adrTaps) ? noteWords(lastTap(adrTaps)) : '' }] : []),
+    ...(amioTaps.length ? [{ text: `Amiodarone x${amioTaps.length}`, note: lastTap(amioTaps) ? noteWords(lastTap(amioTaps)) : '' }] : []),
+  ];
+  const otherItems = [...t.others.map(o => ({ text: o.line, note: o.note })), ...lines(h.otherTx).map(x => ({ text: x, note: '' }))];
+  const timersTreatmentNodes: React.ReactNode[] = [
+    standardTreatmentNodes[0], standardTreatmentNodes[1],
+    ...(timerMeds.length ? [<div key="m">For medications we have given:{subWithNote(timerMeds)}</div>] : []),
+    otherItems.length ? <div key="o">We have also given or done:{subWithNote(otherItems)}</div>
+      : unk('othertx') ? <div key="o">We have not given or done anything else.</div> : <div key="o">{miss('Anything else ?')}</div>,
+  ];
+  const treatmentNodes = timersOnly ? timersTreatmentNodes : standardTreatmentNodes;
 
   // The primary survey (ROSC), as sentences: "For our primary survey we have GCS 6, airway is an ETT tube, we are ventilating at a rate of 10,
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
@@ -6127,7 +6153,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       );
       case 'info': return (
         <HandoverPageCard>
-          {content.arrest.priorChecks && <HandoverChoice label="What was the first rhythm?" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />}
+          {content.arrest.askFirstRhythm && <HandoverChoice label="What was the first rhythm?" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />}
           {text('suspectedCause', 'Suspected cause of arrest?', { prompt: true, footer: (
             <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
               onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
@@ -6194,6 +6220,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               ))}
               <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Access" on={unk('access')} onClick={() => { const on = !unk('access'); setUnk('access', on); if (on) { onField('accessIv', ''); onField('accessIo', ''); } }} /></div>
             </HandoverBox>
+            {timersOnly && text('otherTx', "Anything else we've given or done?", { rows: 3, clearUnknown: 'othertx', state: othersDone ? 'done' : 'missing', footer: (
+              <>
+                <p className="text-sm text-neutral-500 text-center mb-2">Arrest – Timers doesn't record airway, other medications or devices. Tell us what else was given or done, one per line, with doses if you know them.</p>
+                {txLog.others.length > 0 && <p className="text-sm text-neutral-500 text-center mb-2">Already logged: {txLog.others.map(o => o.line).join(', ')}</p>}
+                <button data-handover-choice="Anything else: None" aria-pressed={unk('othertx')} onClick={() => { const on = !unk('othertx'); setUnk('othertx', on); if (on) onField('otherTx', ''); }}
+                  className={`w-full ${compact ? 'py-2' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${unk('othertx') ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>None</button>
+              </>) })}
           </HandoverPageCard>
         );
       }

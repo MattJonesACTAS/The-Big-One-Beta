@@ -23,6 +23,7 @@ export interface HandoverFields {
   airwayIgt: string;        // 'Yes' | 'No' | '' (with an airway device)
   accessIv: string;         // how many IVs, '0'-'4'; '' = what the Tx log says
   accessIo: string;
+  otherTx: string;          // Arrest – Timers: what else was given or done (that mode doesn't record it), one item per line
   gcsE: string;             // GCS eye, verbal and motor (the total is kept in the vital signs, so the VSS tab and the handover share it)
   gcsV: string;
   gcsM: string;         // how many IOs, '0'-'4'; '' = what the Tx log says
