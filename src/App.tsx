@@ -2788,9 +2788,9 @@ export default function App() {
             disabled={isShockForced || tutorialRhythmDemoActive}
             data-button="handover"
             aria-pressed={handoverOpen}
-            className={`bg-neutral-200 px-1 py-2.5 text-[13px] sm:p-4 sm:text-base rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base whitespace-nowrap ${handoverOpen ? 'ring-2 ring-[#4a6fa5]' : ''} ${isShockForced ? 'opacity-50' : ''}`}
+            className={`${handoverOpen ? 'bg-[#dde7f3] text-[#3b5b8a]' : 'bg-neutral-200'} px-1 py-2.5 text-[13px] sm:p-4 sm:text-base rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base whitespace-nowrap ${isShockForced ? 'opacity-50' : ''}`}
           >
-            <ClipboardList size={14} className="sm:w-4 sm:h-4" /> Handover
+            {handoverOpen ? <XCircle size={14} className="sm:w-4 sm:h-4" /> : <ClipboardList size={14} className="sm:w-4 sm:h-4" />} {handoverOpen ? 'Close' : 'Handover'}
           </button>
         )}
         <button onClick={() => setShowEndWarning(true)} className={`bg-neutral-200 ${showHandoverBtn ? 'px-1 py-2.5 text-[13px]' : 'p-2.5 text-sm'} sm:p-4 sm:text-base rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base whitespace-nowrap`} data-button="end-case">
@@ -3254,14 +3254,20 @@ export default function App() {
           </div>
         </div>
         )} {/* end else (non-log mode) */}
-        {showHandover && !tutorialMode && (
-          <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
-        )}
+        <AnimatePresence>
+          {showHandover && !tutorialMode && (
+            <motion.div key="handover" className="absolute inset-0 z-[45]"
+              initial={{ y: '-100%' }} animate={{ y: 0 }} exit={{ y: '-100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.8 }}>
+              <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Bottom Main Controls */}
       {showHandover && !state.currentOverlay && !tutorialMode && timingMode !== 'minimal' && (
-        <div ref={setHandoverBar} data-handover-bar className="grid grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0" />
+        <div ref={setHandoverBar} data-handover-bar className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0" />
       )}
       <div className={`${showHandover && !state.currentOverlay && !tutorialMode && timingMode !== 'minimal' ? 'hidden' : ''} grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
         {timingMode !== 'log' && timingMode !== 'minimal' && (
@@ -5990,11 +5996,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         </div>
         {(() => {
           const btn = embedded ? 'p-3 sm:p-5 rounded-2xl text-base sm:text-xl' : `${compact ? 'p-3' : 'p-4'} rounded-xl`;
-          const closeB = <button onClick={onClose} data-button="handover-close" className={`${btn} font-bold bg-red-100 text-red-800 btn-base`}>Close</button>;
           const prevB = <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className={`bg-neutral-200 ${btn} font-bold text-neutral-700 btn-base`}>Back</button>;
           const nextB = <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className={`bg-[#4a6fa5] ${btn} font-bold text-white btn-base`}>{last ? 'Done' : 'Next'}</button>;
           return embedded
-            ? (barEl ? createPortal(<>{closeB}{prevB}{nextB}</>, barEl) : null)
+            ? (barEl ? createPortal(<>{prevB}{nextB}</>, barEl) : null)
             : <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>{prevB}{nextB}</div>;
         })()}
       </div>
@@ -6244,13 +6249,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       <div className={`flex-1 overflow-y-auto ${compact ? 'p-2 space-y-2' : 'p-4 space-y-4'}`}>{pageBody()}</div>
       {(() => {
         const btn = embedded ? 'p-3 sm:p-5 rounded-2xl text-base sm:text-xl' : `${compact ? 'p-3' : 'p-4'} rounded-xl`;
-        const closeB = <button onClick={onClose} data-button="handover-close" className={`${btn} font-bold bg-red-100 text-red-800 btn-base`}>Close</button>;
         const backB = <button onClick={curIdx === 0 ? onClose : goBack} disabled={embedded && curIdx === 0} data-button="handover-back" className={`${btn} font-bold btn-base ${embedded && curIdx === 0 ? 'bg-neutral-100 text-neutral-300' : 'bg-neutral-200 text-neutral-700'}`}>{!embedded && curIdx === 0 ? 'Close' : 'Back'}</button>;
         const nextB = curKey === 'review'
           ? <button onClick={() => { setCard(0); setView('read'); }} data-button="handover-readout" className={`${btn} font-bold btn-base bg-[#4a6fa5] text-white`}>Read out</button>
           : <button onClick={goNext} disabled={!canNext} data-button="handover-next-page" className={`${btn} font-bold btn-base ${canNext ? 'bg-[#4a6fa5] text-white' : 'bg-neutral-200 text-neutral-400'}`}>Next</button>;
         return embedded
-          ? (barEl ? createPortal(<>{closeB}{backB}{nextB}</>, barEl) : null)
+          ? (barEl ? createPortal(<>{backB}{nextB}</>, barEl) : null)
           : <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>{backB}{nextB}</div>;
       })()}
     </div>
