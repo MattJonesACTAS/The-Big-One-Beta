@@ -24,6 +24,7 @@ export interface HandoverFields {
   accessIv: string;         // how many IVs, '0'-'4'; '' = what the Tx log says
   accessIo: string;
   latestRhythm: string;     // Arrest – Timers: the most recent rhythm (that mode doesn't record rhythms, so the crew say it)
+  otherMeds: string;        // Arrest – Timers: other medications given (adrenaline and amiodarone are counted from the timers)
   otherTx: string;          // Arrest – Timers: what else was given or done (that mode doesn't record it), one item per line
   gcsE: string;             // GCS eye, verbal and motor (the total is kept in the vital signs, so the VSS tab and the handover share it)
   gcsV: string;
