@@ -326,7 +326,7 @@ const ModeShortName = ({ mode }: { mode: 'log' | 'minimal' | 'elapsed' }) => {
   return parts.length === 2 ? <><span className="whitespace-nowrap">{parts[0]} +</span> <span className="whitespace-nowrap">{parts[1]}</span></> : <span className="whitespace-nowrap">{MODE_SHORT_NAMES[mode]}</span>;
 };
 const ModeGroupHeading = ({ text }: { text: string }) => (
-  <div data-mode-group-heading className="text-xl font-extrabold text-neutral-900 text-left px-1">{text}</div>
+  <div data-mode-group-heading className="text-xl font-extrabold text-neutral-900 text-center">{text}</div>
 );
 
 // The icon for each App Mode: the notepad for the Tx log, the stopwatch for the
@@ -339,9 +339,9 @@ const ModeIcon = ({ mode, size = 40, dim = false }: { mode: 'log' | 'minimal' | 
   const pair = Math.round(size * 0.85);
   return (
     <div className={`flex items-center gap-1 ${fade}`}>
-      <NotebookPen size={pair} strokeWidth={1.75} className="text-neutral-700" />
-      <Plus size={Math.round(size * 0.25)} strokeWidth={2.5} className="text-neutral-400" />
       <Timer size={pair} strokeWidth={1.75} className="text-emerald-600" />
+      <Plus size={Math.round(size * 0.25)} strokeWidth={2.5} className="text-neutral-400" />
+      <NotebookPen size={pair} strokeWidth={1.75} className="text-neutral-700" />
     </div>
   );
 };
@@ -3844,8 +3844,9 @@ export default function App() {
                           <button
                             onClick={() => {
                               if (selected) {
-                                // Already chosen: tapping again just shrinks or re-opens it
-                                setExpandedMode(expanded ? null : mode);
+                                // Already chosen: tapping it again un-chooses it (Next goes back to disabled)
+                                setTimingMode(null);
+                                setExpandedMode(null);
                               } else {
                                 setTimingMode(mode);
                                 setExpandedMode(mode);
@@ -3871,7 +3872,7 @@ export default function App() {
                                 transition={{ duration: 0.25, ease: 'easeOut' }}
                                 // Tapping anywhere in the opened-up part closes it too, not just
                                 // the title row above - that's where a thumb naturally lands
-                                onClick={() => setExpandedMode(null)}
+                                onClick={() => { setTimingMode(null); setExpandedMode(null); }}
                                 className="overflow-hidden cursor-pointer"
                               >
                                 <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
