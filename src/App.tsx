@@ -5842,30 +5842,31 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   ];
   const beforeWords: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': 'approximately 5 to 10 minutes', '10–15 min': 'approximately 10 to 15 minutes', '15–20 min': 'approximately 15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
   const est = content.arrest.startEstimate;
-  // "Patient arrested at approximately 10:20, before our arrival. It was a witnessed arrest, but the patient received no bystander CPR.
-  // Our suspected cause of arrest is sepsis."
+  // "They arrested at approximately 10:20am. It was a witnessed arrest, but they received no CPR between their arrest and our arrival
+  // 10 to 15 minutes later. We suspect the cause of arrest was sepsis."
+  const bandLater: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': '5 to 10 minutes', '10–15 min': '10 to 15 minutes', '15–20 min': '15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
+  const laterText = (roughly: boolean) => { const bt = bandLater[h.startedBefore]; return bt ? ` ${roughly && /^\d/.test(bt) ? 'roughly ' : ''}${bt} later` : ''; };
   const startSentence: React.ReactNode = !h.arrestStart ? miss('When the arrest started ?')
-    : h.arrestStart === 'Unknown' ? "We don't know when the patient arrested."
-    : h.arrestStart === 'During' ? (est ? `Patient arrested at approximately ${t12(est.clock)}, after our arrival.` : 'Patient arrested after our arrival.')
-    : !h.startedBefore ? <>Patient arrested before our arrival {miss('How long before ?')}</>
-    : h.startedBefore === 'Unknown' ? "Patient arrested before our arrival, we don't know when."
-    : h.startedBefore === 'Over 20 min' ? `Patient arrested more than 20 minutes before our arrival${est ? `, so before approximately ${t12(est.clock)}` : ''}.`
-    : est ? `Patient arrested at approximately ${t12(est.clock)}, before our arrival.`
-    : `Patient arrested ${beforeWords[h.startedBefore]} before our arrival.`;
+    : h.arrestStart === 'Unknown' ? "We don't know when they arrested."
+    : h.arrestStart === 'During' ? (est ? `They arrested at approximately ${t12(est.clock)}, after our arrival.` : 'They arrested after our arrival.')
+    : !h.startedBefore ? <>They arrested before our arrival {miss('How long before ?')}</>
+    : h.startedBefore === 'Unknown' ? "They arrested before our arrival, we don't know when."
+    : h.startedBefore === 'Over 20 min' ? `They arrested more than 20 minutes before our arrival${est ? `, so before approximately ${t12(est.clock)}` : ''}.`
+    : est ? `They arrested at approximately ${t12(est.clock)}.`
+    : `They arrested ${beforeWords[h.startedBefore]} before our arrival.`;
   const wit = h.witnessed, byc = h.bystanderCpr;
   const witText = wit === 'Yes' ? 'a witnessed' : wit === 'No' ? 'an unwitnessed' : '';
-  const bycText = byc === 'Yes' ? 'received bystander CPR' : byc === 'No' ? 'received no bystander CPR' : '';
+  const bycClause = byc === 'Yes' ? `they received bystander CPR until our arrival${laterText(true)}`
+    : byc === 'No' ? `they received no CPR between their arrest and our arrival${laterText(false)}`
+    : byc === 'Unknown' ? "we don't know if they received bystander CPR" : '';
   const witnessSentences: React.ReactNode[] = [];
   if ((wit === 'Yes' || wit === 'No') && (byc === 'Yes' || byc === 'No')) {
     // both known: one sentence, "but" when they pull in opposite directions
-    const conn = (wit === 'Yes') === (byc === 'Yes') ? ', and' : ', but';
-    witnessSentences.push(`It was ${witText} arrest${conn} the patient ${bycText}.`);
+    const conn = (wit === 'Yes') === (byc === 'Yes') ? ' and' : ', but';
+    witnessSentences.push(`It was ${witText} arrest${conn} ${bycClause}.`);
   } else {
     witnessSentences.push(!wit ? miss('Witnessed ?') : wit === 'Unknown' ? "We don't know if it was witnessed." : `It was ${witText} arrest.`);
-    witnessSentences.push(!byc ? miss('Bystander CPR ?') : byc === 'Unknown' ? "We don't know if the patient received bystander CPR." : `The patient ${bycText}.`);
-  }
-  if (byc === 'No' && h.startedBefore) {
-    witnessSentences.push(h.startedBefore === 'Unknown' ? "We don't know how long the patient had no CPR." : `The patient had no CPR for ${beforeWords[h.startedBefore]} before our arrival.`);
+    witnessSentences.push(!byc ? miss('Bystander CPR ?') : `${bycClause.charAt(0).toUpperCase()}${bycClause.slice(1)}.`);
   }
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}.`;
