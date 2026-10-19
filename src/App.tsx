@@ -885,6 +885,13 @@ export default function App() {
   // Closing it (or being interrupted) keeps it, so it reopens where they were; a handover that's begun but never opened comes up on Review.
   const handoverResumeRef = useRef<string | null>(null);
   const closeHandover = () => { setShowHandover(false); };
+  // The Handover button in the top row: opens the handover in the central box (closing any other screen over it), and closes it again
+  const handoverOpen = showHandover && !state.currentOverlay;
+  const toggleHandover = () => {
+    if (handoverOpen) { closeHandover(); return; }
+    setState(p => ({ ...p, currentOverlay: null }));
+    setShowHandover(true);
+  };
   // The weight box on the Handover page: the same change as the Recalibrate menu's weight, logged the same way
   const setHandoverWeight = (w: number) => {
     if (state.patientWeight != null && w !== state.patientWeight) addTreatment(`Weight changed: ${state.patientWeight}kg → ${w}kg`);
@@ -1009,6 +1016,8 @@ export default function App() {
   //    real forced popup, the 0:20 return-to-home and Delay all work normally
   //    for the rest of the tutorial instead of going back to being suppressed.
   const tutorialRhythmDemoActive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx && tutorialNodeIndex <= demoEndIdx;
+  // The Handover button in the top row (not in Timers only, and not in the tutorial)
+  const showHandoverBtn = !tutorialMode && (timingMode === 'log' || timingMode === 'elapsed');
   const tutorialRhythmLive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx;
   // The tick's own popup-at-0:00 and auto-close-at-0:20 are a third thing
   // again. Inside the walkthrough they must NOT run on their own schedule:
@@ -2758,7 +2767,7 @@ export default function App() {
         </div>
       )}
       {/* Top Controls */}
-      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${timingMode === 'log' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+      <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${showHandoverBtn ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {timingMode !== 'log' && timingMode !== 'elapsed' && timingMode !== 'minimal' && (
           <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
             {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
@@ -2769,11 +2778,22 @@ export default function App() {
           onClick={() => (timingMode === 'minimal' ? openTimerRecalibrate() : setShowRecalibrateMenu(true))} 
           disabled={tutorialRhythmDemoActive}
           data-button="recalibrate"
-          className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base"
+          className={`bg-neutral-200 ${showHandoverBtn ? 'px-1 py-2.5 text-[13px]' : 'p-2.5 text-sm'} sm:p-4 sm:text-base rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base whitespace-nowrap`}
         >
           <RefreshCw size={14} className="sm:w-4 sm:h-4" /> Recalibrate
         </button>
-        <button onClick={() => setShowEndWarning(true)} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base" data-button="end-case">
+        {showHandoverBtn && (
+          <button
+            onClick={toggleHandover}
+            disabled={isShockForced || tutorialRhythmDemoActive}
+            data-button="handover"
+            aria-pressed={handoverOpen}
+            className={`bg-neutral-200 px-1 py-2.5 text-[13px] sm:p-4 sm:text-base rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base whitespace-nowrap ${handoverOpen ? 'ring-2 ring-[#4a6fa5]' : ''} ${isShockForced ? 'opacity-50' : ''}`}
+          >
+            <ClipboardList size={14} className="sm:w-4 sm:h-4" /> Handover
+          </button>
+        )}
+        <button onClick={() => setShowEndWarning(true)} className={`bg-neutral-200 ${showHandoverBtn ? 'px-1 py-2.5 text-[13px]' : 'p-2.5 text-sm'} sm:p-4 sm:text-base rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base whitespace-nowrap`} data-button="end-case">
           <XCircle size={14} className="sm:w-4 sm:h-4" /> End Case
         </button>
       </div>
@@ -2854,7 +2874,6 @@ export default function App() {
               <div data-tutorial-section="arrestSummary"><ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary={tutorialMode} /></div>
               <div data-tutorial-section="vitalSigns"><VitalSignsSection vitals={state.vitals} /></div>
               <div data-tutorial-section="pharmaSummary"><PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} /></div>
-              {!tutorialMode && <HandoverButton onClick={() => setShowHandover(true)} />}
               <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
                 <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
@@ -6374,7 +6393,6 @@ function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpda
       <div data-tutorial-section="pharmaSummary">
         <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
       </div>
-      {onHandover && state.timingMode !== 'minimal' && <HandoverButton onClick={onHandover} />}
       <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
         <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
         <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={onDelete} onMove={onMove} onEdit={onEdit} />
