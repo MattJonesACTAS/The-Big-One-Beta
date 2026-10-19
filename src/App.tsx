@@ -5239,7 +5239,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5345,7 +5345,8 @@ type HandoverArrest = {
   latest: string;                                     // latest rhythm, or the last one before ROSC
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
-  askFirstRhythm: boolean;                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
+  askFirstRhythm: boolean;
+  askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
   firstState: 'known' | 'unknown' | 'ask' | 'none';   // the first rhythm: from the log, answered by the crew, or still to ask
   startEstimate: { clock: string, kind: 'at' | 'before' } | null;   // best guess of when the arrest happened, to the nearest 5 minutes
@@ -5453,7 +5454,8 @@ const buildHandoverContent = (
     : (loggedFirst ? 'known' : 'none');
   const firstRhythm = firstState === 'known' ? (askFirst ? h.firstRhythm : loggedFirst) : '';
   const recentPool = state.isROSCMode && lastRoscIdx >= 0 ? withRhythm.filter(x => tx.indexOf(x) < lastRoscIdx) : withRhythm;
-  const recentRhythm = recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '';
+  const askLatest = state.timingMode === 'minimal' && askFirst;
+  const recentRhythm = askLatest ? (h.latestRhythm && h.latestRhythm !== 'Unknown' ? h.latestRhythm : '') : (recentPool.length ? rhythmFromName(recentPool[recentPool.length - 1].name)! : '');
   // Rhythms seen apart from the first and the latest (neither is listed twice)
   const others: string[] = [];
   withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && r !== recentRhythm && !others.includes(r)) others.push(r); });
@@ -5462,7 +5464,7 @@ const buildHandoverContent = (
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, priorChecks, askFirstRhythm: askFirst, firstState, startEstimate,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
@@ -5704,7 +5706,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const toggleUnknownVital = (flag: string, keys: VitalKey[]) => { const on = !unk(flag); setUnk(flag, on); if (on) keys.forEach(k => onVital(k, '')); };
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
-  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'treatment', 'allergies', 'history', 'review'] : ['other'];
+  const timersOnly = state.timingMode === 'minimal';       // Arrest – Timers
+  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'info', 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'history', 'review'] : ['other'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5759,9 +5762,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // R / A / B / C values (the VSS tab's own values)
   // HR, BP and GCS sit with the other vital signs in ROSC and in Tx log only (where there are no R / A / B / C pages to hold them)
-  const showCirc = inRosc || state.timingMode === 'log' || state.timingMode === 'minimal';
+  const showCirc = inRosc || state.timingMode === 'log';
   // Arrest – Timers records no weight, airway, access, other medications or devices: the crew are asked for them (the Tx log can't fill them in)
-  const timersOnly = state.timingMode === 'minimal';
   const othersDone = !timersOnly || !!h.otherTx.trim() || unk('othertx') || content.tx.others.length > 0;
   // GCS as E / V / M. The total is what's kept in the vital signs (the VSS tab shares it); the parts are kept to read out "GCS 14 (E4, V4, M6)".
   const gcsPartsOk = !!(h.gcsE && h.gcsV && h.gcsM) && (parseInt(h.gcsE, 10) + parseInt(h.gcsV, 10) + parseInt(h.gcsM, 10) === parseInt(vit.gcs, 10));
@@ -5790,7 +5792,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], allergies: [], history: [] };
+  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], allergies: [], history: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
@@ -5804,7 +5806,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
   }
   if (timersOnly && !state.patientWeight) missing.id.push('Weight');
-  if (timersOnly && !othersDone) missing.treatment.push('Anything else');
+  if (timersOnly && !othersDone) missing.othertx.push('Other Tx');
   if (!h.arrestStart) missing.what.push('When the patient arrested');
   else if (h.arrestStart === 'Before') {
     if (!h.startedBefore) missing.what.push('How long before');
@@ -5812,6 +5814,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (!h.bystanderCpr) missing.witness.push('Bystander CPR');
   }
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
+  if (content.arrest.askLatestRhythm && !h.latestRhythm) missing.info.push('Latest rhythm');
   if (!h.suspectedCause.trim()) missing.info.push('Suspected cause');
   content.signs.forEach(s => { if (!s.value && !unk(s.key)) missing.vitals.push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
@@ -5820,7 +5823,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
-  const pageTitle: Record<string, string> = { other: 'Handover', treatment: 'Treatment', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', treatment: 'Treatment', othertx: 'Other Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -5900,19 +5903,32 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
   else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
-  if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
-  if (a.firstState === 'unknown') {
-    arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
-    if (a.others.length) arrestNodes.push(<div key="o">Rhythms since then:{sub(a.others.map(rhythmWords))}</div>);
-  }
-  if (a.firstState === 'known' && a.firstRhythm) {
-    if (state.timingMode === 'minimal') arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
-    else if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
-    else if (a.latest && a.latest !== a.firstRhythm) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
-    else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
-  }
-  if (a.latest && (a.firstState !== 'known' || a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
+  if (a.askLatestRhythm) {
+    // Arrest – Timers: both rhythms come from the crew
+    const latestW = a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm';
+    if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
+    if (!h.latestRhythm) arrestNodes.push(<div key="l">{miss('Latest rhythm ?')}</div>);
+    if (a.firstState === 'known' && a.latest && a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Our first rhythm and {latestW} were both {rhythmWords(a.firstRhythm)}.</div>);
+    else {
+      if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
+      if (a.firstState === 'known') arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
+      if (h.latestRhythm === 'Unknown') arrestNodes.push(<div key="l">I can't recall the {latestW}.</div>);
+      if (a.latest) arrestNodes.push(<div key="l">Our {latestW} was {rhythmWords(a.latest)}.</div>);
+    }
+  } else {
+    if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
+    if (a.firstState === 'unknown') {
+      arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
+      if (a.others.length) arrestNodes.push(<div key="o">Rhythms since then:{sub(a.others.map(rhythmWords))}</div>);
+    }
+    if (a.firstState === 'known' && a.firstRhythm) {
+      if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
+      else if (a.latest && a.latest !== a.firstRhythm) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
+      else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
+    }
+    if (a.latest && (a.firstState !== 'known' || a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
 
+  }
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
   const splitAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p') + 1;
   const arrestPage1 = arrestNodes.slice(0, splitAt);
@@ -6154,6 +6170,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       case 'info': return (
         <HandoverPageCard>
           {content.arrest.askFirstRhythm && <HandoverChoice label="What was the first rhythm?" options={HANDOVER_FIRST_RHYTHMS} value={h.firstRhythm} onChange={v => onField('firstRhythm', v)} />}
+          {content.arrest.askLatestRhythm && <HandoverChoice label={inRosc ? 'What was the last rhythm before ROSC?' : 'What was the most recent rhythm?'} options={HANDOVER_FIRST_RHYTHMS} value={h.latestRhythm} onChange={v => onField('latestRhythm', v)} />}
           {text('suspectedCause', 'Suspected cause of arrest?', { prompt: true, footer: (
             <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
               onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
@@ -6220,16 +6237,19 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               ))}
               <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Access" on={unk('access')} onClick={() => { const on = !unk('access'); setUnk('access', on); if (on) { onField('accessIv', ''); onField('accessIo', ''); } }} /></div>
             </HandoverBox>
-            {timersOnly && text('otherTx', "Anything else we've given or done?", { rows: 3, clearUnknown: 'othertx', state: othersDone ? 'done' : 'missing', footer: (
-              <>
-                <p className="text-sm text-neutral-500 text-center mb-2">Arrest – Timers doesn't record airway, other medications or devices. Tell us what else was given or done, one per line, with doses if you know them.</p>
-                {txLog.others.length > 0 && <p className="text-sm text-neutral-500 text-center mb-2">Already logged: {txLog.others.map(o => o.line).join(', ')}</p>}
-                <button data-handover-choice="Anything else: None" aria-pressed={unk('othertx')} onClick={() => { const on = !unk('othertx'); setUnk('othertx', on); if (on) onField('otherTx', ''); }}
-                  className={`w-full ${compact ? 'py-2' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${unk('othertx') ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>None</button>
-              </>) })}
           </HandoverPageCard>
         );
       }
+      case 'othertx': return (
+        <HandoverPageCard>
+          {text('otherTx', 'Any other Tx you want to list?', { rows: 4, clearUnknown: 'othertx', state: othersDone ? 'done' : 'missing', footer: (
+            <>
+              {txLog.others.length > 0 && <p className="text-sm text-neutral-500 text-center mb-2">Already logged: {txLog.others.map(o => o.line).join(', ')}</p>}
+              <button data-handover-choice="Other Tx: None" aria-pressed={unk('othertx')} onClick={() => { const on = !unk('othertx'); setUnk('othertx', on); if (on) onField('otherTx', ''); }}
+                className={`w-full ${compact ? 'py-2' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${unk('othertx') ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>None</button>
+            </>) })}
+        </HandoverPageCard>
+      );
       case 'allergies': return (
         <HandoverPageCard>
           <HandoverChoice label="Allergies?" options={HANDOVER_ALLERGIES} value={h.allergies} onChange={v => onField('allergies', v)} />
