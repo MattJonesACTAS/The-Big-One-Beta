@@ -3828,7 +3828,7 @@ export default function App() {
                       Next buttons stay reachable on a short screen once a card
                       has expanded. */}
                   <div className="flex flex-col gap-3 -mx-2">
-                    {([{ title: 'Cardiac arrest', modes: ['minimal', 'elapsed'] }, { title: 'Something else', modes: ['log'] }] as const).map(group => (
+                    {([{ title: 'Cardiac arrest', modes: ['minimal', 'elapsed'] }, { title: 'General', modes: ['log'] }] as const).map(group => (
                     <div key={group.title} data-mode-group className="rounded-3xl border border-neutral-200 bg-neutral-50 p-2.5 space-y-2">
                     <ModeGroupHeading text={group.title} />
                     {group.modes.map(mode => {
@@ -3879,7 +3879,7 @@ export default function App() {
                               >
                                 <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
                                   <p>{details.summary}</p>
-                                  <p data-mode-card-note>{mode === 'minimal' ? "Can't be changed to another mode once the case starts." : `Can be changed to ${TIMING_MODE_LABELS[mode === 'log' ? 'elapsed' : 'log']} mid case.`}</p>
+                                  <p data-mode-card-note>{mode === 'minimal' ? "Can't be changed to another mode once the case starts." : `Can be changed to '${MODE_SHORT_NAMES[mode === 'log' ? 'elapsed' : 'log']}' mode mid case.`}</p>
                                   <div
                                     className="pt-3 border-t border-emerald-200"
                                     role="img"
