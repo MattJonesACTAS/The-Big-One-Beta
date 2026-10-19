@@ -5852,7 +5852,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text.startsWith('Next rhythm check in ') ? `Next rhythm check is in ${a.rhythm.text.slice('Next rhythm check in '.length)}` : a.rhythm.text}.</div>);
   if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
   else if (a.inRosc && a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
-  arrestNodes.push(<div key="p">Pt has received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), plural(a.disarms, 'disarm', 'disarms')])}</div>);
+  arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), plural(a.disarms, 'disarm', 'disarms')])}</div>);
   if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
   if (a.firstState === 'unknown') {
     arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
@@ -5906,8 +5906,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'airway is unknown' : airwayPhrase ? `airway is ${airwayPhrase}` : airwayVal === 'None' ? 'airway is not yet secured' : <>airway is {ampm('Airway ?')}</>;
   const rateOf = (kind: 'breath' | 'vent') => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
   const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
-    : h.breathing === 'Unknown' ? "we don't know if pt is breathing"
-    : <>{h.breathing === 'Breathing' ? 'pt is spontaneously ventilating' : 'we are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
+    : h.breathing === 'Unknown' ? "we don't know if they are breathing"
+    : <>{h.breathing === 'Breathing' ? 'they are spontaneously ventilating' : 'we are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
   const hrKnown = !!vit.hr, bpKnown = !!(vit.bpSys && vit.bpDia);
   const hrText = `a heart rate of ${vit.hr}`, bpText = `a blood pressure of ${vit.bpSys}/${vit.bpDia}`;
   const circPart: React.ReactNode =
@@ -5993,17 +5993,18 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const gcsBox = (
     <HandoverBox label="GCS" state={(vit.gcs || unk('gcs')) ? 'done' : 'missing'} className="col-span-2">
       <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>GCS</span>
-      {([['E', 'gcsE', 4], ['V', 'gcsV', 5], ['M', 'gcsM', 6]] as const).map(([k, field, n], i) => (
-        <div key={k} className={`flex items-center gap-2 ${i ? (compact ? 'mt-1.5' : 'mt-2') : ''}`}>
-          <span className="w-6 text-sm font-bold text-neutral-700 text-center">{k}</span>
-          <div className="grid flex-1 gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
-            {Array.from({ length: n }, (_, j) => String(j + 1)).map(o => (
+      {/* the scale runs down the page, highest at the top, like a GCS chart */}
+      <div className="grid grid-cols-3 gap-2">
+        {([['E', 'Eye', 'gcsE', 4], ['V', 'Verbal', 'gcsV', 5], ['M', 'Motor', 'gcsM', 6]] as const).map(([k, name, field, n]) => (
+          <div key={k} data-handover-gcs-column={k} className="flex flex-col gap-1.5">
+            <span className="text-center text-sm font-bold text-neutral-700">{name}</span>
+            {Array.from({ length: n }, (_, j) => String(n - j)).map(o => (
               <button key={o} data-handover-choice={`GCS ${k}: ${o}`} aria-pressed={h[field] === o} onClick={() => pickGcs(field, o)}
-                className={`${compact ? 'py-2' : 'py-3'} rounded-lg font-bold text-[15px] border btn-base ${h[field] === o ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>{o}</button>
+                className={`${compact ? 'py-1.5' : 'py-2.5'} rounded-lg font-bold text-[15px] border btn-base ${h[field] === o ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>{o}</button>
             ))}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
       <div data-handover-gcs-total className="text-center text-sm font-semibold text-neutral-600 mt-2">{unk('gcs') ? 'GCS unknown' : gcsText || 'Choose E, V and M'}</div>
       <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="GCS" on={unk('gcs')} onClick={() => { toggleUnknownVital('gcs', ['gcs']); onField('gcsE', ''); onField('gcsV', ''); onField('gcsM', ''); }} /></div>
     </HandoverBox>
