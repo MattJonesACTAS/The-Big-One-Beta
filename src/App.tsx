@@ -5368,15 +5368,23 @@ type HandoverContent = {
   treatment: string[];
 };
 
+// "1 minute and 10 seconds" (spoken, not 1:10)
+const spokenDuration = (total: number): string => {
+  const secsAll = Math.max(0, Math.floor(total));
+  const m = Math.floor(secsAll / 60), sec = secsAll % 60;
+  const mTxt = `${m} minute${m === 1 ? '' : 's'}`, sTxt = `${sec} second${sec === 1 ? '' : 's'}`;
+  return m && sec ? `${mTxt} and ${sTxt}` : m ? mTxt : sTxt;
+};
+
 // When the next rhythm check is due, as on the home screen. Only while the patient is in arrest and the
 // app is running the rhythm check timer (not Tx log only, not ROSC).
 const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean } | null => {
   if (state.timingMode === 'log' || state.isROSCMode || !state.running) return null;
-  if (state.rhythmCheckDelayedAt != null) return { text: 'Rhythm check delayed', urgent: true };
-  if (state.rhythmCheckPaused) return { text: `Rhythm check timer paused at ${formatTime(state.frozenCountdown || 0)}`, urgent: false };
+  if (state.rhythmCheckDelayedAt != null) return { text: 'Our rhythm check is delayed', urgent: true };
+  if (state.rhythmCheckPaused) return { text: `Our rhythm check timer is paused with ${spokenDuration(state.frozenCountdown || 0)} to go`, urgent: false };
   const left = state.rhythmCheckTarget - state.elapsedSeconds;
-  if (state.rhythmCheckOvertime > 0 || left <= 0) return { text: 'Rhythm check due now', urgent: true };
-  return { text: `Next rhythm check in ${formatTime(left)}`, urgent: left <= 30 };
+  if (state.rhythmCheckOvertime > 0 || left <= 0) return { text: 'Our rhythm check is due now', urgent: true };
+  return { text: `Our next rhythm check is in ${spokenDuration(left)}`, urgent: left <= 30 };
 };
 
 const buildHandoverContent = (
@@ -5815,13 +5823,16 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const miss = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   // A sentence broken over lines: commas between the lines and a full stop after the last
   const withCommas = (lines: React.ReactNode[]) => lines.map((n, i) => <div key={i}>{n}{i < lines.length - 1 ? ',' : '.'}</div>);
+  // The clauses run on as one sentence, with no line break after each comma
+  const oneSentence = (parts: React.ReactNode[]) => [<div key="s">{parts.map((n, i) => <React.Fragment key={i}>{n}{i < parts.length - 1 ? ', ' : '.'}</React.Fragment>)}</div>];
+  const lcFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
   const cap = (x: React.ReactNode) => (typeof x === 'string' && x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
   const sub = (items: React.ReactNode[]) => (
-    <div className={`mt-2 ml-5 ${compact ? 'space-y-1 text-[18px]' : 'space-y-2 text-[24px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i}>• {cap(x)}</div>)}</div>
+    <div className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i}>• {cap(x)}</div>)}</div>
   );
   // Medication-style dot points with a smaller line underneath (when it was last given, or started)
   const subWithNote = (items: { text: string, note?: string }[]) => (
-    <div className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[18px]' : 'space-y-3 text-[24px]'} font-semibold text-neutral-700`}>
+    <div className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[22px]' : 'space-y-3 text-[28px]'} font-semibold text-neutral-700`}>
       {items.map((x, i) => <div key={i}>• {cap(x.text)}{x.note && <div className={`ml-4 ${compact ? 'text-[14px]' : 'text-[19px]'} font-medium text-neutral-500`}>{x.note}</div>}</div>)}
     </div>
   );
@@ -5875,10 +5886,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const arrestNodes: React.ReactNode[] = [];
-  if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text.startsWith('Next rhythm check in ') ? `Next rhythm check is in ${a.rhythm.text.slice('Next rhythm check in '.length)}` : a.rhythm.text}.</div>);
-  if (a.durationSeconds != null) arrestNodes.push(<div key="d">{a.inRosc ? `We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.` : `We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
-  else if (a.inRosc && a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
-  arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks'), plural(a.disarms, 'disarm', 'disarms')])}</div>);
+  if (a.inRosc) {
+    if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.`}</div>);
+    else if (a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
+  } else if (a.durationSeconds != null && a.rhythm) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)} and ${lcFirst(a.rhythm.text)}.`}</div>);
+  else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
+  else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
+  arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
   if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
   if (a.firstState === 'unknown') {
     arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
@@ -5942,7 +5956,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     : (bpKnown && unk('hr')) ? `for circulation we have ${bpText}, heart rate unknown`
     : (unk('hr') && unk('bp')) ? "for circulation we don't know the heart rate or blood pressure"
     : <>for circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
-  const roscBlock: React.ReactNode[] = withCommas([<>For our primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart]);
+  const roscBlock: React.ReactNode[] = oneSentence([<>For our primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart]);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
   const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
@@ -5970,7 +5984,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     ...(h.otherInfo.trim() ? [<div key="o">Other information: {lines(h.otherInfo).join(', ')}</div>] : []),
   ];
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
-    { key: 'I', title: 'I – Identification', body: withCommas(idLines) },
+    { key: 'I', title: 'I – Identification', body: oneSentence(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     { key: 'M', title: 'M – What happened', body: whatNodes },
     { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestPage1 },
