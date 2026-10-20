@@ -5346,7 +5346,7 @@ type HandoverArrest = {
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
   roscCount: number;                                  // how many times ROSC was logged in the case
-  episodes: { counts: { rhythm: string, n: number }[], unrecorded: number, endsWithRosc: boolean }[];   // rhythm checks counted by arrest (ROSC ends one arrest and the next begins)
+  episodes: { presenting: string, then: { rhythm: string, n: number }[], endsWithRosc: boolean, rearrest: { laterSeconds: number | null, clock: string } | null }[];   // one per arrest: ROSC ends one and a rearrest begins the next
   askFirstRhythm: boolean;
   askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
@@ -5461,24 +5461,43 @@ const buildHandoverContent = (
   // Rhythms seen apart from the first and the latest (neither is listed twice)
   const others: string[] = [];
   withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && r !== recentRhythm && !others.includes(r)) others.push(r); });
-  // Rhythm checks counted by arrest: the checks between one ROSC and the next. A first check entered at setup with no rhythm takes the answer to "What was the first rhythm?".
+  // One entry per arrest (ROSC ends one, a rearrest begins the next): the presenting rhythm, then the rhythms after it in the order they came.
+  // Checks with no rhythm recorded are left out. A first check entered at setup with no rhythm takes the answer to "What was the first rhythm?".
   const episodes: HandoverArrest['episodes'] = [];
   {
-    let cur = { counts: [] as { rhythm: string, n: number }[], unrecorded: 0 };
+    let seq: string[] = [];
     let firstSeen = false;
-    tx.forEach(x => {
-      if (isRoscName(x.name)) { episodes.push({ ...cur, endsWithRosc: true }); cur = { counts: [], unrecorded: 0 }; return; }
+    let prevRoscAt = -1;
+    const closeEpisode = (endsWithRosc: boolean, upTo: number) => {
+      const i = episodes.length;
+      const presenting = (i === 0 && askFirst) ? (firstState === 'known' ? firstRhythm : '') : (seq[0] || '');
+      const rest = presenting && seq.length ? seq.slice(1) : seq;
+      const thenCounts: { rhythm: string, n: number }[] = [];
+      rest.forEach(r => { const f = thenCounts.find(c => c.rhythm === r); if (f) f.n++; else thenCounts.push({ rhythm: r, n: 1 }); });
+      let rearrest: HandoverArrest['episodes'][number]['rearrest'] = null;
+      if (i > 0 && prevRoscAt >= 0) {
+        const ra = tx.slice(prevRoscAt + 1, upTo + 1).find(x => x.name.startsWith('Rearrest'));
+        const prev = tx[prevRoscAt];
+        rearrest = {
+          laterSeconds: ra && !ra.timeUnknown && !prev.timeUnknown ? Math.max(0, ra.elapsed - prev.elapsed) : null,
+          clock: ra && !ra.timeUnknown ? ra.clock : '',
+        };
+        if (!ra) rearrest = { laterSeconds: null, clock: '' };
+      }
+      episodes.push({ presenting, then: thenCounts, endsWithRosc, rearrest });
+      seq = [];
+    };
+    tx.forEach((x, idx) => {
+      if (isRoscName(x.name)) { closeEpisode(true, idx); prevRoscAt = idx; return; }
       const id = getTreatmentIdentity(x.name);
       if (id !== 'Shock' && id !== 'Disarm') return;
       let r = rhythmFromName(x.name) || '';
       if (!r && !firstSeen && askFirst && firstRhythm) r = firstRhythm;
       firstSeen = true;
-      if (!r) { cur.unrecorded++; return; }
-      const f = cur.counts.find(c => c.rhythm === r);
-      if (f) f.n++; else cur.counts.push({ rhythm: r, n: 1 });
+      if (r) seq.push(r);
     });
-    if (cur.counts.length || cur.unrecorded || !episodes.length) episodes.push({ ...cur, endsWithRosc: false });
-    episodes.forEach(e => e.counts.sort((p, q) => q.n - p.n));
+    const rearrestAfterLast = prevRoscAt >= 0 && tx.slice(prevRoscAt + 1).some(x => x.name.startsWith('Rearrest'));
+    if (seq.length || !episodes.length || rearrestAfterLast) closeEpisode(false, tx.length - 1);
   }
   const rhythm = handoverRhythmStatus(state);
   const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
@@ -5940,27 +5959,31 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     const latestW = a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm';
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
     if (!h.latestRhythm) arrestNodes.push(<div key="l">{miss('Latest rhythm ?')}</div>);
-    if (a.firstState === 'known' && a.latest && a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Our first rhythm and {latestW} were both {rhythmSentence(a.firstRhythm)}.</div>);
+    if (a.firstState === 'known' && a.latest && a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Our presenting rhythm and {latestW} were both {rhythmSentence(a.firstRhythm)}.</div>);
     else {
-      if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
-      if (a.firstState === 'known') arrestNodes.push(<div key="f">First rhythm was {rhythmSentence(a.firstRhythm)}.</div>);
+      if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
+      if (a.firstState === 'known') arrestNodes.push(<div key="f">The presenting rhythm was {rhythmSentence(a.firstRhythm)}.</div>);
       if (h.latestRhythm === 'Unknown') arrestNodes.push(<div key="l">I can't recall the {latestW}.</div>);
       if (a.latest) arrestNodes.push(<div key="l">Our {latestW} was {rhythmSentence(a.latest)}.</div>);
     }
   } else {
-    // Rhythm checks by arrest, when the case has more than one rhythm or more than one arrest
+    // The rhythms in the order they came, one block per arrest: "The presenting rhythm was VF. We then had: 1 x VF, 1 x PEA and then ROSC. They rearrested ... into pulseless VT. ..."
     const useEpisodes = a.episodes.length > 0 && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
-    const epList = (e: HandoverArrest['episodes'][number]) => {
-      const items = [...e.counts.map(c => `${c.n} ${rhythmSentence(c.rhythm)}`), ...(e.unrecorded ? [`${e.unrecorded} with no rhythm recorded`] : [])];
-      return items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : (items[0] || '');
-    };
-    const ordinals = ['First', 'Second', 'Third', 'Fourth', 'Fifth'];
+    const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
-    if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
-    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes ? `First rhythm was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
+    if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
+    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes ? `The presenting rhythm was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
     if (useEpisodes) {
-      if (a.episodes.length === 1) { if (epList(a.episodes[0])) arrestNodes.push(<div key="o">Our rhythm checks have been {epList(a.episodes[0])}.</div>); }
-      else arrestNodes.push(<div key="o">Our rhythm checks, by arrest:{sub(a.episodes.map((e, i) => `${i < 5 ? `${ordinals[i]} arrest` : `Arrest ${i + 1}`}: ${epList(e) || 'no rhythm checks recorded'}${e.endsWithRosc ? ', then ROSC' : ''}`))}</div>);
+      a.episodes.forEach((e, i) => {
+        if (i > 0) {
+          const later = e.rearrest && e.rearrest.laterSeconds != null ? (e.rearrest.laterSeconds < 60 ? ' less than a minute later' : ` ${approxPhrase(e.rearrest.laterSeconds)} later`) : '';
+          const at = e.rearrest && e.rearrest.clock ? ` at ${t12(e.rearrest.clock)}` : '';
+          arrestNodes.push(<div key={`ra${i}`}>{`They rearrested${later}${at}${e.presenting ? ` into ${rhythmSentence(e.presenting)}` : ''}.`}</div>);
+        }
+        const items = e.then.map((c, k) => `${c.n} x ${cap(rhythmWords(c.rhythm))}${e.endsWithRosc && k === e.then.length - 1 ? ' and then ROSC' : ''}`);
+        if (items.length) arrestNodes.push(<div key={`th${i}`}>We then had:{sub(items)}</div>);
+        else if (e.endsWithRosc) arrestNodes.push(<div key={`th${i}`}>We then achieved ROSC.</div>);
+      });
     }
     if (a.latest && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
