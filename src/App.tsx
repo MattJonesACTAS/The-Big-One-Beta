@@ -5345,6 +5345,7 @@ type HandoverArrest = {
   latest: string;                                     // latest rhythm, or the last one before ROSC
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
+  roscCount: number;                                  // how many times ROSC was logged in the case
   askFirstRhythm: boolean;
   askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
@@ -5464,7 +5465,7 @@ const buildHandoverContent = (
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
@@ -5898,12 +5899,19 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const arrestNodes: React.ReactNode[] = [];
+  // ROSC can happen more than once in a long case: "twice", and "most recently at ..."
+  const timesPhrase = (n: number) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
+  const roscAt = a.rosc && a.rosc.clock ? t12(a.rosc.clock) : '';
   if (a.inRosc) {
-    if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.`}</div>);
+    if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
+    else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
+    else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.`}</div>);
     else if (a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
   } else if (a.durationSeconds != null && a.rhythm) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)} and ${lcFirst(a.rhythm.text)}.`}</div>);
   else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
   else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
+  // A rearrest after ROSC: the arrest we're handing over is not the first one
+  if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}, but they have since rearrested.`}</div>);
   arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
