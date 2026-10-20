@@ -5346,6 +5346,7 @@ type HandoverArrest = {
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
   roscCount: number;                                  // how many times ROSC was logged in the case
+  episodes: { counts: { rhythm: string, n: number }[], unrecorded: number, endsWithRosc: boolean }[];   // rhythm checks counted by arrest (ROSC ends one arrest and the next begins)
   askFirstRhythm: boolean;
   askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
@@ -5460,12 +5461,31 @@ const buildHandoverContent = (
   // Rhythms seen apart from the first and the latest (neither is listed twice)
   const others: string[] = [];
   withRhythm.forEach(x => { const r = rhythmFromName(x.name)!; if (r !== firstRhythm && r !== recentRhythm && !others.includes(r)) others.push(r); });
+  // Rhythm checks counted by arrest: the checks between one ROSC and the next. A first check entered at setup with no rhythm takes the answer to "What was the first rhythm?".
+  const episodes: HandoverArrest['episodes'] = [];
+  {
+    let cur = { counts: [] as { rhythm: string, n: number }[], unrecorded: 0 };
+    let firstSeen = false;
+    tx.forEach(x => {
+      if (isRoscName(x.name)) { episodes.push({ ...cur, endsWithRosc: true }); cur = { counts: [], unrecorded: 0 }; return; }
+      const id = getTreatmentIdentity(x.name);
+      if (id !== 'Shock' && id !== 'Disarm') return;
+      let r = rhythmFromName(x.name) || '';
+      if (!r && !firstSeen && askFirst && firstRhythm) r = firstRhythm;
+      firstSeen = true;
+      if (!r) { cur.unrecorded++; return; }
+      const f = cur.counts.find(c => c.rhythm === r);
+      if (f) f.n++; else cur.counts.push({ rhythm: r, n: 1 });
+    });
+    if (cur.counts.length || cur.unrecorded || !episodes.length) episodes.push({ ...cur, endsWithRosc: false });
+    episodes.forEach(e => e.counts.sort((p, q) => q.n - p.n));
+  }
   const rhythm = handoverRhythmStatus(state);
   const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
@@ -5851,6 +5871,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   );
   const noteWords = (n: string) => (n.startsWith('last ') ? `Last given ${n.slice(5)}` : n.charAt(0).toUpperCase() + n.slice(1));
   const rhythmWords = (r: string) => (r === 'pVT' ? 'pulseless VT' : r);
+  // inside a sentence "asystole" has no capital (VF, PEA and pulseless VT are as written)
+  const rhythmSentence = (r: string) => (r === 'Asystole' ? 'asystole' : rhythmWords(r));
   const bandWords: Record<string, string> = { 'Under 2 min': 'under 2 minutes', '2–5 min': '2 to 5 minutes', '5–10 min': '5 to 10 minutes', 'Over 10 min': 'over 10 minutes' };
   const lines = (txt: string) => txt.split('\n').map(l => l.trim()).filter(Boolean);
 
@@ -5918,26 +5940,29 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     const latestW = a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm';
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
     if (!h.latestRhythm) arrestNodes.push(<div key="l">{miss('Latest rhythm ?')}</div>);
-    if (a.firstState === 'known' && a.latest && a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Our first rhythm and {latestW} were both {rhythmWords(a.firstRhythm)}.</div>);
+    if (a.firstState === 'known' && a.latest && a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Our first rhythm and {latestW} were both {rhythmSentence(a.firstRhythm)}.</div>);
     else {
       if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
-      if (a.firstState === 'known') arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
+      if (a.firstState === 'known') arrestNodes.push(<div key="f">First rhythm was {rhythmSentence(a.firstRhythm)}.</div>);
       if (h.latestRhythm === 'Unknown') arrestNodes.push(<div key="l">I can't recall the {latestW}.</div>);
-      if (a.latest) arrestNodes.push(<div key="l">Our {latestW} was {rhythmWords(a.latest)}.</div>);
+      if (a.latest) arrestNodes.push(<div key="l">Our {latestW} was {rhythmSentence(a.latest)}.</div>);
     }
   } else {
+    // Rhythm checks by arrest, when the case has more than one rhythm or more than one arrest
+    const useEpisodes = a.episodes.length > 0 && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
+    const epList = (e: HandoverArrest['episodes'][number]) => {
+      const items = [...e.counts.map(c => `${c.n} ${rhythmSentence(c.rhythm)}`), ...(e.unrecorded ? [`${e.unrecorded} with no rhythm recorded`] : [])];
+      return items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : (items[0] || '');
+    };
+    const ordinals = ['First', 'Second', 'Third', 'Fourth', 'Fifth'];
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
-    if (a.firstState === 'unknown') {
-      arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
-      if (a.others.length) arrestNodes.push(<div key="o">Rhythms since then:{sub(a.others.map(rhythmWords))}</div>);
+    if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the first rhythm.</div>);
+    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes ? `First rhythm was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
+    if (useEpisodes) {
+      if (a.episodes.length === 1) { if (epList(a.episodes[0])) arrestNodes.push(<div key="o">Our rhythm checks have been {epList(a.episodes[0])}.</div>); }
+      else arrestNodes.push(<div key="o">Our rhythm checks, by arrest:{sub(a.episodes.map((e, i) => `${i < 5 ? `${ordinals[i]} arrest` : `Arrest ${i + 1}`}: ${epList(e) || 'no rhythm checks recorded'}${e.endsWithRosc ? ', then ROSC' : ''}`))}</div>);
     }
-    if (a.firstState === 'known' && a.firstRhythm) {
-      if (a.others.length) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}, we then had:{sub(a.others.map(rhythmWords))}</div>);
-      else if (a.latest && a.latest !== a.firstRhythm) arrestNodes.push(<div key="f">First rhythm was {rhythmWords(a.firstRhythm)}.</div>);
-      else if (!a.latest || a.latest === a.firstRhythm) arrestNodes.push(<div key="f">Rhythm has been {rhythmWords(a.firstRhythm)} throughout.</div>);
-    }
-    if (a.latest && (a.firstState !== 'known' || a.latest !== a.firstRhythm || a.others.length)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmWords(a.latest)}.</div>);
-
+    if (a.latest && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
   const splitAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p') + 1;
