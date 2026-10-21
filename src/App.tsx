@@ -5476,7 +5476,8 @@ const buildHandoverContent = (
       rest.forEach(r => { const f = thenCounts.find(c => c.rhythm === r); if (f) f.n++; else thenCounts.push({ rhythm: r, n: 1 }); });
       let rearrest: HandoverArrest['episodes'][number]['rearrest'] = null;
       if (i > 0 && prevRoscAt >= 0) {
-        const ra = tx.slice(prevRoscAt + 1, upTo + 1).find(x => x.name.startsWith('Rearrest'));
+        const after = tx.slice(prevRoscAt + 1, upTo + 1);
+        const ra = after.find(x => x.name.startsWith('Rearrest')) || after.find(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; });
         const prev = tx[prevRoscAt];
         rearrest = {
           laterSeconds: ra && !ra.timeUnknown && !prev.timeUnknown ? Math.max(0, ra.elapsed - prev.elapsed) : null,
@@ -5802,7 +5803,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // R / A / B / C values (the VSS tab's own values)
   // HR, BP and GCS sit with the other vital signs in ROSC and in Tx log only (where there are no R / A / B / C pages to hold them)
-  const showCirc = inRosc || state.timingMode === 'log';
+  const showCirc = inRosc;
   // Arrest – Timers records no weight, airway, access, other medications or devices: the crew are asked for them (the Tx log can't fill them in)
   const othersDone = !timersOnly || !!h.otherTx.trim() || unk('othertx') || content.tx.others.length > 0;       // Additional treatments
   const medsDone = !timersOnly || !!h.otherMeds.trim() || unk('othermeds');
@@ -5985,7 +5986,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         else if (e.endsWithRosc) arrestNodes.push(<div key={`th${i}`}>We then achieved ROSC.</div>);
       });
     }
-    if (a.latest && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
+    // (in ROSC the list already ends "... and then ROSC": when its last rhythm is the last rhythm, saying it again is redundant)
+    const lastEp = a.episodes[a.episodes.length - 1];
+    const listEndsWith = lastEp && lastEp.endsWithRosc ? (lastEp.then.length ? lastEp.then[lastEp.then.length - 1].rhythm : lastEp.presenting) : '';
+    const latestRedundant = useEpisodes && a.inRosc && !!a.latest && a.latest === listEndsWith;
+    if (a.latest && !latestRedundant && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
   const splitAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p') + 1;
@@ -6045,20 +6050,20 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   const gcsPart: React.ReactNode = vit.gcs ? gcsText : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
-  const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'airway is unknown' : airwayPhrase ? `airway is ${airwayPhrase}` : airwayVal === 'None' ? 'airway is not yet secured' : <>airway is {ampm('Airway ?')}</>;
+  const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
   const rateOf = (kind: 'breath' | 'vent') => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
   const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
-    : h.breathing === 'Unknown' ? "we don't know if they are breathing"
-    : <>{h.breathing === 'Breathing' ? 'they are spontaneously ventilating' : 'we are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
+    : h.breathing === 'Unknown' ? "We don't know if they are breathing"
+    : <>{h.breathing === 'Breathing' ? 'They are spontaneously ventilating' : 'We are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
   const hrKnown = !!vit.hr, bpKnown = !!(vit.bpSys && vit.bpDia);
   const hrText = `a heart rate of ${vit.hr}`, bpText = `a blood pressure of ${vit.bpSys}/${vit.bpDia}`;
   const circPart: React.ReactNode =
-    (hrKnown && bpKnown) ? `for circulation we have ${hrText} and ${bpText}`
-    : (hrKnown && unk('bp')) ? `for circulation we have ${hrText}, blood pressure unknown`
-    : (bpKnown && unk('hr')) ? `for circulation we have ${bpText}, heart rate unknown`
-    : (unk('hr') && unk('bp')) ? "for circulation we don't know the heart rate or blood pressure"
-    : <>for circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
-  const roscBlock: React.ReactNode[] = oneSentence([<>For our primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart]);
+    (hrKnown && bpKnown) ? `For circulation we have ${hrText} and ${bpText}`
+    : (hrKnown && unk('bp')) ? `For circulation we have ${hrText}, blood pressure unknown`
+    : (bpKnown && unk('hr')) ? `For circulation we have ${bpText}, heart rate unknown`
+    : (unk('hr') && unk('bp')) ? "For circulation we don't know the heart rate or blood pressure"
+    : <>For circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
+  const roscBlock: React.ReactNode[] = [<>For our primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
   const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
