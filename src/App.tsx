@@ -5239,7 +5239,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5346,6 +5346,7 @@ type HandoverArrest = {
   inRosc: boolean;
   rosc: { clock: string, rearrestSince: boolean } | null;
   roscCount: number;                                  // how many times ROSC was logged in the case
+  ownChecks: number;                                  // shocks and disarms we logged (none means the patient may have had ROSC before we arrived)
   episodes: { presenting: string, then: { rhythm: string, n: number }[], endsWithRosc: boolean, rearrest: { laterSeconds: number | null, clock: string } | null }[];   // one per arrest: ROSC ends one and a rearrest begins the next
   askFirstRhythm: boolean;
   askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
@@ -5505,7 +5506,7 @@ const buildHandoverContent = (
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, ownChecks: tx.filter(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; }).length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
@@ -5723,7 +5724,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     const id = getTreatmentIdentity(x.name);
     return id === 'Shock' || id === 'Disarm' || isRoscName(x.name) || x.name.trim() === NOTHING_LOGGED_NAME || /^Rhythm check( #\d+)?$/.test(x.name.trim());
   });
-  const modeLabel = !isArrestCase ? 'Not arrest' : state.isROSCMode ? 'ROSC' : 'Arrest';
+  const general = !isArrestCase;       // General – Tx log only with nothing that only happens in an arrest logged
+  const modeLabel = general ? 'General' : state.isROSCMode ? 'ROSC' : 'Arrest';
   const frame = embedded ? 'absolute inset-0 z-[45]' : 'fixed inset-0 z-[2000]';
   const [view, setView] = useState<'fill' | 'read'>('fill');
   const [card, setCard] = useState(0);
@@ -5732,9 +5734,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const [rrOtherOpen, setRrOtherOpen] = useState(false);
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
-  const content = buildHandoverContent(state, pharmaSummary, h);
+  const content = buildHandoverContent(general ? { ...state, isROSCMode: true } : state, pharmaSummary, h);
   const vit = state.vitals;
-  const inRosc = state.isROSCMode;
+  const inRosc = state.isROSCMode || general;       // a General handover asks the same primary survey and vital signs as a ROSC one
   // A paediatric age the app already knows is filled in until it's changed
   const ageValue = state.handover?.age ?? content.defaultAge?.value ?? '';
   const ageUnit = state.handover?.ageUnit || content.defaultAge?.unit || 'Years';
@@ -5748,7 +5750,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
   const timersOnly = state.timingMode === 'minimal';       // Arrest – Timers
-  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'history', 'review'] : ['other'];
+  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'history', 'review'] : ['id', 'resp', 'breath', 'events', 'vitals', 'treatment', 'allergies', 'history', 'review'];
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5834,7 +5836,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], allergies: [], history: [] };
+  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], allergies: [], history: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
@@ -5866,11 +5868,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Regular medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
-  const pageTitle: Record<string, string> = { other: 'Handover', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Before our arrival', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
-  const pageForCard: Record<string, string> = { I: 'id', RABC: 'resp', M: 'what', I2: content.arrest.askFirstRhythm ? 'info' : 'what', I3: content.arrest.askFirstRhythm ? 'info' : 'what', S: 'vitals', T: 'treatment', AMBO: 'allergies', END: 'review' };
+  const pageForCard: Record<string, string> = { I: 'id', E: 'events', RABC: 'resp', M: 'what', I2: content.arrest.askFirstRhythm ? 'info' : 'what', I3: content.arrest.askFirstRhythm ? 'info' : 'what', S: 'vitals', T: 'treatment', AMBO: 'allergies', END: 'review' };
 
   // --- Read out: one card at a time, written as the words to say. Anything missing is shown amber with a question mark.
   const miss = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
@@ -5944,7 +5946,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // ROSC can happen more than once in a long case: "twice", and "most recently at ..."
   const timesPhrase = (n: number) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
   const roscAt = a.rosc && a.rosc.clock ? t12(a.rosc.clock) : '';
-  if (a.inRosc) {
+  if (a.inRosc && a.ownChecks === 0 && a.roscCount >= 1) arrestNodes.push(<div key="d">{`ROSC was logged${a.roscCount >= 2 ? ` ${timesPhrase(a.roscCount)}, most recently` : ''}${roscAt ? ` at ${roscAt}` : ''}.`}</div>);
+  else if (a.inRosc) {
     if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.`}</div>);
@@ -5954,7 +5957,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   // A rearrest after ROSC: the arrest we're handing over is not the first one
   if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}, but they have since rearrested.`}</div>);
-  arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
+  if (!(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
     const latestW = a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm';
@@ -5969,7 +5972,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     }
   } else {
     // The rhythms in the order they came, one block per arrest: "The presenting rhythm was VF. We then had: 1 x VF, 1 x PEA and then ROSC. They rearrested ... into pulseless VT. ..."
-    const useEpisodes = a.episodes.length > 0 && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
+    // (with no rhythm recorded at all there's nothing to list: a ROSC alone is already said above)
+    const anyRhythm = a.episodes.some(e => e.then.length > 0 || !!e.presenting);
+    const useEpisodes = anyRhythm && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
     const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
     if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
@@ -5993,7 +5998,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (a.latest && !latestRedundant && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
-  const splitAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p') + 1;
+  const pAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p');
+  const splitAt = pAt >= 0 ? pAt + 1 : arrestNodes.length;
   const arrestPage1 = arrestNodes.slice(0, splitAt);
   const arrestPage2 = arrestNodes.slice(splitAt);
 
@@ -6090,7 +6096,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     <div key="s">{leadStr}{leadStr && tailStr ? ', ' : ''}{tailStr && (blankUnknown ? <span className="text-amber-500" data-handover-missing-frag={tailStr}>{tailStr}</span> : tailStr)}.</div>,
     ...(h.otherInfo.trim() ? [<div key="o">Other information: {lines(h.otherInfo).join(', ')}</div>] : []),
   ];
-  const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
+  const arrestCards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: oneSentence(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     { key: 'M', title: 'M – What happened', body: whatNodes },
@@ -6101,6 +6107,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     { key: 'AMBO', title: 'AMBO', body: ambo },
     { key: 'END', title: 'Finish', body: <div className={`text-center ${compact ? 'text-[34px] pt-10' : 'text-[44px] pt-20'}`}>Any questions?</div> },
   ];
+
+  // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
+  const eventLines = lines(h.pertinentEvents);
+  const cards = general
+    ? [arrestCards.find(c => c.key === 'I')!, ...(eventLines.length ? [{ key: 'E', title: 'M – Before our arrival', body: eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) }] : []), ...arrestCards.filter(c => ['RABC', 'S', 'T', 'AMBO', 'END'].includes(c.key))]
+    : arrestCards;
 
   if (view === 'read') {
     const c = cards[card];
@@ -6173,6 +6185,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
             If this is an arrest, log a rhythm check (or ROSC) and the arrest handover appears here.
           </div>
         </div>
+      );
+      case 'events': return (
+        <HandoverPageCard>
+          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none' })}
+        </HandoverPageCard>
       );
       case 'id': return (
         <HandoverPageCard>
