@@ -893,9 +893,10 @@ export default function App() {
     setShowHandover(true);
   };
   // The weight box on the Handover page: the same change as the Recalibrate menu's weight, logged the same way
-  const setHandoverWeight = (w: number) => {
+  const setHandoverWeight = (w: number, type: 'adult' | 'paed', ageLabel: string | null) => {
     if (state.patientWeight != null && w !== state.patientWeight) addTreatment(`Weight changed: ${state.patientWeight}kg → ${w}kg`);
-    setState(prev => ({ ...prev, patientWeight: w, patientAge: null }));
+    // (Arrest – Timers keeps no patient type, so only the weight is saved there)
+    setState(prev => ({ ...prev, patientWeight: w, patientType: prev.timingMode === 'minimal' ? prev.patientType : type, patientAge: prev.timingMode === 'minimal' ? null : ageLabel }));
   };   // which Handover view is open (the Read out view isn't closed at 0:20)
   const [previousCases, setPreviousCases] = useState<AppState[]>(() => loadPreviousCases());
   const [showPreviousCasesList, setShowPreviousCasesList] = useState(false);
@@ -5682,15 +5683,56 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
 
 // The patient's weight: filled in from the case, editable. The case's weight changes when the crew leave the box with a valid number
 // (not on every key, so typing 85 doesn't log a change to 8 first). A blank or invalid entry goes back to the case's weight.
-function HandoverWeight({ current, onCommit }: { current: number | null | undefined, onCommit: (w: number) => void }) {
-  const [text, setText] = useState(current != null ? String(current) : '');
-  useEffect(() => { setText(current != null ? String(current) : ''); }, [current]);
-  const commit = () => {
-    const w = parseFloat(text);
-    if (!isNaN(w) && w > 0) { if (w !== current) onCommit(w); setText(String(w)); }
-    else setText(current != null ? String(current) : '');
-  };
-  return <HandoverNumber label="Weight" value={text} onChange={setText} unit="kg" onBlur={commit} />;
+// The weights the setup screens already offer
+const ADULT_WEIGHTS = [35, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200];
+const PAED_WEIGHTS: [string, number][] = [['Newborn', 3], ['3 months', 5], ['6 months', 7], ['12 months', 11], ['2 years', 13], ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21], ['7 years', 23], ['8 years', 25], ['9 years', 27], ['10 years', 30], ['11 years', 33]];
+
+// Weight on the Identification page: tap Adult or Paediatric, then pick from the list (no keyboard unless it's a custom paediatric weight)
+function HandoverWeightPicker({ weight, type, ageLabel, onCommit }: { weight: number | null | undefined, type: 'adult' | 'paed' | null | undefined, ageLabel: string | null | undefined, onCommit: (w: number, type: 'adult' | 'paed', ageLabel: string | null) => void }) {
+  const compact = React.useContext(HandoverDensity);
+  const known: 'adult' | 'paed' | null = type ?? (weight != null ? (weight >= 35 ? 'adult' : 'paed') : null);
+  const [mode, setMode] = useState<'adult' | 'paed' | null>(known);
+  useEffect(() => { setMode(known); }, [known]);
+  const [custom, setCustom] = useState(known === 'paed' && weight != null && !ageLabel);
+  const [customText, setCustomText] = useState(known === 'paed' && weight != null && !ageLabel ? String(weight) : '');
+  const ageOption = ageLabel ? PAED_WEIGHTS.find(([l]) => l === ageLabel) : undefined;
+  const selCls = `w-full bg-white border border-neutral-300 rounded-lg ${compact ? 'px-3 py-2' : 'px-3 py-3'} text-[16px] font-semibold text-neutral-800`;
+  const tcls = (on: boolean) => `${compact ? 'py-2' : 'py-3'} rounded-lg font-bold text-[15px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
+  const adultVal = mode === 'adult' && weight != null ? String(weight) : '';
+  const commitCustom = () => { const w = parseFloat(customText); if (!isNaN(w) && w > 0) { if (w !== weight || ageLabel) onCommit(w, 'paed', null); } };
+  return (
+    <HandoverBox label="Weight" state={weight != null ? 'done' : 'missing'}>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Weight</span>
+      <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+        {(['adult', 'paed'] as const).map(t => (
+          <button key={t} data-handover-choice={`Weight: ${t === 'adult' ? 'Adult' : 'Paediatric'}`} aria-pressed={mode === t} onClick={() => { setMode(t); if (t === 'adult') setCustom(false); }} className={tcls(mode === t)}>{t === 'adult' ? 'Adult' : 'Paediatric'}</button>
+        ))}
+      </div>
+      {mode === 'adult' && (
+        <select data-handover-weight-select aria-label="Adult weight" className={`${selCls} ${compact ? 'mt-2' : 'mt-3'}`} value={adultVal} onChange={e => { const w = parseFloat(e.target.value); if (w > 0) onCommit(w, 'adult', null); }}>
+          <option value="">Select weight</option>
+          {weight != null && mode === 'adult' && !ADULT_WEIGHTS.includes(weight) && <option value={String(weight)}>{weight}kg</option>}
+          {ADULT_WEIGHTS.map(w => <option key={w} value={String(w)}>{w}kg</option>)}
+        </select>
+      )}
+      {mode === 'paed' && (
+        <div className={compact ? 'mt-2' : 'mt-3'}>
+          <select data-handover-weight-select aria-label="Paediatric weight by age" className={selCls} value={ageOption ? String(ageOption[1]) : ''} onChange={e => { const w = parseFloat(e.target.value); const o = PAED_WEIGHTS.find(([, ww]) => ww === w); if (o) { setCustom(false); onCommit(o[1], 'paed', o[0]); } }}>
+            <option value="">Choose age</option>
+            {PAED_WEIGHTS.map(([l, w]) => <option key={l} value={String(w)}>{l} ({w}kg)</option>)}
+          </select>
+          {custom ? (
+            <div className={`relative ${compact ? 'mt-2' : 'mt-3'}`}>
+              <input data-handover-weight-custom type="number" inputMode="decimal" aria-label="Custom weight" placeholder="Custom weight" value={customText} onChange={e => setCustomText(e.target.value)} onBlur={commitCustom} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} className={`${selCls} pr-10`} />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+            </div>
+          ) : (
+            <button data-handover-choice="Weight: Custom" onClick={() => { setCustomText(''); setCustom(true); }} className={`w-full ${compact ? 'mt-2' : 'mt-3'} ${tcls(false)} !bg-white !text-[#4a6fa5]`}>Custom weight</button>
+          )}
+        </div>
+      )}
+    </HandoverBox>
+  );
 }
 
 // A strip that keeps the next rhythm check in view (arrest only)
@@ -5709,7 +5751,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   embedded?: boolean,
   onFinish?: () => void,
   onView?: (v: 'fill' | 'read') => void,
-  onWeight?: (w: number) => void,
+  onWeight?: (w: number, type: 'adult' | 'paed', ageLabel: string | null) => void,
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   onField: (key: keyof HandoverFields, value: string) => void,
@@ -5750,7 +5792,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
   const timersOnly = state.timingMode === 'minimal';       // Arrest – Timers
-  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'history', 'review'] : ['id', 'resp', 'breath', 'events', 'vitals', 'treatment', 'allergies', 'history', 'review'];
+  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'history', 'review'] : ['id', 'events', 'resp', 'breath', 'vitals', 'treatment', 'allergies', 'history', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5836,7 +5878,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], allergies: [], history: [] };
+  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], history: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
@@ -5861,14 +5903,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   if (content.arrest.askLatestRhythm && !h.latestRhythm) missing.info.push('Latest rhythm');
   if (!h.suspectedCause.trim()) (h.arrestStart === 'Before' ? missing.witness : missing.what).push('Suspected cause');
-  content.signs.forEach(s => { if (!s.value && !unk(s.key)) missing.vitals.push(s.label); });
+  content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && s.key === 'etco2' ? missing.breath : missing.vitals).push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.history.push('Medical history');
   if (!h.medications.trim() && !unk('meds')) missing.history.push('Regular medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Before our arrival', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Before our arrival', details: 'Additional pertinent details', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -5938,7 +5980,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   }
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}.`;
-  const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>);
+  const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence, ...lines(h.pertinentEvents).map(l => (/[.!?]$/.test(l) ? l : `${l}.`))].map((n, i) => <div key={i}>{n}</div>);
 
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -6069,7 +6111,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     : (bpKnown && unk('hr')) ? `For circulation we have ${bpText}, heart rate unknown`
     : (unk('hr') && unk('bp')) ? "For circulation we don't know the heart rate or blood pressure"
     : <>For circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
-  const roscBlock: React.ReactNode[] = [<>For our primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
+  const roscBlock: React.ReactNode[] = [<>For our primary survey{general ? ' now' : ''} we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
   const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
@@ -6111,7 +6153,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
   const eventLines = lines(h.pertinentEvents);
   const cards = general
-    ? [arrestCards.find(c => c.key === 'I')!, ...(eventLines.length ? [{ key: 'E', title: 'M – Before our arrival', body: eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) }] : []), ...arrestCards.filter(c => ['RABC', 'S', 'T', 'AMBO', 'END'].includes(c.key))]
+    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, ...(eventLines.length ? [{ key: 'E', title: 'M – Before our arrival', body: eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) }] : []), ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
   if (view === 'read') {
@@ -6154,6 +6196,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
               className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>) });
 
+  // In a ROSC or General handover EtCO₂ is asked at the bottom of the Breathing page (so Vital Signs fits); it is still read out with the vital signs
+  const vsSigns = inRosc ? content.signs.filter(sg => sg.key !== 'etco2') : content.signs;
+
   const gcsBox = (
     <HandoverBox label="GCS" state={(vit.gcs || unk('gcs')) ? 'done' : 'missing'} className="col-span-2">
       <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>GCS</span>
@@ -6186,9 +6231,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           </div>
         </div>
       );
+      case 'details': return (
+        <HandoverPageCard>
+          {text('pertinentEvents', 'Additional pertinent details', { rows: 5, state: 'none', placeholder: 'e.g. Chest pain earlier today\nFamily at scene, DNR status unknown' })}
+        </HandoverPageCard>
+      );
       case 'events': return (
         <HandoverPageCard>
-          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none' })}
+          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Collapsed at a shopping centre\nBystander CPR and one AED shock, ROSC before we arrived' })}
         </HandoverPageCard>
       );
       case 'id': return (
@@ -6214,7 +6264,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
           {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
           {onWeight
-            ? <HandoverWeight current={state.patientWeight} onCommit={onWeight} />
+            ? <HandoverWeightPicker weight={state.patientWeight} type={state.patientType} ageLabel={state.patientAge} onCommit={onWeight} />
             : <HandoverBox label="Weight" state="none"><div className="text-[16px] text-neutral-800"><span className={`${smallLabel} mr-2`}>Weight</span>{content.weight}</div></HandoverBox>}
         </HandoverPageCard>
       );
@@ -6234,6 +6284,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               {rrChoice === 'Other' && !unk('rr') && <HandoverNumber label="Rate (other)" value={vit.rr} onChange={v => setVitalValue('rr', 'rr', v)} unit="/min" />}
             </>
           )}
+          <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+            {content.signs.filter(sg => sg.key === 'etco2').map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+          </div>
         </HandoverPageCard>
       );
       case 'what': return (
@@ -6267,7 +6320,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         <HandoverPageCard>
           <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
             {showCirc && <HandoverNumber narrow label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />}
-            {content.signs.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {vsSigns.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
             {showCirc && (
               <HandoverBox label="BP" state={((vit.bpSys && vit.bpDia) || unk('bp')) ? 'done' : 'missing'} className="col-span-2">
                 <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>BP</span>
@@ -6279,7 +6332,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               </HandoverBox>
             )}
             {showCirc && !inRosc && gcsBox}
-            {content.signs.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {vsSigns.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>
         </HandoverPageCard>
       );
@@ -6294,25 +6347,27 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         const COUNTS = ['0', '1', '2', '3'];
         return (
           <HandoverPageCard>
-            <HandoverBox label="Airway" state={airwayDone ? 'done' : 'missing'}>
-              <span className={head}>Airway</span>
+            <HandoverBox label="Airway" state={airwayVal ? 'done' : 'missing'}>
+              <span className={head}>Confirm airway</span>
               <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
                 {['ETT', 'LMA', 'FONA', 'OPA', 'NPA', 'None'].map(o => (
                   <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => { if (airwayHasDevice && o === 'None') onField('airwayIgt', ''); pick(airwayVal, 'airway', o, 'airway'); }} className={bcls(airwayVal === o)}>{o}</button>
                 ))}
               </div>
-              {airwayHasDevice && (
-                <div>
-                  <span className={sub2}>IGT?</span>
-                  <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+              <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) { onField('airway', ''); onField('airwayIgt', ''); } }} /></div>
+            </HandoverBox>
+            {airwayHasDevice && (
+              <HandoverBox label="IGT?" state={igtVal ? 'done' : 'missing'}>
+                <div className="flex items-center gap-3">
+                  <span className="text-[15px] font-extrabold uppercase tracking-wide text-neutral-700 w-14 flex-shrink-0">IGT?</span>
+                  <div className={`grid grid-cols-2 flex-1 ${compact ? 'gap-2' : 'gap-3'}`}>
                     {['Yes', 'No'].map(o => <button key={o} data-handover-choice={`IGT?: ${o}`} aria-pressed={igtVal === o} onClick={() => pick(igtVal, 'airwayIgt', o, 'airway')} className={bcls(igtVal === o)}>{o}</button>)}
                   </div>
                 </div>
-              )}
-              <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) { onField('airway', ''); onField('airwayIgt', ''); } }} /></div>
-            </HandoverBox>
+              </HandoverBox>
+            )}
             <HandoverBox label="Access" state={accessDone ? 'done' : 'missing'}>
-              <span className={head}>Patent access points</span>
+              <span className={head}>Confirm access points</span>
               {([['IV', ivVal, 'accessIv'], ['IO', ioVal, 'accessIo']] as const).map(([lab, val, field], i) => (
                 <div key={lab} className={i ? (compact ? 'mt-2' : 'mt-3') : ''}>
                   <span className={`${HANDOVER_HEADING_PLAIN} !mb-1`}>{lab}</span>
