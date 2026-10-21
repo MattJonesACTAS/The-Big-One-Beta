@@ -5239,7 +5239,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5813,7 +5813,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       <div className="relative" data-handover-textfield>
         {extra?.rows
           ? <textarea aria-label={label} placeholder={extra?.placeholder ?? "Type here…"} value={h[key]} onKeyDown={e => closeKeyboardOnDoubleEnter(e, h[key], v => onField(key, v))} onChange={e => { let v = e.target.value; const done = /\n\n$/.test(v); if (done) v = v.replace(/\n+$/, ''); onField(key, v); if (extra.clearUnknown && v && unk(extra.clearUnknown)) setUnk(extra.clearUnknown, false); if (done) e.target.blur(); }} rows={extra.rows} className={textFieldClass} />
-          : <input aria-label={label} placeholder="Type here…" enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
+          : <input aria-label={label} placeholder={extra?.placeholder ?? "Type here…"} enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} value={h[key]} onChange={e => onField(key, e.target.value)} autoCapitalize={extra?.words ? 'words' : undefined} autoComplete="off"
               className={`${textFieldClass} ${extra?.prompt && !h[key].trim() ? '!border-[#4a6fa5]' : ''}`} />}
         <Pencil size={16} className={`absolute right-3 text-neutral-400 pointer-events-none ${extra?.rows ? 'top-3' : 'top-1/2 -translate-y-1/2'}`} />
       </div>
@@ -5857,6 +5857,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
   const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
   if (!h.gender) missing.id.push('Gender');
+  if (general && !h.pertinentEvents.trim()) missing.events.push('What happened');
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (timersOnly && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && !(state.patientWeight && h.weightFor === `${ageValue}|${ageUnit}`)) missing.id.push('Weight');
   if (inRosc) {
@@ -5879,7 +5880,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   }
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   if (content.arrest.askLatestRhythm && !h.latestRhythm) missing.info.push('Latest rhythm');
-  if (!h.suspectedCause.trim()) (h.arrestStart === 'Before' ? missing.witness : missing.what).push('Suspected cause');
+  if (!h.suspectedCause.trim()) missing.details.push('Suspected cause');
   content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && s.key === 'etco2' ? missing.breath : missing.vitals).push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
@@ -5887,7 +5888,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!h.medications.trim() && !unk('meds')) missing.otherinfo.push('Regular medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Before our arrival', details: 'Before our arrival', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'What happened', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -5955,9 +5956,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     witnessSentences.push(!wit ? miss('Witnessed ?') : wit === 'Unknown' ? "We don't know if it was witnessed." : `It was ${witText} arrest.`);
     witnessSentences.push(!byc ? miss('Bystander CPR ?') : `${bycClause.charAt(0).toUpperCase()}${bycClause.slice(1)}.`);
   }
+  // "...because patient clutched their chest before collapsing" (the reason, when the crew wrote one)
+  const whyText = (() => { const t = lines(h.causeWhy).join(', ').replace(/^because\s+/i, '').replace(/[.!?]+$/, ''); return t && /^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t; })();
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
-    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}.`;
-  const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence, ...lines(h.pertinentEvents).map(l => (/[.!?]$/.test(l) ? l : `${l}.`))].map((n, i) => <div key={i}>{n}</div>);
+    : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}${whyText ? ` because ${whyText}` : ''}.`;
+  const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>);
 
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -6032,7 +6035,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     vit.gcs ? { node: gcsText, known: true } : unk('gcs') ? { node: 'GCS unknown', known: true } : { node: miss('GCS ?'), known: false },
   ];
   const vitalsNodes: React.ReactNode[] = [
-    <div key="v">{recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have recorded:' : 'No vital signs recorded:'}
+    <div key="v">{recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:'}
       {sub([...circLines.map(l => l.node), ...recorded.map(s => `${s.label} of ${s.value}${s.unit === '%' ? '%' : ''}`), ...unknownSigns.map(s => `${s.label} unknown`), ...notRecorded.map(s => <span key={s.label} className="text-amber-500" data-handover-missing-frag={`${s.label} ?`}>{s.label} ?</span>)])}
     </div>,
   ];
@@ -6088,7 +6091,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     : (bpKnown && unk('hr')) ? `For circulation we have ${bpText}, heart rate unknown`
     : (unk('hr') && unk('bp')) ? "For circulation we don't know the heart rate or blood pressure"
     : <>For circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
-  const roscBlock: React.ReactNode[] = [<>For our primary survey{general ? ' now' : ''} we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
+  const roscBlock: React.ReactNode[] = [<>For a quick primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
   const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
@@ -6130,7 +6133,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
   const eventLines = lines(h.pertinentEvents);
   const cards = general
-    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, ...(eventLines.length ? [{ key: 'E', title: 'M – Before our arrival', body: eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) }] : []), ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
+    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, { key: 'E', title: 'M – What happened', body: eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('What happened ?')}</div> }, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
   if (view === 'read') {
@@ -6168,13 +6171,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const goNext = () => { if (canNext && curIdx < pageKeys.length - 1) setPageKey(pageKeys[curIdx + 1]); };
   const goBack = () => { if (curIdx > 0) setPageKey(pageKeys[curIdx - 1]); };
   // The suspected cause of arrest: on the Witnessed and CPR page when there is one (the patient had arrested before we arrived), otherwise on What happened
-  const causeBox = text('suspectedCause', 'Suspected cause of arrest?', { prompt: true, footer: (
+  const causeBox = text('suspectedCause', 'Suspected cause of arrest?', { prompt: true, placeholder: 'Cardiac', footer: (
             <button data-handover-choice="Suspected cause: Unknown" aria-pressed={h.suspectedCause.trim().toLowerCase() === 'unknown'}
               onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
               className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>) });
 
   // In a ROSC or General handover EtCO₂ is asked at the bottom of the Breathing page (so Vital Signs fits); it is still read out with the vital signs
   const vsSigns = inRosc ? content.signs.filter(sg => sg.key !== 'etco2') : content.signs;
+
+  const whyBox = text('causeWhy', 'Why do you think that was the cause?', { rows: 3, state: 'none', placeholder: 'patient clutched their chest before collapsing.' });
 
   const gcsBox = (
     <HandoverBox label="GCS" state={(vit.gcs || unk('gcs')) ? 'done' : 'missing'} className="col-span-2">
@@ -6210,12 +6215,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       );
       case 'details': return (
         <HandoverPageCard>
-          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Patient clutched their chest before collapsing...' })}
+          {causeBox}
+          <div className="text-center text-[20px] font-bold italic text-neutral-500 -my-0.5" data-handover-because>because...</div>
+          {whyBox}
         </HandoverPageCard>
       );
       case 'events': return (
         <HandoverPageCard>
-          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Patient has taken a polypharmacy OD...' })}
+          {text('pertinentEvents', 'Briefly explain what happened', { rows: 5, state: h.pertinentEvents.trim() ? 'done' : 'missing', placeholder: 'e.g. Patient has taken a polypharmacy OD...' })}
         </HandoverPageCard>
       );
       case 'id': return (
@@ -6225,7 +6232,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           <HandoverBox label="Age" state={(ageValue || h.ageUnknown === 'Yes') ? 'done' : 'missing'}>
             <span className={labelClass}>Age</span>
             <select aria-label="Age" data-handover-age-select value={h.ageUnknown === 'Yes' || !ageValue ? '' : `${ageValue}|${ageUnit}`}
-              onChange={e => { const [n, u] = e.target.value.split('|'); if (!n) return; onField('age', n); onField('ageUnit', u); if (h.ageUnknown) onField('ageUnknown', ''); }}
+              onChange={e => { const [n, u] = e.target.value.split('|'); if (!n) return; onField('age', n); onField('ageUnit', u); if (h.ageUnknown) onField('ageUnknown', '');
+                if (!timersOnly && onWeight) {
+                  if (isPaedAge(n, u)) { const sg = suggestedPaedWeight(n, u); if (state.patientType !== 'paed' || state.patientAge !== sg[0]) onWeight(sg[1], 'paed', sg[0]); }
+                  else if (state.patientType === 'paed') onWeight(80, 'adult', null);
+                } }}
               className={`w-full bg-white border ${ageValue || h.ageUnknown === 'Yes' ? 'border-neutral-300' : 'border-[#4a6fa5]'} rounded-lg px-3 ${compact ? 'py-2.5' : 'py-3.5'} text-[16px] font-semibold text-neutral-800`}>
               <option value="">Select age</option>
               <option value="0|Months">Newborn</option>
@@ -6277,14 +6288,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               Estimated time of arrest: {content.arrest.startEstimate.kind === 'before' ? 'before ' : ''}{t12(content.arrest.startEstimate.clock)}
             </div>
           )}
-          {(h.arrestStart === 'During' || h.arrestStart === 'Unknown') && causeBox}
         </HandoverPageCard>
       );
       case 'witness': return (
         <HandoverPageCard>
           <HandoverChoice label="Witnessed?" options={HANDOVER_YNU} value={h.witnessed} onChange={v => onField('witnessed', v)} />
           <HandoverChoice label="Bystander CPR?" options={HANDOVER_YNU} value={h.bystanderCpr} onChange={v => onField('bystanderCpr', v)} />
-          {causeBox}
         </HandoverPageCard>
       );
       case 'info': return (

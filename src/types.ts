@@ -25,6 +25,7 @@ export interface HandoverFields {
   accessIo: string;
   latestRhythm: string;     // Arrest – Timers: the most recent rhythm (that mode doesn't record rhythms, so the crew say it)
   weightFor: string;        // Arrest – Timers (which records no weight): the age ('6|Years') a child's weight was confirmed for. Only a child's weight is read out.
+  causeWhy: string;         // Arrest / ROSC: why the crew think that was the cause (optional, read out after the cause)
   pertinentEvents: string;  // General handover: what happened before we arrived (free text, read second)
   otherMeds: string;        // Arrest – Timers: other medications given (adrenaline and amiodarone are counted from the timers)
   otherTx: string;          // Arrest – Timers: what else was given or done (that mode doesn't record it), one item per line
