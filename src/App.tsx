@@ -5792,7 +5792,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
   const timersOnly = state.timingMode === 'minimal';       // Arrest – Timers
-  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'history', 'review'] : ['id', 'events', 'resp', 'breath', 'vitals', 'treatment', 'allergies', 'history', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
+  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'otherinfo', 'review'] : ['id', 'events', 'resp', 'breath', 'vitals', 'treatment', 'allergies', 'otherinfo', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -5878,7 +5878,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
-  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], history: [] };
+  const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
   if (inRosc) {
@@ -5906,11 +5906,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && s.key === 'etco2' ? missing.breath : missing.vitals).push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
-  if (!h.background.trim() && !unk('history')) missing.history.push('Medical history');
-  if (!h.medications.trim() && !unk('meds')) missing.history.push('Regular medications');
+  if (!h.background.trim() && !unk('history')) missing.allergies.push('Medical history');
+  if (!h.medications.trim() && !unk('meds')) missing.otherinfo.push('Regular medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Before our arrival', details: 'Before our arrival', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies', history: 'History and medications', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Before our arrival', details: 'Before our arrival', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -6245,16 +6245,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         <HandoverPageCard>
           <HandoverBox label="Age" state={(ageValue || h.ageUnknown === 'Yes') ? 'done' : 'missing'}>
             <span className={labelClass}>Age</span>
-            <div className="grid grid-cols-2 gap-3">
-              <input aria-label="Age" inputMode="numeric" enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} placeholder="Type here…" pattern="[0-9]*" value={h.ageUnknown === 'Yes' ? '' : ageValue} onChange={e => { onField('age', e.target.value.replace(/\D/g, '').slice(0, 3)); if (h.ageUnknown) onField('ageUnknown', ''); }} autoComplete="off"
-                className={`${inputClass} text-center ${ageValue || h.ageUnknown === 'Yes' ? '' : '!bg-white !border-[#4a6fa5]'}`} />
-              <div className="grid grid-cols-2 gap-3">
-                {['Years', 'Months'].map(u => (
-                  <button key={u} data-handover-choice={`Age unit: ${u}`} aria-pressed={ageUnit === u} onClick={() => onField('ageUnit', u)}
-                    className={`rounded-lg font-bold text-[15px] border btn-base ${ageUnit === u ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>{u}</button>
-                ))}
-              </div>
-            </div>
+            <select aria-label="Age" data-handover-age-select value={h.ageUnknown === 'Yes' || !ageValue ? '' : `${ageValue}|${ageUnit}`}
+              onChange={e => { const [n, u] = e.target.value.split('|'); if (!n) return; onField('age', n); onField('ageUnit', u); if (h.ageUnknown) onField('ageUnknown', ''); }}
+              className={`w-full bg-white border ${ageValue || h.ageUnknown === 'Yes' ? 'border-neutral-300' : 'border-[#4a6fa5]'} rounded-lg px-3 ${compact ? 'py-2.5' : 'py-3.5'} text-[16px] font-semibold text-neutral-800`}>
+              <option value="">Select age</option>
+              <option value="0|Months">Newborn</option>
+              {Array.from({ length: 23 }, (_, i) => i + 1).map(n => <option key={`m${n}`} value={`${n}|Months`}>{n} {n === 1 ? 'month' : 'months'}</option>)}
+              {Array.from({ length: 110 }, (_, i) => i + 1).map(n => <option key={`y${n}`} value={`${n}|Years`}>{n} {n === 1 ? 'year' : 'years'}</option>)}
+              {ageValue && !((ageUnit === 'Months' && +ageValue <= 23) || (ageUnit === 'Years' && +ageValue >= 1 && +ageValue <= 110)) && <option value={`${ageValue}|${ageUnit}`}>{ageValue} {ageUnit.toLowerCase()}</option>}
+            </select>
             <div className="mt-3">
               <button data-handover-choice="Age: Unknown" aria-pressed={h.ageUnknown === 'Yes'}
                 onClick={() => { if (h.ageUnknown === 'Yes') onField('ageUnknown', ''); else { onField('ageUnknown', 'Yes'); onField('age', ''); } }}
@@ -6396,15 +6395,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         <HandoverPageCard>
           <HandoverChoice label="Allergies?" options={HANDOVER_ALLERGIES} value={h.allergies} onChange={v => onField('allergies', v)} />
           {h.allergies === 'Yes' && text('allergiesOther', 'What are they allergic to?', { state: h.allergiesOther.trim() ? 'done' : 'missing' })}
-        </HandoverPageCard>
-      );
-      case 'history': return (
-        <HandoverPageCard>
           {text('background', 'Medical history', { rows: 2, clearUnknown: 'history', state: (h.background.trim() || unk('history')) ? 'done' : 'missing',
             footer: <HandoverUnknown label="Medical history" on={unk('history')} onClick={() => { const on = !unk('history'); setUnk('history', on); if (on) onField('background', ''); }} /> })}
+        </HandoverPageCard>
+      );
+      case 'otherinfo': return (
+        <HandoverPageCard>
           {text('medications', 'Regular medications', { rows: 2, clearUnknown: 'meds', state: (h.medications.trim() || unk('meds')) ? 'done' : 'missing',
             footer: <HandoverUnknown label="Regular medications" on={unk('meds')} onClick={() => { const on = !unk('meds'); setUnk('meds', on); if (on) onField('medications', ''); }} /> })}
-          {text('otherInfo', 'Other information (optional)', { rows: 2 })}
+          {text('otherInfo', 'Other information (optional)', { rows: 4, state: 'none' })}
         </HandoverPageCard>
       );
       default: {
