@@ -33,8 +33,7 @@ import {
   NotebookPen,
   Pencil,
   Timer,
-  Hourglass
-} from 'lucide-react';
+  Hourglass, Megaphone } from 'lucide-react';
 import { AppState, Treatment, OverlayType , HandoverFields } from './types';
 import InteractiveTutorial, { ModeAboutSlide } from './InteractiveTutorial';
 import TutorialOverlay, { getTutorialNodes, TUTORIAL_FLASH_CLASSES } from './TutorialOverlay';
@@ -6425,9 +6424,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
             ) : (
               <div data-handover-allfilled className="space-y-4 pt-2">
                 <button data-button="handover-edit-all" onClick={() => setPageKey('id')}
-                  className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold border-2 border-[#4a6fa5] text-[#4a6fa5] bg-white btn-base`}>Edit handover</button>
+                  className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold border-2 border-[#4a6fa5] text-[#4a6fa5] bg-white btn-base flex items-center justify-center gap-3`}><Pencil size={22} strokeWidth={2.25} /> Edit handover</button>
                 <button data-button="handover-deliver" onClick={() => { setCard(0); setView('read'); }}
-                  className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold bg-[#4a6fa5] text-white btn-base`}>Deliver handover</button>
+                  className={`w-full ${compact ? 'py-6' : 'py-8'} rounded-2xl text-[20px] font-bold bg-[#4a6fa5] text-white btn-base flex items-center justify-center gap-3`}><Megaphone size={22} strokeWidth={2.25} /> Deliver handover</button>
               </div>
             )}
           </div>
