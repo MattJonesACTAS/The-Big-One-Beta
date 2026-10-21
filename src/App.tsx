@@ -6210,12 +6210,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       );
       case 'details': return (
         <HandoverPageCard>
-          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Collapsed at a shopping centre\nBystander CPR and one AED shock, ROSC before we arrived' })}
+          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Patient clutched their chest before collapsing...' })}
         </HandoverPageCard>
       );
       case 'events': return (
         <HandoverPageCard>
-          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Collapsed at a shopping centre\nBystander CPR and one AED shock, ROSC before we arrived' })}
+          {text('pertinentEvents', 'Pertinent events before our arrival', { rows: 5, state: 'none', placeholder: 'e.g. Patient has taken a polypharmacy OD...' })}
         </HandoverPageCard>
       );
       case 'id': return (
