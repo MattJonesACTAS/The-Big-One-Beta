@@ -5239,7 +5239,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', patientType: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5578,7 +5578,7 @@ const buildHandoverContent = (
   if (!treatment.length) treatment.push('None recorded');
 
   return {
-    weight: (state.timingMode === 'minimal' ? h.patientType === 'paed' : state.patientType === 'paed') && state.patientWeight ? `${state.patientWeight}kg` : '',
+    weight: (state.timingMode === 'minimal' ? (isPaedAge(h.age, h.ageUnit || 'Years') && h.weightFor === `${h.age}|${h.ageUnit || 'Years'}`) : state.patientType === 'paed') && state.patientWeight ? `${state.patientWeight}kg` : '',
     defaultAge: state.patientType === 'paed' ? parseAgeLabel(state.patientAge) : null,
     airway: airway.length ? airway.join(', ') : 'none recorded',
     rhythm,
@@ -5684,41 +5684,37 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
 // (not on every key, so typing 85 doesn't log a change to 8 first). A blank or invalid entry goes back to the case's weight.
 const PAED_WEIGHTS: [string, number][] = [['Newborn', 3], ['3 months', 5], ['6 months', 7], ['12 months', 11], ['2 years', 13], ['3 years', 15], ['4 years', 17], ['5 years', 19], ['6 years', 21], ['7 years', 23], ['8 years', 25], ['9 years', 27], ['10 years', 30], ['11 years', 33]];
 
-// Arrest – Timers: Adult or Paediatric (no weight for an adult); for a child, pick the weight by age from the list, or a custom weight
-function HandoverPatientType({ type, weight, onType, onCommit }: { type: string | undefined, weight: number | null | undefined, onType: (t: 'adult' | 'paed') => void, onCommit: (w: number, ageLabel: string | null) => void }) {
+// In Arrest – Timers the age decides: a child (a number of months, or up to 11 years, the range of the weight list) gets a weight to confirm, an adult gets none
+const isPaedAge = (age: string, unit: string): boolean => !!age && (unit === 'Months' || (+age >= 0 && +age <= 11));
+const suggestedPaedWeight = (age: string, unit: string): [string, number] => {
+  const months = unit === 'Months' ? +age : +age * 12;
+  const asMonths = (label: string) => (label === 'Newborn' ? 0 : (parseInt(label, 10) * (label.includes('year') ? 12 : 1)));
+  return PAED_WEIGHTS.reduce((best, cur) => (Math.abs(asMonths(cur[0]) - months) < Math.abs(asMonths(best[0]) - months) ? cur : best), PAED_WEIGHTS[0]);
+};
+
+// Arrest – Timers: for a child, confirm the weight suggested by their age, or enter a custom one
+function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm, onCustom }: { ageKey: string, suggested: [string, number], weight: number | null | undefined, confirmedFor: string | undefined, onConfirm: () => void, onCustom: (w: number) => void }) {
   const compact = React.useContext(HandoverDensity);
-  const paed = type === 'paed';
-  const listed = weight != null ? PAED_WEIGHTS.find(([, w]) => w === weight) : undefined;
-  const [custom, setCustom] = useState(paed && weight != null && !listed);
-  const [customText, setCustomText] = useState(paed && weight != null && !listed ? String(weight) : '');
-  const selCls = `w-full bg-white border border-neutral-300 rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-neutral-800`;
-  const tcls = (on: boolean) => `${compact ? 'py-2' : 'py-3'} rounded-lg font-bold text-[15px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
+  const confirmed = weight != null && confirmedFor === ageKey;
+  const wasCustom = confirmed && weight !== suggested[1];
+  const [custom, setCustom] = useState(wasCustom);
+  const [customText, setCustomText] = useState(wasCustom ? String(weight) : '');
+  useEffect(() => { if (!confirmed) { setCustom(false); setCustomText(''); } }, [ageKey]);
   const sentRef = React.useRef<number | null>(null);          // Enter commits and then blurs: the blur must not commit (and log) it a second time
-  const commitCustom = () => { const w = parseFloat(customText); if (!isNaN(w) && w > 0 && w !== weight && w !== sentRef.current) { sentRef.current = w; onCommit(w, null); } };
+  const commitCustom = () => { const w = parseFloat(customText); if (!isNaN(w) && w > 0 && w !== sentRef.current && !(confirmed && w === weight)) { sentRef.current = w; onCustom(w); } };
+  const tcls = (on: boolean) => `${compact ? 'py-2.5' : 'py-3.5'} rounded-lg font-bold text-[15px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
   return (
-    <HandoverBox label="Patient type" state={type === 'adult' || (paed && weight != null) ? 'done' : 'missing'}>
-      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Patient type</span>
+    <HandoverBox label="Weight" state={confirmed ? 'done' : 'missing'}>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Weight</span>
       <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-        {(['adult', 'paed'] as const).map(t => (
-          <button key={t} data-handover-choice={`Patient type: ${t === 'adult' ? 'Adult' : 'Paediatric'}`} aria-pressed={type === t} onClick={() => onType(t)} className={tcls(type === t)}>{t === 'adult' ? 'Adult' : 'Paediatric'}</button>
-        ))}
+        <button data-handover-choice="Weight: Confirm" aria-pressed={confirmed && !wasCustom && !custom} onClick={() => { setCustom(false); sentRef.current = null; onConfirm(); }} className={tcls(confirmed && !wasCustom && !custom)}>{suggested[1]}kg ({suggested[0]})</button>
+        <button data-handover-choice="Weight: Custom" aria-pressed={custom || wasCustom} onClick={() => { setCustom(true); setCustomText(wasCustom ? String(weight) : ''); }} className={tcls(custom || wasCustom)}>Custom weight</button>
       </div>
-      {paed && (
-        <div className={compact ? 'mt-2' : 'mt-3'}>
-          <select data-handover-weight-select aria-label="Paediatric weight by age" className={selCls} value={!custom && listed ? String(listed[1]) : ''}
-            onChange={e => { const w = parseFloat(e.target.value); const o = PAED_WEIGHTS.find(([, ww]) => ww === w); if (w > 0) { setCustom(false); sentRef.current = null; onCommit(w, o ? o[0] : null); } }}>
-            <option value="">Assume weight by age</option>
-            {PAED_WEIGHTS.map(([l, w]) => <option key={l} value={String(w)}>{l} ({w}kg)</option>)}
-          </select>
-          {custom ? (
-            <div className={`relative ${compact ? 'mt-2' : 'mt-3'}`}>
-              <input data-handover-weight-custom type="number" inputMode="decimal" aria-label="Custom weight" placeholder="Custom weight" value={customText} onChange={e => setCustomText(e.target.value)} onBlur={commitCustom} onKeyDown={e => { if (e.key === 'Enter') { commitCustom(); (e.target as HTMLInputElement).blur(); } }}
-                className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-center`} />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
-            </div>
-          ) : (
-            <button data-handover-choice="Weight: Custom" onClick={() => { setCustomText(''); setCustom(true); }} className={`w-full ${compact ? 'mt-2' : 'mt-3'} ${tcls(false)} !bg-white !text-[#4a6fa5]`}>Custom weight</button>
-          )}
+      {custom && (
+        <div className={`relative ${compact ? 'mt-2' : 'mt-3'}`}>
+          <input data-handover-weight-custom type="number" inputMode="decimal" aria-label="Custom weight" placeholder="Custom weight" value={customText} onChange={e => setCustomText(e.target.value)} onBlur={commitCustom} onKeyDown={e => { if (e.key === 'Enter') { commitCustom(); (e.target as HTMLInputElement).blur(); } }}
+            className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-center`} />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
         </div>
       )}
     </HandoverBox>
@@ -5862,6 +5858,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
+  if (timersOnly && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && !(state.patientWeight && h.weightFor === `${ageValue}|${ageUnit}`)) missing.id.push('Weight');
   if (inRosc) {
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
     if (!h.breathing) missing.breath.push('Breathing');
@@ -5872,7 +5869,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
   }
-  if (timersOnly) { if (!h.patientType) missing.id.push('Patient type'); else if (h.patientType === 'paed' && !state.patientWeight) missing.id.push('Weight'); }
   if (timersOnly && !medsDone) missing.othertx.push('Medications given');
   if (timersOnly && !othersDone) missing.othertx.push('Additional treatments');
   if (!h.arrestStart) missing.what.push('When the patient arrested');
@@ -6243,7 +6239,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           </HandoverBox>
           <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
           {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
-          {timersOnly && onWeight && <HandoverPatientType type={h.patientType} weight={state.patientWeight} onType={t => onField('patientType', t)} onCommit={(w, label) => onWeight(w, 'paed', label)} />}
+          {timersOnly && onWeight && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && (() => {
+            const sg = suggestedPaedWeight(ageValue, ageUnit); const key = `${ageValue}|${ageUnit}`;
+            return <HandoverPaedWeight ageKey={key} suggested={sg} weight={state.patientWeight} confirmedFor={h.weightFor} onConfirm={() => { onField('weightFor', key); onWeight(sg[1], 'paed', sg[0]); }} onCustom={w => { onField('weightFor', key); onWeight(w, 'paed', null); }} />;
+          })()}
         </HandoverPageCard>
       );
       case 'resp': return (
