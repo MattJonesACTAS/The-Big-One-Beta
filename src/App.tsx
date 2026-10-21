@@ -5856,8 +5856,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
   const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
-  if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (!h.gender) missing.id.push('Gender');
+  if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (timersOnly && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && !(state.patientWeight && h.weightFor === `${ageValue}|${ageUnit}`)) missing.id.push('Weight');
   if (inRosc) {
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
@@ -6220,6 +6220,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       );
       case 'id': return (
         <HandoverPageCard>
+          <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
+          {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
           <HandoverBox label="Age" state={(ageValue || h.ageUnknown === 'Yes') ? 'done' : 'missing'}>
             <span className={labelClass}>Age</span>
             <select aria-label="Age" data-handover-age-select value={h.ageUnknown === 'Yes' || !ageValue ? '' : `${ageValue}|${ageUnit}`}
@@ -6237,8 +6239,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>
             </div>
           </HandoverBox>
-          <HandoverChoice label="Gender" options={HANDOVER_GENDERS} value={h.gender} onChange={v => onField('gender', v)} columns={2} />
-          {h.gender === 'Other' && text('genderOther', 'Gender (other)', { words: true })}
           {timersOnly && onWeight && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && (() => {
             const sg = suggestedPaedWeight(ageValue, ageUnit); const key = `${ageValue}|${ageUnit}`;
             return <HandoverPaedWeight ageKey={key} suggested={sg} weight={state.patientWeight} confirmedFor={h.weightFor} onConfirm={() => { onField('weightFor', key); onWeight(sg[1], 'paed', sg[0]); }} onCustom={w => { onField('weightFor', key); onWeight(w, 'paed', null); }} />;
