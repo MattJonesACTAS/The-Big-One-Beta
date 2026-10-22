@@ -3844,7 +3844,14 @@ export default function App() {
                       <span>ADDED SO FAR{state.treatments.some(t => t.prior) ? ` (${state.treatments.filter(t => t.prior).length})` : ''}</span>
                       <ChevronDown size={16} strokeWidth={3} className={`transition-transform ${catchupAddedOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    {catchupAddedOpen && (state.treatments.some(t => t.prior) ? (
+                    <motion.div
+                      initial={false}
+                      animate={{ height: catchupAddedOpen ? 'auto' : 0, opacity: catchupAddedOpen ? 1 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      aria-hidden={!catchupAddedOpen}
+                      className="overflow-hidden"
+                    >
+                      {state.treatments.some(t => t.prior) ? (
                       <div className="space-y-1 mt-1.5">
                         {state.treatments.map((t, i) => ({ t, i })).filter(x => x.t.prior).reverse().map(({ t, i }) => (
                           <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-3.5 pr-1.5 py-1.5">
@@ -3853,7 +3860,8 @@ export default function App() {
                           </div>
                         ))}
                       </div>
-                    ) : <div className="text-[15px] text-neutral-400 mt-1">Nothing yet</div>)}
+                      ) : <div className="text-[15px] text-neutral-400 mt-1">Nothing yet</div>}
+                    </motion.div>
                   </div>
                   <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-1">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
