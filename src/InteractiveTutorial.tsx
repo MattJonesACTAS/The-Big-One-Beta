@@ -114,7 +114,7 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
           ? { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThis is the Add Tx menu, the same one you'll use throughout the case.\n\nIt has four categories of treatments you can log:\n• Rhythm Check (shocks and disarms)\n• Medications\n• Airway\n• Other Tx\n\nYou can also free type custom interventions.",
             morePages: [
               { title: "Successful / Unsuccessful", text: "For some interventions in Airway and Other Tx, you can choose to log them as successful or unsuccessful to keep your record keeping accurate." },
-              { title: "Added So Far", text: "Everything you log here appears in the 'Added so far' list underneath the menu, newest first.\n\nTap the cross beside an entry to remove it." },
+              { title: "Added So Far", text: "Everything you log here is listed under 'Added so far', beneath the menu.\n\nTap the heading to open the list, with the newest entry first.\n\nTap the cross beside an entry to remove it." },
               { title: "Give it a Go", text: "Find IV access and log an unsuccessful IV attempt.\n\nOnce you've done that, feel free to log something else or press 'Start Case'." }
             ] }
           : { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.",

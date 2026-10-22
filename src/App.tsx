@@ -2003,7 +2003,8 @@ export default function App() {
   // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
   const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
   const [catchupMenuKey, setCatchupMenuKey] = useState(0);
-  const [catchupMenuOpen, setCatchupMenuOpen] = useState(false);   // a section or a dose list is open in the setup slide's menu   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
+  const [catchupMenuOpen, setCatchupMenuOpen] = useState(false);
+  const [catchupAddedOpen, setCatchupAddedOpen] = useState(false);   // the Added so far drop-down on the setup slide   // a section or a dose list is open in the setup slide's menu   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
     // Shock, Disarm and ROSC outcomes move the rhythm check timers. (Cases saved by older versions of
@@ -3837,17 +3838,20 @@ export default function App() {
                     </React.Fragment>
                   </div>
                   <div data-catchup-added className="rounded-xl bg-neutral-100 px-3 py-2 text-left">
-                    <div className="text-[14px] font-extrabold tracking-wide text-neutral-500 mb-2">ADDED SO FAR</div>
-                    {state.treatments.some(t => t.prior) ? (
-                      <div className="max-h-[24vh] overflow-y-auto space-y-1.5">
+                    <button data-catchup-added-toggle aria-expanded={catchupAddedOpen} onClick={() => setCatchupAddedOpen(o => !o)} className="w-full flex items-center justify-between text-[12px] font-extrabold tracking-wide text-neutral-500 py-0.5">
+                      <span>ADDED SO FAR{state.treatments.some(t => t.prior) ? ` (${state.treatments.filter(t => t.prior).length})` : ''}</span>
+                      <ChevronDown size={16} strokeWidth={3} className={`transition-transform ${catchupAddedOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {catchupAddedOpen && (state.treatments.some(t => t.prior) ? (
+                      <div className="max-h-[22vh] overflow-y-auto space-y-1 mt-1.5">
                         {state.treatments.map((t, i) => ({ t, i })).filter(x => x.t.prior).reverse().map(({ t, i }) => (
-                          <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-4 pr-2 py-2">
-                            <span className="text-[17px] font-bold text-neutral-800 truncate">{t.name}</span>
-                            <button aria-label={`Remove ${t.name}`} data-catchup-remove onClick={() => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, j) => j !== i) }))} className="flex-shrink-0 w-8 h-8 rounded-full text-neutral-500 flex items-center justify-center"><X size={18} strokeWidth={3} /></button>
+                          <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-3.5 pr-1.5 py-1.5">
+                            <span className="text-[15px] font-bold text-neutral-800 truncate">{t.name}</span>
+                            <button aria-label={`Remove ${t.name}`} data-catchup-remove onClick={() => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, j) => j !== i) }))} className="flex-shrink-0 w-7 h-7 rounded-full text-neutral-500 flex items-center justify-center"><X size={16} strokeWidth={3} /></button>
                           </div>
                         ))}
                       </div>
-                    ) : <div className="text-[17px] text-neutral-400">Nothing yet</div>}
+                    ) : <div className="text-[15px] text-neutral-400 mt-1">Nothing yet</div>)}
                   </div>
                   <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-1">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
