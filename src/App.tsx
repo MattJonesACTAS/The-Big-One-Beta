@@ -33,7 +33,7 @@ import {
   NotebookPen,
   Pencil,
   Timer,
-  Hourglass, MessageSquareText } from 'lucide-react';
+  Hourglass, MessageSquareText, Lock } from 'lucide-react';
 import { AppState, Treatment, OverlayType , HandoverFields } from './types';
 import InteractiveTutorial, { ModeAboutSlide } from './InteractiveTutorial';
 import TutorialOverlay, { getTutorialNodes, TUTORIAL_FLASH_CLASSES } from './TutorialOverlay';
@@ -3975,7 +3975,6 @@ export default function App() {
                               >
                                 <div className="px-4 pb-4 pt-1 text-left space-y-3 text-sm text-neutral-700">
                                   <p>{details.summary}</p>
-                                  <p data-mode-card-note>{mode === 'minimal' ? "Can't be changed to another mode once the case starts." : `Can be changed to '${MODE_SHORT_NAMES[mode === 'log' ? 'elapsed' : 'log']}' mode mid case.`}</p>
                                   <div
                                     className="pt-3 border-t border-emerald-200"
                                     role="img"
@@ -4296,7 +4295,6 @@ export default function App() {
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-4">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">Change Mode</h2>
-            <p data-mode-lock-note className="text-sm text-neutral-500 text-center">Arrest – Timers can't be switched to or from a mode with a Tx log partway through a case, so the record stays complete.</p>
             <div className="flex flex-col gap-3">
               {TIMING_MODE_ORDER.map(mode => {
                 const blocked = timingMode !== mode && !canChangeMode(timingMode, mode);
@@ -4315,8 +4313,8 @@ export default function App() {
                     </span>
                     <span>
                       <ModeLabel mode={mode} />
-                      {blocked && <span className="block text-xs font-medium text-neutral-400">Can't be changed during a case</span>}
                     </span>
+                    {blocked && <Lock data-mode-lock-icon aria-label="Can't be changed during a case" size={20} strokeWidth={2.25} className="ml-auto flex-shrink-0 text-neutral-400" />}
                   </button>
                 );
               })}
@@ -4949,7 +4947,7 @@ function CheckItem({ label, subItems, color = 'emerald', checked, onToggle }: Ch
   
   return (
     <div>
-      <label onClick={() => onToggle(label)} className={`flex items-start p-2 rounded-lg cursor-pointer transition-colors ${checked ? colors.bg : 'hover:bg-neutral-50'}`}>
+      <label onClick={() => onToggle(label)} className={`flex items-start p-2 rounded-lg cursor-pointer transition-colors hover:bg-neutral-50`}>
         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center mr-2.5 mt-0.5 transition-colors flex-shrink-0 ${checked ? `${colors.checkBg} ${colors.border}` : 'border-neutral-300 bg-white'}`}>
           {checked && <CheckCircle2 size={12} className="text-white" />}
         </div>
@@ -5773,7 +5771,7 @@ function HandoverBecauseField({ value, onChange }: { value: string, onChange: (v
     <HandoverBox label="Why do you think that was the cause?" state="none">
       <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Why do you think that was the cause?</span>
       <div className="relative">
-        <span ref={wordRef} data-handover-because style={{ lineHeight: 'normal' }} className="absolute left-[14px] top-[10px] text-[16px] font-bold italic text-neutral-500 pointer-events-none select-none">because</span>
+        <span ref={wordRef} data-handover-because style={{ lineHeight: '24px' }} className="absolute left-[14px] top-[10px] text-[16px] font-semibold text-neutral-800 pointer-events-none select-none">Because...</span>
         <textarea aria-label="Why do you think that was the cause?" data-handover-textfield rows={4} value={value} onChange={e => onChange(e.target.value)} placeholder="patient clutched their chest before collapsing."
           style={{ textIndent: indent }} className="w-full rounded-lg border-2 border-neutral-400 bg-white px-3 py-2 text-[16px] font-semibold text-neutral-800 placeholder:font-normal placeholder:text-neutral-400 resize-none" />
       </div>
@@ -5939,8 +5937,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
   const igtVal = !airwayHasDevice ? '' : (h.airwayIgt || (logIgt ? 'Yes' : (airwayVal === logAirwayDev ? 'No' : '')));
   const logAccessAny = txLog.io + txLog.iv > 0;
-  const ivVal = unk('access') ? '' : (h.accessIv !== '' ? h.accessIv : (logAccessAny ? String(Math.min(txLog.iv, 3)) : ''));
-  const ioVal = unk('access') ? '' : (h.accessIo !== '' ? h.accessIo : (logAccessAny ? String(Math.min(txLog.io, 3)) : ''));
+  const accessFromLog = logAccessAny || state.timingMode !== 'minimal';
+  const ivVal = unk('access') ? '' : (h.accessIv !== '' ? h.accessIv : (accessFromLog ? String(Math.min(txLog.iv, 3)) : ''));
+  const ioVal = unk('access') ? '' : (h.accessIo !== '' ? h.accessIo : (accessFromLog ? String(Math.min(txLog.io, 3)) : ''));
   const airwayDone = !!airwayVal && (!airwayHasDevice || !!igtVal);
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 

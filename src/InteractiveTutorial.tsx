@@ -57,7 +57,7 @@ const ABOUT_SINGLE_PAGE = true;
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
     { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job." },
-    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline, and amiodarone." },
+    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline, and amiodarone.\n\n• Can't be changed to another mode once the case starts." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you only need the timers." },
   ],
   log: [
