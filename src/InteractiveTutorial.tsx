@@ -66,8 +66,8 @@ const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; t
     { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Arrests where you manage the timings yourself.\n\n• Scribing during a sim." },
   ],
   elapsed: [
-    { title: 'What It Does', text: "• Combines all the capabilities of 'Timers only' and 'Tx log only' modes." },
-    { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Like 'Tx log only', requires repeated attention." },
+    { title: 'What It Does', text: "• Combines all the capabilities of the 'Arrest – Timers' and 'General – Tx log only' modes." },
+    { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Like 'General – Tx log only', requires repeated attention." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
   ],
 };
@@ -110,8 +110,15 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
       title: 'Previous Treatments',
       nextScreen: null, // progression driven by real catchupStep, not by Next click
       elements: [
-        { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.",
-          morePages: [{ title: "Give it a Go", text: "Add two treatments, then press '{nextButton}'." }] },
+        mode === 'log'
+          ? { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThis is the Add Tx menu, the same one you'll use throughout the case.\n\nIt has four categories of treatments you can log:\n\n• Rhythm Check (shocks and disarms)\n\n• Medications\n\n• Airway\n\n• Other Tx\n\nYou can also free type custom interventions.",
+            morePages: [
+              { title: "Successful / Unsuccessful", text: "For some interventions in Airway and Other Tx, you can choose to log them as successful or unsuccessful to keep your record keeping accurate." },
+              { title: "Added So Far", text: "Everything you log here appears in the 'Added so far' list underneath the menu, newest first.\n\nTap the cross beside an entry to remove it." },
+              { title: "Give it a Go", text: "Log an unsuccessful IV: open 'Other Tx', switch 'IV access' to 'Unsuccessful', then tap it.\n\nThen press '{nextButton}'." }
+            ] }
+          : { id: 'previousTx', x: 50, y: 50, number: 3, title: 'Previous Treatments', description: "Next, you will need to enter what treatments (Tx) you've already applied before you opened the app.\n\nThe most common cardiac arrest Tx's are listed front and centre for quick access, but you can add any Tx you like from the full list.",
+            morePages: [{ title: "Give it a Go", text: "Add two treatments, then press '{nextButton}'." }] },
       ],
     },
     timingMethod: {

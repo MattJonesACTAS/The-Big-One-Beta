@@ -1962,6 +1962,8 @@ export default function App() {
     (timingMode === 'elapsed' || timingMode === 'minimal') && !!rhythmInterval &&
     state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
 
+  // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
+  const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
     // Shock, Disarm and ROSC outcomes move the rhythm check timers. (Cases saved by older versions of
@@ -1981,7 +1983,7 @@ export default function App() {
     // An outcome for a delayed rhythm check is logged in the new round, the
     // same as an outcome chosen straight from the timer-forced popup (where
     // the timer has already moved the round on).
-    const resolvingDelayForRound = !catchupTxMode && state.rhythmCheckDelayedAt != null && isRhythmOutcomeName;
+    const resolvingDelayForRound = !catchupTxActive && state.rhythmCheckDelayedAt != null && isRhythmOutcomeName;
     const treatment: Treatment = {
       name: displayName,
       elapsed: state.elapsedSeconds,
@@ -1989,13 +1991,13 @@ export default function App() {
       clock: getLocalTime(now),
       clockSeconds: getLocalTimeWithSeconds(now),
       loggedAt: now.getTime(),
-      ...(catchupTxMode ? { prior: true } : {}),
+      ...(catchupTxActive ? { prior: true } : {}),
       ...(options?.customDose ? { customDose: true } : {})
     };
 
-    if (catchupTxMode) {
+    if (catchupTxActive) {
       setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment] }));
-      setCatchupTxMode(false);
+      if (catchupTxMode) setCatchupTxMode(false);
       return;
     }
 
@@ -2010,7 +2012,7 @@ export default function App() {
     // "Rhythm check now" popup or straight from Add Tx - is that delayed
     // check, done now: it restores the held CPR round and re-anchors the
     // interval the same way a rearrest does (below).
-    const resolvingDelay = !catchupTxMode && state.rhythmCheckDelayedAt != null && isShockOrDisarmForReset;
+    const resolvingDelay = !catchupTxActive && state.rhythmCheckDelayedAt != null && isShockOrDisarmForReset;
     // When a shock/disarm is logged early (before the timer would have hit
     // zero on its own), automatically switch to whichever of
     // evens/odds/half-evens/half-odds puts the next check closest to - but
@@ -3781,7 +3783,44 @@ export default function App() {
                 </div>
               )}
 
-              {!catchupTxMode && catchupStep === 3 && (
+              {!catchupTxMode && catchupStep === 3 && timingMode === 'log' && (
+                <div className="text-center space-y-3">
+                  <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
+                  <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left" style={{ height: '44vh' }}>
+                    <TreatmentSelection
+                      addTreatment={(name, options) => { addTreatment(name, options); }}
+                      state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
+                      isShockForced={false}
+                      patientTypeOverride={weightType}
+                    />
+                  </div>
+                  <div data-catchup-added className="rounded-xl bg-neutral-100 px-3 py-2 text-left">
+                    <div className="text-[11px] font-extrabold tracking-wide text-neutral-500 mb-1">ADDED SO FAR</div>
+                    {state.treatments.some(t => t.prior) ? (
+                      <div className="max-h-[17vh] overflow-y-auto space-y-1">
+                        {state.treatments.map((t, i) => ({ t, i })).filter(x => x.t.prior).reverse().map(({ t, i }) => (
+                          <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-3 pr-1.5 py-1">
+                            <span className="text-[14px] font-bold text-neutral-800 truncate">{t.name}</span>
+                            <button aria-label={`Remove ${t.name}`} data-catchup-remove onClick={() => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, j) => j !== i) }))} className="flex-shrink-0 w-6 h-6 rounded-full text-neutral-500 flex items-center justify-center"><X size={14} strokeWidth={3} /></button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <div className="text-[14px] text-neutral-400">Nothing yet</div>}
+                  </div>
+                  <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-1">
+                    <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
+                    <button
+                      onClick={() => { if (showInteractiveTutorial) { setShowInteractiveTutorial(false); setTutorialMode(true); } handleCatchupStart(); }}
+                      disabled={showInteractiveTutorial && (!catchupNodeCleared || !state.treatments.some(t => t.prior && t.name.startsWith('IV access') && t.name.includes('Unsuccessful')))}
+                      className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && (!catchupNodeCleared || !state.treatments.some(t => t.prior && t.name.startsWith('IV access') && t.name.includes('Unsuccessful'))) ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
+                    >
+                      Start Case
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!catchupTxMode && catchupStep === 3 && timingMode !== 'log' && (
                 <div className="text-center space-y-5">
                   <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
                   <div className="space-y-3 py-3 px-2">
@@ -5093,7 +5132,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
                   <div className="pr-1 flex items-center gap-2">
                     {onDelete && (
                       <button
-                        data-tx-more={tx.name.startsWith('Adrenaline push') ? 'adrenaline-push' : undefined}
+                        data-tx-more={tx.name.startsWith('Adrenaline push') ? 'adrenaline-push' : tx.name.startsWith('Naloxone') ? 'naloxone' : undefined}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           if (isReorderingThis) {

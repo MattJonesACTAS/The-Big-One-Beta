@@ -69,9 +69,9 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
     tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
     vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
-    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
-    addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
-    treatmentLogInfo: "Tap the small button beside the adrenaline push entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
+    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log some Naloxone.",
+    addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Naloxone', and select a dose.",
+    treatmentLogInfo: "Tap the small button beside the Naloxone entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
     handover: "Press the 'Handover' button at the top of the home screen, fill in the blanks with whatever you like, then deliver the handover and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
@@ -404,7 +404,7 @@ const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
 };
 
 export const TUTORIAL_FLASH_CLASSES = [
-  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx', 'tutorial-flash-handover',
+  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx', 'tutorial-flash-handover', 'tutorial-flash-naloxone-tx',
   'tutorial-flash-adrenaline', 'tutorial-flash-dose', 'tutorial-flash-summary',
   'tutorial-flash-adrenaline-tx', 'tutorial-flash-summary-close', 'tutorial-flash-end',
   'tutorial-flash-close',
@@ -419,6 +419,10 @@ const nodeById = (id: string): RawNode => {
 const withOverrides = (id: string, overrides: Partial<RawNode>): RawNode => ({ ...nodeById(id), ...overrides });
 
 const ADRENALINE_LOGGED = (s: any) => s.treatments.some((t: any) => t.name.startsWith('Adrenaline push'));
+// Tx log only (General): Naloxone is logged from the home screen, then edited (or reordered / deleted) in the Tx log
+const NALOXONE_LOGGED = (s: any) => s.treatments.some((t: any) => t.name.startsWith('Naloxone') && !t.prior);
+const NALOXONE_HANDLED = (s: any) => !s.treatments.some((t: any) => t.name.startsWith('Naloxone'))
+  || s.treatments.some((t: any) => t.name.startsWith('Naloxone') && (t.timeUnknown || t.edited));
 const ADRENALINE_HANDLED = (s: any) => !ADRENALINE_LOGGED(s)
   || s.treatments.some((t: any) => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
 
@@ -518,27 +522,47 @@ const LOG_NODES: RawNode[] = [
   nodeById('tabs'),
   nodeById('closeChecklist'),
   withOverrides('vssTab', { pages: vssTabPages("Your values appear on the home page summary and the case summary, which we'll see later.") }),
-  nodeById('addTxBtn'),
-  nodeById('addTxSubmenu'),
+  // The Add Tx menu was introduced on the setup slide (where an unsuccessful IV was logged); here it is a Naloxone dose
+  withOverrides('addTxBtn', {
+    pages: [{
+      title: 'Add Treatment Button',
+      description: "This opens the Add Tx menu again, the same one you used during setup.\n\nYou can log a treatment from it at any time during the case."
+    }, {
+      title: 'Give it a Go',
+      description: "Press the '+ Add Tx' button so we can log some Naloxone."
+    }]
+  }),
+  withOverrides('addTxSubmenu', {
+    pages: [{
+      title: 'Medications',
+      description: "All medications will have one or more dosage options to choose from for different indications.\n\nThese dosages are pre-calculated if they are weight based."
+    }, {
+      title: 'Give it a Go',
+      description: "Log an initial dose of Naloxone to progress."
+    }]
+  }),
   withOverrides('arrestSummaryInfo', {
     pages: [{
       title: 'Arrest Summary',
       description: 'In this mode, the home page is the running case summary.\n\nThe top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms.'
     }],
-    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_LOGGED(s),
-    // waiting for adrenaline to be logged
-    flashWhileCurrent: () => ['tutorial-flash-adrenaline', 'tutorial-flash-dose']
+    condition: (s, sf) => LOG_HOME(s, sf) && NALOXONE_LOGGED(s),
+    // waiting for Naloxone to be logged
+    flashWhileCurrent: (c) => (c.state.currentOverlay === null ? ['tutorial-flash-add-tx'] : [])
   }),
   withOverrides('vitalSignsInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
   withOverrides('pharmaSummaryInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
-  withOverrides('treatmentLogInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
-  // waiting for the adrenaline entry to be edited (its row pulses), then the Handover slide
+  withOverrides('treatmentLogInfo', {
+    pages: [...nodeById('treatmentLogInfo').pages.slice(0, -1), { title: 'Give it a Go', description: "Edit the Naloxone entry you logged earlier, changing it to whatever you like, to continue." }],
+    condition: (s, sf) => LOG_HOME(s, sf)
+  }),
+  // waiting for the Naloxone entry to be edited (its row pulses), then the Handover slide
   withOverrides('handover', {
-    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s),
-    flashWhileCurrent: (c) => (c.state.currentOverlay === null && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : ['tutorial-flash-handover']
+    condition: (s, sf) => LOG_HOME(s, sf) && NALOXONE_HANDLED(s),
+    flashWhileCurrent: (c) => (c.state.currentOverlay === null && !NALOXONE_HANDLED(c.state)) ? ['tutorial-flash-naloxone-tx'] : ['tutorial-flash-handover']
   }),
   withOverrides('endCase', {
-    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s) && HANDOVER_DONE(s),
+    condition: (s, sf) => LOG_HOME(s, sf) && NALOXONE_HANDLED(s) && HANDOVER_DONE(s),
     // waiting for the handover to be read out to the end
     flashWhileCurrent: (c) => (HANDOVER_DONE(c.state) ? [] : ['tutorial-flash-handover'])
   }),

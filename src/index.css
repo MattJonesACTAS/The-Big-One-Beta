@@ -376,3 +376,8 @@ html, body { touch-action: pan-x pan-y; }
 body.tutorial-flash-handover [data-button="handover"][aria-pressed="false"] {
   animation: adrenalineFlash 1.5s infinite;
 }
+
+/* Tutorial (Tx log only): the Naloxone entry's button pulses until it has been edited */
+body.tutorial-flash-naloxone-tx [data-tx-more="naloxone"] {
+  animation: tutorialDotsFlash 1.4s ease-in-out infinite;
+}
