@@ -61,7 +61,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
     treatmentLogInfo: "Press the 'Summary' button at the bottom left of the home screen, tap the small button beside the adrenaline push entry in the treatment log, and choose Edit, Reorder, or Delete.",
-    handover: "Press the 'Handover' button at the top of the home screen, fill in every page, then press 'Deliver handover' and read it out to the end.",
+    handover: "Press the 'Handover' button at the top of the home screen, fill in the blanks with whatever you like, then deliver the handover and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
   },
@@ -72,7 +72,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
     treatmentLogInfo: "Tap the small button beside the adrenaline push entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
-    handover: "Press the 'Handover' button at the top of the home screen, fill in every page, then press 'Deliver handover' and read it out to the end.",
+    handover: "Press the 'Handover' button at the top of the home screen, fill in the blanks with whatever you like, then deliver the handover and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
   },
@@ -82,7 +82,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can start an adrenaline timer.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen and choose 'Adrenaline' to start its timer.",
-    handover: "Press the 'Handover' button at the top of the home screen, fill in every page, then press 'Deliver handover' and read it out to the end.",
+    handover: "Press the 'Handover' button at the top of the home screen, fill in the blanks with whatever you like, then deliver the handover and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
   },
@@ -350,7 +350,7 @@ const ELAPSED_RAW: RawNode[] = [
   {
     // Before End Case: the crew build a handover and read it out to the end (App.tsx sets handover.delivered)
     id: 'handover', type: 'positioned', x: 50, y: 4.2, anchor: '[data-button="handover"]',
-    pages: [{ title: 'Handover Button', description: "The Big One can also produce a resus handover. It will autofill what it can from the case, but you'll need to provide additional information about what happened." }, { title: 'Give it a Go', description: 'Build a handover to continue.' }],
+    pages: [{ title: 'Handover Button', description: "The Big One can also produce a resus handover.\n\nIt will autofill what it can from the case, but you'll need to provide additional information about what happened." }, { title: 'Give it a Go', description: 'Fill in the blanks with whatever you like and deliver a handover to continue.' }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
@@ -589,10 +589,12 @@ interface Props {
   // True while one of the app's own menus (Recalibrate, Change Mode, warnings...) is open: the
   // waiting node's marker then hides behind it instead of floating on top
   appModalOpen?: boolean;
+  // True while the Handover is open: building one takes a while, so the "Lost?" slide waits
+  handoverOpen?: boolean;
   intervalBaseline?: string | null;
 }
 
-export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed', appModalOpen = false, intervalBaseline = null }: Props) {
+export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed', appModalOpen = false, handoverOpen = false, intervalBaseline = null }: Props) {
   const ALL_NODES = getTutorialNodes(mode);
   const [internalNodeIndex, setInternalNodeIndex] = useState(externalNodeIndex);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
@@ -699,14 +701,14 @@ export default function TutorialOverlay({ appState, isShockForced, onExit, onNod
   }, [lostInstruction, conditionMet]);
   useEffect(() => {
     if (lostInstruction === null || conditionMet || tutorialDone || lostNode
-        || activePopup || activePositioned || revealPending || isShockForced) return;
+        || activePopup || activePositioned || revealPending || isShockForced || handoverOpen) return;
     const t = setTimeout(() => {
       setLostNode({ id: 'lost', type: 'popup', pages: [{ title: 'Lost?', description: lostInstruction }] } as unknown as GlobalNode);
       setCurrentPageIndex(0);
       setPageAnimKey(k => k + 1);
     }, LOST_DELAY_MS);
     return () => clearTimeout(t);
-  }, [lostInstruction, conditionMet, tutorialDone, lostNode, activePopup, activePositioned, revealPending, isShockForced, currentNode?.id]);
+  }, [lostInstruction, conditionMet, tutorialDone, lostNode, activePopup, activePositioned, revealPending, isShockForced, handoverOpen, currentNode?.id]);
 
 
   // Dismiss active popup during rhythm check window

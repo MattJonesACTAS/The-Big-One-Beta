@@ -2664,6 +2664,7 @@ export default function App() {
             globalNodeIndex={tutorialNodeIndex}
             mode={timingMode ?? 'elapsed'}
             appModalOpen={showEndWarning || showPauseWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
+            handoverOpen={showHandover && !state.currentOverlay}
             intervalBaseline={tutorialIntervalBaseline}
             onNodeChange={(nodeIndex, done) => {
               setTutorialNodeIndex(nodeIndex);
@@ -2920,6 +2921,7 @@ export default function App() {
                 globalNodeIndex={tutorialNodeIndex}
                 mode={timingMode ?? 'elapsed'}
                 appModalOpen={showEndWarning || showPauseWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
+            handoverOpen={showHandover && !state.currentOverlay}
                 intervalBaseline={tutorialIntervalBaseline}
                 onNodeChange={(nodeIndex, done) => {
                   setTutorialNodeIndex(nodeIndex);
@@ -3178,6 +3180,7 @@ export default function App() {
               globalNodeIndex={tutorialNodeIndex}
               mode={timingMode ?? 'elapsed'}
               appModalOpen={showEndWarning || showPauseWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
+            handoverOpen={showHandover && !state.currentOverlay}
               intervalBaseline={tutorialIntervalBaseline}
               onNodeChange={(nodeIndex, done) => {
                 setTutorialNodeIndex(nodeIndex);
@@ -5863,7 +5866,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const txLog = content.tx;
   const logAirwayDev = txLog.airway.find(a => a !== 'IGT') ?? '';
   const logIgt = txLog.airway.includes('IGT');
-  const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev);
+  // no airway logged (the Tx log would have it): None is already chosen. Arrest – Timers records no airway, so there the crew are asked.
+  const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev || (state.timingMode !== 'minimal' ? 'None' : ''));
   const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
   const igtVal = !airwayHasDevice ? '' : (h.airwayIgt || (logIgt ? 'Yes' : (airwayVal === logAirwayDev ? 'No' : '')));
   const logAccessAny = txLog.io + txLog.iv > 0;
