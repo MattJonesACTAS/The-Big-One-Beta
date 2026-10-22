@@ -3829,15 +3829,14 @@ export default function App() {
                 <div className="text-center space-y-3">
                   <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
                   <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left flex flex-col" style={{ maxHeight: catchupMenuOpen ? 'min(62vh, 560px)' : undefined }}>
-                    <React.Fragment key={catchupMenuKey}>
                     <TreatmentSelection
                       tight
+                      collapseSignal={catchupMenuKey}
                       addTreatment={(name, options) => { addTreatment(name, options); setCatchupMenuKey(k => k + 1); }}
                       state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
                       isShockForced={false}
                       patientTypeOverride={weightType}
                     />
-                    </React.Fragment>
                   </div>
                   <div data-catchup-added className="rounded-xl bg-neutral-100 px-3 py-2 text-left">
                     <button data-catchup-added-toggle aria-expanded={catchupAddedOpen} onClick={() => setCatchupAddedOpen(o => !o)} className="w-full flex items-center justify-between text-[12px] font-extrabold tracking-wide text-neutral-500 py-0.5">
@@ -6742,7 +6741,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false, su
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, tight, onDelayRhythmCheck, tutorialOutcomeRestriction }: { addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, tight?: boolean, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, tight, collapseSignal, onDelayRhythmCheck, tutorialOutcomeRestriction }: { addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, tight?: boolean, collapseSignal?: number, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -6759,6 +6758,14 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
     if (isShockForced) setExpandedSection('rhythmCheck');
   }, [isShockForced]);
   
+  // The setup slide bumps collapseSignal after every logged treatment: the dose list goes, then the open section closes (animated)
+  useEffect(() => {
+    if (!collapseSignal) return;
+    setSelectedMed(null); setCustomDose(''); setSelectedCustomUnit(null); setCustomTx(''); setCustomInputValues({});
+    const id = setTimeout(() => setExpandedSection(null), 20);
+    return () => clearTimeout(id);
+  }, [collapseSignal]);
+
   const handleMedClick = (med: string) => {
     if (DOSE_CONFIG[med]) {
       setSelectedMed(med);
@@ -7166,7 +7173,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         </div>
       )}
       
-      <TxSection 
+      <TxSection resetSignal={collapseSignal} 
         title="Rhythm Check" 
         color="pink" 
         sectionId="rhythmCheck"
@@ -7226,7 +7233,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               things to log, not a relabelled version of the full list.
               Airway and Other Tx are dropped entirely; the custom-text box
               below stays, as a deliberate exception. */}
-          <TxSection 
+          <TxSection resetSignal={collapseSignal} 
             title="Medications" 
             color="emerald" 
             items={state.timingMode === 'minimal' ? ['Adrenaline push', 'Amiodarone'] : MEDICATIONS} 
@@ -7237,7 +7244,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           />
           
           {state.timingMode !== 'minimal' && (
-          <TxSection 
+          <TxSection resetSignal={collapseSignal} 
             title="Airway" 
             color="blue" 
             items={[
@@ -7257,7 +7264,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           )}
           
           {state.timingMode !== 'minimal' && (
-          <TxSection 
+          <TxSection resetSignal={collapseSignal} 
             title="Other Tx" 
             color="neutral" 
             items={[
@@ -7306,7 +7313,8 @@ function TxSection({
   expandedSection,
   onToggle,
   showChevron = true,
-  disabledItems
+  disabledItems,
+  resetSignal
 }: { 
   title: string;
   color: string;
@@ -7320,6 +7328,8 @@ function TxSection({
   // Item names to grey out and make unclickable - used by the rhythm-check
   // walkthrough to restrict the popup to only the outcome it just instructed
   disabledItems?: string[];
+  // Bumped by the setup slide after a treatment is logged: forgets the staged Unsuccessful toggles
+  resetSignal?: number;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   // Tracks which failable items (ETT, IV access, etc.) are currently staged
@@ -7327,6 +7337,7 @@ function TxSection({
   // logging time via a toggle right on the item, rather than requiring a
   // trip into the three-dot menu afterward.
   const [markedUnsuccessful, setMarkedUnsuccessful] = useState<Record<string, boolean>>({});
+  useEffect(() => { setMarkedUnsuccessful({}); }, [resetSignal]);
   
   // Use controlled state if provided, otherwise use internal state
   const collapsed = sectionId && expandedSection !== undefined 
