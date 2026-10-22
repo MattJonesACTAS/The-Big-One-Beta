@@ -69,7 +69,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
     tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
     vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
-    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log some Naloxone.",
+    addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen to open the menu.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Naloxone', and select a dose.",
     treatmentLogInfo: "Tap the small button beside the Naloxone entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
     handover: "Press the 'Handover' button at the top of the home screen, fill in the blanks with whatever you like, then deliver the handover and read it out to the end.",
@@ -292,7 +292,7 @@ const ELAPSED_RAW: RawNode[] = [
     pages: [
       {
         title: 'Arrest Summary',
-        description: 'The top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms.'
+        description: 'The top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms if any have occurred.'
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -404,7 +404,7 @@ const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
 };
 
 export const TUTORIAL_FLASH_CLASSES = [
-  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx', 'tutorial-flash-handover', 'tutorial-flash-naloxone-tx',
+  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx', 'tutorial-flash-handover', 'tutorial-flash-naloxone-tx', 'tutorial-guide-naloxone',
   'tutorial-flash-adrenaline', 'tutorial-flash-dose', 'tutorial-flash-summary',
   'tutorial-flash-adrenaline-tx', 'tutorial-flash-summary-close', 'tutorial-flash-end',
   'tutorial-flash-close',
@@ -529,7 +529,7 @@ const LOG_NODES: RawNode[] = [
       description: "This opens the Add Tx menu again, the same one you used during setup.\n\nYou can log a treatment from it at any time during the case."
     }, {
       title: 'Give it a Go',
-      description: "Press the '+ Add Tx' button so we can log some Naloxone."
+      description: "Open the '+ Add Tx' menu."
     }]
   }),
   withOverrides('addTxSubmenu', {
@@ -544,11 +544,11 @@ const LOG_NODES: RawNode[] = [
   withOverrides('arrestSummaryInfo', {
     pages: [{
       title: 'Arrest Summary',
-      description: 'In this mode, the home page is the running case summary.\n\nThe top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms.'
+      description: 'In this mode, the home page is the running case summary.\n\nThe top of the running summary lists the number of CPR rounds, along with the number of shocks and disarms if any have occurred.'
     }],
     condition: (s, sf) => LOG_HOME(s, sf) && NALOXONE_LOGGED(s),
     // waiting for Naloxone to be logged
-    flashWhileCurrent: (c) => (c.state.currentOverlay === null ? ['tutorial-flash-add-tx'] : [])
+    flashWhileCurrent: (c) => (c.state.currentOverlay === null ? ['tutorial-flash-add-tx'] : ['tutorial-guide-naloxone'])
   }),
   withOverrides('vitalSignsInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
   withOverrides('pharmaSummaryInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),

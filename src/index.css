@@ -381,3 +381,12 @@ body.tutorial-flash-handover [data-button="handover"][aria-pressed="false"] {
 body.tutorial-flash-naloxone-tx [data-tx-more="naloxone"] {
   animation: tutorialDotsFlash 1.4s ease-in-out infinite;
 }
+
+/* Tutorial: pulses inside the Add Tx menu (the section header, then the item, then the dose) */
+body.tutorial-guide-iv-section [data-tx-section="otherTx"],
+body.tutorial-guide-iv-row [data-medication="IV access"],
+body.tutorial-guide-naloxone-section [data-tx-section="medications"],
+body.tutorial-guide-naloxone-row [data-medication="Naloxone"],
+body.tutorial-guide-naloxone [data-dose="Suspected narcotic OD"] {
+  animation: adrenalineFlash 1.5s infinite;
+}

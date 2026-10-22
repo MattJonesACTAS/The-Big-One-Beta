@@ -1962,6 +1962,32 @@ export default function App() {
     (timingMode === 'elapsed' || timingMode === 'minimal') && !!rhythmInterval &&
     state.rhythmCheckDelayedAt == null && editingTreatmentIndex === null;
 
+  // Tutorial: inside the Add Tx menu, pulse the section header until the item it is looking for is on screen, then pulse the item itself.
+  // 'tutorial-guide-iv' / 'tutorial-guide-naloxone' on the body switch each guide on (the tutorials set them).
+  useEffect(() => {
+    const guides: [string, string][] = [['tutorial-guide-iv', 'IV access'], ['tutorial-guide-naloxone', 'Naloxone']];
+    const tick = () => {
+      for (const [flag, item] of guides) {
+        const on = document.body.classList.contains(flag);
+        const el = document.querySelector(`[data-medication="${item}"]`);
+        // a collapsed section keeps its items in the page at zero height: look at the section panel, not the item
+        const panel = el?.closest('.overflow-hidden');
+        const shown = !!el && !!panel && panel.getBoundingClientRect().height > 0;
+        document.body.classList.toggle(`${flag}-section`, on && !shown);
+        document.body.classList.toggle(`${flag}-row`, on && shown);
+      }
+    };
+    const id = setInterval(tick, 200);
+    return () => { clearInterval(id); guides.forEach(([flag]) => document.body.classList.remove(`${flag}-section`, `${flag}-row`)); };
+  }, []);
+  // General setup slide in the tutorial: once the node has been read, the IV access item pulses until an unsuccessful IV has been logged
+  const ivGuideOn = showInteractiveTutorial && showCatchup && catchupStep === 3 && timingMode === 'log' && catchupNodeCleared
+    && !state.treatments.some(t => t.prior && t.name.startsWith('IV access') && t.name.includes('Unsuccessful'));
+  useEffect(() => {
+    document.body.classList.toggle('tutorial-guide-iv', ivGuideOn);
+    return () => document.body.classList.remove('tutorial-guide-iv');
+  }, [ivGuideOn]);
+
   // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
   const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
