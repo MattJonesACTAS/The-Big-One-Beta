@@ -1980,6 +1980,18 @@ export default function App() {
     const id = setInterval(tick, 200);
     return () => { clearInterval(id); guides.forEach(([flag]) => document.body.classList.remove(`${flag}-section`, `${flag}-row`)); };
   }, []);
+  useEffect(() => {
+    if (!(showCatchup && catchupStep === 3 && timingMode === 'log')) { setCatchupMenuOpen(false); return; }
+    const tick = () => {
+      const box = document.querySelector('[data-catchup-add-tx]');
+      if (!box) return;
+      const open = !!box.querySelector('[data-dose]') || [...box.querySelectorAll('[data-medication]')].some(el => { const p = el.closest('.overflow-hidden'); return !!p && p.getBoundingClientRect().height > 0; });
+      setCatchupMenuOpen(prev => (prev === open ? prev : open));
+    };
+    tick();
+    const id = setInterval(tick, 150);
+    return () => clearInterval(id);
+  }, [showCatchup, catchupStep, timingMode]);
   // General setup slide in the tutorial: once the node has been read, the IV access item pulses until an unsuccessful IV has been logged
   const ivGuideOn = showInteractiveTutorial && showCatchup && catchupStep === 3 && timingMode === 'log' && catchupNodeCleared
     && !state.treatments.some(t => t.prior && t.name.startsWith('IV access') && t.name.includes('Unsuccessful'));
@@ -1990,7 +2002,8 @@ export default function App() {
 
   // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
   const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
-  const [catchupMenuKey, setCatchupMenuKey] = useState(0);   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
+  const [catchupMenuKey, setCatchupMenuKey] = useState(0);
+  const [catchupMenuOpen, setCatchupMenuOpen] = useState(false);   // a section or a dose list is open in the setup slide's menu   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
     // Shock, Disarm and ROSC outcomes move the rhythm check timers. (Cases saved by older versions of
@@ -3813,7 +3826,7 @@ export default function App() {
               {!catchupTxMode && catchupStep === 3 && timingMode === 'log' && (
                 <div className="text-center space-y-3">
                   <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
-                  <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left" style={{ height: '44vh' }}>
+                  <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left" style={{ height: catchupMenuOpen ? 'min(62vh, 560px)' : 'auto' }}>
                     <React.Fragment key={catchupMenuKey}>
                     <TreatmentSelection
                       addTreatment={(name, options) => { addTreatment(name, options); setCatchupMenuKey(k => k + 1); }}
@@ -3824,17 +3837,17 @@ export default function App() {
                     </React.Fragment>
                   </div>
                   <div data-catchup-added className="rounded-xl bg-neutral-100 px-3 py-2 text-left">
-                    <div className="text-[11px] font-extrabold tracking-wide text-neutral-500 mb-1">ADDED SO FAR</div>
+                    <div className="text-[14px] font-extrabold tracking-wide text-neutral-500 mb-2">ADDED SO FAR</div>
                     {state.treatments.some(t => t.prior) ? (
-                      <div className="max-h-[17vh] overflow-y-auto space-y-1">
+                      <div className="max-h-[24vh] overflow-y-auto space-y-1.5">
                         {state.treatments.map((t, i) => ({ t, i })).filter(x => x.t.prior).reverse().map(({ t, i }) => (
-                          <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-3 pr-1.5 py-1">
-                            <span className="text-[14px] font-bold text-neutral-800 truncate">{t.name}</span>
-                            <button aria-label={`Remove ${t.name}`} data-catchup-remove onClick={() => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, j) => j !== i) }))} className="flex-shrink-0 w-6 h-6 rounded-full text-neutral-500 flex items-center justify-center"><X size={14} strokeWidth={3} /></button>
+                          <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-4 pr-2 py-2">
+                            <span className="text-[17px] font-bold text-neutral-800 truncate">{t.name}</span>
+                            <button aria-label={`Remove ${t.name}`} data-catchup-remove onClick={() => setState(prev => ({ ...prev, treatments: prev.treatments.filter((_, j) => j !== i) }))} className="flex-shrink-0 w-8 h-8 rounded-full text-neutral-500 flex items-center justify-center"><X size={18} strokeWidth={3} /></button>
                           </div>
                         ))}
                       </div>
-                    ) : <div className="text-[14px] text-neutral-400">Nothing yet</div>}
+                    ) : <div className="text-[17px] text-neutral-400">Nothing yet</div>}
                   </div>
                   <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-1">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
@@ -6974,7 +6987,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
     };
 
     return (
-      <div className="h-full overflow-y-auto pb-4">
+      <div key="tx-dose-picker" className="h-full overflow-y-auto pb-4">
         <div className="p-6 mb-4">
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">{selectedMed}</h2>
           {state.patientWeight && (
@@ -7132,7 +7145,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   }
   
   return (
-    <div data-tutorial-anchor="add-tx-submenu" className={`w-full ${noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}`}>
+    <div key="tx-menu" data-tutorial-anchor="add-tx-submenu" className={`w-full ${noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}`}>
       {isShockForced && (
         <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse">
            RHYTHM CHECK: SELECT SHOCK STATUS
