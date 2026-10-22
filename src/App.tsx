@@ -2002,6 +2002,7 @@ export default function App() {
 
   // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
   const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
+  const catchupLogSlide = showCatchup && catchupStep === 3 && timingMode === 'log' && !catchupTxMode;
   const [catchupMenuKey, setCatchupMenuKey] = useState(0);
   const [catchupMenuOpen, setCatchupMenuOpen] = useState(false);
   const [catchupAddedOpen, setCatchupAddedOpen] = useState(false);   // the Added so far drop-down on the setup slide   // a section or a dose list is open in the setup slide's menu   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
@@ -3370,7 +3371,7 @@ export default function App() {
       {/* Catchup Modal */}
       <AnimatePresence>
         {showCatchup && (
-          <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4">
+          <div className={`fixed inset-0 bg-black/90 z-[1000] flex justify-center p-4 ${catchupLogSlide ? 'items-start' : 'items-center'}`} style={catchupLogSlide ? { paddingTop: '10vh' } : undefined}>
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
               initial={{ x: '100%', opacity: 0 }}
@@ -3378,7 +3379,7 @@ export default function App() {
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
               className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
-              style={catchupTxMode ? { height: '68vh' } : {}}
+              style={catchupTxMode ? { height: '68vh' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : {}}
             >
               {catchupTxMode && (
                 <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -3827,9 +3828,10 @@ export default function App() {
               {!catchupTxMode && catchupStep === 3 && timingMode === 'log' && (
                 <div className="text-center space-y-3">
                   <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
-                  <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left" style={{ height: catchupMenuOpen ? 'min(62vh, 560px)' : 'auto' }}>
+                  <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left flex flex-col" style={{ maxHeight: catchupMenuOpen ? 'min(62vh, 560px)' : undefined }}>
                     <React.Fragment key={catchupMenuKey}>
                     <TreatmentSelection
+                      tight
                       addTreatment={(name, options) => { addTreatment(name, options); setCatchupMenuKey(k => k + 1); }}
                       state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
                       isShockForced={false}
@@ -3843,7 +3845,7 @@ export default function App() {
                       <ChevronDown size={16} strokeWidth={3} className={`transition-transform ${catchupAddedOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {catchupAddedOpen && (state.treatments.some(t => t.prior) ? (
-                      <div className="max-h-[22vh] overflow-y-auto space-y-1 mt-1.5">
+                      <div className="space-y-1 mt-1.5">
                         {state.treatments.map((t, i) => ({ t, i })).filter(x => x.t.prior).reverse().map(({ t, i }) => (
                           <div key={i} className="flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-full pl-3.5 pr-1.5 py-1.5">
                             <span className="text-[15px] font-bold text-neutral-800 truncate">{t.name}</span>
@@ -6732,7 +6734,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false, su
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, onDelayRhythmCheck, tutorialOutcomeRestriction }: { addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, tight, onDelayRhythmCheck, tutorialOutcomeRestriction }: { addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, tight?: boolean, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -6991,7 +6993,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
     };
 
     return (
-      <div key="tx-dose-picker" className="h-full overflow-y-auto pb-4">
+      <div key="tx-dose-picker" className={`h-full overflow-y-auto ${tight ? '' : 'pb-4'}`}>
         <div className="p-6 mb-4">
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">{selectedMed}</h2>
           {state.patientWeight && (
@@ -7149,7 +7151,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
   }
   
   return (
-    <div key="tx-menu" data-tutorial-anchor="add-tx-submenu" className={`w-full ${noScroll ? 'pb-4' : 'h-full overflow-y-auto pb-4'}`}>
+    <div key="tx-menu" data-tutorial-anchor="add-tx-submenu" className={`w-full ${noScroll ? '' : 'h-full overflow-y-auto'} ${tight ? '' : 'pb-4'}`}>
       {isShockForced && (
         <div className="bg-[#b91c1c] text-white p-4 text-center font-bold sticky top-0 z-[100] animate-pulse">
            RHYTHM CHECK: SELECT SHOCK STATUS
@@ -7263,7 +7265,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           />
           )}
           
-          <div className="py-3 px-2 border-t border-neutral-100 bg-neutral-50 mb-4">
+          <div className={`py-3 px-2 border-t border-neutral-100 bg-neutral-50 ${tight ? '' : 'mb-4'}`}>
             <div className="flex gap-2 w-full">
               <input 
                 type="text" 
