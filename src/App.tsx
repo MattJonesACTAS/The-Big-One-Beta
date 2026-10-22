@@ -1990,6 +1990,7 @@ export default function App() {
 
   // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
   const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
+  const [catchupMenuKey, setCatchupMenuKey] = useState(0);   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
     // Shock, Disarm and ROSC outcomes move the rhythm check timers. (Cases saved by older versions of
@@ -3813,12 +3814,14 @@ export default function App() {
                 <div className="text-center space-y-3">
                   <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
                   <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left" style={{ height: '44vh' }}>
+                    <React.Fragment key={catchupMenuKey}>
                     <TreatmentSelection
-                      addTreatment={(name, options) => { addTreatment(name, options); }}
+                      addTreatment={(name, options) => { addTreatment(name, options); setCatchupMenuKey(k => k + 1); }}
                       state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
                       isShockForced={false}
                       patientTypeOverride={weightType}
                     />
+                    </React.Fragment>
                   </div>
                   <div data-catchup-added className="rounded-xl bg-neutral-100 px-3 py-2 text-left">
                     <div className="text-[11px] font-extrabold tracking-wide text-neutral-500 mb-1">ADDED SO FAR</div>
