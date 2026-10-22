@@ -98,7 +98,7 @@ function vssTabPages(whereShown: string): NodePage[] {
     description: "As you type a value, a green tick appears next to it, confirming that a change has been made.\n\nEntering a new value replaces the old one.\n\n" + whereShown
   }, {
     title: 'Give it a Go',
-    description: "Open the VSS tab, record a BGL and a temperature, and close the tab to continue.\n\nThey'll be autofilled when we build a handover later."
+    description: 'Open the VSS tab, record a BGL and a temperature, and close the tab to continue.'
   }];
 }
 // True once a BGL and a temperature have been entered on the VSS tab (the handover autofills them)
@@ -379,8 +379,8 @@ const ELAPSED_RAW: RawNode[] = [
 // Which button(s) pulse while the tutorial is waiting on each node. Attached
 // by id so the node text above stays exactly as written.
 const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
-  // waiting for the Handover to be built and read out
-  handover: () => ['tutorial-flash-handover'],
+  // while the Handover node's own slide is up, the button pulses (in Tx log only the adrenaline entry pulses until it has been edited)
+  handover: (c) => (c.state.currentOverlay === null && !c.adrenalineHandled && c.state.timingMode === 'log') ? ['tutorial-flash-adrenaline-tx'] : ['tutorial-flash-handover'],
   // recalibrate dismissed, waiting for the weight to actually change
   tabs: (c) => {
     if (!c.weightUnchanged) return [];
@@ -397,7 +397,8 @@ const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
   // treatment log dismissed, waiting for the adrenaline entry to be edited
   closeOverlay: (c) => (c.state.currentOverlay === 'summary' && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : [],
   // Return to Home dismissed, waiting for the summary to be closed
-  endCase: (c) => c.state.currentOverlay === 'summary' ? ['tutorial-flash-summary-close'] : [],
+  // End Case waits for the handover to be read out to the end: the Handover button pulses until then
+  endCase: (c) => c.state.currentOverlay === 'summary' ? ['tutorial-flash-summary-close'] : (HANDOVER_DONE(c.state) ? [] : ['tutorial-flash-handover']),
   // End Case dismissed, waiting for it to be pressed
   finalStats: (c) => c.state.currentOverlay === null ? ['tutorial-flash-end'] : [],
 };
@@ -488,7 +489,7 @@ const MINIMAL_NODES: RawNode[] = [
     }]
   }),
   nodeById('handover'),
-  withOverrides('endCase', { flashWhileCurrent: undefined }),
+  withOverrides('endCase', { flashWhileCurrent: (c) => (HANDOVER_DONE(c.state) ? [] : ['tutorial-flash-handover']) }),
   withOverrides('finalStats', {
     pages: [{
       title: 'Final Case Data',
@@ -531,11 +532,15 @@ const LOG_NODES: RawNode[] = [
   withOverrides('vitalSignsInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
   withOverrides('pharmaSummaryInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
   withOverrides('treatmentLogInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
-  withOverrides('handover', { condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s) }),
+  // waiting for the adrenaline entry to be edited (its row pulses), then the Handover slide
+  withOverrides('handover', {
+    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s),
+    flashWhileCurrent: (c) => (c.state.currentOverlay === null && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : ['tutorial-flash-handover']
+  }),
   withOverrides('endCase', {
     condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s) && HANDOVER_DONE(s),
-    // waiting for the adrenaline entry to be edited
-    flashWhileCurrent: (c) => (c.state.currentOverlay === null && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : []
+    // waiting for the handover to be read out to the end
+    flashWhileCurrent: (c) => (HANDOVER_DONE(c.state) ? [] : ['tutorial-flash-handover'])
   }),
   nodeById('finalStats'),
   nodeById('export'),
