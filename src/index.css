@@ -359,3 +359,20 @@ body.tutorial-flash-adrenaline-tx [data-tx-more="adrenaline-push"] {
 
 /* The app is never zoomed: no pinch zoom or double-tap zoom (scrolling still works) */
 html, body { touch-action: pan-x pan-y; }
+
+/* A ticked checklist item gets a line drawn through it, left to right (it works across wrapped lines too) */
+.strike-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 60%;
+  background-size: 0% 2px;
+  transition: background-size 0.35s ease-out;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.strike-draw.on { background-size: 100% 2px; }
+
+/* Tutorial: the Handover button pulses while the tutorial waits for it to be pressed */
+body.tutorial-flash-handover [data-button="handover"][aria-pressed="false"] {
+  animation: adrenalineFlash 1.5s infinite;
+}

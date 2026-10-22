@@ -1017,7 +1017,7 @@ export default function App() {
   //    for the rest of the tutorial instead of going back to being suppressed.
   const tutorialRhythmDemoActive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx && tutorialNodeIndex <= demoEndIdx;
   // The Handover button in the top row (not in Timers only, and not in the tutorial)
-  const showHandoverBtn = !tutorialMode && (timingMode === 'log' || timingMode === 'elapsed' || timingMode === 'minimal');
+  const showHandoverBtn = (timingMode === 'log' || timingMode === 'elapsed' || timingMode === 'minimal');
   const tutorialRhythmLive = tutorialMode && hasRhythmDemo && tutorialNodeIndex >= demoStartIdx;
   // The tick's own popup-at-0:00 and auto-close-at-0:20 are a third thing
   // again. Inside the walkthrough they must NOT run on their own schedule:
@@ -2860,7 +2860,7 @@ export default function App() {
 
       {/* Main Center Display */}
       <div data-green-box className={`flex-1 bg-white border-4 rounded-3xl relative overflow-hidden transition-colors duration-300 min-h-0 ${
-        showHandover && !state.currentOverlay && !tutorialMode ? 'border-[#4a6fa5]' :
+        showHandover && !state.currentOverlay ? 'border-[#4a6fa5]' :
         state.currentOverlay === 'reversibles' ? 'border-blue-400' :
         state.currentOverlay === 'rosc' ? 'border-orange-400' :
         state.currentOverlay === 'phea' ? 'border-purple-400' :
@@ -3255,7 +3255,7 @@ export default function App() {
         </div>
         )} {/* end else (non-log mode) */}
         <AnimatePresence>
-          {showHandover && !tutorialMode && (
+          {showHandover && (
             <motion.div key="handover" className="absolute inset-0 z-[45]"
               initial={{ y: '-100%' }} animate={{ y: 0 }} exit={{ y: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.8 }}>
@@ -3266,10 +3266,10 @@ export default function App() {
       </div>
 
       {/* Bottom Main Controls */}
-      {showHandover && !state.currentOverlay && !tutorialMode && (
+      {showHandover && !state.currentOverlay && (
         <div ref={setHandoverBar} data-handover-bar className="grid grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0" />
       )}
-      <div className={`${showHandover && !state.currentOverlay && !tutorialMode ? 'hidden' : ''} grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      <div className={`${showHandover && !state.currentOverlay ? 'hidden' : ''} grid gap-3 sm:gap-4 mt-3 sm:mt-4 flex-shrink-0 ${timingMode === 'log' ? (state.isROSCMode ? 'grid-cols-2' : 'grid-cols-1') : timingMode === 'minimal' ? 'grid-cols-1' : 'grid-cols-2'}`}>
         {timingMode !== 'log' && timingMode !== 'minimal' && (
           <button 
             onClick={() => {
@@ -4883,7 +4883,7 @@ function CheckItem({ label, subItems, color = 'emerald', checked, onToggle }: Ch
           {checked && <CheckCircle2 size={12} className="text-white" />}
         </div>
         <div className="flex-1">
-          <span className={`text-[17px] font-medium ${checked ? colors.text : 'text-neutral-700'}`}>{label}</span>
+          <span className={`strike-draw ${checked ? 'on' : ''} text-[17px] font-medium ${checked ? colors.text : 'text-neutral-700'}`}>{label}</span>
           {subItems && subItems.length > 0 && (
             <ul className="mt-2 ml-0 space-y-1">
               {subItems.map((item, idx) => (
@@ -5239,7 +5239,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5691,6 +5691,24 @@ const suggestedPaedWeight = (age: string, unit: string): [string, number] => {
   const asMonths = (label: string) => (label === 'Newborn' ? 0 : (parseInt(label, 10) * (label.includes('year') ? 12 : 1)));
   return PAED_WEIGHTS.reduce((best, cur) => (Math.abs(asMonths(cur[0]) - months) < Math.abs(asMonths(best[0]) - months) ? cur : best), PAED_WEIGHTS[0]);
 };
+
+// "because" is fixed text at the start of the box: what the crew type has to follow on from it ("... was cardiac because patient clutched their chest")
+function HandoverBecauseField({ value, onChange }: { value: string, onChange: (v: string) => void }) {
+  const compact = React.useContext(HandoverDensity);
+  const wordRef = React.useRef<HTMLSpanElement>(null);
+  const [indent, setIndent] = useState(0);
+  React.useLayoutEffect(() => { if (wordRef.current) setIndent(wordRef.current.offsetWidth + 7); }, []);
+  return (
+    <HandoverBox label="Why do you think that was the cause?" state="none">
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Why do you think that was the cause?</span>
+      <div className="relative">
+        <span ref={wordRef} data-handover-because style={{ lineHeight: 'normal' }} className="absolute left-[14px] top-[10px] text-[16px] font-bold italic text-neutral-500 pointer-events-none select-none">because</span>
+        <textarea aria-label="Why do you think that was the cause?" data-handover-textfield rows={4} value={value} onChange={e => onChange(e.target.value)} placeholder="patient clutched their chest before collapsing."
+          style={{ textIndent: indent }} className="w-full rounded-lg border-2 border-neutral-400 bg-white px-3 py-2 text-[16px] font-semibold text-neutral-800 placeholder:font-normal placeholder:text-neutral-400 resize-none" />
+      </div>
+    </HandoverBox>
+  );
+}
 
 // Arrest – Timers: for a child, confirm the weight suggested by their age, or enter a custom one
 function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm, onCustom }: { ageKey: string, suggested: [string, number], weight: number | null | undefined, confirmedFor: string | undefined, onConfirm: () => void, onCustom: (w: number) => void }) {
@@ -6153,7 +6171,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         {(() => {
           const btn = embedded ? 'p-3 sm:p-5 rounded-2xl text-base sm:text-xl' : `${compact ? 'p-3' : 'p-4'} rounded-xl`;
           const prevB = <button onClick={() => (card > 0 ? setCard(card - 1) : setView('fill'))} data-button="handover-prev" className={`bg-neutral-200 ${btn} font-bold text-neutral-700 btn-base`}>Back</button>;
-          const nextB = <button onClick={() => (last ? (onFinish ? onFinish() : onClose()) : setCard(card + 1))} data-button="handover-next" className={`bg-[#4a6fa5] ${btn} font-bold text-white btn-base`}>{last ? 'Done' : 'Next'}</button>;
+          const nextB = <button onClick={() => { if (last) { onField('delivered', 'Yes'); if (onFinish) onFinish(); else onClose(); } else setCard(card + 1); }} data-button="handover-next" className={`bg-[#4a6fa5] ${btn} font-bold text-white btn-base`}>{last ? 'Done' : 'Next'}</button>;
           return embedded
             ? (barEl ? createPortal(<>{prevB}{nextB}</>, barEl) : null)
             : <div className={`flex-shrink-0 grid grid-cols-2 gap-3 ${compact ? 'p-2.5' : 'p-4'} bg-neutral-100 border-t border-neutral-200`}>{prevB}{nextB}</div>;
@@ -6179,7 +6197,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // In a ROSC or General handover EtCO₂ is asked at the bottom of the Breathing page (so Vital Signs fits); it is still read out with the vital signs
   const vsSigns = inRosc ? content.signs.filter(sg => sg.key !== 'etco2') : content.signs;
 
-  const whyBox = text('causeWhy', 'Why do you think that was the cause?', { rows: 3, state: 'none', placeholder: 'patient clutched their chest before collapsing.' });
+  const whyBox = <HandoverBecauseField value={h.causeWhy} onChange={v => onField('causeWhy', v)} />;
 
   const gcsBox = (
     <HandoverBox label="GCS" state={(vit.gcs || unk('gcs')) ? 'done' : 'missing'} className="col-span-2">
@@ -6216,7 +6234,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       case 'details': return (
         <HandoverPageCard>
           {causeBox}
-          <div className="text-center text-[20px] font-bold italic text-neutral-500 -my-0.5" data-handover-because>because...</div>
           {whyBox}
         </HandoverPageCard>
       );

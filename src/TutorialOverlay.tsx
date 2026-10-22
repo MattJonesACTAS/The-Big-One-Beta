@@ -61,6 +61,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
     treatmentLogInfo: "Press the 'Summary' button at the bottom left of the home screen, tap the small button beside the adrenaline push entry in the treatment log, and choose Edit, Reorder, or Delete.",
+    handover: "Press the 'Handover' button at the top of the home screen, fill in every page, then press 'Deliver handover' and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
   },
@@ -71,6 +72,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
     treatmentLogInfo: "Tap the small button beside the adrenaline push entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
+    handover: "Press the 'Handover' button at the top of the home screen, fill in every page, then press 'Deliver handover' and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
   },
@@ -80,6 +82,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
     vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can start an adrenaline timer.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen and choose 'Adrenaline' to start its timer.",
+    handover: "Press the 'Handover' button at the top of the home screen, fill in every page, then press 'Deliver handover' and read it out to the end.",
     endCase: "Press the 'End Case' button at the top right of the home screen and confirm.",
     delete: "Press the 'Close Case' button on the right and confirm to finish the tutorial.",
   },
@@ -95,11 +98,13 @@ function vssTabPages(whereShown: string): NodePage[] {
     description: "As you type a value, a green tick appears next to it, confirming that a change has been made.\n\nEntering a new value replaces the old one.\n\n" + whereShown
   }, {
     title: 'Give it a Go',
-    description: 'Open the VSS tab, record a vital sign, and close the tab to continue.'
+    description: "Open the VSS tab, record a BGL and a temperature, and close the tab to continue.\n\nThey'll be autofilled when we build a handover later."
   }];
 }
-// True once at least one vital sign has been entered on the VSS tab
-const VITALS_SAVED = (s: any) => Object.values(s.vitals ?? {}).some((v: any) => String(v ?? '').trim() !== '');
+// True once a BGL and a temperature have been entered on the VSS tab (the handover autofills them)
+// True once the handover has been read out to the end
+const HANDOVER_DONE = (s: any) => s.handover?.delivered === 'Yes';
+const VITALS_SAVED = (s: any) => ['bgl', 'temp'].every(k => String(s.vitals?.[k] ?? '').trim() !== '');
 
 const ELAPSED_RAW: RawNode[] = [
   // --- Home screen nodes ---
@@ -341,11 +346,17 @@ const ELAPSED_RAW: RawNode[] = [
       && (!s.treatments.some(t => t.name.startsWith('Adrenaline push'))
           || s.treatments.some(t => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited)))
   },
-  // --- Home after summary ---
+  // --- Handover, then home after summary ---
+  {
+    // Before End Case: the crew build a handover and read it out to the end (App.tsx sets handover.delivered)
+    id: 'handover', type: 'positioned', x: 50, y: 4.2, anchor: '[data-button="handover"]',
+    pages: [{ title: 'Handover Button', description: "The Big One can also produce a resus handover. It will autofill what it can from the case, but you'll need to provide additional information about what happened." }, { title: 'Give it a Go', description: 'Build a handover to continue.' }],
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
+  },
   {
     id: 'endCase', type: 'positioned', x: 75.22, y: 4.2, anchor: '[data-button="end-case"]',
     pages: [{ title: 'End Case Button', description: "When you've either stopped resuscitative efforts or handed your patient over at hospital, you can end the case." }, { title: 'Give it a Go', description: "Let's end the case and see the final summary page." }],
-    condition: (s, sf) => s.running && s.currentOverlay === null && !sf
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf && HANDOVER_DONE(s)
   },
   // --- Case summary ---
   {
@@ -368,6 +379,8 @@ const ELAPSED_RAW: RawNode[] = [
 // Which button(s) pulse while the tutorial is waiting on each node. Attached
 // by id so the node text above stays exactly as written.
 const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
+  // waiting for the Handover to be built and read out
+  handover: () => ['tutorial-flash-handover'],
   // recalibrate dismissed, waiting for the weight to actually change
   tabs: (c) => {
     if (!c.weightUnchanged) return [];
@@ -390,7 +403,7 @@ const FLASH: Record<string, (ctx: TutorialFlashContext) => string[]> = {
 };
 
 export const TUTORIAL_FLASH_CLASSES = [
-  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx',
+  'tutorial-flash-recalibrate', 'tutorial-flash-weight', 'tutorial-flash-add-tx', 'tutorial-flash-handover',
   'tutorial-flash-adrenaline', 'tutorial-flash-dose', 'tutorial-flash-summary',
   'tutorial-flash-adrenaline-tx', 'tutorial-flash-summary-close', 'tutorial-flash-end',
   'tutorial-flash-close',
@@ -433,7 +446,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
-      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval\n\n• Change the app mode"
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval"
     }, { title: 'Give it a Go', description: "Change the rhythm check interval to move forward." }]
   }),
   // no patient weight in this mode, so the checklists wait for a real rhythm check interval change instead
@@ -474,6 +487,7 @@ const MINIMAL_NODES: RawNode[] = [
       description: 'When you press adrenaline or amiodarone, a timer will appear on the home screen to help you keep track of when the next dose is due.'
     }]
   }),
+  nodeById('handover'),
   withOverrides('endCase', { flashWhileCurrent: undefined }),
   withOverrides('finalStats', {
     pages: [{
@@ -517,8 +531,9 @@ const LOG_NODES: RawNode[] = [
   withOverrides('vitalSignsInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
   withOverrides('pharmaSummaryInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
   withOverrides('treatmentLogInfo', { condition: (s, sf) => LOG_HOME(s, sf) }),
+  withOverrides('handover', { condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s) }),
   withOverrides('endCase', {
-    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s),
+    condition: (s, sf) => LOG_HOME(s, sf) && ADRENALINE_HANDLED(s) && HANDOVER_DONE(s),
     // waiting for the adrenaline entry to be edited
     flashWhileCurrent: (c) => (c.state.currentOverlay === null && !c.adrenalineHandled) ? ['tutorial-flash-adrenaline-tx'] : []
   }),
