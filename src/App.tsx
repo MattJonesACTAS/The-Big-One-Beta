@@ -857,6 +857,8 @@ export default function App() {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | 'minimal' | null>(() => state.timingMode);
+  // The mode the setup was last chosen in: choosing a different one before the case starts wipes what was entered as already applied
+  const [lastSetupMode, setLastSetupMode] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
   // Which App Mode card is currently expanded. Kept apart from timingMode so
   // tapping the chosen card again can shrink it without un-choosing the mode.
   const [expandedMode, setExpandedMode] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
@@ -1082,7 +1084,7 @@ export default function App() {
     setUseManualEntry(false);
     setCatchupTxMode(false);
     setPriorTxs([]);
-    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
+    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 }); setLastSetupMode(null);
     setElapsedTimestamp(null);
     setState(INITIAL_STATE);
     setSetupReset(n => n + 1);
@@ -1105,7 +1107,7 @@ export default function App() {
     setUseManualEntry(false);
     setCatchupTxMode(false);
     setPriorTxs([]);
-    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
+    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 }); setLastSetupMode(null);
     setElapsedTimestamp(null);
     setState(INITIAL_STATE);
     setCatchupStep(1);
@@ -2010,6 +2012,7 @@ export default function App() {
     const disarms = state.treatments.filter(t => t.prior && getTreatmentIdentity(t.name) === 'Disarm').length;
     setPriorCounts(p => ({ ...p, shock: p.shock + shocks, disarm: p.disarm + disarms }));
     setState(prev => ({ ...prev, treatments: prev.treatments.filter(t => !(t.prior && (getTreatmentIdentity(t.name) === 'Shock' || getTreatmentIdentity(t.name) === 'Disarm'))) }));
+    setLastSetupMode('elapsed');
     setTimingMode('elapsed');
     setShowArrestModePrompt(false);
   };
@@ -2549,7 +2552,7 @@ export default function App() {
     setWeightType(null);
     setPaedWeightMethod(null);
     setWeightInput('');
-    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
+    setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 }); setLastSetupMode(null);
     setPriorTxs([]);
     // setPhotoTimestamp(null); // Removed - not defined
     setElapsedTimestamp(null);
@@ -4005,6 +4008,13 @@ export default function App() {
                                 setTimingMode(null);
                                 setExpandedMode(null);
                               } else {
+                                // a different mode from the one the treatments were entered in: start them again
+                                if (lastSetupMode && lastSetupMode !== mode) {
+                                  setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
+                                  setPriorTxs([]);
+                                  setState(prev => ({ ...prev, treatments: prev.treatments.filter(t => !t.prior), arrestModeSuggested: false }));
+                                }
+                                setLastSetupMode(mode);
                                 setTimingMode(mode);
                                 setExpandedMode(mode);
                               }
