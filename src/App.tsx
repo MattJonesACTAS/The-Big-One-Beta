@@ -2040,6 +2040,12 @@ export default function App() {
     if (catchupTxActive) {
       setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment] }));
       if (catchupTxMode) setCatchupTxMode(false);
+      else {
+        // General setup slide: the same "logged" banner that comes down on the home screen
+        loggedTreatmentRef.current = name;
+        setShowLoggedNotification(true);
+        setTimeout(() => setShowLoggedNotification(false), 2000);
+      }
       return;
     }
 
