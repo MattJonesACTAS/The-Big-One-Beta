@@ -60,12 +60,12 @@ const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; t
     { title: 'When to Use It', text: "• Cardiac arrest cases when you're still learning how to use the app." },
   ],
   log: [
-    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Pre-calculates weight-based doses.\n\n• Helps you build a comprehensive resus handover." },
+    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Automatically adds doses for each medication together to make a total.\n\n• Pre-calculates weight-based doses.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Helps you build a comprehensive resus handover." },
     { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting.\n\n• If you log a rhythm check, the app will suggest switching to an arrest mode." },
     { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Scribing during a sim." },
   ],
   elapsed: [
-    { title: 'What It Does', text: "• Keeps track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Pre-calculates weight-based doses.\n\n• Helps you build a comprehensive resus handover." },
+    { title: 'What It Does', text: "• Keeps track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• You create a detailed log of the case in real time.\n\n• Automatically adds doses for each medication together to make a total.\n\n• Pre-calculates weight-based doses.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Helps you build a comprehensive resus handover." },
     { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Requires repeated attention to log treatments, which could be distracting." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
   ],
