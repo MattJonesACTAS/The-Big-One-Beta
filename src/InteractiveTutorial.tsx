@@ -50,24 +50,23 @@ interface InteractiveTutorialProps {
 // EXPERIMENT: true shows each mode's "Learn more" as ONE scrollable page
 // (all three sections on it); false goes back to three separate pages
 // (What It Does / Limitations / When to Use It, with Next). Same text either way.
-const ABOUT_SINGLE_PAGE = true;
 
 // "Learn more" on each mode card: three pages per mode - what it does, its
 // limitations, and when to use it. Headings are the section names.
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
-    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job." },
-    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline, and amiodarone.\n\n• Can't be changed to another mode once the case starts." },
-    { title: 'When to Use It', text: "• Cardiac arrest cases where you only need the timers." },
+    { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job.\n\n• Records the time of each rhythm check outcome, adrenaline dose, and amiodarone dose.\n\n• Helps you build a basic resus handover." },
+    { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline, and amiodarone.\n\n• Does not record doses or other treatments.\n\n• Can't be changed to another mode once the case starts." },
+    { title: 'When to Use It', text: "• Cardiac arrest cases when you're still learning how to use the app." },
   ],
   log: [
-    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, useful for case sheets." },
+    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Pre-calculates weight-based doses.\n\n• Helps you build a comprehensive resus handover." },
     { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting.\n\n• If you log a rhythm check, the app will suggest switching to an arrest mode." },
     { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Scribing during a sim." },
   ],
   elapsed: [
-    { title: 'What It Does', text: "• Combines all the capabilities of the 'Arrest – Timers' and 'General – Tx log only' modes." },
-    { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Like 'General – Tx log only', requires repeated attention." },
+    { title: 'What It Does', text: "• Keeps track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Pre-calculates weight-based doses.\n\n• Helps you build a comprehensive resus handover." },
+    { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Requires repeated attention to log treatments, which could be distracting." },
     { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
   ],
 };
@@ -645,17 +644,9 @@ function renderPlainBullets(text: string) {
 export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'elapsed'; onClose: () => void }) {
   const pages = MODE_ABOUT_PAGES[mode];
   const [page, setPage] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [more, setMore] = useState(false);
-  const check = () => {
-    const el = scrollRef.current;
-    if (el) setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
-  };
-  useEffect(() => {
-    setPage(0);
-    const t = window.setTimeout(check, 50);
-    return () => window.clearTimeout(t);
-  }, [mode]);
+  const press = useRef<{ x: number; y: number } | null>(null);
+  const go = (n: number) => setPage(Math.max(0, Math.min(pages.length - 1, n)));
+  useEffect(() => { setPage(0); }, [mode]);
   const buttonStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px',
@@ -682,7 +673,7 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
       pointerEvents: 'auto',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
-      <div style={{
+      <div data-about-card style={{
         backgroundColor: '#ffffff',
         borderRadius: '16px',
         padding: '24px',
@@ -690,42 +681,41 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
         width: '85%',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
         maxHeight: '100%',
-        overflowY: 'auto',
-        ...(ABOUT_SINGLE_PAGE ? { display: 'flex', flexDirection: 'column' as const, overflowY: 'hidden' as const } : {}),
+        display: 'flex',
+        flexDirection: 'column',
       }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: '16px', flexShrink: 0 }}>
-          {ABOUT_SINGLE_PAGE ? 'Learn More' : pages[page].title}
-        </h2>
-        {ABOUT_SINGLE_PAGE ? (
-          <>
-            <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', marginBottom: '14px' }}>
-              <div ref={scrollRef} onScroll={check} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                {pages.map((pg, i, all) => (
-                  <div key={i} style={{ marginBottom: i < all.length - 1 ? '18px' : 0 }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 6px 0' }}>{pg.title}</h3>
-                    {renderPlainBullets(pg.text)}
-                  </div>
-                ))}
+        {/* The three pages sit side by side: swipe sideways (or use the dots / Next) to move between them */}
+        <div
+          data-about-viewport
+          style={{ overflow: 'hidden', flex: 1, minHeight: 0, touchAction: 'pan-y' }}
+          onPointerDown={e => { press.current = { x: e.clientX, y: e.clientY }; }}
+          onPointerUp={e => {
+            const s = press.current; press.current = null;
+            if (!s) return;
+            const dx = e.clientX - s.x, dy = e.clientY - s.y;
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(page + (dx < 0 ? 1 : -1));
+          }}
+          onPointerCancel={() => { press.current = null; }}
+        >
+          <div style={{ display: 'flex', height: '100%', transition: 'transform 0.28s ease', transform: `translateX(-${page * 100}%)` }}>
+            {pages.map((pg, i) => (
+              <div key={i} data-about-page={i} aria-hidden={i !== page} style={{ flex: '0 0 100%', minWidth: 0, overflowY: 'auto' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1a1a1a', textAlign: 'center', margin: '0 0 16px 0' }}>{pg.title}</h2>
+                {renderPlainBullets(pg.text)}
               </div>
-              {more && (
-                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '36px', pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(255,255,255,0), #ffffff)' }} />
-              )}
-            </div>
-            <button onClick={onClose} style={buttonStyle}>Got It</button>
-          </>
-        ) : (
-          <>
-            <div style={{ marginBottom: '20px' }}>{renderPlainBullets(pages[page].text)}</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '14px' }}>
-              {pages.map((_, i) => (
-                <span key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === page ? '#10b981' : '#d1d5db' }} />
-              ))}
-            </div>
-            <button onClick={() => (page < pages.length - 1 ? setPage(page + 1) : onClose())} style={buttonStyle}>
-              {page < pages.length - 1 ? 'Next' : 'Got It'}
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', margin: '12px 0 10px', flexShrink: 0 }}>
+          {pages.map((_, i) => (
+            <button key={i} data-about-dot={i} aria-label={`Page ${i + 1} of ${pages.length}`} onClick={() => go(i)} style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <span style={{ display: 'block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === page ? '#10b981' : '#d1d5db' }} />
             </button>
-          </>
-        )}
+          ))}
+        </div>
+        <button onClick={() => (page < pages.length - 1 ? go(page + 1) : onClose())} style={buttonStyle}>
+          {page < pages.length - 1 ? 'Next' : 'Got It'}
+        </button>
       </div>
     </div>
   );
