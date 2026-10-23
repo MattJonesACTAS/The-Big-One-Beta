@@ -58,19 +58,19 @@ const MODE_ABOUT_NAMES: Record<'log' | 'minimal' | 'elapsed', string> = { minima
 
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
+    { title: 'When to Use It', text: "• Cardiac arrest cases when you're still learning how to use the app." },
     { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job.\n\n• Records the time of each rhythm check outcome, adrenaline dose, and amiodarone dose.\n\n• Helps you build a basic resus handover." },
     { title: 'Limitations', text: "• Does not help with your case sheet beyond the times you logged rhythm checks, adrenaline, and amiodarone.\n\n• Does not record doses or other treatments.\n\n• Can't be changed to another mode once the case starts." },
-    { title: 'When to Use It', text: "• Cardiac arrest cases when you're still learning how to use the app." },
   ],
   log: [
-    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Automatically adds doses for each medication together to make a total.\n\n• Pre-calculates weight-based doses.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Helps you build a comprehensive resus handover." },
-    { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting.\n\n• If you log a rhythm check, the app will suggest switching to an arrest mode." },
     { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Scribing during a sim." },
+    { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Automatically adds doses for each medication together to make a total.\n\n• Pre-calculates weight-based doses.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Helps you build a comprehensive resus handover." },
+    { title: 'Limitations', text: "• Requires repeated attention, which could be distracting.\n\n• Does not track rhythm checks or redosing.\n\n• If you log a rhythm check, the app will suggest switching to an arrest mode." },
   ],
   elapsed: [
+    { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
     { title: 'What It Does', text: "• Keeps track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• You create a detailed log of the case in real time.\n\n• Automatically adds doses for each medication together to make a total.\n\n• Pre-calculates weight-based doses.\n\n• Provides a summary of what you logged, useful for case sheets.\n\n• Helps you build a comprehensive resus handover." },
     { title: 'Limitations', text: "• Requires practice, as it is the most complex mode.\n\n• Requires repeated attention to log treatments, which could be distracting." },
-    { title: 'When to Use It', text: "• Cardiac arrest cases where you want both the timers and a detailed log." },
   ],
 };
 
