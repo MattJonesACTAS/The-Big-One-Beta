@@ -6033,6 +6033,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
+  // A child (by the age in the handover, or by the case when the age isn't known): the Other information box suggests what is specific to a child
+  const isChildPatient = ageValue && h.ageUnknown !== 'Yes' ? isPaedAge(ageValue, ageUnit) : state.patientType === 'paed';
   // Tx log modes: the weight was chosen at setup. An age that doesn't go with it (a child on an adult case, an adult on a child case, another child's age) asks for the weight to be confirmed
   const weightKey = `${ageValue}|${ageUnit}`;
   const weightNeed: { sg: [string, number]; type: 'adult' | 'paed' } | null = (() => {
@@ -6579,7 +6581,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         <HandoverPageCard>
           {text('medications', 'Regular medications', { rows: 2, clearUnknown: 'meds', state: (h.medications.trim() || unk('meds')) ? 'done' : 'missing',
             footer: <HandoverUnknown label="Regular medications" on={unk('meds')} onClick={() => { const on = !unk('meds'); setUnk('meds', on); if (on) onField('medications', ''); }} /> })}
-          {text('otherInfo', 'Other information (optional)', { rows: 4, state: 'none' })}
+          {text('otherInfo', 'Other information (optional)', { rows: 4, state: 'none', ...(isChildPatient ? { placeholder: "e.g. Patient's father is in the family room / immunisations up to date" } : {}) })}
         </HandoverPageCard>
       );
       default: {
