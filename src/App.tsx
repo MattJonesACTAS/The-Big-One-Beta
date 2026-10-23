@@ -5881,7 +5881,7 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
   const tcls = (on: boolean) => `${compact ? 'py-2.5' : 'py-3.5'} rounded-lg font-bold text-[15px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
   return (
     <HandoverBox label="Weight" state={confirmed ? 'done' : 'missing'}>
-      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Weight</span>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Confirm weight</span>
       <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
         <button data-handover-choice="Weight: Confirm" aria-pressed={confirmed && !wasCustom && !custom} onClick={() => { setCustom(false); sentRef.current = null; onConfirm(); }} className={tcls(confirmed && !wasCustom && !custom)}>{suggested[1]}kg ({suggested[0]})</button>
         <button data-handover-choice="Weight: Custom" aria-pressed={custom || wasCustom} onClick={() => { setCustom(true); setCustomText(wasCustom ? String(weight) : ''); }} className={tcls(custom || wasCustom)}>Custom weight</button>
