@@ -2002,6 +2002,17 @@ export default function App() {
     return () => document.body.classList.remove('tutorial-guide-iv');
   }, [ivGuideOn]);
 
+  // Shock, Disarm or a plain rhythm check: what suggests a cardiac arrest while in General
+  const isRhythmCheckName = (n: string) => getTreatmentIdentity(n) === 'Shock' || getTreatmentIdentity(n) === 'Disarm' || /^Rhythm check/.test(n.trim());
+  // Switching to the arrest mode from the setup page: shocks and disarms logged there become the arrest setup's counters
+  const switchSetupToArrest = () => {
+    const shocks = state.treatments.filter(t => t.prior && getTreatmentIdentity(t.name) === 'Shock').length;
+    const disarms = state.treatments.filter(t => t.prior && getTreatmentIdentity(t.name) === 'Disarm').length;
+    setPriorCounts(p => ({ ...p, shock: p.shock + shocks, disarm: p.disarm + disarms }));
+    setState(prev => ({ ...prev, treatments: prev.treatments.filter(t => !(t.prior && (getTreatmentIdentity(t.name) === 'Shock' || getTreatmentIdentity(t.name) === 'Disarm'))) }));
+    setTimingMode('elapsed');
+    setShowArrestModePrompt(false);
+  };
   // General (Tx log only): the full Add Tx menu sits on the setup slide, and what is logged there is a treatment from before the app was opened
   const catchupTxActive = catchupTxMode || (showCatchup && catchupStep === 3 && timingMode === 'log');
   const catchupLogSlide = showCatchup && catchupStep === 3 && timingMode === 'log' && !catchupTxMode;
@@ -2043,6 +2054,11 @@ export default function App() {
       setState(prev => ({ ...prev, treatments: [...prev.treatments, treatment] }));
       if (catchupTxMode) setCatchupTxMode(false);
       else {
+        // a rhythm check logged on the setup page suggests the arrest mode too (once per case: the flag goes on into the case)
+        if (!state.arrestModeSuggested && !tutorialMode && isRhythmCheckName(name)) {
+          setState(prev => ({ ...prev, arrestModeSuggested: true }));
+          setShowArrestModePrompt(true);
+        }
         // General setup slide: the same "logged" banner that comes down on the home screen
         loggedTreatmentRef.current = name;
         setShowLoggedNotification(true);
@@ -2202,7 +2218,7 @@ export default function App() {
     }
     
     // Tx log only: the first rhythm check logged suggests an arrest, so the arrest mode is suggested (once per case)
-    if (state.timingMode === 'log' && !state.arrestModeSuggested && !tutorialMode && (getTreatmentIdentity(name) === 'Shock' || getTreatmentIdentity(name) === 'Disarm' || /^Rhythm check/.test(name.trim()))) {
+    if (state.timingMode === 'log' && !state.arrestModeSuggested && !tutorialMode && isRhythmCheckName(name)) {
       setState(prev => ({ ...prev, arrestModeSuggested: true }));
       setShowArrestModePrompt(true);
     }
@@ -2506,6 +2522,7 @@ export default function App() {
       cprRound: timingMode === 'minimal' ? 0 : priorCounts.shock + priorCounts.disarm,
       treatments: allInitialTxs,
       catchupElapsed: adjustedElapsed,
+      arrestModeSuggested: !!state.arrestModeSuggested,
       startClockTime: startClockTime,
       patientWeight: parsedWeight || (tutorialMode ? 70 : null),
       patientType: timingMode === 'minimal' ? null : (weightType || (tutorialMode ? 'adult' : null)),
@@ -4512,12 +4529,10 @@ export default function App() {
       {showArrestModePrompt && (
         <div data-arrest-mode-prompt className="fixed inset-0 bg-black/80 z-[1500] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
           <div className="bg-white rounded-3xl p-7 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-3">Is this a cardiac arrest?</h2>
-            <p className="text-neutral-600 mb-3">You've logged a rhythm check in General mode.</p>
-            <p className="text-neutral-600 mb-6">Arrest – Timers + Tx log keeps the rhythm check timers for you and gives a more accurate record.</p>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-6">Change to cardiac arrest mode?</h2>
             <div className="grid grid-cols-2 gap-3">
               <button data-arrest-prompt-stay onClick={() => setShowArrestModePrompt(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Stay in General</button>
-              <button data-arrest-prompt-switch onClick={() => { setShowArrestModePrompt(false); beginModeChange('elapsed'); }} className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">Switch mode</button>
+              <button data-arrest-prompt-switch onClick={() => { setShowArrestModePrompt(false); if (showCatchup) switchSetupToArrest(); else beginModeChange('elapsed'); }} className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">Switch mode</button>
             </div>
           </div>
         </div>

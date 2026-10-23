@@ -53,6 +53,9 @@ interface InteractiveTutorialProps {
 
 // "Learn more" on each mode card: three pages per mode - what it does, its
 // limitations, and when to use it. Headings are the section names.
+// The mode's name, shown at the top of each of its Learn More pages
+const MODE_ABOUT_NAMES: Record<'log' | 'minimal' | 'elapsed', string> = { minimal: 'Arrest – Timers', elapsed: 'Arrest – Timers + Tx log', log: 'General – Tx log only' };
+
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
     { title: 'What It Does', text: "• Assists you in keeping track of your next rhythm check, next adrenaline dose, and next amiodarone dose.\n\n• Needs little input from you and, if anything, reduces distractions on the job.\n\n• Records the time of each rhythm check outcome, adrenaline dose, and amiodarone dose.\n\n• Helps you build a basic resus handover." },
@@ -684,6 +687,7 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
         display: 'flex',
         flexDirection: 'column',
       }}>
+        <div data-about-mode style={{ textAlign: 'center', fontSize: '13px', fontWeight: '700', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#059669', marginBottom: '8px', flexShrink: 0 }}>{MODE_ABOUT_NAMES[mode]}</div>
         {/* The three pages sit side by side: swipe sideways (or use the dots / Next) to move between them */}
         <div
           data-about-viewport
