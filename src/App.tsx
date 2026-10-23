@@ -3384,7 +3384,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
               style={catchupTxMode ? { height: '68vh' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : {}}
             >
               {catchupTxMode && (
@@ -3832,7 +3832,8 @@ export default function App() {
               )}
 
               {!catchupTxMode && catchupStep === 3 && timingMode === 'log' && (
-                <div className="text-center space-y-3">
+                <div className="text-center flex flex-col min-h-0 flex-1">
+                  <div data-catchup-scroll className="flex-1 min-h-0 overflow-y-auto space-y-3">
                   <h2 className="text-xl font-bold text-neutral-900">What Treatments Have<br />You Already Applied?</h2>
                   <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left flex flex-col" style={{ maxHeight: catchupMenuOpen ? 'min(62vh, 560px)' : undefined }}>
                     <TreatmentSelection
@@ -3868,7 +3869,8 @@ export default function App() {
                       ) : <div className="text-[15px] text-neutral-400 mt-1">Nothing yet</div>}
                     </motion.div>
                   </div>
-                  <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-1">
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-3 flex-shrink-0">
                     <button onClick={() => setCatchupStep(2)} className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base">Back</button>
                     <button
                       onClick={() => { if (showInteractiveTutorial) { setShowInteractiveTutorial(false); setTutorialMode(true); } handleCatchupStart(); }}
