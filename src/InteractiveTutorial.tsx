@@ -62,8 +62,8 @@ const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; t
   ],
   log: [
     { title: 'What It Does', text: "• You create a detailed log of the case in real time.\n\n• Tallies the total doses you log, useful at handover.\n\n• Provides a summary of what you logged, for case sheets." },
-    { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting." },
-    { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Arrests where you manage the timings yourself.\n\n• Scribing during a sim." },
+    { title: 'Limitations', text: "• Does not track rhythm checks or redosing.\n\n• Requires repeated attention, which could be distracting.\n\n• If you log a rhythm check, the app will suggest switching to an arrest mode." },
+    { title: 'When to Use It', text: "• Complex non-cardiac arrest jobs (such as PHEA).\n\n• Scribing during a sim." },
   ],
   elapsed: [
     { title: 'What It Does', text: "• Combines all the capabilities of the 'Arrest – Timers' and 'General – Tx log only' modes." },
