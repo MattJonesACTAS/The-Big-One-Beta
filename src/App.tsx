@@ -4529,7 +4529,8 @@ export default function App() {
       {showArrestModePrompt && (
         <div data-arrest-mode-prompt className="fixed inset-0 bg-black/80 z-[1500] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
           <div className="bg-white rounded-3xl p-7 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-6">Change to cardiac arrest mode?</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Cardiac arrest Tx logged</h2>
+            <p className="text-lg text-neutral-600 mb-6">Change to cardiac arrest mode?</p>
             <div className="grid grid-cols-2 gap-3">
               <button data-arrest-prompt-stay onClick={() => setShowArrestModePrompt(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Stay in General</button>
               <button data-arrest-prompt-switch onClick={() => { setShowArrestModePrompt(false); if (showCatchup) switchSetupToArrest(); else beginModeChange('elapsed'); }} className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">Switch mode</button>

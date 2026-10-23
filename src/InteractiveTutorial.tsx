@@ -54,7 +54,11 @@ interface InteractiveTutorialProps {
 // "Learn more" on each mode card: three pages per mode - what it does, its
 // limitations, and when to use it. Headings are the section names.
 // The mode's name, shown at the top of each of its Learn More pages
-const MODE_ABOUT_NAMES: Record<'log' | 'minimal' | 'elapsed', string> = { minimal: 'Arrest – Timers', elapsed: 'Arrest – Timers + Tx log', log: 'General – Tx log only' };
+const MODE_ABOUT_NAMES: Record<'log' | 'minimal' | 'elapsed', { group: string; name: string }> = {
+  minimal: { group: 'Cardiac Arrest', name: 'Timers' },
+  elapsed: { group: 'Cardiac Arrest', name: 'Timers + Tx Log' },
+  log: { group: 'General', name: 'Tx Log Only' },
+};
 
 const MODE_ABOUT_PAGES: Record<'log' | 'minimal' | 'elapsed', { title: string; text: string }[]> = {
   minimal: [
@@ -687,7 +691,10 @@ export function ModeAboutSlide({ mode, onClose }: { mode: 'log' | 'minimal' | 'e
         display: 'flex',
         flexDirection: 'column',
       }}>
-        <div data-about-mode style={{ textAlign: 'center', fontSize: '13px', fontWeight: '700', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#059669', marginBottom: '8px', flexShrink: 0 }}>{MODE_ABOUT_NAMES[mode]}</div>
+        <div data-about-mode style={{ textAlign: 'center', color: '#059669', marginBottom: '10px', flexShrink: 0, lineHeight: 1.25 }}>
+          <div style={{ fontSize: '13px', fontWeight: '600' }}>{MODE_ABOUT_NAMES[mode].group}</div>
+          <div style={{ fontSize: '17px', fontWeight: '700' }}>{MODE_ABOUT_NAMES[mode].name}</div>
+        </div>
         {/* The three pages sit side by side: swipe sideways (or use the dots / Next) to move between them */}
         <div
           data-about-viewport
