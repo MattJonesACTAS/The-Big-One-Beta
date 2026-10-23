@@ -44,6 +44,7 @@ const INITIAL_STATE: AppState = {
   reversiblesChecklistOpened: false,
   caseOpenedAt: null,
   caseClosedAt: null,
+  arrestModeSuggested: false,
   startTime: null,
   pausedTime: 0,
   elapsedSeconds: 0,
@@ -876,6 +877,7 @@ export default function App() {
   const [disregardAdrenaline, setDisregardAdrenaline] = useState<'pending' | 'confirmed' | null>(null);
   const [disregardAmiodarone, setDisregardAmiodarone] = useState<'pending' | 'confirmed' | null>(null);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [showArrestModePrompt, setShowArrestModePrompt] = useState(false);   // Tx log only: a rhythm check was logged, so suggest the arrest mode
   const [showHandover, setShowHandover] = useState(false);
   const handoverViewRef = useRef<'fill' | 'read'>('fill');
   // The Handover's Close / Back / Next buttons are drawn in the bottom bar, outside the box (a portal into this element)
@@ -2199,6 +2201,12 @@ export default function App() {
       }
     }
     
+    // Tx log only: the first rhythm check logged suggests an arrest, so the arrest mode is suggested (once per case)
+    if (state.timingMode === 'log' && !state.arrestModeSuggested && !tutorialMode && (getTreatmentIdentity(name) === 'Shock' || getTreatmentIdentity(name) === 'Disarm' || /^Rhythm check/.test(name.trim()))) {
+      setState(prev => ({ ...prev, arrestModeSuggested: true }));
+      setShowArrestModePrompt(true);
+    }
+
     // Show notification with treatment name
     if (!isRoscName(name) && !name.startsWith('Mode changed')) {
       loggedTreatmentRef.current = name;
@@ -4501,6 +4509,20 @@ export default function App() {
         </div>
       )}
 
+      {showArrestModePrompt && (
+        <div data-arrest-mode-prompt className="fixed inset-0 bg-black/80 z-[1500] flex items-center justify-center p-6" style={{ height: '100dvh' }}>
+          <div className="bg-white rounded-3xl p-7 max-w-sm w-full text-center shadow-2xl">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-3">Is this a cardiac arrest?</h2>
+            <p className="text-neutral-600 mb-3">You've logged a rhythm check in General mode.</p>
+            <p className="text-neutral-600 mb-6">Arrest – Timers + Tx log keeps the rhythm check timers for you and gives a more accurate record.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button data-arrest-prompt-stay onClick={() => setShowArrestModePrompt(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Stay in General</button>
+              <button data-arrest-prompt-switch onClick={() => { setShowArrestModePrompt(false); beginModeChange('elapsed'); }} className="bg-emerald-600 p-4 rounded-xl font-bold text-white btn-base">Switch mode</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Treatment Logged Notification Banner */}
       <AnimatePresence>
         {showLoggedNotification && (
@@ -5530,17 +5552,19 @@ const buildHandoverContent = (
   // How long arrest management has run: from the first rhythm check the app logged, plus one 2-minute cycle for each
   // shock or disarm entered at setup (those happened before the app started, so their times aren't known)
   const priorCount = tx.filter(x => x.prior && (getTreatmentIdentity(x.name) === 'Shock' || getTreatmentIdentity(x.name) === 'Disarm')).length;
+  // The timer modes run on the monitor's elapsed time (entered at setup, or when switching from Tx log only), and the monitor starts within about
+  // 30 seconds of the first rhythm check: that elapsed time IS how long management has run, whatever was logged or entered at setup.
+  // Tx log only has no timer, so it counts from the first rhythm check it knows about (plus 2 minutes for each one entered at setup).
   let loggedSpan: number | null = null;
-  if (firstCheck) {
-    if (state.timingMode === 'log') loggedSpan = firstCheck.loggedAt != null ? Math.max(0, Math.floor((endMs - firstCheck.loggedAt) / 1000)) : null;
-    else loggedSpan = Math.max(0, Math.floor(endElapsed - firstCheck.elapsed));
+  if (state.timingMode !== 'log') {
+    loggedSpan = Math.max(0, Math.floor(endElapsed));
+  } else if (firstCheck) {
+    loggedSpan = firstCheck.loggedAt != null ? Math.max(0, Math.floor((endMs - firstCheck.loggedAt) / 1000)) : null;
   } else if (priorCount > 0) {
-    // nothing logged yet: the monitor's elapsed time, or when recording began in Tx log only
-    loggedSpan = state.timingMode === 'log'
-      ? (state.caseOpenedAt != null ? Math.max(0, Math.floor((endMs - state.caseOpenedAt) / 1000)) : 0)
-      : Math.max(0, Math.floor(endElapsed));
+    // nothing logged yet: since the app was opened
+    loggedSpan = state.caseOpenedAt != null ? Math.max(0, Math.floor((endMs - state.caseOpenedAt) / 1000)) : 0;
   }
-  const durationSeconds: number | null = loggedSpan != null ? loggedSpan + priorCount * HANDOVER_CHECK_SECONDS : null;
+  const durationSeconds: number | null = loggedSpan != null ? loggedSpan + (state.timingMode === 'log' ? priorCount * HANDOVER_CHECK_SECONDS : 0) : null;
   const managementStartMs = durationSeconds != null ? endMs - durationSeconds * 1000 : null;
   // Best guess of when the arrest happened: when management began, less the time before we arrived
   const round5 = (ms: number) => Math.round(ms / 300000) * 300000;

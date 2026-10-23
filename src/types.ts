@@ -59,6 +59,8 @@ export interface AppState {
   reversiblesChecklistOpened: boolean;
   caseOpenedAt: number | null;
   caseClosedAt: number | null;
+  // Tx log only: the popup suggesting the arrest mode has been shown for this case (it is shown once)
+  arrestModeSuggested?: boolean;
   startTime: number | null;
   pausedTime: number;
   elapsedSeconds: number;
