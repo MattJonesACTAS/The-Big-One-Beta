@@ -2477,10 +2477,9 @@ export default function App() {
       });
     };
 
-    // Auto-add "CPR" and "Pads on" before shocks/disarms in catchup
+    // Auto-add "CPR" before shocks/disarms in catchup
     if (priorCounts.shock > 0 || priorCounts.disarm > 0) {
       pushPrior('CPR');
-      pushPrior('Pads on');
     }
 
     for (let i = 0; i < priorCounts.shock; i++) {
