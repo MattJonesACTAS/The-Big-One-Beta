@@ -61,6 +61,8 @@ export interface AppState {
   caseClosedAt: number | null;
   // Tx log only: the popup suggesting the arrest mode has been shown for this case (it is shown once)
   arrestModeSuggested?: boolean;
+  // The case has run on the monitor's elapsed time (it started in a timer mode): the handover counts from it, even after a switch to Tx log only
+  timerModeUsed?: boolean;
   startTime: number | null;
   pausedTime: number;
   elapsedSeconds: number;

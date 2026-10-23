@@ -45,6 +45,7 @@ const INITIAL_STATE: AppState = {
   caseOpenedAt: null,
   caseClosedAt: null,
   arrestModeSuggested: false,
+  timerModeUsed: false,
   startTime: null,
   pausedTime: 0,
   elapsedSeconds: 0,
@@ -2525,6 +2526,7 @@ export default function App() {
       treatments: allInitialTxs,
       catchupElapsed: adjustedElapsed,
       arrestModeSuggested: !!state.arrestModeSuggested,
+      timerModeUsed: timingMode !== 'log',
       startClockTime: startClockTime,
       patientWeight: parsedWeight || (tutorialMode ? 70 : null),
       patientType: timingMode === 'minimal' ? null : (weightType || (tutorialMode ? 'adult' : null)),
@@ -2625,6 +2627,8 @@ export default function App() {
       // No timer to recalibrate, so it takes effect straight away
       // (A case saved before elapsedCalibrated existed was calibrated if it was in a timer mode)
       if (state.elapsedCalibrated === undefined && timingMode !== 'log') setState(prev => ({ ...prev, elapsedCalibrated: true }));
+      // a case that has run in a timer mode keeps counting from the monitor's elapsed time in the handover
+      if (timingMode !== 'log') setState(prev => ({ ...prev, timerModeUsed: true }));
       setTimingMode('log');
       setShowModeChange(false);
       addTreatment(`Mode changed: ${TIMING_MODE_LABELS.log}`);
@@ -5580,8 +5584,10 @@ const buildHandoverContent = (
   // The timer modes run on the monitor's elapsed time (entered at setup, or when switching from Tx log only), and the monitor starts within about
   // 30 seconds of the first rhythm check: that elapsed time IS how long management has run, whatever was logged or entered at setup.
   // Tx log only has no timer, so it counts from the first rhythm check it knows about (plus 2 minutes for each one entered at setup).
+  // A case that has run in a timer mode keeps counting from the monitor's elapsed time after a switch to Tx log only (or the arrest time would jump)
+  const monitorBased = state.timingMode !== 'log' || !!state.timerModeUsed || state.treatments.some(t => /^Mode changed: Arrest/.test(t.name));
   let loggedSpan: number | null = null;
-  if (state.timingMode !== 'log') {
+  if (monitorBased) {
     loggedSpan = Math.max(0, Math.floor(endElapsed));
   } else if (firstCheck) {
     loggedSpan = firstCheck.loggedAt != null ? Math.max(0, Math.floor((endMs - firstCheck.loggedAt) / 1000)) : null;
@@ -5589,7 +5595,7 @@ const buildHandoverContent = (
     // nothing logged yet: since the app was opened
     loggedSpan = state.caseOpenedAt != null ? Math.max(0, Math.floor((endMs - state.caseOpenedAt) / 1000)) : 0;
   }
-  const durationSeconds: number | null = loggedSpan != null ? loggedSpan + (state.timingMode === 'log' ? priorCount * HANDOVER_CHECK_SECONDS : 0) : null;
+  const durationSeconds: number | null = loggedSpan != null ? loggedSpan + (monitorBased ? 0 : priorCount * HANDOVER_CHECK_SECONDS) : null;
   const managementStartMs = durationSeconds != null ? endMs - durationSeconds * 1000 : null;
   // Best guess of when the arrest happened: when management began, less the time before we arrived
   const round5 = (ms: number) => Math.round(ms / 300000) * 300000;
@@ -6027,11 +6033,20 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
+  // Tx log modes: the weight was chosen at setup. An age that doesn't go with it (a child on an adult case, an adult on a child case, another child's age) asks for the weight to be confirmed
+  const weightKey = `${ageValue}|${ageUnit}`;
+  const weightNeed: { sg: [string, number]; type: 'adult' | 'paed' } | null = (() => {
+    if (timersOnly || h.ageUnknown === 'Yes' || !ageValue) return null;
+    if (isPaedAge(ageValue, ageUnit)) { const sg = suggestedPaedWeight(ageValue, ageUnit); return state.patientType === 'paed' && state.patientAge === sg[0] ? null : { sg, type: 'paed' }; }
+    return state.patientType === 'paed' ? { sg: ['Adult', 80], type: 'adult' } : null;
+  })();
+  const weightConfirmed = h.weightFor === weightKey && state.patientWeight != null;
   const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
   if (!h.gender) missing.id.push('Gender');
   if (general && !h.pertinentEvents.trim()) missing.events.push('What happened');
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (timersOnly && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && !(state.patientWeight && h.weightFor === `${ageValue}|${ageUnit}`)) missing.id.push('Weight');
+  if (weightNeed && !weightConfirmed) missing.id.push('Weight');
   if (inRosc) {
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
     if (!h.breathing) missing.breath.push('Breathing');
@@ -6403,11 +6418,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
           <HandoverBox label="Age" state={(ageValue || h.ageUnknown === 'Yes') ? 'done' : 'missing'}>
             <span className={labelClass}>Age</span>
             <select aria-label="Age" data-handover-age-select value={h.ageUnknown === 'Yes' || !ageValue ? '' : `${ageValue}|${ageUnit}`}
-              onChange={e => { const [n, u] = e.target.value.split('|'); if (!n) return; onField('age', n); onField('ageUnit', u); if (h.ageUnknown) onField('ageUnknown', '');
-                if (!timersOnly && onWeight) {
-                  if (isPaedAge(n, u)) { const sg = suggestedPaedWeight(n, u); if (state.patientType !== 'paed' || state.patientAge !== sg[0]) onWeight(sg[1], 'paed', sg[0]); }
-                  else if (state.patientType === 'paed') onWeight(80, 'adult', null);
-                } }}
+              onChange={e => { const [n, u] = e.target.value.split('|'); if (!n) return; onField('age', n); onField('ageUnit', u); if (h.ageUnknown) onField('ageUnknown', ''); }}
               className={`w-full bg-white border ${ageValue || h.ageUnknown === 'Yes' ? 'border-neutral-300' : 'border-[#4a6fa5]'} rounded-lg px-3 ${compact ? 'py-2.5' : 'py-3.5'} text-[16px] font-semibold text-neutral-800`}>
               <option value="">Select age</option>
               <option value="0|Months">Newborn</option>
@@ -6421,9 +6432,16 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.ageUnknown === 'Yes' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>
             </div>
           </HandoverBox>
-          {timersOnly && onWeight && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && (() => {
-            const sg = suggestedPaedWeight(ageValue, ageUnit); const key = `${ageValue}|${ageUnit}`;
-            return <HandoverPaedWeight ageKey={key} suggested={sg} weight={state.patientWeight} confirmedFor={h.weightFor} onConfirm={() => { onField('weightFor', key); onWeight(sg[1], 'paed', sg[0]); }} onCustom={w => { onField('weightFor', key); onWeight(w, 'paed', null); }} />;
+          {(() => {
+            if (!onWeight) return null;
+            if (timersOnly) {
+              if (h.ageUnknown === 'Yes' || !isPaedAge(ageValue, ageUnit)) return null;
+              const sg = suggestedPaedWeight(ageValue, ageUnit);
+              return <HandoverPaedWeight ageKey={weightKey} suggested={sg} weight={state.patientWeight} confirmedFor={h.weightFor} onConfirm={() => { onField('weightFor', weightKey); onWeight(sg[1], 'paed', sg[0]); }} onCustom={w => { onField('weightFor', weightKey); onWeight(w, 'paed', null); }} />;
+            }
+            if (!weightNeed && !weightConfirmed) return null;
+            const need = weightNeed ?? (isPaedAge(ageValue, ageUnit) ? { sg: suggestedPaedWeight(ageValue, ageUnit), type: 'paed' as const } : { sg: ['Adult', 80] as [string, number], type: 'adult' as const });
+            return <HandoverPaedWeight ageKey={weightKey} suggested={need.sg} weight={state.patientWeight} confirmedFor={h.weightFor} onConfirm={() => { onField('weightFor', weightKey); onWeight(need.sg[1], need.type, need.type === 'paed' ? need.sg[0] : null); }} onCustom={w => { onField('weightFor', weightKey); onWeight(w, need.type, null); }} />;
           })()}
         </HandoverPageCard>
       );
