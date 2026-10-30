@@ -87,6 +87,7 @@ export interface AppState {
   patientType: 'adult' | 'paed' | null;
   patientAge: string | null;
   infusionDoses: Record<string, string>;
+  infusionUnits?: Record<string, string>;   // 'mg' | 'mcg' chosen for an infusion's total on the Pharma summary; blank = the drug's usual unit
   reversiblesChecked: string[];
   roscChecked: string[];
   pheaChecked: string[];

@@ -64,6 +64,7 @@ const INITIAL_STATE: AppState = {
   patientType: null,
   patientAge: null,
   infusionDoses: {} as Record<string, string>,
+  infusionUnits: {} as Record<string, string>,
   reversiblesChecked: [],
   roscChecked: [],
   pheaChecked: [],
@@ -2712,7 +2713,7 @@ export default function App() {
 
         <VitalSignsSection vitals={state.vitals} />
 
-        <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
+        <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} infusionUnits={state.infusionUnits} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} />
         
         <div className="rounded-xl border border-neutral-100">
           <div data-tutorial-anchor="closed-treatment-log-banner" className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
@@ -2955,7 +2956,7 @@ export default function App() {
               {/* In the tutorial the Arrest Summary is always shown, since its note is about it and no rhythm check has happened yet to bring it up on its own */}
               <div data-tutorial-section="arrestSummary"><ArrestSummarySection state={state} showRecordingDuration alwaysShowArrestSummary={tutorialMode} /></div>
               <div data-tutorial-section="vitalSigns"><VitalSignsSection vitals={state.vitals} /></div>
-              <div data-tutorial-section="pharmaSummary"><PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} /></div>
+              <div data-tutorial-section="pharmaSummary"><PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} infusionUnits={state.infusionUnits} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))} /></div>
               <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
                 <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
                 <TreatmentLog treatments={state.treatments} elapsedSeconds={state.elapsedSeconds} caseOpenedAt={state.caseOpenedAt} onDelete={deleteTreatment} onMove={moveTreatment} onEdit={handleEditTreatment} />
@@ -2987,7 +2988,7 @@ export default function App() {
                   onMoveTreatment={moveTreatment}
                   onEditTreatment={handleEditTreatment}
                   editingTreatmentIndex={editingTreatmentIndex}
-                  onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                  onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))}
                 onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
                 />
               )}
@@ -3203,7 +3204,7 @@ export default function App() {
                 onMoveTreatment={moveTreatment}
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
-                onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))}
                 onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
               />
             )}
@@ -3234,7 +3235,7 @@ export default function App() {
                 onMoveTreatment={moveTreatment}
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
-                  onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))}
+                  onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))}
                 onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
               />
             )}
@@ -3569,7 +3570,7 @@ export default function App() {
                     <PharmaSummarySection
                       treatments={viewingPreviousCase.treatments}
                       pharmaSummary={computePharmaSummary(viewingPreviousCase.treatments)}
-                      infusionDoses={viewingPreviousCase.infusionDoses}
+                      infusionDoses={viewingPreviousCase.infusionDoses} infusionUnits={viewingPreviousCase.infusionUnits}
                       activeInfusions={INFUSION_DRUGS.filter(d => viewingPreviousCase.treatments.some(t => t.name.startsWith(d)))}
                     />
 
@@ -4681,7 +4682,7 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onHandover }: { 
+function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { 
   key?: string,
   type: OverlayType, 
   onClose: () => void, 
@@ -4698,6 +4699,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   onEditTreatment?: (idx: number) => void,
   editingTreatmentIndex?: number | null,
   onUpdateInfusionDose?: (drug: string, dose: string) => void,
+  onUpdateInfusionUnit?: (drug: string, unit: string) => void,
   onHandover?: () => void
 }) {
   const isTop = ['reversibles', 'rosc', 'phea', 'vitals'].includes(type);
@@ -4715,7 +4717,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
-        {type === 'summary' && <SummaryOverlay onHandover={onHandover} state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} />}
+        {type === 'summary' && <SummaryOverlay onHandover={onHandover} state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
           <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
         ) : (
@@ -5696,13 +5698,12 @@ const buildHandoverContent = (
     let dose: string;
     if (INFUSION_DRUGS.includes(med)) {
       const d = state.infusionDoses?.[med];
-      dose = d ? `${d}${med === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : '';
+      dose = d ? `${d}${state.infusionUnits?.[med] ?? (med === 'Adrenaline infusion' ? 'mcg' : 'mg')}` : '';
     } else {
       dose = info.display.replace(/\s*\(\d+\)\s*$/, '');
     }
     medList.push({ idx: firstIdx(n => n.startsWith(med)), name, dose, note: dt ? `${dt.label === 'Started' ? 'started' : 'last'} ${t12(dt.time)}` : '' });
   });
-  if (oxygen.length) medList.push({ idx: firstIdx(n => getTreatmentIdentity(n) === 'Oxygen' && succeeded(n)), name: 'Oxygen', dose: oxygenDevices.join(', '), note: '' });
   medList.sort((p, q) => p.idx - q.idx);
   // Anything else: Corpuls, Pacing, and anything typed into the log that isn't one of the app's own items
   const otherList: { idx: number, line: string, note: string }[] = [];
@@ -6737,13 +6738,16 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
   );
 }
 
-function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, onUpdateInfusionDose, treatments }: { 
+function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, activeInfusions, onUpdateInfusionDose, onUpdateInfusionUnit, treatments }: { 
   treatments?: Treatment[],
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
   infusionDoses?: Record<string, string>,
+  infusionUnits?: Record<string, string>,
   activeInfusions?: string[],
-  onUpdateInfusionDose?: (drug: string, dose: string) => void
+  onUpdateInfusionDose?: (drug: string, dose: string) => void,
+  onUpdateInfusionUnit?: (drug: string, unit: string) => void
 }) {
+  const unitFor = (drug: string) => infusionUnits?.[drug] ?? (drug === 'Adrenaline infusion' ? 'mcg' : 'mg');
   const nonInfusionEntries = Object.entries(pharmaSummary).filter(([name]) => !INFUSION_DRUGS.includes(name));
   const hasContent = nonInfusionEntries.length > 0 || (activeInfusions && activeInfusions.length > 0);
 
@@ -6771,13 +6775,16 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
                       placeholder="0"
                       className="w-16 text-right text-[16px] font-black text-neutral-900 bg-transparent px-2 py-1 outline-none"
                     />
-                    <span className="text-[13px] font-medium text-neutral-400 pr-2 w-8 text-left flex-shrink-0">
-                      {drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}
-                    </span>
+                    {onUpdateInfusionUnit ? (
+                      <button type="button" data-infusion-unit={drug} aria-label={`Toggle ${drug} unit`} onClick={() => onUpdateInfusionUnit(drug, unitFor(drug) === 'mg' ? 'mcg' : 'mg')}
+                        className="mr-1.5 px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-[13px] font-bold whitespace-nowrap flex-shrink-0">{unitFor(drug)}</button>
+                    ) : (
+                      <span className="text-[13px] font-medium text-neutral-400 pr-2 w-8 text-left flex-shrink-0">{unitFor(drug)}</span>
+                    )}
                   </div>
                 ) : (
                   <span className="text-[16px] font-black text-neutral-900">
-                    {infusionDoses?.[drug] ? `${infusionDoses[drug]}${drug === 'Adrenaline infusion' ? 'mcg' : 'mg'}` : '—'}
+                    {infusionDoses?.[drug] ? `${infusionDoses[drug]}${unitFor(drug)}` : '—'}
                   </span>
                 )}
               </div>
@@ -6789,7 +6796,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, activeInfusions, o
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onHandover }: { onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
+function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
       <div data-tutorial-section="arrestSummary">
@@ -6799,7 +6806,7 @@ function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpda
         <VitalSignsSection vitals={state.vitals} />
       </div>
       <div data-tutorial-section="pharmaSummary">
-        <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} />
+        <PharmaSummarySection treatments={state.treatments} pharmaSummary={pharmaSummary} infusionDoses={state.infusionDoses} infusionUnits={state.infusionUnits} activeInfusions={INFUSION_DRUGS.filter(d => state.treatments.some(t => t.name.startsWith(d)))} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />
       </div>
       <div data-tutorial-section="treatmentLog" className="rounded-xl border border-neutral-100">
         <div className="bg-emerald-50 text-emerald-800 p-3 font-bold text-sm tracking-wider text-center rounded-t-xl">TREATMENT LOG</div>
