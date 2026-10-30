@@ -5395,7 +5395,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -6021,7 +6021,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // Airway and access: the Tx log fills these in; the crew can correct them for the handover (the Tx log itself is never changed).
   const txLog = content.tx;
   const logAirwayDev = txLog.airway.find(a => a !== 'IGT') ?? '';
-  const logIgt = txLog.airway.includes('IGT');
   // no airway logged (the Tx log would have it): None is already chosen. Arrest – Timers records no airway, so there the crew are asked.
   const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev || (state.timingMode !== 'minimal' ? 'None' : ''));
   const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
@@ -6037,12 +6036,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const showPhea = airwayVal === 'ETT' || (state.timingMode !== 'minimal' && (logHasSux || logKetamineRsi || logKetamineInduction));
   const pheaSuggested: string = !showPhea || state.timingMode === 'minimal' ? '' : (logHasSux || logKetamineRsi || ((airwayVal === 'ETT' || logKetamineInduction) && !logHasArrestTx)) ? 'Yes' : 'No';
   const pheaVal: string = !showPhea ? '' : (h.phea || pheaSuggested);
-  const igtVal = !airwayHasDevice ? '' : (h.airwayIgt || (logIgt ? 'Yes' : (airwayVal === logAirwayDev ? 'No' : '')));
   const logAccessAny = txLog.io + txLog.iv > 0;
   const accessFromLog = logAccessAny || state.timingMode !== 'minimal';
   const ivVal = unk('access') ? '' : (h.accessIv !== '' ? h.accessIv : (accessFromLog ? String(Math.min(txLog.iv, 3)) : ''));
   const ioVal = unk('access') ? '' : (h.accessIo !== '' ? h.accessIo : (accessFromLog ? String(Math.min(txLog.io, 3)) : ''));
-  const airwayDone = !!airwayVal && (!airwayHasDevice || !!igtVal);
+  const airwayDone = !!airwayVal;
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
@@ -6088,7 +6086,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.allergies.push('Medical history');
   if (!h.medications.trim() && !unk('meds')) missing.otherinfo.push('Regular medications');
-  if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
+  if (!airwayVal) missing.treatment.push('Airway');
   if (!accessDone) missing.treatment.push('Access');
   if (showPhea && !pheaVal) missing.treatment.push('PHEA');
   const pageTitle: Record<string, string> = { other: 'Handover', events: 'What happened', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
@@ -6244,9 +6242,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   ];
 
   const t = content.tx;
-  const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA', IGT: 'an IGT' };
+  const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA' };
   // (the crew's airway and access answers, or what the Tx log says)
-  const airwayPhrase = airwayHasDevice ? `${airwayName[airwayVal]}${igtVal === 'Yes' ? ' with an IGT' : ''}` : '';
+  const airwayPhrase = airwayHasDevice ? airwayName[airwayVal] : '';
   const ivN = parseInt(ivVal, 10) || 0, ioN = parseInt(ioVal, 10) || 0;
   const standardTreatmentNodes: React.ReactNode[] = [
     <div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>,
@@ -6529,7 +6527,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         </HandoverPageCard>
       );
       case 'treatment': {
-        const pick = (cur: string, field: 'airway' | 'airwayIgt' | 'accessIv' | 'accessIo', v: string, group: 'airway' | 'access') => {
+        const pick = (cur: string, field: 'airway' | 'accessIv' | 'accessIo', v: string, group: 'airway' | 'access') => {
           if (unk(group)) setUnk(group, false);
           onField(field, (cur === v && h[field] === v) ? '' : v);          // tapping the chosen one again goes back to what the Tx log says
         };
@@ -6543,19 +6541,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               <span className={head}>Confirm airway</span>
               <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
                 {['ETT', 'LMA', 'FONA', 'OPA', 'NPA', 'None'].map(o => (
-                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => { if (airwayHasDevice && o === 'None') onField('airwayIgt', ''); pick(airwayVal, 'airway', o, 'airway'); }} className={bcls(airwayVal === o)}>{o}</button>
+                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => pick(airwayVal, 'airway', o, 'airway')} className={bcls(airwayVal === o)}>{o}</button>
                 ))}
               </div>
-              <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) { onField('airway', ''); onField('airwayIgt', ''); } }} /></div>
+              <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) onField('airway', ''); }} /></div>
             </HandoverBox>
-            {airwayHasDevice && (
-              <HandoverBox label="IGT?" state={igtVal ? 'done' : 'missing'}>
-                <span className={head}>IGT?</span>
-                <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-                  {['Yes', 'No'].map(o => <button key={o} data-handover-choice={`IGT?: ${o}`} aria-pressed={igtVal === o} onClick={() => pick(igtVal, 'airwayIgt', o, 'airway')} className={bcls(igtVal === o)}>{o}</button>)}
-                </div>
-              </HandoverBox>
-            )}
             {showPhea && (
               <HandoverBox label="PHEA" state={pheaVal ? 'done' : 'missing'}>
                 <span className={head}>Was PHEA performed?</span>

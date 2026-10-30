@@ -20,7 +20,6 @@ export interface Treatment {
 // closed, and never saved with a previous case or printed in the PDF.
 export interface HandoverFields {
   airway: string;           // what the crew say the airway is ('ETT' | 'LMA' | 'FONA' | 'OPA' | 'NPA' | 'None'); '' = what the Tx log says. Never changes the Tx log.
-  airwayIgt: string;        // 'Yes' | 'No' | '' (with an airway device)
   accessIv: string;         // how many IVs, '0'-'4'; '' = what the Tx log says
   accessIo: string;
   latestRhythm: string;     // Arrest – Timers: the most recent rhythm (that mode doesn't record rhythms, so the crew say it)
