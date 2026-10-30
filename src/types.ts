@@ -26,6 +26,7 @@ export interface HandoverFields {
   latestRhythm: string;     // Arrest – Timers: the most recent rhythm (that mode doesn't record rhythms, so the crew say it)
   weightFor: string;        // Arrest – Timers (which records no weight): the age ('6|Years') a child's weight was confirmed for. Only a child's weight is read out.
   causeWhy: string;         // Arrest / ROSC: why the crew think that was the cause (optional, read out after the cause)
+  phea: string;             // 'Yes' | 'No' | '': was pre-hospital emergency anaesthesia performed (asked when an ETT is in); '' = what the Tx log suggests
   delivered: string;        // 'Yes' once the handover has been read out to the end (the tutorial waits for this)
   pertinentEvents: string;  // General handover: what happened before we arrived (free text, read second)
   otherMeds: string;        // Arrest – Timers: other medications given (adrenaline and amiodarone are counted from the timers)

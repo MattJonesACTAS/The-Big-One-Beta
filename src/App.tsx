@@ -5393,7 +5393,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', airwayIgt: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -6024,6 +6024,13 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // no airway logged (the Tx log would have it): None is already chosen. Arrest – Timers records no airway, so there the crew are asked.
   const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev || (state.timingMode !== 'minimal' ? 'None' : ''));
   const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
+  // Was PHEA performed? Asked when an ETT is in. The Tx log suggests the answer: suxamethonium, the ketamine dose for when sux is contraindicated,
+  // or an intubation with no arrest treatments logged. Arrest – Timers has no log, so there the crew answer it.
+  const logHasSux = state.treatments.some(t => /^Suxamethonium/i.test(t.name));
+  const logKetamineRsi = state.treatments.some(t => { const k = /^Ketamine push\s+(\d+(?:\.\d+)?)\s*mg/i.exec(t.name); return !!k && state.patientType === 'adult' && state.patientWeight != null && Math.abs(parseFloat(k[1]) - 2 * state.patientWeight) < 1; });
+  const logHasArrestTx = state.treatments.some(t => getTreatmentIdentity(t.name) === 'Shock' || getTreatmentIdentity(t.name) === 'Disarm' || isRoscName(t.name) || /^Rearrest/.test(t.name) || /^CPR\b/.test(t.name));
+  const pheaSuggested: string = airwayVal !== 'ETT' || state.timingMode === 'minimal' ? '' : (logHasSux || logKetamineRsi || !logHasArrestTx) ? 'Yes' : 'No';
+  const pheaVal: string = airwayVal !== 'ETT' ? '' : (h.phea || pheaSuggested);
   const igtVal = !airwayHasDevice ? '' : (h.airwayIgt || (logIgt ? 'Yes' : (airwayVal === logAirwayDev ? 'No' : '')));
   const logAccessAny = txLog.io + txLog.iv > 0;
   const accessFromLog = logAccessAny || state.timingMode !== 'minimal';
@@ -6077,6 +6084,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!h.medications.trim() && !unk('meds')) missing.otherinfo.push('Regular medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
+  if (airwayVal === 'ETT' && !pheaVal) missing.treatment.push('PHEA');
   const pageTitle: Record<string, string> = { other: 'Handover', events: 'What happened', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
@@ -6261,7 +6269,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     otherItems.length ? <div key="o">For additional treatments we have:{subWithNote(otherItems)}</div>
       : unk('othertx') ? <div key="o">We have not done any additional treatments.</div> : <div key="o">{miss('Additional treatments ?')}</div>,
   ];
-  const treatmentNodes = timersOnly ? timersTreatmentNodes : standardTreatmentNodes;
+  const pheaNodes: React.ReactNode[] = pheaVal === 'Yes' ? [<div key="phea">Pre-hospital emergency anaesthesia was performed.</div>] : [];
+  const treatmentNodes = [...pheaNodes, ...(timersOnly ? timersTreatmentNodes : standardTreatmentNodes)];
 
   // The primary survey (ROSC), as sentences: "For our primary survey we have GCS 6, airway is an ETT tube, we are ventilating at a rate of 10,
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
@@ -6538,6 +6547,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 <span className={head}>IGT?</span>
                 <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
                   {['Yes', 'No'].map(o => <button key={o} data-handover-choice={`IGT?: ${o}`} aria-pressed={igtVal === o} onClick={() => pick(igtVal, 'airwayIgt', o, 'airway')} className={bcls(igtVal === o)}>{o}</button>)}
+                </div>
+              </HandoverBox>
+            )}
+            {airwayVal === 'ETT' && (
+              <HandoverBox label="PHEA" state={pheaVal ? 'done' : 'missing'}>
+                <span className={head}>Was PHEA performed?</span>
+                <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+                  {['Yes', 'No'].map(o => <button key={o} data-handover-choice={`PHEA: ${o}`} aria-pressed={pheaVal === o} onClick={() => onField('phea', (pheaVal === o && h.phea === o) ? '' : o)} className={bcls(pheaVal === o)}>{o}</button>)}
                 </div>
               </HandoverBox>
             )}
