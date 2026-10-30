@@ -5395,7 +5395,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', airway: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', radialPulse: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5869,6 +5869,24 @@ function HandoverBecauseField({ value, onChange }: { value: string, onChange: (v
   );
 }
 
+// A text box that starts with fixed words the crew carry on from ("Our patient... has taken a polypharmacy OD"). The box holds only what they type; the handover text is the fixed words plus it.
+function HandoverPrefixField({ label, prefixWords, value, onChange, placeholder, state }: { label: string, prefixWords: string, value: string, onChange: (v: string) => void, placeholder: string, state: 'done' | 'missing' | 'none' }) {
+  const compact = React.useContext(HandoverDensity);
+  const wordRef = React.useRef<HTMLSpanElement>(null);
+  const [indent, setIndent] = useState(0);
+  React.useLayoutEffect(() => { if (wordRef.current) setIndent(wordRef.current.offsetWidth + 7); }, []);
+  return (
+    <HandoverBox label={label} state={state}>
+      <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}</span>
+      <div className="relative">
+        <span ref={wordRef} data-handover-prefix style={{ lineHeight: '24px' }} className="absolute left-[14px] top-[10px] text-[16px] font-semibold text-neutral-800 pointer-events-none select-none">{prefixWords}</span>
+        <textarea aria-label={label} data-handover-textfield autoCapitalize="none" rows={5} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          style={{ textIndent: indent }} className="w-full rounded-lg border-2 border-neutral-400 bg-white px-3 py-2 text-[16px] font-semibold text-neutral-800 placeholder:font-normal placeholder:text-neutral-400 resize-none" />
+      </div>
+    </HandoverBox>
+  );
+}
+
 // Arrest – Timers: for a child, confirm the weight suggested by their age, or enter a custom one
 function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm, onCustom }: { ageKey: string, suggested: [string, number], weight: number | null | undefined, confirmedFor: string | undefined, onConfirm: () => void, onCustom: (w: number) => void }) {
   const compact = React.useContext(HandoverDensity);
@@ -6056,7 +6074,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const weightConfirmed = h.weightFor === weightKey && state.patientWeight != null;
   const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
   if (!h.gender) missing.id.push('Gender');
-  if (general && !h.pertinentEvents.trim()) missing.events.push('What happened');
+  if (general && !h.pertinentEvents.trim()) missing.events.push('Why was ACTAS called?');
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (timersOnly && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && !(state.patientWeight && h.weightFor === `${ageValue}|${ageUnit}`)) missing.id.push('Weight');
   if (weightNeed && !weightConfirmed) missing.id.push('Weight');
@@ -6066,6 +6084,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     else if (h.breathing !== 'Unknown' && !vit.rr && !unk('rr')) missing.breath.push(rrLabel);
   }
   if (showCirc) {
+    if (!h.radialPulse && !unk('pulse')) missing.vitals.push('Radial pulse');
     if (!vit.hr && !unk('hr')) missing.vitals.push('HR');
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
@@ -6089,7 +6108,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!airwayVal) missing.treatment.push('Airway');
   if (!accessDone) missing.treatment.push('Access');
   if (showPhea && !pheaVal) missing.treatment.push('PHEA');
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'What happened', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Reason for call', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -6161,7 +6180,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const whyText = (() => { const t = lines(h.causeWhy).join(', ').replace(/^because\s+/i, '').replace(/[.!?]+$/, ''); return t && /^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t; })();
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}${whyText ? ` because ${whyText}` : ''}.`;
-  const whatNodes: React.ReactNode[] = [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>);
+  const pheaSentence: React.ReactNode[] = pheaVal === 'Yes' ? [<div key="phea">Emergency anaesthesia was performed.</div>] : [];      // closes the What happened text
+  const whatNodes: React.ReactNode[] = [[startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>), pheaSentence].flat();
 
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -6229,11 +6249,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const recorded = content.signs.filter(s => s.value);
   const unknownSigns = content.signs.filter(s => !s.value && unk(s.key));
   const notRecorded = content.signs.filter(s => !s.value && !unk(s.key));
-  // HR, BP and GCS come first (ROSC and Tx log only)
+  // HR and BP come first (ROSC and Tx log only). GCS is said once, in the primary survey
   const circLines: { node: React.ReactNode, known: boolean }[] = !showCirc ? [] : [
     vit.hr ? { node: `HR of ${vit.hr}`, known: true } : unk('hr') ? { node: 'HR unknown', known: true } : { node: miss('HR ?'), known: false },
     (vit.bpSys && vit.bpDia) ? { node: `BP of ${vit.bpSys}/${vit.bpDia}`, known: true } : unk('bp') ? { node: 'BP unknown', known: true } : { node: miss('BP ?'), known: false },
-    vit.gcs ? { node: gcsText, known: true } : unk('gcs') ? { node: 'GCS unknown', known: true } : { node: miss('GCS ?'), known: false },
   ];
   const vitalsNodes: React.ReactNode[] = [
     <div key="v">{recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:'}
@@ -6273,8 +6292,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     otherItems.length ? <div key="o">For additional treatments we have:{subWithNote(otherItems)}</div>
       : unk('othertx') ? <div key="o">We have not done any additional treatments.</div> : <div key="o">{miss('Additional treatments ?')}</div>,
   ];
-  const pheaNodes: React.ReactNode[] = pheaVal === 'Yes' ? [<div key="phea">Pre-hospital emergency anaesthesia was performed.</div>] : [];
-  const treatmentNodes = [...pheaNodes, ...(timersOnly ? timersTreatmentNodes : standardTreatmentNodes)];
+  const treatmentNodes = timersOnly ? timersTreatmentNodes : standardTreatmentNodes;
 
   // The primary survey (ROSC), as sentences: "For our primary survey we have GCS 6, airway is an ETT tube, we are ventilating at a rate of 10,
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
@@ -6286,13 +6304,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     : h.breathing === 'Unknown' ? "We don't know if they are breathing"
     : <>{h.breathing === 'Breathing' ? 'They are spontaneously ventilating' : 'We are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
   const hrKnown = !!vit.hr, bpKnown = !!(vit.bpSys && vit.bpDia);
-  const hrText = `a heart rate of ${vit.hr}`, bpText = `a blood pressure of ${vit.bpSys}/${vit.bpDia}`;
-  const circPart: React.ReactNode =
-    (hrKnown && bpKnown) ? `For circulation we have ${hrText} and ${bpText}`
-    : (hrKnown && unk('bp')) ? `For circulation we have ${hrText}, blood pressure unknown`
-    : (bpKnown && unk('hr')) ? `For circulation we have ${bpText}, heart rate unknown`
-    : (unk('hr') && unk('bp')) ? "For circulation we don't know the heart rate or blood pressure"
-    : <>For circulation we have a heart rate of {hrKnown ? vit.hr : unk('hr') ? 'unknown' : ampm('HR ?')} and a blood pressure of {bpKnown ? `${vit.bpSys}/${vit.bpDia}` : unk('bp') ? 'unknown' : ampm('BP ?')}</>;
+  const circPart: React.ReactNode = h.radialPulse === 'Present' ? 'Radial pulse is present'
+    : h.radialPulse === 'Absent' ? 'Radial pulse is not present'
+    : unk('pulse') ? "We don't know if there is a radial pulse"
+    : ampm('Radial pulse ?');
   const roscBlock: React.ReactNode[] = [<>For a quick primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
@@ -6333,9 +6348,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   ];
 
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
-  const eventLines = lines(h.pertinentEvents);
+  const eventLines = lines(h.pertinentEvents).map((l, i) => (i === 0 && general && !/^our patient\b/i.test(l)) ? `Our patient ${l}` : l);
   const cards = general
-    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, { key: 'E', title: 'M – What happened', body: eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('What happened ?')}</div> }, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
+    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{pheaSentence}</> }, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
   if (view === 'read') {
@@ -6423,7 +6438,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       );
       case 'events': return (
         <HandoverPageCard>
-          {text('pertinentEvents', 'Briefly explain what happened', { rows: 5, state: h.pertinentEvents.trim() ? 'done' : 'missing', placeholder: 'e.g. Patient has taken a polypharmacy OD...' })}
+          <HandoverPrefixField label="Why was ACTAS called?" prefixWords="Our patient..." state={h.pertinentEvents.trim() ? 'done' : 'missing'} placeholder="has taken a polypharmacy OD"
+            value={h.pertinentEvents.replace(/^Our patient ?/i, '')} onChange={v => onField('pertinentEvents', v.trim() ? `Our patient ${v.replace(/^\s+/, '')}` : '')} />
         </HandoverPageCard>
       );
       case 'id': return (
@@ -6508,7 +6524,20 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       );
       case 'vitals': return (
         <HandoverPageCard>
-          <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+ <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+            {showCirc && (
+              <HandoverBox label="Radial pulse" state={(h.radialPulse || unk('pulse')) ? 'done' : 'missing'} className="col-span-2">
+                <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Radial pulse</span>
+                <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
+                  {[['Present', 'Present'], ['Absent', 'Not present']].map(([v, lbl]) => {
+                    const on = h.radialPulse === v && !unk('pulse');
+                    return <button key={v} data-handover-choice={`Radial pulse: ${lbl}`} aria-pressed={on} onClick={() => { if (unk('pulse')) setUnk('pulse', false); onField('radialPulse', on ? '' : v); }}
+                      className={`${compact ? 'py-1.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>{lbl}</button>;
+                  })}
+                </div>
+                <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Radial pulse" on={unk('pulse')} onClick={() => { const on = !unk('pulse'); setUnk('pulse', on); if (on) onField('radialPulse', ''); }} /></div>
+              </HandoverBox>
+            )}
             {showCirc && <HandoverNumber narrow label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />}
             {vsSigns.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
             {showCirc && (
