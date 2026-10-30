@@ -6025,13 +6025,18 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // no airway logged (the Tx log would have it): None is already chosen. Arrest – Timers records no airway, so there the crew are asked.
   const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev || (state.timingMode !== 'minimal' ? 'None' : ''));
   const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
-  // Was PHEA performed? Asked when an ETT is in. The Tx log suggests the answer: suxamethonium, the ketamine dose for when sux is contraindicated,
-  // or an intubation with no arrest treatments logged. Arrest – Timers has no log, so there the crew answer it.
+  // Was PHEA performed? Asked when an ETT is in, or when the Tx log has suxamethonium or one of the two anaesthetic ketamine doses (1 or 2 mg/kg, adult).
+  // The log suggests the answer: suxamethonium or the 2 mg/kg ketamine (for when sux is contraindicated) is a Yes; so is an intubation (or the 1 mg/kg dose) with no arrest
+  // treatments logged. Arrest – Timers has no log, so there the crew answer it (and it is only asked once an ETT is chosen).
+  const ketamineMgs = state.treatments.map(t => /^Ketamine push\s+(\d+(?:\.\d+)?)\s*mg/i.exec(t.name)).filter(Boolean).map(k => parseFloat((k as RegExpExecArray)[1]));
+  const adultKg = state.patientType === 'adult' && state.patientWeight != null ? state.patientWeight : null;
   const logHasSux = state.treatments.some(t => /^Suxamethonium/i.test(t.name));
-  const logKetamineRsi = state.treatments.some(t => { const k = /^Ketamine push\s+(\d+(?:\.\d+)?)\s*mg/i.exec(t.name); return !!k && state.patientType === 'adult' && state.patientWeight != null && Math.abs(parseFloat(k[1]) - 2 * state.patientWeight) < 1; });
+  const logKetamineRsi = adultKg != null && ketamineMgs.some(mg => Math.abs(mg - 2 * adultKg) < 1);          // 2 mg/kg: intubation when sux is contraindicated
+  const logKetamineInduction = adultKg != null && ketamineMgs.some(mg => Math.abs(mg - adultKg) < 1);        // 1 mg/kg: induction with sux (also the post-intubation dose)
   const logHasArrestTx = state.treatments.some(t => getTreatmentIdentity(t.name) === 'Shock' || getTreatmentIdentity(t.name) === 'Disarm' || isRoscName(t.name) || /^Rearrest/.test(t.name) || /^CPR\b/.test(t.name));
-  const pheaSuggested: string = airwayVal !== 'ETT' || state.timingMode === 'minimal' ? '' : (logHasSux || logKetamineRsi || !logHasArrestTx) ? 'Yes' : 'No';
-  const pheaVal: string = airwayVal !== 'ETT' ? '' : (h.phea || pheaSuggested);
+  const showPhea = airwayVal === 'ETT' || (state.timingMode !== 'minimal' && (logHasSux || logKetamineRsi || logKetamineInduction));
+  const pheaSuggested: string = !showPhea || state.timingMode === 'minimal' ? '' : (logHasSux || logKetamineRsi || ((airwayVal === 'ETT' || logKetamineInduction) && !logHasArrestTx)) ? 'Yes' : 'No';
+  const pheaVal: string = !showPhea ? '' : (h.phea || pheaSuggested);
   const igtVal = !airwayHasDevice ? '' : (h.airwayIgt || (logIgt ? 'Yes' : (airwayVal === logAirwayDev ? 'No' : '')));
   const logAccessAny = txLog.io + txLog.iv > 0;
   const accessFromLog = logAccessAny || state.timingMode !== 'minimal';
@@ -6085,7 +6090,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!h.medications.trim() && !unk('meds')) missing.otherinfo.push('Regular medications');
   if (!airwayVal) missing.treatment.push('Airway'); else if (airwayHasDevice && !igtVal) missing.treatment.push('IGT');
   if (!accessDone) missing.treatment.push('Access');
-  if (airwayVal === 'ETT' && !pheaVal) missing.treatment.push('PHEA');
+  if (showPhea && !pheaVal) missing.treatment.push('PHEA');
   const pageTitle: Record<string, string> = { other: 'Handover', events: 'What happened', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: 'Vital Signs', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
@@ -6551,7 +6556,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 </div>
               </HandoverBox>
             )}
-            {airwayVal === 'ETT' && (
+            {showPhea && (
               <HandoverBox label="PHEA" state={pheaVal ? 'done' : 'missing'}>
                 <span className={head}>Was PHEA performed?</span>
                 <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
