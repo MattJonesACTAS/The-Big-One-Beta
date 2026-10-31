@@ -5508,7 +5508,8 @@ type HandoverArrest = {
   askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
   firstState: 'known' | 'unknown' | 'ask' | 'none';   // the first rhythm: from the log, answered by the crew, or still to ask
-  startEstimate: { clock: string, kind: 'at' | 'before' } | null;   // best guess of when the arrest happened, to the nearest 5 minutes
+  startEstimate: { clock: string, kind: 'at' | 'before', afterContactMin?: number } | null;   // best guess of when the arrest happened, to the nearest 5 minutes (afterContactMin: minutes after the monitor was turned on, for an arrest during the case in the timer modes)
+  monitorTimed: boolean;     // the timer modes run on the monitor's elapsed time
 };
 type HandoverTreatment = {
   airway: string[];                                   // the most advanced airway that worked, then IGT
@@ -5597,13 +5598,23 @@ const buildHandoverContent = (
     // nothing logged yet: since the app was opened
     loggedSpan = state.caseOpenedAt != null ? Math.max(0, Math.floor((endMs - state.caseOpenedAt) / 1000)) : 0;
   }
-  const durationSeconds: number | null = loggedSpan != null ? loggedSpan + (monitorBased ? 0 : priorCount * HANDOVER_CHECK_SECONDS) : null;
+  // An arrest that happened during the job, in the timer modes: the monitor was turned on at patient contact, so its elapsed time includes the time before the arrest.
+  // The arrest began about 30 seconds before the first rhythm check; each shock or disarm entered at setup was a check one 2-minute cycle earlier.
+  const duringTimer = monitorBased && h.arrestStart === 'During';
+  let arrestElapsed: number | null = null;
+  if (duringTimer) {
+    const nowMs = state.caseClosedAt ?? Date.now();
+    const openedElapsed = state.caseOpenedAt != null ? state.elapsedSeconds - (nowMs - state.caseOpenedAt) / 1000 : null;       // nothing logged yet: as the app was opened
+    const firstAt = firstCheck ? firstCheck.elapsed : (priorCount > 0 ? openedElapsed : null);
+    arrestElapsed = firstAt != null ? Math.max(0, firstAt - priorCount * HANDOVER_CHECK_SECONDS - 30) : null;
+  }
+  const durationSeconds: number | null = duringTimer ? (arrestElapsed != null ? Math.max(0, Math.floor(endElapsed - arrestElapsed)) : null) : loggedSpan != null ? loggedSpan + (monitorBased ? 0 : priorCount * HANDOVER_CHECK_SECONDS) : null;
   const managementStartMs = durationSeconds != null ? endMs - durationSeconds * 1000 : null;
   // Best guess of when the arrest happened: when management began, less the time before we arrived
   const round5 = (ms: number) => Math.round(ms / 300000) * 300000;
   let startEstimate: { clock: string, kind: 'at' | 'before' } | null = null;
   if (managementStartMs != null) {
-    if (h.arrestStart === 'During') startEstimate = { clock: getLocalTime(new Date(round5(managementStartMs))), kind: 'at' };
+    if (h.arrestStart === 'During') startEstimate = { clock: getLocalTime(new Date(round5(managementStartMs))), kind: 'at', ...(duringTimer && arrestElapsed != null ? { afterContactMin: Math.round(arrestElapsed / 60) } : {}) };
     else if (h.arrestStart === 'Before' && HANDOVER_BEFORE_MIDPOINT[h.startedBefore] != null) startEstimate = { clock: getLocalTime(new Date(round5(managementStartMs - HANDOVER_BEFORE_MIDPOINT[h.startedBefore] * 60000))), kind: 'at' };
     else if (h.arrestStart === 'Before' && h.startedBefore === 'Over 20 min') startEstimate = { clock: getLocalTime(new Date(round5(managementStartMs - 20 * 60000))), kind: 'before' };
   }
@@ -5666,7 +5677,7 @@ const buildHandoverContent = (
   const arrest: HandoverArrest = {
     rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
-    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, ownChecks: tx.filter(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; }).length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
+    rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, monitorTimed: monitorBased, ownChecks: tx.filter(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; }).length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
@@ -6177,10 +6188,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // 10 to 15 minutes later. We suspect the cause of arrest was sepsis."
   const bandLater: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': '5 to 10 minutes', '10–15 min': '10 to 15 minutes', '15–20 min': '15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
   const laterText = (roughly: boolean) => { const bt = bandLater[h.startedBefore]; return bt ? ` ${roughly && /^\d/.test(bt) ? 'roughly ' : ''}${bt} later` : ''; };
+  // An arrest after we arrived. Timer modes know when the monitor was turned on (patient contact); Tx log only doesn't, so it says the patient had output when we arrived
+  const afterMin = est?.afterContactMin;
+  const duringSentence = content.arrest.monitorTimed
+    ? (est ? `They arrested at approximately ${t12(est.clock)}${afterMin == null ? '' : afterMin < 1 ? ', within a minute of us making patient contact' : `, about ${afterMin} minute${afterMin === 1 ? '' : 's'} after we made patient contact`}.` : 'They arrested while in our care.')
+    : (est ? `They had output when we made patient contact, but they arrested at approximately ${t12(est.clock)}.` : 'They had output when we made patient contact, but they arrested.');
   const anaesFirst = 'To manage their presentation we needed to perform emergency anaesthesia, but they';
   const startSentence: React.ReactNode = !h.arrestStart ? miss('When the arrest started ?')
     : h.arrestStart === 'Unknown' ? (pheaTiming === 'before' ? `${anaesFirst} then arrested, and we don't know when.` : "We don't know when they arrested.")
-    : h.arrestStart === 'During' ? (pheaTiming === 'before' ? `${anaesFirst} arrested after the procedure${est ? ` at approximately ${t12(est.clock)}` : ''}.` : est ? `They arrested at approximately ${t12(est.clock)}, after our arrival.` : 'They arrested after our arrival.')
+    : h.arrestStart === 'During' ? (pheaTiming === 'before' ? `${anaesFirst} arrested after the procedure${est ? ` at approximately ${t12(est.clock)}` : ''}.` : duringSentence)
     : !h.startedBefore ? <>They arrested before our arrival {miss('How long before ?')}</>
     : h.startedBefore === 'Unknown' ? "They arrested before our arrival, we don't know when."
     : h.startedBefore === 'Over 20 min' ? `They arrested more than 20 minutes before our arrival${est ? `, so before approximately ${t12(est.clock)}` : ''}.`
