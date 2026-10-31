@@ -5870,7 +5870,7 @@ function HandoverBecauseField({ value, onChange }: { value: string, onChange: (v
 }
 
 // A text box that starts with fixed words the crew carry on from ("Our patient... has taken a polypharmacy OD"). The box holds only what they type; the handover text is the fixed words plus it.
-function HandoverPrefixField({ label, prefixWords, value, onChange, placeholder, state }: { label: string, prefixWords: string, value: string, onChange: (v: string) => void, placeholder: string, state: 'done' | 'missing' | 'none' }) {
+function HandoverPrefixField({ label, prefixWords, value, onChange, placeholder, state, rows = 5 }: { label: string, prefixWords: string, value: string, onChange: (v: string) => void, placeholder: string, state: 'done' | 'missing' | 'none', rows?: number }) {
   const compact = React.useContext(HandoverDensity);
   const wordRef = React.useRef<HTMLSpanElement>(null);
   const [indent, setIndent] = useState(0);
@@ -5880,7 +5880,7 @@ function HandoverPrefixField({ label, prefixWords, value, onChange, placeholder,
       <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}</span>
       <div className="relative">
         <span ref={wordRef} data-handover-prefix style={{ lineHeight: '24px' }} className="absolute left-[14px] top-[10px] text-[16px] font-semibold text-neutral-800 pointer-events-none select-none">{prefixWords}</span>
-        <textarea aria-label={label} data-handover-textfield autoCapitalize="none" rows={5} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        <textarea aria-label={label} data-handover-textfield autoCapitalize="none" rows={rows} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
           style={{ textIndent: indent }} className="w-full rounded-lg border-2 border-neutral-400 bg-white px-3 py-2 text-[16px] font-semibold text-neutral-800 placeholder:font-normal placeholder:text-neutral-400 resize-none" />
       </div>
     </HandoverBox>
@@ -6077,6 +6077,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const missing: Record<string, string[]> = { id: [], resp: [], breath: [], what: [], witness: [], info: [], vitals: [], vitals2: [], treatment: [], othertx: [], events: [], details: [], allergies: [], otherinfo: [] };
   if (!h.gender) missing.id.push('Gender');
   if (general && !h.pertinentEvents.trim()) missing.events.push('Why was ACTAS called?');
+  if (!general && h.arrestStart === 'During' && !h.pertinentEvents.trim()) missing.what.push('Why was ACTAS called?');
   if (!ageValue && h.ageUnknown !== 'Yes') missing.id.push('Age');
   if (timersOnly && h.ageUnknown !== 'Yes' && isPaedAge(ageValue, ageUnit) && !(state.patientWeight && h.weightFor === `${ageValue}|${ageUnit}`)) missing.id.push('Weight');
   if (weightNeed && !weightConfirmed) missing.id.push('Weight');
@@ -6211,7 +6212,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // ROSC can happen more than once in a long case: "twice", and "most recently at ..."
   const timesPhrase = (n: number) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
   const roscAt = a.rosc && a.rosc.clock ? t12(a.rosc.clock) : '';
-  if (a.inRosc && a.ownChecks === 0 && a.roscCount >= 1) arrestNodes.push(<div key="d">{`ROSC was logged${a.roscCount >= 2 ? ` ${timesPhrase(a.roscCount)}, most recently` : ''}${roscAt ? ` at ${roscAt}` : ''}.`}</div>);
+  if (a.inRosc && a.ownChecks === 0 && a.roscCount >= 1) arrestNodes.push(<div key="d">{`We ${a.roscCount >= 2 ? 'have achieved' : 'achieved'} ROSC${a.roscCount >= 2 ? ` ${timesPhrase(a.roscCount)}, most recently` : ''}${roscAt ? ` at ${roscAt}` : ''}.`}</div>);
   else if (a.inRosc) {
     if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
@@ -6361,9 +6362,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     <div key="s">{leadStr}{leadStr && tailStr ? ', ' : ''}{tailStr && (blankUnknown ? <span className="text-amber-500" data-handover-missing-frag={tailStr}>{tailStr}</span> : tailStr)}.</div>,
     ...(h.otherInfo.trim() ? [<div key="o">Other information: {lines(h.otherInfo).join(', ')}</div>] : []),
   ];
+  // What happened before we arrived (the presenting complaint): read out second in a General handover, and in an arrest / ROSC handover whenever it has been written
+  // (it is kept when a General handover turns into an arrest one)
+  const eventsApply = general || h.arrestStart === 'During';          // (only an arrest after we arrived has an earlier complaint to explain; otherwise the call was for the arrest)
+  const eventLines = !eventsApply ? [] : lines(h.pertinentEvents).map((l, i) => (i === 0 && !/^our patient\b/i.test(l)) ? `Our patient ${l}` : l);
+  const eventsCard = { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{general ? pheaGeneral : null}</> };
   const arrestCards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: oneSentence(idLines) },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
+    ...(eventLines.length || h.arrestStart === 'During' ? [eventsCard] : []),
     { key: 'M', title: 'M – What happened', body: whatNodes },
     { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestPage1 },
     ...(arrestPage2.length ? [{ key: 'I3', title: 'I – Info / Arrest Summary', body: arrestPage2 }] : []),
@@ -6374,9 +6381,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   ];
 
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
-  const eventLines = lines(h.pertinentEvents).map((l, i) => (i === 0 && general && !/^our patient\b/i.test(l)) ? `Our patient ${l}` : l);
   const cards = general
-    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{pheaGeneral}</> }, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
+    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, eventsCard, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
   if (view === 'read') {
@@ -6543,6 +6549,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
             <div data-handover-estimate className="text-[15px] font-semibold text-neutral-700 bg-neutral-100 rounded-lg px-4 py-1.5 text-center">
               Estimated time of arrest: {content.arrest.startEstimate.kind === 'before' ? 'before ' : ''}{t12(content.arrest.startEstimate.clock)}
             </div>
+          )}
+          {h.arrestStart === 'During' && (
+            <HandoverPrefixField label="Why was ACTAS called?" prefixWords="Our patient..." rows={2}
+              state={h.pertinentEvents.trim() ? 'done' : 'missing'} placeholder="has taken a polypharmacy OD"
+              value={h.pertinentEvents.replace(/^Our patient ?/i, '')} onChange={v => onField('pertinentEvents', v.trim() ? `Our patient ${v.replace(/^\s+/, '')}` : '')} />
           )}
         </HandoverPageCard>
       );
