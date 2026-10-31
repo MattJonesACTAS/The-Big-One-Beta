@@ -6152,13 +6152,34 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   ];
   const beforeWords: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': 'approximately 5 to 10 minutes', '10–15 min': 'approximately 10 to 15 minutes', '15–20 min': 'approximately 15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
   const est = content.arrest.startEstimate;
+  // Emergency anaesthesia and the order of events, worked out from the log. Anaesthesia in the middle of an arrest doesn't happen, so:
+  //   General, or the arrest began before we arrived (and no ROSC)  -> 'To manage their presentation we needed to perform emergency anaesthesia.'
+  //   anaesthesia, then the arrest (a treatment logged as already applied is before the case)  -> said with the arrest: '... but they arrested after the procedure at approximately 6:30am.'
+  //   anaesthesia after ROSC -> 'To manage their presentation we then needed ...' at the end of the arrest summary (after a rearrest: said with it, 'at that point')
+  //   a log that puts it inside the arrest -> after ROSC if there was ROSC, otherwise before the arrest
+  const isAnaesthetic = (x: { name: string }) => /^Suxamethonium/i.test(x.name) || ketamineMgs.some(mg => new RegExp(`^Ketamine push\\s+${mg}\\s*mg`, 'i').test(x.name) && adultKg != null && (Math.abs(mg - adultKg) < 1 || Math.abs(mg - 2 * adultKg) < 1));
+  const isArrestTx = (x: { name: string }) => ['Shock', 'Disarm'].includes(getTreatmentIdentity(x.name)) || /^(CPR|Pads on)\b/.test(x.name);
+  const anaesStamps = state.treatments.filter(isAnaesthetic).map(x => (x.prior ? -1 : x.elapsed));
+  const pheaAt = anaesStamps.length ? Math.min(...anaesStamps) : null;                                    // -1 = before the case began
+  const lowest = (xs: number[]) => xs.reduce<number | null>((lo, v) => (lo == null || v < lo ? v : lo), null);
+  const arrestStartAt = lowest(state.treatments.filter(x => !x.prior && isArrestTx(x)).map(x => x.elapsed));
+  const arrestBeforeCase = state.treatments.some(x => x.prior && isArrestTx(x));
+  const roscStamp = lowest(state.treatments.filter(x => isRoscName(x.name)).map(x => x.elapsed));
+  const pheaTiming: 'none' | 'general' | 'before' | 'afterRosc' = pheaVal !== 'Yes' ? 'none'
+    : general ? 'general'
+    : h.arrestStart === 'Before' ? (roscStamp != null ? 'afterRosc' : 'general')
+    : (pheaAt != null && (pheaAt === -1 ? !arrestBeforeCase : arrestStartAt != null && pheaAt < arrestStartAt)) ? 'before'
+    : roscStamp != null ? 'afterRosc' : 'before';
+  const pheaGeneral: React.ReactNode[] = pheaTiming === 'general' ? [<div key="phea">To manage their presentation we needed to perform emergency anaesthesia.</div>] : [];
+  const pheaAfterRosc = pheaTiming === 'afterRosc';
   // "They arrested at approximately 10:20am. It was a witnessed arrest, but they received no CPR between their arrest and our arrival
   // 10 to 15 minutes later. We suspect the cause of arrest was sepsis."
   const bandLater: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': '5 to 10 minutes', '10–15 min': '10 to 15 minutes', '15–20 min': '15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
   const laterText = (roughly: boolean) => { const bt = bandLater[h.startedBefore]; return bt ? ` ${roughly && /^\d/.test(bt) ? 'roughly ' : ''}${bt} later` : ''; };
+  const anaesFirst = 'To manage their presentation we needed to perform emergency anaesthesia, but they';
   const startSentence: React.ReactNode = !h.arrestStart ? miss('When the arrest started ?')
-    : h.arrestStart === 'Unknown' ? "We don't know when they arrested."
-    : h.arrestStart === 'During' ? (est ? `They arrested at approximately ${t12(est.clock)}, after our arrival.` : 'They arrested after our arrival.')
+    : h.arrestStart === 'Unknown' ? (pheaTiming === 'before' ? `${anaesFirst} then arrested, and we don't know when.` : "We don't know when they arrested.")
+    : h.arrestStart === 'During' ? (pheaTiming === 'before' ? `${anaesFirst} arrested after the procedure${est ? ` at approximately ${t12(est.clock)}` : ''}.` : est ? `They arrested at approximately ${t12(est.clock)}, after our arrival.` : 'They arrested after our arrival.')
     : !h.startedBefore ? <>They arrested before our arrival {miss('How long before ?')}</>
     : h.startedBefore === 'Unknown' ? "They arrested before our arrival, we don't know when."
     : h.startedBefore === 'Over 20 min' ? `They arrested more than 20 minutes before our arrival${est ? `, so before approximately ${t12(est.clock)}` : ''}.`
@@ -6182,22 +6203,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const whyText = (() => { const t = lines(h.causeWhy).join(', ').replace(/^because\s+/i, '').replace(/[.!?]+$/, ''); return t && /^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t; })();
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}${whyText ? ` because ${whyText}` : ''}.`;
-  // Where the emergency anaesthesia sentence goes depends on the order of events, worked out from the log:
-  //   anaesthesia, then the arrest  -> before the arrest is described (the first line of What happened)
-  //   anaesthesia during the arrest -> the end of What happened
-  //   anaesthesia after ROSC        -> after the sentence that says when ROSC was achieved (or the rearrest one)
-  // A treatment logged as already applied (at setup) has no time but is before the case began; with no anaesthetic in the log (the crew just said Yes) it is placed after ROSC if there was one.
-  const pheaSentence: React.ReactNode[] = pheaVal === 'Yes' ? [<div key="phea">We have needed to perform emergency anaesthesia in our management.</div>] : [];
-  const isAnaesthetic = (x: { name: string }) => /^Suxamethonium/i.test(x.name) || ketamineMgs.some(mg => new RegExp(`^Ketamine push\\s+${mg}\\s*mg`, 'i').test(x.name) && adultKg != null && (Math.abs(mg - adultKg) < 1 || Math.abs(mg - 2 * adultKg) < 1));
-  const isArrestTx = (x: { name: string }) => ['Shock', 'Disarm'].includes(getTreatmentIdentity(x.name)) || /^(CPR|Pads on)\b/.test(x.name);
-  const anaesStamps = state.treatments.filter(isAnaesthetic).map(x => (x.prior ? -1 : x.elapsed));
-  const pheaAt = anaesStamps.length ? Math.min(...anaesStamps) : null;                                    // -1 = before the case began
-  const arrestStartAt = state.treatments.filter(x => !x.prior && isArrestTx(x)).map(x => x.elapsed).reduce<number | null>((lo, v) => (lo == null || v < lo ? v : lo), null);
-  const arrestBeforeCase = state.treatments.some(x => x.prior && isArrestTx(x));
-  const roscStamp = state.treatments.filter(x => isRoscName(x.name)).map(x => x.elapsed).reduce<number | null>((lo, v) => (lo == null || v < lo ? v : lo), null);
-  const pheaBeforeArrest = pheaVal === 'Yes' && !general && pheaAt != null && (pheaAt === -1 ? !arrestBeforeCase : arrestStartAt != null && pheaAt < arrestStartAt);
-  const pheaAfterRosc = pheaVal === 'Yes' && !pheaBeforeArrest && roscStamp != null && (pheaAt == null || pheaAt > roscStamp);
-  const whatNodes: React.ReactNode[] = [pheaBeforeArrest ? pheaSentence : [], [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>), pheaAfterRosc || pheaBeforeArrest ? [] : pheaSentence].flat();
+  const whatNodes: React.ReactNode[] = [[...(pheaTiming === 'before' && !h.arrestStart ? [pheaGeneral.length ? null : <div key="pb">To manage their presentation we needed to perform emergency anaesthesia.</div>] : []), [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>)], pheaGeneral].flat(2).filter(Boolean) as React.ReactNode[];
 
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -6215,8 +6221,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
   else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   // A rearrest after ROSC: the arrest we're handing over is not the first one
-  if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}, but they have since rearrested.`}</div>);
-  if (!(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">They have received:{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
+  if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they have since rearrested.`}</div>);
+  if (!(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? 'They received:' : 'They have received:'}{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
     const latestW = a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm';
@@ -6256,7 +6262,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     const latestRedundant = useEpisodes && a.inRosc && !!a.latest && a.latest === listEndsWith;
     if (a.latest && !latestRedundant && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
-  if (pheaAfterRosc) { const keyAt = (k: string) => arrestNodes.findIndex(n => (n as React.ReactElement)?.key === k); const at = keyAt('rr') >= 0 ? keyAt('rr') : keyAt('d'); arrestNodes.splice(at >= 0 ? at + 1 : arrestNodes.length, 0, ...pheaSentence); }      // after the sentence that says when ROSC was achieved (or, after a rearrest, the one that says they have since rearrested)
+  if (pheaAfterRosc && a.inRosc) arrestNodes.push(<div key="phea">To manage their presentation we then needed to perform emergency anaesthesia.</div>);
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
   const pAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p');
   const splitAt = pAt >= 0 ? pAt + 1 : arrestNodes.length;
@@ -6370,7 +6376,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
   const eventLines = lines(h.pertinentEvents).map((l, i) => (i === 0 && general && !/^our patient\b/i.test(l)) ? `Our patient ${l}` : l);
   const cards = general
-    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{pheaSentence}</> }, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
+    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{pheaGeneral}</> }, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
   if (view === 'read') {
