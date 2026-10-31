@@ -6110,7 +6110,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (!airwayVal) missing.treatment.push('Airway');
   if (!accessDone) missing.treatment.push('Access');
   if (showPhea && !pheaVal) missing.treatment.push('PHEA');
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Reason for call', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: inRosc ? 'Breathing / Circulation' : 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'Vital Signs (1/2)' : 'Vital Signs', vitals2: 'Vital Signs (2/2)', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Presenting complaint', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: inRosc ? 'Breathing / Circulation' : 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'Vital Signs (1/2)' : 'Vital Signs', vitals2: 'Vital Signs (2/2)', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
@@ -6182,8 +6182,22 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const whyText = (() => { const t = lines(h.causeWhy).join(', ').replace(/^because\s+/i, '').replace(/[.!?]+$/, ''); return t && /^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t; })();
   const causeSentence: React.ReactNode = !h.suspectedCause.trim() ? miss('Suspected cause ?')
     : h.suspectedCause.trim().toLowerCase() === 'unknown' ? "We don't know the cause of arrest." : `We suspect the cause of arrest was ${h.suspectedCause.trim()}${whyText ? ` because ${whyText}` : ''}.`;
-  const pheaSentence: React.ReactNode[] = pheaVal === 'Yes' ? [<div key="phea">We have needed to perform emergency anaesthesia in our management.</div>] : [];      // closes the What happened text
-  const whatNodes: React.ReactNode[] = [[startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>), pheaSentence].flat();
+  // Where the emergency anaesthesia sentence goes depends on the order of events, worked out from the log:
+  //   anaesthesia, then the arrest  -> before the arrest is described (the first line of What happened)
+  //   anaesthesia during the arrest -> the end of What happened
+  //   anaesthesia after ROSC        -> after the sentence that says when ROSC was achieved (or the rearrest one)
+  // A treatment logged as already applied (at setup) has no time but is before the case began; with no anaesthetic in the log (the crew just said Yes) it is placed after ROSC if there was one.
+  const pheaSentence: React.ReactNode[] = pheaVal === 'Yes' ? [<div key="phea">We have needed to perform emergency anaesthesia in our management.</div>] : [];
+  const isAnaesthetic = (x: { name: string }) => /^Suxamethonium/i.test(x.name) || ketamineMgs.some(mg => new RegExp(`^Ketamine push\\s+${mg}\\s*mg`, 'i').test(x.name) && adultKg != null && (Math.abs(mg - adultKg) < 1 || Math.abs(mg - 2 * adultKg) < 1));
+  const isArrestTx = (x: { name: string }) => ['Shock', 'Disarm'].includes(getTreatmentIdentity(x.name)) || /^(CPR|Pads on)\b/.test(x.name);
+  const anaesStamps = state.treatments.filter(isAnaesthetic).map(x => (x.prior ? -1 : x.elapsed));
+  const pheaAt = anaesStamps.length ? Math.min(...anaesStamps) : null;                                    // -1 = before the case began
+  const arrestStartAt = state.treatments.filter(x => !x.prior && isArrestTx(x)).map(x => x.elapsed).reduce<number | null>((lo, v) => (lo == null || v < lo ? v : lo), null);
+  const arrestBeforeCase = state.treatments.some(x => x.prior && isArrestTx(x));
+  const roscStamp = state.treatments.filter(x => isRoscName(x.name)).map(x => x.elapsed).reduce<number | null>((lo, v) => (lo == null || v < lo ? v : lo), null);
+  const pheaBeforeArrest = pheaVal === 'Yes' && !general && pheaAt != null && (pheaAt === -1 ? !arrestBeforeCase : arrestStartAt != null && pheaAt < arrestStartAt);
+  const pheaAfterRosc = pheaVal === 'Yes' && !pheaBeforeArrest && roscStamp != null && (pheaAt == null || pheaAt > roscStamp);
+  const whatNodes: React.ReactNode[] = [pheaBeforeArrest ? pheaSentence : [], [startSentence, ...(h.arrestStart !== 'During' && h.arrestStart !== 'Unknown' ? witnessSentences : []), causeSentence].map((n, i) => <div key={i}>{n}</div>), pheaAfterRosc || pheaBeforeArrest ? [] : pheaSentence].flat();
 
   const a = content.arrest;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -6242,6 +6256,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     const latestRedundant = useEpisodes && a.inRosc && !!a.latest && a.latest === listEndsWith;
     if (a.latest && !latestRedundant && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
+  if (pheaAfterRosc) { const keyAt = (k: string) => arrestNodes.findIndex(n => (n as React.ReactElement)?.key === k); const at = keyAt('rr') >= 0 ? keyAt('rr') : keyAt('d'); arrestNodes.splice(at >= 0 ? at + 1 : arrestNodes.length, 0, ...pheaSentence); }      // after the sentence that says when ROSC was achieved (or, after a rearrest, the one that says they have since rearrested)
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
   const pAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p');
   const splitAt = pAt >= 0 ? pAt + 1 : arrestNodes.length;
