@@ -4852,6 +4852,53 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
   );
 }
 
+// ---- ECG: a dropdown on the VSS tab and on the handover's first Vital Signs page ----
+const ECG_OPTIONS: [string, string][] = [['notdone', 'Not done'], ['sinus', 'Sinus rhythm, no ST changes'], ['arrhythmia', 'Arrhythmia, no ST changes'], ['st', 'ST depression or T wave changes'], ['stemi', 'STEMI'], ['unreadable', 'Unable to interpret']];
+// alphabetical, so related rhythms sit together; [what is stored, how it reads in the handover]
+const ECG_RHYTHMS: [string, string][] = [
+  ['Atrial fibrillation', 'atrial fibrillation'], ['Atrial flutter', 'atrial flutter'],
+  ['Heart block - first degree', 'first degree heart block'], ['Heart block - second degree', 'second degree heart block'], ['Heart block - third degree (complete)', 'complete heart block'],
+  ['Junctional rhythm', 'a junctional rhythm'], ['Paced rhythm', 'a paced rhythm'],
+  ['Premature atrial contractions', 'premature atrial contractions'], ['Premature ventricular contractions', 'premature ventricular contractions'],
+  ['Sinus arrhythmia', 'sinus arrhythmia'], ['SVT', 'SVT'], ['VT', 'VT'], ['Other', ''],
+];
+const ecgRhythmPhrase = (rhythm?: string, other?: string) => rhythm === 'Other' ? ((other ?? '').trim() || 'an arrhythmia') : (ECG_RHYTHMS.find(r => r[0] === rhythm)?.[1] || 'an arrhythmia');
+function ecgSentence(v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }): string | null {
+  switch (v.ecg) {
+    case 'notdone': return 'We have not done an ECG.';
+    case 'sinus': return 'Their ECG showed sinus rhythm with no ST changes.';
+    case 'arrhythmia': return `Their ECG showed ${ecgRhythmPhrase(v.ecgRhythm, v.ecgOther)} with no ST changes.`;
+    case 'st': return 'Their ECG showed some ischaemic changes.';
+    case 'stemi': return 'Their ECG showed STEMI.';
+    case 'unreadable': return 'Their ECG was unreadable.';
+    default: return null;
+  }
+}
+const ecgShort = (v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => v.ecg === 'arrhythmia' ? `Arrhythmia${v.ecgRhythm ? `: ${v.ecgRhythm === 'Other' ? (v.ecgOther || 'other') : v.ecgRhythm}` : ''}` : (ECG_OPTIONS.find(o => o[0] === v.ecg)?.[1] ?? '');
+function EcgSelect({ ecg = '', rhythm = '', other = '', onChange, compact = false }: { ecg?: string, rhythm?: string, other?: string, onChange: (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => void, compact?: boolean }) {
+  const cls = `w-full rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 ${compact ? 'px-2 py-1.5 text-[15px]' : 'px-3 py-3 text-[16px]'}`;
+  return (
+    <div className="space-y-2">
+      <select aria-label="ECG" data-ecg-select value={ecg} className={cls}
+        onChange={e => onChange({ ecg: e.target.value, ...(e.target.value === 'arrhythmia' ? {} : { ecgRhythm: '', ecgOther: '' }) })}>
+        <option value="">Select…</option>
+        {ECG_OPTIONS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      </select>
+      {ecg === 'arrhythmia' && (
+        <select aria-label="Which rhythm?" data-ecg-rhythm value={rhythm} className={cls}
+          onChange={e => onChange({ ecgRhythm: e.target.value, ...(e.target.value === 'Other' ? {} : { ecgOther: '' }) })}>
+          <option value="">Which rhythm? (optional)</option>
+          {ECG_RHYTHMS.map(([v]) => <option key={v} value={v}>{v === 'Other' ? 'Other (type it)' : v}</option>)}
+        </select>
+      )}
+      {ecg === 'arrhythmia' && rhythm === 'Other' && (
+        <input type="text" aria-label="Other rhythm" data-ecg-other value={other} placeholder="Type the rhythm" className={cls}
+          onChange={e => onChange({ ecgOther: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
+      )}
+    </div>
+  );
+}
+
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
   // Every keystroke is saved straight away. The green tick is not a button: it
   // only confirms that a field has been changed since the VSS tab was opened,
@@ -4874,6 +4921,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
     { key: 'etco2',label: 'EtCO₂'        },
     { key: 'bpSys',label: 'Systolic BP'  },
     { key: 'bpDia',label: 'Diastolic BP' },
+    { key: 'ecg',  label: 'ECG'          },
     { key: 'gcs',  label: 'GCS'          },
     { key: 'bgl',  label: 'BGL'          },
     { key: 'temp', label: 'Temp'         },
@@ -4884,6 +4932,15 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
       <div className="p-3 space-y-2">
         {fields.map(({ key, label }) => {
           const isChanged = changed.has(key);
+          if (key === 'ecg') return (
+            <div key={key} className="bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[15px] font-bold text-neutral-800">{label}</span>
+                <span data-vss-tick={key} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${isChanged ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
+              </div>
+              <EcgSelect ecg={vitals.ecg} rhythm={vitals.ecgRhythm} other={vitals.ecgOther} onChange={patch => { onChange({ ...vitals, ...patch }); setChanged(prev => (prev.has('ecg') ? prev : new Set(prev).add('ecg'))); }} />
+            </div>
+          );
           return (
             <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
               <span className="text-[15px] font-bold text-neutral-800">{label}</span>
@@ -4892,7 +4949,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
                   type="text"
                   inputMode="decimal"
                   aria-label={label}
-                  value={vitals[key]}
+                  value={vitals[key] ?? ''}
                   onChange={e => update(key, e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                   className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
@@ -5365,6 +5422,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
     { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
+    { label: 'ECG',     value: ecgShort(v), unit: '' },
   ].filter(r => r.value !== '');
   return (
     <div className="rounded-xl border border-neutral-100">
@@ -6101,6 +6159,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (!h.radialPulse && !unk('pulse')) missing.breath.push('Radial pulse');
     if (!vit.hr && !unk('hr')) missing.vitals.push('HR');
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
+    if (!vit.ecg) missing.vitals.push('ECG');
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
   }
   if (timersOnly && !medsDone) missing.othertx.push('Medications given');
@@ -6238,7 +6297,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
   else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   // A rearrest after ROSC: the arrest we're handing over is not the first one
-  if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they have since rearrested.`}</div>);
+  // The latest rearrest (when, and into what) is said here, with the ROSC it followed, and not again in the rhythm list
+  const rearrestBits = (e: typeof a.episodes[number]) => {
+    const later = e.rearrest && e.rearrest.laterSeconds != null ? (e.rearrest.laterSeconds < 60 ? ' less than a minute later' : ` ${approxPhrase(e.rearrest.laterSeconds)} later`) : '';
+    const at = e.rearrest && e.rearrest.clock ? ` at ${t12(e.rearrest.clock)}` : '';
+    return `rearrested${later}${at}${e.presenting ? ` into ${rhythmSentence(e.presenting)}` : ''}`;
+  };
+  const rearEp = a.episodes.length > 1 ? a.episodes[a.episodes.length - 1] : null;
+  const rearrestClause = rearEp && rearrestBits(rearEp) !== 'rearrested' ? rearrestBits(rearEp) : 'have since rearrested';
+  if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they ${rearrestClause}.`}</div>);
   if (!(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? 'They received:' : 'They have received:'}{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
@@ -6263,14 +6330,9 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes ? `The presenting rhythm was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
     if (useEpisodes) {
       a.episodes.forEach((e, i) => {
-        if (i > 0) {
-          const later = e.rearrest && e.rearrest.laterSeconds != null ? (e.rearrest.laterSeconds < 60 ? ' less than a minute later' : ` ${approxPhrase(e.rearrest.laterSeconds)} later`) : '';
-          const at = e.rearrest && e.rearrest.clock ? ` at ${t12(e.rearrest.clock)}` : '';
-          arrestNodes.push(<div key={`ra${i}`}>{`They rearrested${later}${at}${e.presenting ? ` into ${rhythmSentence(e.presenting)}` : ''}.`}</div>);
-        }
-        const items = e.then.map((c, k) => `${c.n} x ${cap(rhythmWords(c.rhythm))}${e.endsWithRosc && k === e.then.length - 1 ? ' and then ROSC' : ''}`);
-        if (items.length) arrestNodes.push(<div key={`th${i}`}>We then had:{sub(items)}</div>);
-        else if (e.endsWithRosc) arrestNodes.push(<div key={`th${i}`}>We then achieved ROSC.</div>);
+        if (i > 0 && !(i === a.episodes.length - 1 && !a.inRosc && a.roscCount >= 1)) arrestNodes.push(<div key={`ra${i}`}>{`They ${rearrestBits(e)}.`}</div>);
+        const items = e.then.map(c => `${c.n} x ${cap(rhythmWords(c.rhythm))}`);
+        if (items.length) arrestNodes.push(<div key={`th${i}`}>{i > 0 && i === a.episodes.length - 1 && !a.inRosc && a.roscCount >= 1 ? 'Since the rearrest we have had:' : 'We then had:'}{sub(items)}</div>);
       });
     }
     // (in ROSC the list already ends "... and then ROSC": when its last rhythm is the last rhythm, saying it again is redundant)
@@ -6294,10 +6356,16 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     vit.hr ? { node: `HR of ${vit.hr}`, known: true } : unk('hr') ? { node: 'HR unknown', known: true } : { node: miss('HR ?'), known: false },
     (vit.bpSys && vit.bpDia) ? { node: `BP of ${vit.bpSys}/${vit.bpDia}`, known: true } : unk('bp') ? { node: 'BP unknown', known: true } : { node: miss('BP ?'), known: false },
   ];
-  const vitalsNodes: React.ReactNode[] = [
-    <div key="v">{recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:'}
-      {sub([...circLines.map(l => l.node), ...recorded.map(s => `${s.label} of ${s.value}${s.unit === '%' ? '%' : ''}`), ...unknownSigns.map(s => `${s.label} unknown`), ...notRecorded.map(s => <span key={s.label} className="text-amber-500" data-handover-missing-frag={`${s.label} ?`}>{s.label} ?</span>)])}
-    </div>,
+  const restSigns = [...recorded.map(s => `${s.label} of ${s.value}${s.unit === '%' ? '%' : ''}`), ...unknownSigns.map(s => `${s.label} unknown`), ...notRecorded.map(s => <span key={s.label} className="text-amber-500" data-handover-missing>{s.label} ?</span>)];
+  const ecgLine = ecgSentence(vit);
+  const vitalsHeading = recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:';
+  // In a ROSC or General handover the ECG follows HR and BP (the circulation items), then the rest of the vital signs
+  const vitalsNodes: React.ReactNode[] = showCirc ? [
+    <div key="v">{vitalsHeading}{sub(circLines.map(l => l.node))}</div>,
+    <div key="ecg">{ecgLine ?? miss('ECG ?')}</div>,
+    ...(restSigns.length ? [<div key="v2">We also have:{sub(restSigns)}</div>] : []),
+  ] : [
+    <div key="v">{vitalsHeading}{sub(restSigns)}</div>,
   ];
 
   const t = content.tx;
@@ -6598,6 +6666,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                   <HandoverNumber boxed={false} label="Diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
                 </div>
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
+              </HandoverBox>
+            )}
+            {showCirc && (
+              <HandoverBox label="ECG" state={vit.ecg ? 'done' : 'missing'} className="col-span-2">
+                <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>ECG</span>
+                <EcgSelect ecg={vit.ecg} rhythm={vit.ecgRhythm} other={vit.ecgOther} compact={compact} onChange={patch => (Object.keys(patch) as VitalKey[]).forEach(k => onVital(k, (patch as Record<string, string>)[k]))} />
               </HandoverBox>
             )}
             {showCirc && !inRosc && gcsBox}
