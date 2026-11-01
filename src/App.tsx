@@ -4853,7 +4853,7 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
 }
 
 // ---- ECG: a dropdown on the VSS tab and on the handover's first Vital Signs page ----
-const ECG_OPTIONS: [string, string][] = [['notdone', 'Not done'], ['sinus', 'Sinus rhythm, no ST changes'], ['arrhythmia', 'Arrhythmia, no ST changes'], ['st', 'ST depression or T wave changes'], ['stemi', 'STEMI'], ['unreadable', 'Unable to interpret']];
+const ECG_OPTIONS: [string, string][] = [['notdone', 'Not done'], ['sinus', 'Sinus rhythm, no ST changes'], ['arrhythmia', 'Arrhythmia, no ST changes'], ['st', 'Ischaemic changes'], ['stemi', 'STEMI'], ['unreadable', 'Unreadable']];
 // alphabetical, so related rhythms sit together; [what is stored, how it reads in the handover]
 const ECG_RHYTHMS: [string, string][] = [
   ['Atrial fibrillation', 'atrial fibrillation'], ['Atrial flutter', 'atrial flutter'],
