@@ -4877,14 +4877,15 @@ function ecgBullet(v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }): 
   }
 }
 const ECG_RHYTHM_SHORT: Record<string, string> = { 'Atrial fibrillation': 'AF', 'Heart block - first degree': '1st degree block', 'Heart block - second degree': '2nd degree block', 'Heart block - third degree (complete)': 'Complete heart block', 'Junctional rhythm': 'Junctional', 'Paced rhythm': 'Paced' };
-const ecgShort = (v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => v.ecg === 'arrhythmia' ? `Arrhythmia${v.ecgRhythm ? `: ${v.ecgRhythm === 'Other' ? ((v.ecgOther ?? '').trim() || 'other') : (ECG_RHYTHM_SHORT[v.ecgRhythm] ?? v.ecgRhythm)}` : ''}` : (ECG_OPTIONS.find(o => o[0] === v.ecg)?.[1] ?? '');
-function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyLabel = '–' }: { value: string, options: [string, string][], onChange: (v: string) => void, ariaLabel: string, dataAttr: string, emptyLabel?: string }) {
-  const shown = options.find(o => o[0] === value)?.[1] ?? '';
+const ecgShort = (v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => v.ecg === 'arrhythmia' ? (v.ecgRhythm ? (v.ecgRhythm === 'Other' ? ((v.ecgOther ?? '').trim() || 'Arrhythmia') : (ECG_RHYTHM_SHORT[v.ecgRhythm] ?? v.ecgRhythm)) : 'Arrhythmia') : (ECG_OPTIONS.find(o => o[0] === v.ecg)?.[1] ?? '');
+function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyLabel = '–', display }: { value: string, options: [string, string][], onChange: (v: string) => void, ariaLabel: string, dataAttr: string, emptyLabel?: string, display?: string }) {
+  const shown = display ?? (options.find(o => o[0] === value)?.[1] ?? '');
   return (
     <span className="relative group inline-block w-24 min-w-[6rem] max-w-[14rem]" style={shown ? { width: 'auto' } : undefined}>
       <span className="block text-right text-[16px] font-bold text-sky-700 border-b-2 border-sky-200 group-focus-within:border-sky-500 py-1 min-h-[2.1rem] leading-snug">{shown || '\u00a0'}</span>
       <select aria-label={ariaLabel} {...{ [dataAttr]: true }} value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
         <option value="">{emptyLabel}</option>
+        {value === '__current' && <option value="__current" hidden>{display}</option>}
         {options.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
       </select>
     </span>
@@ -4960,29 +4961,30 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
               <span data-vss-tick={k} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${changed.has(k) ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
             );
             const rowCls = "flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100";
+            const rhythmChosen = vitals.ecg === 'arrhythmia' && !!vitals.ecgRhythm;      // a specific rhythm replaces 'Arrhythmia' on the ECG line, and the Rhythm line goes
             return (
               <React.Fragment key={key}>
                 <div className={rowCls}>
                   <span className="text-[15px] font-bold text-neutral-800">{label}</span>
                   <div className="flex items-center gap-2">
-                    <UnderlineSelect value={vitals.ecg ?? ''} options={ECG_OPTIONS} ariaLabel="ECG" dataAttr="data-ecg-select"
-                      onChange={v => patchEcg({ ecg: v, ...(v === 'arrhythmia' ? {} : { ecgRhythm: '', ecgOther: '' }) }, 'ecg')} />
+                    <UnderlineSelect value={rhythmChosen ? '__current' : (vitals.ecg ?? '')} display={rhythmChosen ? ecgShort(vitals) : undefined} options={ECG_OPTIONS} ariaLabel="ECG" dataAttr="data-ecg-select"
+                      onChange={v => patchEcg({ ecg: v, ecgRhythm: '', ecgOther: '' }, 'ecg')} />
                     {tick('ecg')}
                   </div>
                 </div>
-                {vitals.ecg === 'arrhythmia' && (
+                {vitals.ecg === 'arrhythmia' && !rhythmChosen && (
                   <div className={rowCls}>
                     <span className="text-[15px] font-bold text-neutral-800">Rhythm</span>
                     <div className="flex items-center gap-2">
                       <UnderlineSelect value={vitals.ecgRhythm ?? ''} options={ECG_RHYTHMS.map(([v]): [string, string] => [v, v === 'Other' ? 'Other (type it)' : v])} ariaLabel="Which rhythm?" dataAttr="data-ecg-rhythm"
-                        onChange={v => patchEcg({ ecgRhythm: v, ...(v === 'Other' ? {} : { ecgOther: '' }) }, 'ecgRhythm')} />
+                        onChange={v => patchEcg({ ecgRhythm: v }, 'ecg')} />
                       {tick('ecgRhythm')}
                     </div>
                   </div>
                 )}
                 {vitals.ecg === 'arrhythmia' && vitals.ecgRhythm === 'Other' && (
                   <div className={rowCls}>
-                    <span className="text-[15px] font-bold text-neutral-800">Other</span>
+                    <span className="text-[15px] font-bold text-neutral-800">Rhythm</span>
                     <div className="flex items-center gap-2">
                       <input type="text" aria-label="Other rhythm" data-ecg-other value={vitals.ecgOther ?? ''} onChange={e => patchEcg({ ecgOther: e.target.value }, 'ecgOther')}
                         onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
