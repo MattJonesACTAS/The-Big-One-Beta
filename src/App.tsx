@@ -4876,7 +4876,20 @@ function ecgBullet(v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }): 
     default: return null;
   }
 }
-const ecgShort = (v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => v.ecg === 'arrhythmia' ? `Arrhythmia${v.ecgRhythm ? `: ${v.ecgRhythm === 'Other' ? (v.ecgOther || 'other') : v.ecgRhythm}` : ''}` : (ECG_OPTIONS.find(o => o[0] === v.ecg)?.[1] ?? '');
+const ECG_RHYTHM_SHORT: Record<string, string> = { 'Atrial fibrillation': 'AF', 'Heart block - first degree': '1st degree block', 'Heart block - second degree': '2nd degree block', 'Heart block - third degree (complete)': 'Complete heart block', 'Junctional rhythm': 'Junctional', 'Paced rhythm': 'Paced' };
+const ecgShort = (v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => v.ecg === 'arrhythmia' ? `Arrhythmia${v.ecgRhythm ? `: ${v.ecgRhythm === 'Other' ? ((v.ecgOther ?? '').trim() || 'other') : (ECG_RHYTHM_SHORT[v.ecgRhythm] ?? v.ecgRhythm)}` : ''}` : (ECG_OPTIONS.find(o => o[0] === v.ecg)?.[1] ?? '');
+function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyLabel = '–' }: { value: string, options: [string, string][], onChange: (v: string) => void, ariaLabel: string, dataAttr: string, emptyLabel?: string }) {
+  const shown = options.find(o => o[0] === value)?.[1] ?? '';
+  return (
+    <span className="relative group inline-block w-24 min-w-[6rem] max-w-[14rem]" style={shown ? { width: 'auto' } : undefined}>
+      <span className="block text-right text-[16px] font-bold text-sky-700 border-b-2 border-sky-200 group-focus-within:border-sky-500 py-1 min-h-[2.1rem] leading-snug">{shown || '\u00a0'}</span>
+      <select aria-label={ariaLabel} {...{ [dataAttr]: true }} value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        <option value="">{emptyLabel}</option>
+        {options.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      </select>
+    </span>
+  );
+}
 const ecgSelectClass = (compact: boolean) => `rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 ${compact ? 'pl-2 pr-1 py-1.5 text-[14px]' : 'px-3 py-2.5 text-[16px]'}`;
 function EcgMain({ ecg = '', onChange, compact = false, className = 'w-full' }: { ecg?: string, onChange: (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => void, compact?: boolean, className?: string }) {
   return (
@@ -4942,18 +4955,43 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
         {fields.map(({ key, label }) => {
           const isChanged = changed.has(key);
           if (key === 'ecg') {
-            const patchEcg = (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => { onChange({ ...vitals, ...patch }); setChanged(prev => (prev.has('ecg') ? prev : new Set(prev).add('ecg'))); };
+            const patchEcg = (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }, tickKey: keyof AppState['vitals']) => { onChange({ ...vitals, ...patch }); setChanged(prev => (prev.has(tickKey) ? prev : new Set(prev).add(tickKey))); };
+            const tick = (k: keyof AppState['vitals']) => (
+              <span data-vss-tick={k} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${changed.has(k) ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
+            );
+            const rowCls = "flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100";
             return (
-              <div key={key} className="bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
-                <div className="flex items-center justify-between gap-3">
+              <React.Fragment key={key}>
+                <div className={rowCls}>
                   <span className="text-[15px] font-bold text-neutral-800">{label}</span>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <EcgMain ecg={vitals.ecg} onChange={patchEcg} compact className="w-[15.5rem] max-w-full" />
-                    <span data-vss-tick={key} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${isChanged ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
+                  <div className="flex items-center gap-2">
+                    <UnderlineSelect value={vitals.ecg ?? ''} options={ECG_OPTIONS} ariaLabel="ECG" dataAttr="data-ecg-select"
+                      onChange={v => patchEcg({ ecg: v, ...(v === 'arrhythmia' ? {} : { ecgRhythm: '', ecgOther: '' }) }, 'ecg')} />
+                    {tick('ecg')}
                   </div>
                 </div>
-                <EcgDetail ecg={vitals.ecg} rhythm={vitals.ecgRhythm} other={vitals.ecgOther} onChange={patchEcg} compact />
-              </div>
+                {vitals.ecg === 'arrhythmia' && (
+                  <div className={rowCls}>
+                    <span className="text-[15px] font-bold text-neutral-800">Rhythm</span>
+                    <div className="flex items-center gap-2">
+                      <UnderlineSelect value={vitals.ecgRhythm ?? ''} options={ECG_RHYTHMS.map(([v]): [string, string] => [v, v === 'Other' ? 'Other (type it)' : v])} ariaLabel="Which rhythm?" dataAttr="data-ecg-rhythm"
+                        onChange={v => patchEcg({ ecgRhythm: v, ...(v === 'Other' ? {} : { ecgOther: '' }) }, 'ecgRhythm')} />
+                      {tick('ecgRhythm')}
+                    </div>
+                  </div>
+                )}
+                {vitals.ecg === 'arrhythmia' && vitals.ecgRhythm === 'Other' && (
+                  <div className={rowCls}>
+                    <span className="text-[15px] font-bold text-neutral-800">Other</span>
+                    <div className="flex items-center gap-2">
+                      <input type="text" aria-label="Other rhythm" data-ecg-other value={vitals.ecgOther ?? ''} onChange={e => patchEcg({ ecgOther: e.target.value }, 'ecgOther')}
+                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                        className="w-40 text-right text-[16px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1" />
+                      {tick('ecgOther')}
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
             );
           }
           return (
