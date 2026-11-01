@@ -4858,8 +4858,8 @@ const ECG_KEYS = ['ecgR', 'ecgT', 'ecgE', 'ecgB', 'ecgI', 'ecgMore'] as const;
 // alphabetical; [stored, shown in the dropdown, how the script says it, how the case summary says it]
 const ECG_RHYTHMS: [string, string, string, string][] = [
   ['af', 'Atrial fibrillation', 'atrial fibrillation', 'AF'], ['flutter', 'Atrial flutter', 'atrial flutter', 'Atrial flutter'], ['junctional', 'Junctional rhythm', 'a junctional rhythm', 'Junctional'],
-  ['nsr', 'Normal sinus rhythm', 'normal sinus rhythm', 'Normal sinus rhythm'], ['paced', 'Paced rhythm', 'a paced rhythm', 'Paced'], ['sinarr', 'Sinus arrhythmia', 'sinus arrhythmia', 'Sinus arrhythmia'],
-  ['sinbrady', 'Sinus bradycardia', 'sinus bradycardia', 'Sinus bradycardia'], ['sintachy', 'Sinus tachycardia', 'sinus tachycardia', 'Sinus tachycardia'], ['svt', 'SVT', 'SVT', 'SVT'], ['vt', 'VT', 'VT', 'VT'],
+  ['paced', 'Paced rhythm', 'a paced rhythm', 'Paced'], ['sinarr', 'Sinus arrhythmia', 'sinus arrhythmia', 'Sinus arrhythmia'], ['sinbrady', 'Sinus bradycardia', 'sinus bradycardia', 'Sinus bradycardia'],
+  ['nsr', 'Sinus rhythm', 'normal sinus rhythm', 'Sinus rhythm'], ['sintachy', 'Sinus tachycardia', 'sinus tachycardia', 'Sinus tachycardia'], ['svt', 'SVT', 'SVT', 'SVT'], ['vt', 'VT', 'VT', 'VT'],
   ['other', 'Other (type it)', '', ''],
 ];
 const ECG_ECTOPICS: [string, string][] = [['PACs', 'PACs'], ['PJCs', 'PJCs'], ['PVCs', 'PVCs']];
@@ -6749,12 +6749,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 <HandoverBox label="ECG" state={(ev.ecgR || unk('ecg')) ? 'done' : 'missing'} className="col-span-2">
                   <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>ECG</span>
                   <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
-                    <button data-handover-choice="ECG: Normal sinus rhythm" aria-pressed={plainNsr} className={btn(plainNsr)}
-                      onClick={() => { if (plainNsr) clearAll(); else { clearAll(); onVital('ecgR', 'nsr'); if (unk('ecg')) setUnk('ecg', false); } }}>Normal sinus rhythm</button>
-                    <button data-handover-choice="ECG: No ECG" aria-pressed={unk('ecg')} className={btn(unk('ecg'))}
-                      onClick={() => toggleUnknownVital('ecg', [...ECG_KEYS])}>No ECG</button>
+                    <button data-handover-choice="ECG: Sinus rhythm" aria-pressed={plainNsr} className={btn(plainNsr)}
+                      onClick={() => { if (plainNsr) clearAll(); else { clearAll(); onVital('ecgR', 'nsr'); if (unk('ecg')) setUnk('ecg', false); } }}>Sinus rhythm</button>
                     <button data-handover-choice="ECG: Other findings" aria-pressed={open} className={btn(open)}
                       onClick={() => { if (open) clearAll(); else { onVital('ecgR', ev.ecgR || 'nsr'); onVital('ecgMore', '1'); if (unk('ecg')) setUnk('ecg', false); } }}>Other findings</button>
+                    <button data-handover-choice="ECG: No ECG" aria-pressed={unk('ecg')} className={btn(unk('ecg'))}
+                      onClick={() => toggleUnknownVital('ecg', [...ECG_KEYS])}>No ECG</button>
                   </div>
                   {open && <EcgGrid v={ev} set={setEcg} compact={compact} />}
                 </HandoverBox>
