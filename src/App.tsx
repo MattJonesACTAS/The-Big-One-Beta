@@ -4852,32 +4852,53 @@ function TimersOnlySelection({ state, isShockForced, addTreatment, onDelayRhythm
   );
 }
 
-// ---- ECG: a dropdown on the VSS tab and on the handover's first Vital Signs page ----
-const ECG_OPTIONS: [string, string][] = [['sinus', 'Sinus rhythm, no ST changes'], ['arrhythmia', 'Arrhythmia, no ST changes'], ['st', 'Ischaemic changes'], ['stemi', 'STEMI'], ['unreadable', 'Unreadable']];
-// alphabetical, so related rhythms sit together; [what is stored, how it reads in the handover]
-const ECG_RHYTHMS: [string, string][] = [
-  ['Atrial fibrillation', 'atrial fibrillation'], ['Atrial flutter', 'atrial flutter'],
-  ['Heart block - first degree', 'first degree heart block'], ['Heart block - second degree', 'second degree heart block'], ['Heart block - third degree (complete)', 'complete heart block'],
-  ['Junctional rhythm', 'a junctional rhythm'], ['Paced rhythm', 'a paced rhythm'],
-  ['PVCs', 'PVCs'],
-  ['Sinus arrhythmia', 'sinus arrhythmia'], ['SVT', 'SVT'], ['VT', 'VT'], ['Other', ''],
+// ---- ECG: a rhythm, then ectopics, a block and ischaemic changes (each left at None when there are none) ----
+type EcgFields = { ecgR?: string, ecgT?: string, ecgE?: string, ecgB?: string, ecgI?: string, ecgMore?: string };
+const ECG_KEYS = ['ecgR', 'ecgT', 'ecgE', 'ecgB', 'ecgI', 'ecgMore'] as const;
+// alphabetical; [stored, shown in the dropdown, how the script says it, how the case summary says it]
+const ECG_RHYTHMS: [string, string, string, string][] = [
+  ['af', 'Atrial fibrillation', 'atrial fibrillation', 'AF'], ['flutter', 'Atrial flutter', 'atrial flutter', 'Atrial flutter'], ['junctional', 'Junctional rhythm', 'a junctional rhythm', 'Junctional'],
+  ['nsr', 'Normal sinus rhythm', 'normal sinus rhythm', 'Normal sinus rhythm'], ['paced', 'Paced rhythm', 'a paced rhythm', 'Paced'], ['sinarr', 'Sinus arrhythmia', 'sinus arrhythmia', 'Sinus arrhythmia'],
+  ['sinbrady', 'Sinus bradycardia', 'sinus bradycardia', 'Sinus bradycardia'], ['sintachy', 'Sinus tachycardia', 'sinus tachycardia', 'Sinus tachycardia'], ['svt', 'SVT', 'SVT', 'SVT'], ['vt', 'VT', 'VT', 'VT'],
+  ['other', 'Other (type it)', '', ''],
 ];
-const ECG_RHYTHM_LEGACY: Record<string, string> = { 'PVC': 'PVCs', 'Premature ventricular contractions': 'PVCs' };      // saved before the abbreviations
-const ecgRhythmPhrase = (rhythm?: string, other?: string) => rhythm === 'Other' ? ((other ?? '').trim() || 'an arrhythmia') : (ECG_RHYTHMS.find(r => r[0] === rhythm)?.[1] || ECG_RHYTHM_LEGACY[rhythm ?? ''] || 'an arrhythmia');
-// How the ECG reads as one of the vital sign dot points
-function ecgBullet(v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }): string | null {
-  switch (v.ecg) {
-    case 'notdone': return 'ECG not done';
-    case 'sinus': return 'ECG showing sinus rhythm with no ST changes';
-    case 'arrhythmia': return `ECG showing ${ecgRhythmPhrase(v.ecgRhythm, v.ecgOther)} with no ST changes`;
-    case 'st': return 'ECG showing some ischaemic changes';
-    case 'stemi': return 'ECG showing STEMI';
-    case 'unreadable': return 'ECG unreadable';
-    default: return null;
-  }
+const ECG_ECTOPICS: [string, string][] = [['PACs', 'PACs'], ['PJCs', 'PJCs'], ['PVCs', 'PVCs']];
+const ECG_BLOCKS: [string, string, string, string][] = [
+  ['first', 'First degree', 'first degree heart block', '1st degree block'], ['LBBB', 'LBBB', 'LBBB', 'LBBB'], ['RBBB', 'RBBB', 'RBBB', 'RBBB'],
+  ['second1', 'Second degree type I', 'second degree heart block type I', '2nd degree block type I'], ['second2', 'Second degree type II', 'second degree heart block type II', '2nd degree block type II'],
+  ['third', 'Third degree (complete)', 'complete heart block', 'Complete heart block'],
+];
+const ECG_ISCHAEMIA: [string, string][] = [['std', 'ST depression'], ['stemi', 'STEMI'], ['twave', 'T wave changes']];
+const ecgListText = (xs: string[]) => xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+const ecgHasFollowUps = (r?: string) => !!r && r !== 'vt';      // VT conceals everything else
+// Choosing something can clear the rest: VT has no ectopics, blocks or ischaemic changes; a non-Other rhythm has no typed rhythm
+function ecgPatch(key: keyof EcgFields, value: string): EcgFields {
+  if (key !== 'ecgR') return { [key]: value };
+  const p: EcgFields = { ecgR: value };
+  if (!ecgHasFollowUps(value)) { p.ecgE = ''; p.ecgB = ''; p.ecgI = ''; }
+  if (value !== 'other') p.ecgT = '';
+  if (!value) p.ecgMore = '';
+  return p;
 }
-const ECG_RHYTHM_SHORT: Record<string, string> = { 'Atrial fibrillation': 'AF', 'Heart block - first degree': '1st degree block', 'Heart block - second degree': '2nd degree block', 'Heart block - third degree (complete)': 'Complete heart block', 'Junctional rhythm': 'Junctional', 'Paced rhythm': 'Paced' };
-const ecgShort = (v: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => v.ecg === 'arrhythmia' ? (v.ecgRhythm ? (v.ecgRhythm === 'Other' ? ((v.ecgOther ?? '').trim() || 'Arrhythmia') : (ECG_RHYTHM_SHORT[v.ecgRhythm] ?? v.ecgRhythm)) : 'Arrhythmia') : (ECG_OPTIONS.find(o => o[0] === v.ecg)?.[1] ?? '');
+// The script's dot point. Anything left at None isn't mentioned.
+function ecgBullet(v: EcgFields): string | null {
+  if (!v.ecgR) return null;
+  if (v.ecgR === 'vt') return 'They are in VT with output';
+  const stemi = v.ecgI === 'stemi';
+  const parts = [v.ecgE || '', ECG_BLOCKS.find(b => b[0] === v.ecgB)?.[2] ?? '', stemi ? '' : (ECG_ISCHAEMIA.find(i => i[0] === v.ecgI)?.[1] ?? '')].filter(Boolean);
+  const withParts = parts.length ? ` with ${ecgListText(parts)}` : '';
+  if (v.ecgR === 'svt') return `They are in SVT${withParts}${stemi ? ' and their ECG came back as STEMI' : ''}`;
+  const rhythm = v.ecgR === 'other' ? ((v.ecgT ?? '').trim() || 'an arrhythmia') : (ECG_RHYTHMS.find(r => r[0] === v.ecgR)?.[2] ?? 'an arrhythmia');
+  return `Their ECG shows ${rhythm}${withParts}${stemi ? ' and came back as STEMI' : ''}`;
+}
+// The case summary's row
+const ecgShort = (v: EcgFields): string => {
+  if (!v.ecgR) return '';
+  const base = v.ecgR === 'other' ? ((v.ecgT ?? '').trim() || 'Arrhythmia') : (ECG_RHYTHMS.find(r => r[0] === v.ecgR)?.[3] ?? '');
+  if (v.ecgR === 'vt') return base;
+  return [base, v.ecgE || '', ECG_BLOCKS.find(b => b[0] === v.ecgB)?.[3] ?? '', ECG_ISCHAEMIA.find(i => i[0] === v.ecgI)?.[1] ?? ''].filter(Boolean).join(', ');
+};
+// A dropdown that looks like the other vital sign inputs: the same blue underline, the choice shown as if it was typed
 function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyLabel = '–', display }: { value: string, options: [string, string][], onChange: (v: string) => void, ariaLabel: string, dataAttr: string, emptyLabel?: string, display?: string }) {
   const shown = display ?? (options.find(o => o[0] === value)?.[1] ?? '');
   return (
@@ -4885,41 +4906,37 @@ function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyL
       <span className="block text-right text-[16px] font-bold text-sky-700 border-b-2 border-sky-200 group-focus-within:border-sky-500 py-1 min-h-[2.1rem] leading-snug">{shown || '\u00a0'}</span>
       <select aria-label={ariaLabel} {...{ [dataAttr]: true }} value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
         <option value="">{emptyLabel}</option>
-        {value === '__current' && <option value="__current" hidden>{display}</option>}
         {options.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
       </select>
     </span>
   );
 }
-const ecgSelectClass = (compact: boolean) => `rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 ${compact ? 'pl-2 pr-1 py-1.5 text-[14px]' : 'px-3 py-2.5 text-[16px]'}`;
-function EcgMain({ ecg = '', onChange, compact = false, className = 'w-full' }: { ecg?: string, onChange: (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => void, compact?: boolean, className?: string }) {
+const ecgSelectClass = (compact: boolean) => `rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 w-full ${compact ? 'pl-2 pr-1 py-1.5 text-[14px]' : 'px-3 py-2.5 text-[15px]'}`;
+// The handover's 'Other findings' grid: rhythm and, unless it's VT, ectopics, blocks and ischaemic changes
+function EcgGrid({ v, set, compact = false }: { v: EcgFields, set: (key: keyof EcgFields, value: string) => void, compact?: boolean }) {
+  const cls = ecgSelectClass(compact);
   return (
-    <select aria-label="ECG" data-ecg-select value={ecg} className={`${ecgSelectClass(compact)} ${className}`}
-      onChange={e => onChange({ ecg: e.target.value, ...(e.target.value === 'arrhythmia' ? {} : { ecgRhythm: '', ecgOther: '' }) })}>
-      <option value="">Select…</option>
-      {ECG_OPTIONS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-    </select>
-  );
-}
-function EcgDetail({ ecg = '', rhythm = '', other = '', onChange, compact = false }: { ecg?: string, rhythm?: string, other?: string, onChange: (patch: { ecgRhythm?: string, ecgOther?: string }) => void, compact?: boolean }) {
-  if (ecg !== 'arrhythmia') return null;
-  return (
-    <div className="space-y-2 mt-2">
-      <select aria-label="Which rhythm?" data-ecg-rhythm value={rhythm} className={`${ecgSelectClass(compact)} w-full`}
-        onChange={e => onChange({ ecgRhythm: e.target.value, ...(e.target.value === 'Other' ? {} : { ecgOther: '' }) })}>
-        <option value="">Which rhythm? (optional)</option>
-        {ECG_RHYTHMS.map(([v]) => <option key={v} value={v}>{v === 'Other' ? 'Other (type it)' : v}</option>)}
+    <div className={`grid grid-cols-2 gap-2 ${compact ? 'mt-2' : 'mt-3'}`}>
+      <select aria-label="Rhythm" data-ecg-rhythm value={v.ecgR ?? 'nsr'} className={`${cls} ${ecgHasFollowUps(v.ecgR) ? '' : 'col-span-2'}`} onChange={e => set('ecgR', e.target.value)}>
+        {ECG_RHYTHMS.map(([c, label]) => <option key={c} value={c}>{label}</option>)}
       </select>
-      {rhythm === 'Other' && (
-        <input type="text" aria-label="Other rhythm" data-ecg-other value={other} placeholder="Type the rhythm" className={`${ecgSelectClass(compact)} w-full`}
-          onChange={e => onChange({ ecgOther: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
+      {ecgHasFollowUps(v.ecgR) && (<>
+        <select aria-label="Ectopics" data-ecg-ectopics value={v.ecgE ?? ''} className={cls} onChange={e => set('ecgE', e.target.value)}>
+          <option value="">Ectopics: none</option>{ECG_ECTOPICS.map(([c, label]) => <option key={c} value={c}>{label}</option>)}
+        </select>
+        <select aria-label="Blocks" data-ecg-block value={v.ecgB ?? ''} className={cls} onChange={e => set('ecgB', e.target.value)}>
+          <option value="">Blocks: none</option>{ECG_BLOCKS.map(([c, label]) => <option key={c} value={c}>{label}</option>)}
+        </select>
+        <select aria-label="Ischaemic changes" data-ecg-ischaemia value={v.ecgI ?? ''} className={cls} onChange={e => set('ecgI', e.target.value)}>
+          <option value="">Ischaemic changes: none</option>{ECG_ISCHAEMIA.map(([c, label]) => <option key={c} value={c}>{label}</option>)}
+        </select>
+      </>)}
+      {v.ecgR === 'other' && (
+        <input type="text" aria-label="Other rhythm" data-ecg-other value={v.ecgT ?? ''} placeholder="Type the rhythm" className={`${cls} col-span-2`}
+          onChange={e => set('ecgT', e.target.value)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
       )}
     </div>
   );
-}
-// the handover's box: the dropdown, then the follow-up
-function EcgSelect({ ecg, rhythm, other, onChange, compact = false }: { ecg?: string, rhythm?: string, other?: string, onChange: (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }) => void, compact?: boolean }) {
-  return (<div><EcgMain ecg={ecg} onChange={onChange} compact={compact} /><EcgDetail ecg={ecg} rhythm={rhythm} other={other} onChange={onChange} compact={compact} /></div>);
 }
 
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
@@ -4947,7 +4964,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
     { key: 'gcs',  label: 'GCS'          },
     { key: 'bgl',  label: 'BGL'          },
     { key: 'temp', label: 'Temp'         },
-    { key: 'ecg',  label: 'ECG'          },
+    { key: 'ecgR', label: 'ECG'          },
   ];
   return (
     <div className="h-full overflow-y-auto">
@@ -4955,44 +4972,46 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
       <div className="p-3 space-y-2">
         {fields.map(({ key, label }) => {
           const isChanged = changed.has(key);
-          if (key === 'ecg') {
-            const patchEcg = (patch: { ecg?: string, ecgRhythm?: string, ecgOther?: string }, tickKey: keyof AppState['vitals']) => { onChange({ ...vitals, ...patch }); setChanged(prev => (prev.has(tickKey) ? prev : new Set(prev).add(tickKey))); };
+          if (key === 'ecgR') {
+            const setEcg = (k: keyof EcgFields, value: string) => { onChange({ ...vitals, ...ecgPatch(k, value) }); setChanged(prev => (prev.has(k as keyof AppState['vitals']) ? prev : new Set(prev).add(k as keyof AppState['vitals']))); };
             const tick = (k: keyof AppState['vitals']) => (
               <span data-vss-tick={k} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${changed.has(k) ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
             );
             const rowCls = "flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100";
-            const rhythmChosen = vitals.ecg === 'arrhythmia' && !!vitals.ecgRhythm;      // a specific rhythm replaces 'Arrhythmia' on the ECG line, and the Rhythm line goes
+            const lblCls = "text-[15px] font-bold text-neutral-800";
+            const noneRow = (lbl: string, k: keyof EcgFields, options: [string, string][], attr: string) => (
+              <div className={rowCls}>
+                <span className={lblCls}>{lbl}</span>
+                <div className="flex items-center gap-2">
+                  <UnderlineSelect value={(vitals as EcgFields)[k] ?? ''} display={(vitals as EcgFields)[k] ? undefined : 'None'} options={options} emptyLabel="None" ariaLabel={lbl} dataAttr={attr} onChange={v => setEcg(k, v)} />
+                  {tick(k as keyof AppState['vitals'])}
+                </div>
+              </div>
+            );
             return (
               <React.Fragment key={key}>
                 <div className={rowCls}>
-                  <span className="text-[15px] font-bold text-neutral-800">{label}</span>
+                  <span className={lblCls}>{label}</span>
                   <div className="flex items-center gap-2">
-                    <UnderlineSelect value={rhythmChosen ? '__current' : (vitals.ecg ?? '')} display={rhythmChosen ? ecgShort(vitals) : undefined} options={ECG_OPTIONS} ariaLabel="ECG" dataAttr="data-ecg-select"
-                      onChange={v => patchEcg({ ecg: v, ecgRhythm: '', ecgOther: '' }, 'ecg')} />
-                    {tick('ecg')}
+                    <UnderlineSelect value={vitals.ecgR ?? ''} display={vitals.ecgR === 'other' ? ((vitals.ecgT ?? '').trim() || 'Other') : undefined} options={ECG_RHYTHMS.map(([c, l]): [string, string] => [c, l])} ariaLabel="ECG" dataAttr="data-ecg-rhythm" onChange={v => setEcg('ecgR', v)} />
+                    {tick('ecgR')}
                   </div>
                 </div>
-                {vitals.ecg === 'arrhythmia' && !rhythmChosen && (
+                {vitals.ecgR === 'other' && (
                   <div className={rowCls}>
-                    <span className="text-[15px] font-bold text-neutral-800">Rhythm</span>
+                    <span className={lblCls}>Rhythm</span>
                     <div className="flex items-center gap-2">
-                      <UnderlineSelect value={vitals.ecgRhythm ?? ''} options={ECG_RHYTHMS.map(([v]): [string, string] => [v, v === 'Other' ? 'Other (type it)' : v])} ariaLabel="Which rhythm?" dataAttr="data-ecg-rhythm"
-                        onChange={v => patchEcg({ ecgRhythm: v }, 'ecg')} />
-                      {tick('ecgRhythm')}
-                    </div>
-                  </div>
-                )}
-                {vitals.ecg === 'arrhythmia' && vitals.ecgRhythm === 'Other' && (
-                  <div className={rowCls}>
-                    <span className="text-[15px] font-bold text-neutral-800">Rhythm</span>
-                    <div className="flex items-center gap-2">
-                      <input type="text" aria-label="Other rhythm" data-ecg-other value={vitals.ecgOther ?? ''} onChange={e => patchEcg({ ecgOther: e.target.value }, 'ecgOther')}
-                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                      <input type="text" aria-label="Other rhythm" data-ecg-other value={vitals.ecgT ?? ''} onChange={e => setEcg('ecgT', e.target.value)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                         className="w-40 text-right text-[16px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1" />
-                      {tick('ecgOther')}
+                      {tick('ecgT')}
                     </div>
                   </div>
                 )}
+                {ecgHasFollowUps(vitals.ecgR) && (<>
+                  {noneRow('Ectopics', 'ecgE', ECG_ECTOPICS, 'data-ecg-ectopics')}
+                  {noneRow('Blocks', 'ecgB', ECG_BLOCKS.map(([c, l]): [string, string] => [c, l]), 'data-ecg-block')}
+                  {noneRow('Ischaemic changes', 'ecgI', ECG_ISCHAEMIA, 'data-ecg-ischaemia')}
+                </>)}
               </React.Fragment>
             );
           }
@@ -6214,7 +6233,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (!h.radialPulse && !unk('pulse')) missing.breath.push('Radial pulse');
     if (!vit.hr && !unk('hr')) missing.vitals.push('HR');
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
-    if (!vit.ecg && !unk('ecg')) missing.vitals.push('ECG');
+    if (!vit.ecgR && !unk('ecg')) missing.vitals.push('ECG');
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
   }
   if (timersOnly && !medsDone) missing.othertx.push('Medications given');
@@ -6412,7 +6431,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     (vit.bpSys && vit.bpDia) ? { node: `BP of ${vit.bpSys}/${vit.bpDia}`, known: true } : unk('bp') ? { node: 'BP unknown', known: true } : { node: miss('BP ?'), known: false },
   ];
   const restSigns = [...recorded.map(s => `${s.label} of ${s.value}${s.unit === '%' ? '%' : ''}`), ...unknownSigns.map(s => `${s.label} unknown`), ...notRecorded.map(s => <span key={s.label} className="text-amber-500" data-handover-missing>{s.label} ?</span>)];
-  const ecgPoint: React.ReactNode = !showCirc ? null : (vit.ecg && ecgBullet(vit)) || (unk('ecg') ? 'ECG not done' : miss('ECG ?'));
+  const ecgPoint: React.ReactNode = !showCirc ? null : (ecgBullet(vit) || (unk('ecg') ? 'We have not been able to record an ECG' : miss('ECG ?')));
   const vitalsHeading = recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:';
   // In a ROSC or General handover the ECG is a dot point under HR, then BP and the rest
   const vitalsNodes: React.ReactNode[] = [
@@ -6719,13 +6738,28 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
               </HandoverBox>
             )}
-            {showCirc && (
-              <HandoverBox label="ECG" state={(vit.ecg || unk('ecg')) ? 'done' : 'missing'} className="col-span-2">
-                <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>ECG</span>
-                <EcgSelect ecg={vit.ecg} rhythm={vit.ecgRhythm} other={vit.ecgOther} compact={compact} onChange={patch => { (Object.keys(patch) as VitalKey[]).forEach(k => onVital(k, (patch as Record<string, string>)[k])); if (patch.ecg && unk('ecg')) setUnk('ecg', false); }} />
-                <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="ECG" text="Not done" on={unk('ecg')} onClick={() => toggleUnknownVital('ecg', ['ecg', 'ecgRhythm', 'ecgOther'])} /></div>
-              </HandoverBox>
-            )}
+            {showCirc && (() => {
+              const ev = vit as EcgFields;
+              const setEcg = (k: keyof EcgFields, value: string) => { const patch = ecgPatch(k, value); (Object.keys(patch) as (keyof EcgFields)[]).forEach(key => onVital(key, patch[key] ?? '')); if (patch.ecgR && unk('ecg')) setUnk('ecg', false); };
+              const plainNsr = ev.ecgR === 'nsr' && !ev.ecgE && !ev.ecgB && !ev.ecgI && ev.ecgMore !== '1';
+              const open = ev.ecgMore === '1' || (!!ev.ecgR && !plainNsr);
+              const clearAll = () => ECG_KEYS.forEach(k => onVital(k, ''));
+              const btn = (on: boolean) => `${compact ? 'py-1.5 text-[13.5px]' : 'py-3 text-[15px]'} px-1 leading-tight rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
+              return (
+                <HandoverBox label="ECG" state={(ev.ecgR || unk('ecg')) ? 'done' : 'missing'} className="col-span-2">
+                  <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>ECG</span>
+                  <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
+                    <button data-handover-choice="ECG: Normal sinus rhythm" aria-pressed={plainNsr} className={btn(plainNsr)}
+                      onClick={() => { if (plainNsr) clearAll(); else { clearAll(); onVital('ecgR', 'nsr'); if (unk('ecg')) setUnk('ecg', false); } }}>Normal sinus rhythm</button>
+                    <button data-handover-choice="ECG: No ECG" aria-pressed={unk('ecg')} className={btn(unk('ecg'))}
+                      onClick={() => toggleUnknownVital('ecg', [...ECG_KEYS])}>No ECG</button>
+                    <button data-handover-choice="ECG: Other findings" aria-pressed={open} className={btn(open)}
+                      onClick={() => { if (open) clearAll(); else { onVital('ecgR', ev.ecgR || 'nsr'); onVital('ecgMore', '1'); if (unk('ecg')) setUnk('ecg', false); } }}>Other findings</button>
+                  </div>
+                  {open && <EcgGrid v={ev} set={setEcg} compact={compact} />}
+                </HandoverBox>
+              );
+            })()}
             {showCirc && !inRosc && gcsBox}
             {vsSigns.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>

@@ -107,6 +107,7 @@ export interface AppState {
     hr: string; rr: string; gcs: string;
     bpSys: string; bpDia: string; spo2: string;
     etco2: string; bgl: string; temp: string;
+    ecgR?: string; ecgT?: string; ecgE?: string; ecgB?: string; ecgI?: string; ecgMore?: string;     // the ECG: rhythm, a typed rhythm (Other), ectopics, block, ischaemic changes; ecgMore: the handover's 'Other findings' grid is open
   };
 }
 
@@ -122,4 +123,10 @@ export interface Vitals {
   etco2: string;
   bgl: string;
   temp: string;
+  ecgR?: string;
+  ecgT?: string;
+  ecgE?: string;
+  ecgB?: string;
+  ecgI?: string;
+  ecgMore?: string;
 }
