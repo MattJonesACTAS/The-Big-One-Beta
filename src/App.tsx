@@ -6233,7 +6233,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     if (!h.radialPulse && !unk('pulse')) missing.breath.push('Radial pulse');
     if (!vit.hr && !unk('hr')) missing.vitals.push('HR');
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
-    if (!vit.ecgR && !unk('ecg')) missing.vitals.push('ECG');
+    if (!vit.ecgR && !unk('ecg')) missing.vitals2.push('ECG');
     if (!inRosc && !vit.gcs && !unk('gcs')) missing.vitals.push('GCS');
   }
   if (timersOnly && !medsDone) missing.othertx.push('Medications given');
@@ -6247,7 +6247,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   if (content.arrest.askLatestRhythm && !h.latestRhythm) missing.info.push('Latest rhythm');
   if (!h.suspectedCause.trim()) missing.details.push('Suspected cause');
-  content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && s.key !== 'spo2' ? missing.vitals2 : missing.vitals).push(s.label); });
+  content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && s.key === 'etco2' ? missing.vitals2 : missing.vitals).push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.allergies.push('Medical history');
@@ -6270,12 +6270,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const lcFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
   const cap = (x: React.ReactNode) => (typeof x === 'string' && x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
   const sub = (items: React.ReactNode[]) => (
-    <div className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i}>• {cap(x)}</div>)}</div>
+    <div className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x)}</div>)}</div>
   );
   // Medication-style dot points with a smaller line underneath (when it was last given, or started)
   const subWithNote = (items: { text: string, note?: string }[]) => (
     <div className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[22px]' : 'space-y-3 text-[28px]'} font-semibold text-neutral-700`}>
-      {items.map((x, i) => <div key={i}>• {cap(x.text)}{x.note && <div className={`ml-4 ${compact ? 'text-[14px]' : 'text-[19px]'} font-medium text-neutral-500`}>{x.note}</div>}</div>)}
+      {items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x.text)}{x.note && <div className={`${compact ? 'text-[14px]' : 'text-[19px]'} font-medium text-neutral-500`}>{x.note}</div>}</div>)}
     </div>
   );
   const noteWords = (n: string) => (n.startsWith('last ') ? `Last given ${n.slice(5)}` : n.charAt(0).toUpperCase() + n.slice(1));
@@ -6579,8 +6579,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               onClick={() => onField('suspectedCause', h.suspectedCause.trim().toLowerCase() === 'unknown' ? '' : 'Unknown')}
               className={`w-full ${compact ? 'py-2.5' : 'py-4'} rounded-lg font-bold text-[16px] border btn-base ${h.suspectedCause.trim().toLowerCase() === 'unknown' ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-white text-[#4a6fa5] border-neutral-200'}`}>Unknown</button>) });
 
-  // In a ROSC or General handover the vital signs run over two pages: HR, BP and SpO₂, then EtCO₂, BGL and Temp (the radial pulse is on Breathing / Circulation)
-  const vsSigns = inRosc ? content.signs.filter(sg => sg.key === 'spo2') : content.signs;
+  // In a ROSC or General handover the vital signs run over two pages: HR, SpO₂, BP, BGL and Temp, then the ECG and EtCO₂ (the radial pulse is on Breathing / Circulation)
+  const vsSigns = inRosc ? content.signs.filter(sg => ['spo2', 'bgl', 'temp'].includes(sg.key)) : content.signs;
 
   const whyBox = <HandoverBecauseField value={h.causeWhy} onChange={v => onField('causeWhy', v)} />;
 
@@ -6738,6 +6738,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
               </HandoverBox>
             )}
+            {showCirc && !inRosc && gcsBox}
+            {vsSigns.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+          </div>
+        </HandoverPageCard>
+      );
+      case 'vitals2': return (
+        <HandoverPageCard>
+          <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
             {showCirc && (() => {
               const ev = vit as EcgFields;
               const setEcg = (k: keyof EcgFields, value: string) => { const patch = ecgPatch(k, value); (Object.keys(patch) as (keyof EcgFields)[]).forEach(key => onVital(key, patch[key] ?? '')); if (patch.ecgR && unk('ecg')) setUnk('ecg', false); };
@@ -6760,15 +6768,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
                 </HandoverBox>
               );
             })()}
-            {showCirc && !inRosc && gcsBox}
-            {vsSigns.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
-          </div>
-        </HandoverPageCard>
-      );
-      case 'vitals2': return (
-        <HandoverPageCard>
-          <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-            {content.signs.filter(sg => sg.key !== 'spo2').map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {content.signs.filter(sg => sg.key === 'etco2').map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>
         </HandoverPageCard>
       );
