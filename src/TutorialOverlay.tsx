@@ -68,7 +68,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
   log: {
     recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
     tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
-    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, record a temperature and an ECG, then press 'Close'.",
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen to open the menu.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Naloxone', and select a dose.",
     treatmentLogInfo: "Tap the small button beside the Naloxone entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
@@ -89,19 +89,21 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
 };
 
 // The VSS tab node's pages; only the last line of the second page differs by mode.
-function vssTabPages(whereShown: string): NodePage[] {
+function vssTabPages(whereShown: string, giveItAGo = 'Open the VSS tab, record a BGL and a temperature, and close the tab to continue.'): NodePage[] {
   return [{
     title: 'VSS Tab',
-    description: "The VSS tab works differently to the checklists.\n\nIts main purpose is to record your most recent set of vital signs before handover.\n\nThat way, you can have them all in one place.\n\nThe VSS tab does not record values over time; it only displays the most recent entry for each vital sign."
+    description: "The VSS tab works differently to the checklists.\n\nYou can use this tab to create a list of the most recent vital signs you've taken during the case.\n\nThere are three benefits to this:\n\n• It gives you a place to quickly record the vital signs you might only take once during a case and then forget (such as temp and BGL)\n\n• It shows you which vital signs you might have missed\n\n• It creates a complete list in one place to use at handover"
   }, {
     title: 'VSS Tab',
-    description: "As you type a value, a green tick appears next to it, confirming that a change has been made.\n\nEntering a new value replaces the old one.\n\n" + whereShown
+    description: "The VSS tab does not record values over time; it only displays the most recent entry for each vital sign, so it is best kept up to date closer to handover.\n\nAs you type a value, a green tick appears next to it, confirming that a change has been made.\n\nEntering a new value replaces the old one.\n\n" + whereShown
   }, {
     title: 'Give it a Go',
-    description: 'Open the VSS tab, record a BGL and a temperature, and close the tab to continue.'
+    description: giveItAGo
   }];
 }
 // True once a BGL and a temperature have been entered on the VSS tab (the handover autofills them)
+// General mode asks for a temperature and an ECG instead
+const VITALS_SAVED_GENERAL = (s: any) => String(s.vitals?.temp ?? '').trim() !== '' && String(s.vitals?.ecgR ?? '').trim() !== '';
 // True once the handover has been read out to the end
 const HANDOVER_DONE = (s: any) => s.handover?.delivered === 'Yes';
 const VITALS_SAVED = (s: any) => ['bgl', 'temp'].every(k => String(s.vitals?.[k] ?? '').trim() !== '');
@@ -521,7 +523,7 @@ const LOG_NODES: RawNode[] = [
   }),
   nodeById('tabs'),
   nodeById('closeChecklist'),
-  withOverrides('vssTab', { pages: vssTabPages("Your values appear on the home page summary and the case summary, which we'll see later.") }),
+  withOverrides('vssTab', { pages: vssTabPages("Your values appear on the home page summary and the case summary, which we'll see later.", 'Open the VSS tab, record a temperature and an ECG, and close the tab to continue.') }),
   // The Add Tx menu was introduced on the setup slide (where an unsuccessful IV was logged); here it is a Naloxone dose
   withOverrides('addTxBtn', {
     pages: [{
@@ -530,7 +532,8 @@ const LOG_NODES: RawNode[] = [
     }, {
       title: 'Give it a Go',
       description: "Open the '+ Add Tx' menu."
-    }]
+    }],
+    condition: (s, sf) => s.running && s.currentOverlay === null && !sf && s.reversiblesChecked.length > 0 && VITALS_SAVED_GENERAL(s)
   }),
   withOverrides('addTxSubmenu', {
     pages: [{
