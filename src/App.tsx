@@ -4943,7 +4943,7 @@ function EcgGrid({ v, set, compact = false }: { v: EcgFields, set: (key: keyof E
 
 // The VSS tab's subheadings; the handover keeps its own order and has no headings
 const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])[] }[] = [
-  { title: '', cls: '', keys: ['gcs'] },      // GCS sits above Cardiac with no heading of its own
+  { title: 'Neuro', cls: 'bg-purple-50 text-purple-800 border-purple-200', keys: ['gcs'] },
   { title: 'Cardiac', cls: 'bg-rose-50 text-rose-800 border-rose-200', keys: ['hr', 'bpSys', 'bpDia', 'ecgR'] },
   { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'spo2', 'etco2'] },
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
