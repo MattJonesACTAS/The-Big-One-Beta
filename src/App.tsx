@@ -6441,22 +6441,24 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const arrestPage1 = arrestNodes.slice(0, splitAt);
   const arrestPage2 = arrestNodes.slice(splitAt);
 
-  const recorded = content.signs.filter(s => s.value);
-  const unknownSigns = content.signs.filter(s => !s.value && unk(s.key));
-  const notRecorded = content.signs.filter(s => !s.value && !unk(s.key));
-  // HR and BP come first (ROSC and Tx log only). GCS is said once, in the primary survey
-  const circLines: { node: React.ReactNode, known: boolean }[] = !showCirc ? [] : [
-    vit.hr ? { node: `HR of ${vit.hr}`, known: true } : unk('hr') ? { node: 'HR unknown', known: true } : { node: miss('HR ?'), known: false },
-    (vit.bpSys && vit.bpDia) ? { node: `BP of ${vit.bpSys}/${vit.bpDia}`, known: true } : unk('bp') ? { node: 'BP unknown', known: true } : { node: miss('BP ?'), known: false },
-  ];
-  // The vital signs read in the VSS tab's order (GCS and the respiratory rate are said in the primary survey), each staying in its place whether it is recorded, Unknown or missing
+  // The vital signs, in the VSS tab's master order (GCS and the respiratory rate are said in the primary survey).
+  // What has a value comes first, in that order; then "We have not recorded:" lists the rest by name only (no Unknown, no amber prompt).
   const READOUT_ORDER = ['spo2', 'etco2', 'temp', 'bgl', 'lactate'];
-  const restSigns = [...content.signs].sort((x, y) => READOUT_ORDER.indexOf(x.key) - READOUT_ORDER.indexOf(y.key)).map(sg => sg.value ? `${sg.label} of ${sg.value}${sg.unit === '%' ? '%' : ''}` : unk(sg.key) ? `${sg.label} unknown` : <span key={sg.label} className="text-amber-500" data-handover-missing>{sg.label} ?</span>);
-  const ecgPoint: React.ReactNode = !showCirc ? null : (ecgBullet(vit) || (unk('ecg') ? 'We have not been able to record an ECG' : miss('ECG ?')));
-  const vitalsHeading = recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:';
-  // In a ROSC or General handover: HR, BP, the ECG, then the rest
+  const orderedSigns = [...content.signs].sort((x, y) => READOUT_ORDER.indexOf(x.key) - READOUT_ORDER.indexOf(y.key));
+  type VsItem = { label: string, value: string | null, unknown?: boolean };
+  const vsItems: VsItem[] = [
+    ...(showCirc ? [
+      { label: 'HR', value: vit.hr ? `HR of ${vit.hr}` : null, unknown: unk('hr') },
+      { label: 'BP', value: (vit.bpSys && vit.bpDia) ? `BP of ${vit.bpSys}/${vit.bpDia}` : null, unknown: unk('bp') },
+      { label: 'ECG', value: ecgBullet(vit), unknown: unk('ecg') },
+    ] : []),
+    ...orderedSigns.map(sg => ({ label: sg.label, value: sg.value ? `${sg.label} of ${sg.value}${sg.unit === '%' ? '%' : ''}` : null, unknown: unk(sg.key) })),
+  ];
+  const haveNodes: React.ReactNode[] = vsItems.filter(i => i.value).map(i => i.value);
+  const notRecordedNodes: React.ReactNode[] = vsItems.filter(i => !i.value).map(i => i.label);
   const vitalsNodes: React.ReactNode[] = [
-    <div key="v">{vitalsHeading}{sub(showCirc ? [circLines[0].node, circLines[1].node, ecgPoint, ...restSigns] : restSigns)}</div>,
+    ...(haveNodes.length ? [<div key="v">For vital signs we have:{sub(haveNodes)}</div>] : []),
+    ...(notRecordedNodes.length ? [<div key="nr">We have not recorded:{sub(notRecordedNodes)}</div>] : []),
   ];
 
   const t = content.tx;
