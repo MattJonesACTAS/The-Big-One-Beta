@@ -4894,12 +4894,13 @@ function ecgBullet(v: EcgFields): string | null {
   return `Their ECG shows ${rhythm}${withParts}${stemi ? ' and came back as STEMI' : ''}`;
 }
 // The case summary's row
-const ecgShort = (v: EcgFields): string => {
-  if (!v.ecgR) return '';
+const ecgLines = (v: EcgFields): string[] => {
+  if (!v.ecgR) return [];
   const base = v.ecgR === 'other' ? ((v.ecgT ?? '').trim() || 'Arrhythmia') : (ECG_RHYTHMS.find(r => r[0] === v.ecgR)?.[3] ?? '');
-  if (v.ecgR === 'vt') return base;
-  return [base, v.ecgE || '', ECG_BLOCKS.find(b => b[0] === v.ecgB)?.[3] ?? '', ECG_ISCHAEMIA.find(i => i[0] === v.ecgI)?.[1] ?? ''].filter(Boolean).join(', ');
+  if (v.ecgR === 'vt') return [base];
+  return [base, v.ecgE || '', ECG_BLOCKS.find(b => b[0] === v.ecgB)?.[3] ?? '', ECG_ISCHAEMIA.find(i => i[0] === v.ecgI)?.[1] ?? ''].filter(Boolean);
 };
+const ecgShort = (v: EcgFields): string => ecgLines(v).join(', ');
 // A dropdown that looks like the other vital sign inputs: the same blue underline, the choice shown as if it was typed
 function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyLabel = '–', display }: { value: string, options: [string, string][], onChange: (v: string) => void, ariaLabel: string, dataAttr: string, emptyLabel?: string, display?: string }) {
   const shown = display ?? (options.find(o => o[0] === value)?.[1] ?? '');
@@ -5503,27 +5504,28 @@ function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary
 
 function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
   const v = vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
-  const vitalRows = [
+  // The VSS tab's order, without the headings
+  const vitalRows: { label: string, value: string, unit: string, lines?: string[] }[] = [
+    { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
     { label: 'HR',     value: v.hr,   unit: 'bpm'    },
+    { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
+    { label: 'ECG',     value: ecgShort(v), unit: '', lines: ecgLines(v) },
     { label: 'RR',      value: v.rr,   unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
-    { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
-    { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
-    { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
+    { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
     { label: 'Lactate', value: v.lactate ?? '', unit: 'mmol/L' },
-    { label: 'ECG',     value: ecgShort(v), unit: '' },
   ].filter(r => r.value !== '');
   return (
     <div className="rounded-xl border border-neutral-100">
       <div className="bg-sky-50 text-sky-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">VITAL SIGNS</div>
       <div className="bg-white rounded-b-xl">
-      {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
+      {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit, lines }, i) => (
         <div key={label} className={`flex items-center justify-between gap-4 px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
           <span className="text-[14px] font-semibold text-neutral-500 flex-shrink-0">{label}</span>
           <span className={`font-bold text-neutral-900 tabular-nums min-w-0 text-right ${label === 'ECG' ? 'text-[15px] leading-snug' : 'text-[17px]'}`} style={label === 'ECG' ? { maxWidth: 'calc((100% - 2.9rem) * 0.85)' } : undefined}>
-            {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
+            {lines ? <span className="flex flex-col items-end">{lines.map(l => <span key={l}>{l}</span>)}</span> : <>{value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span></>}
           </span>
         </div>
       )) : (
