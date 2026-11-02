@@ -3423,6 +3423,7 @@ export default function App() {
                 <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
                   <div className="flex-1 overflow-hidden" style={{ width: '100%' }}>
                     <TreatmentSelection
+                      large
                       addTreatment={(name) => { addTreatment(name); }}
                       state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
                       isShockForced={false}
@@ -3870,6 +3871,7 @@ export default function App() {
                   <div data-catchup-add-tx className="rounded-2xl border border-neutral-200 overflow-hidden text-left flex flex-col" style={{ maxHeight: catchupMenuOpen ? 'min(62vh, 560px)' : undefined }}>
                     <TreatmentSelection
                       tight
+                      large
                       collapseSignal={catchupMenuKey}
                       addTreatment={(name, options) => { addTreatment(name, options); setCatchupMenuKey(k => k + 1); }}
                       state={{ ...state, patientType: weightType as any, patientWeight: weightInput ? parseFloat(weightInput) : state.patientWeight }}
@@ -7084,7 +7086,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false, su
   );
 }
 
-function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, tight, collapseSignal, onDelayRhythmCheck, tutorialOutcomeRestriction }: { addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, tight?: boolean, collapseSignal?: number, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
+function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOverride, noScroll, tight, large, collapseSignal, onDelayRhythmCheck, tutorialOutcomeRestriction }: { large?: boolean, addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void, state: AppState, isShockForced?: boolean, patientTypeOverride?: string | null, noScroll?: boolean, tight?: boolean, collapseSignal?: number, onDelayRhythmCheck?: () => void, tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null }) {
   const [customTx, setCustomTx] = useState('');
   const [selectedMed, setSelectedMed] = useState<string | null>(null);
   const [customDose, setCustomDose] = useState('');
@@ -7516,7 +7518,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
         </div>
       )}
       
-      <TxSection resetSignal={collapseSignal} 
+      <TxSection large={large} resetSignal={collapseSignal} 
         title="Rhythm Check" 
         color="pink" 
         sectionId="rhythmCheck"
@@ -7548,7 +7550,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           for that button. */}
       {isShockForced && onDelayRhythmCheck && (
         <div className="bg-white p-3 pt-0 grid grid-cols-1 gap-2">
-          <div aria-hidden="true" className="w-full p-3 rounded-xl text-sm font-bold invisible">
+          <div aria-hidden="true" className={`w-full ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold invisible`}>
             spacer
           </div>
           {(() => {
@@ -7557,7 +7559,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               <button
                 onClick={() => { if (!delayDisabled) onDelayRhythmCheck(); }}
                 disabled={delayDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
+                className={`w-full text-left ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
                 style={delayDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
               >
                 <Hourglass size={16} strokeWidth={2.5} />
@@ -7576,7 +7578,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               things to log, not a relabelled version of the full list.
               Airway and Other Tx are dropped entirely; the custom-text box
               below stays, as a deliberate exception. */}
-          <TxSection resetSignal={collapseSignal} 
+          <TxSection large={large} resetSignal={collapseSignal} 
             title="Medications" 
             color="emerald" 
             items={state.timingMode === 'minimal' ? ['Adrenaline push', 'Amiodarone'] : MEDICATIONS} 
@@ -7587,7 +7589,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           />
           
           {state.timingMode !== 'minimal' && (
-          <TxSection resetSignal={collapseSignal} 
+          <TxSection large={large} resetSignal={collapseSignal} 
             title="Airway" 
             color="blue" 
             items={[
@@ -7607,7 +7609,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           )}
           
           {state.timingMode !== 'minimal' && (
-          <TxSection resetSignal={collapseSignal} 
+          <TxSection large={large} resetSignal={collapseSignal} 
             title="Other Tx" 
             color="neutral" 
             items={[
@@ -7657,7 +7659,8 @@ function TxSection({
   onToggle,
   showChevron = true,
   disabledItems,
-  resetSignal
+  resetSignal,
+  large = false
 }: { 
   title: string;
   color: string;
@@ -7673,6 +7676,8 @@ function TxSection({
   disabledItems?: string[];
   // Bumped by the setup slide after a treatment is logged: forgets the staged Unsuccessful toggles
   resetSignal?: number;
+  // The setup menus sit on a smaller card, so their headings and options are bigger
+  large?: boolean;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(!initiallyExpanded);
   // Tracks which failable items (ETT, IV access, etc.) are currently staged
@@ -7715,7 +7720,7 @@ function TxSection({
         data-tutorial-anchor="tx-section-header"
         data-tx-section={sectionId}
         onClick={handleToggle}
-        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${colorMap[color]}`}
+        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${large ? 'text-[19px]' : ''} ${colorMap[color]}`}
       >
         <span>{title}</span>
         {showChevron && <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />}
@@ -7743,7 +7748,7 @@ function TxSection({
                   <button
                     onClick={() => { if (!isDisabled) onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName); }}
                     disabled={isDisabled}
-                    className={`flex-1 text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
+                    className={`flex-1 text-left ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                     style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                     data-medication={itemName}
                   >
@@ -7772,7 +7777,7 @@ function TxSection({
                 key={itemName} 
                 onClick={() => { if (!isDisabled) onSelect(itemName); }} 
                 disabled={isDisabled}
-                className={`w-full text-left p-3 rounded-xl font-bold text-sm btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
+                className={`w-full text-left ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                 style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                 data-medication={itemName}
               >
