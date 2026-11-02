@@ -5522,7 +5522,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
       {vitalRows.length > 0 ? vitalRows.map(({ label, value, unit }, i) => (
         <div key={label} className={`flex items-center justify-between gap-4 px-4 py-3 ${i < vitalRows.length - 1 ? 'border-b border-neutral-100' : ''}`}>
           <span className="text-[14px] font-semibold text-neutral-500 flex-shrink-0">{label}</span>
-          <span className={`font-bold text-neutral-900 tabular-nums min-w-0 text-right ${label === 'ECG' ? 'text-[15px] leading-snug' : 'text-[17px]'}`}>
+          <span className={`font-bold text-neutral-900 tabular-nums min-w-0 text-right ${label === 'ECG' ? 'text-[15px] leading-snug' : 'text-[17px]'}`} style={label === 'ECG' ? { maxWidth: 'calc((100% - 2.9rem) * 0.85)' } : undefined}>
             {value} <span className="text-[12px] font-medium text-neutral-400">{unit}</span>
           </span>
         </div>
