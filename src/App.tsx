@@ -4943,9 +4943,10 @@ function EcgGrid({ v, set, compact = false }: { v: EcgFields, set: (key: keyof E
 
 // The VSS tab's subheadings; the handover keeps its own order and has no headings
 const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])[] }[] = [
+  { title: '', cls: '', keys: ['gcs'] },      // GCS sits above Cardiac with no heading of its own
   { title: 'Cardiac', cls: 'bg-rose-50 text-rose-800 border-rose-200', keys: ['hr', 'bpSys', 'bpDia', 'ecgR'] },
   { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'spo2', 'etco2'] },
-  { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['gcs', 'bgl', 'temp', 'lactate'] },
+  { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
   // Every keystroke is saved straight away. The green tick is not a button: it
@@ -4980,8 +4981,8 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
       <div className="p-2.5 px-4 z-20 font-bold text-[16px] tracking-wide border-b uppercase sticky top-0 text-center bg-sky-50 text-sky-800 border-sky-200">Vital Signs</div>
       <div className="p-3 space-y-2">
         {VSS_GROUPS.map((g, gi) => (
-          <React.Fragment key={g.title}>
-            <div data-vss-group={g.title} className={`-mx-3 px-4 py-2 border-y font-bold text-[14px] tracking-wide uppercase text-center ${gi === 0 ? '-mt-3' : ''} ${g.cls}`}>{g.title}</div>
+          <React.Fragment key={g.title || 'top'}>
+            {g.title && <div data-vss-group={g.title} className={`-mx-3 px-4 py-2 border-y font-bold text-[14px] tracking-wide uppercase text-center ${gi === 0 ? '-mt-3' : ''} ${g.cls}`}>{g.title}</div>}
             {g.keys.map(gk => {
           const { key, label } = fields.find(f => f.key === gk)!;
           const isChanged = changed.has(key);
