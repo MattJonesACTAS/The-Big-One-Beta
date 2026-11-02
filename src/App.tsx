@@ -3409,7 +3409,7 @@ export default function App() {
       {/* Catchup Modal */}
       <AnimatePresence>
         {showCatchup && (
-          <div className={`fixed inset-0 bg-black/90 z-[1000] flex justify-center p-4 ${catchupLogSlide ? 'items-start' : 'items-center'}`} style={catchupLogSlide ? { paddingTop: '10vh' } : undefined}>
+          <div className={`fixed inset-0 bg-black/90 z-[1000] flex justify-center p-4 ${catchupLogSlide || catchupTxMode ? 'items-start' : 'items-center'}`} style={catchupLogSlide || catchupTxMode ? { paddingTop: '10vh' } : undefined}>
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
               initial={{ x: '100%', opacity: 0 }}
@@ -3417,7 +3417,7 @@ export default function App() {
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
               className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
-              style={catchupTxMode ? { height: '68vh' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : {}}
+              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : {}}
             >
               {catchupTxMode && (
                 <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -7550,7 +7550,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
           for that button. */}
       {isShockForced && onDelayRhythmCheck && (
         <div className="bg-white p-3 pt-0 grid grid-cols-1 gap-2">
-          <div aria-hidden="true" className={`w-full ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold invisible`}>
+          <div aria-hidden="true" className={`w-full ${large ? 'p-[13px] text-[15.5px]' : 'p-3 text-sm'} rounded-xl font-bold invisible`}>
             spacer
           </div>
           {(() => {
@@ -7559,7 +7559,7 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               <button
                 onClick={() => { if (!delayDisabled) onDelayRhythmCheck(); }}
                 disabled={delayDisabled}
-                className={`w-full text-left ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
+                className={`w-full text-left ${large ? 'p-[13px] text-[15.5px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2 ${delayDisabled ? 'cursor-not-allowed' : ''}`}
                 style={delayDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
               >
                 <Hourglass size={16} strokeWidth={2.5} />
@@ -7720,7 +7720,7 @@ function TxSection({
         data-tutorial-anchor="tx-section-header"
         data-tx-section={sectionId}
         onClick={handleToggle}
-        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${large ? 'text-[19px]' : ''} ${colorMap[color]}`}
+        className={`flex items-center justify-between p-4 cursor-pointer font-bold select-none text-left ${large ? 'text-[17.5px]' : ''} ${colorMap[color]}`}
       >
         <span>{title}</span>
         {showChevron && <ChevronDown className={`transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`} />}
@@ -7748,7 +7748,7 @@ function TxSection({
                   <button
                     onClick={() => { if (!isDisabled) onSelect(isUnsuccessful ? `${itemName} - Unsuccessful` : itemName); }}
                     disabled={isDisabled}
-                    className={`flex-1 text-left ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
+                    className={`flex-1 text-left ${large ? 'p-[13px] text-[15.5px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                     style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                     data-medication={itemName}
                   >
@@ -7777,7 +7777,7 @@ function TxSection({
                 key={itemName} 
                 onClick={() => { if (!isDisabled) onSelect(itemName); }} 
                 disabled={isDisabled}
-                className={`w-full text-left ${large ? 'p-3.5 text-[17px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
+                className={`w-full text-left ${large ? 'p-[13px] text-[15.5px]' : 'p-3 text-sm'} rounded-xl font-bold btn-base ${textColorClass} ${bgClass} ${isDisabled ? 'cursor-not-allowed' : ''}`}
                 style={isDisabled ? { opacity: 0.6, filter: 'grayscale(0.5)' } : undefined}
                 data-medication={itemName}
               >
