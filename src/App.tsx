@@ -4911,13 +4911,13 @@ function UnderlineSelect({ value, options, onChange, ariaLabel, dataAttr, emptyL
     </span>
   );
 }
-const ecgSelectClass = (compact: boolean) => `rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 w-full ${compact ? 'pl-2 pr-1 py-1.5 text-[14px]' : 'px-3 py-2.5 text-[15px]'}`;
+const ecgSelectClass = (compact: boolean) => `rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 w-full ${compact ? 'pl-3 pr-2 py-2.5 text-[15px]' : 'px-3 py-3.5 text-[16px]'}`;
 // The handover's 'Other findings' grid: rhythm and, unless it's VT, ectopics, blocks and ischaemic changes
 function EcgGrid({ v, set, compact = false }: { v: EcgFields, set: (key: keyof EcgFields, value: string) => void, compact?: boolean }) {
   const cls = ecgSelectClass(compact);
   return (
-    <div className={`grid grid-cols-2 gap-2 ${compact ? 'mt-2' : 'mt-3'}`}>
-      <select aria-label="Rhythm" data-ecg-rhythm value={v.ecgR ?? 'nsr'} className={`${cls} ${ecgHasFollowUps(v.ecgR) ? '' : 'col-span-2'}`} onChange={e => set('ecgR', e.target.value)}>
+    <div className={`flex flex-col gap-2 ${compact ? 'mt-2' : 'mt-3'}`}>
+      <select aria-label="Rhythm" data-ecg-rhythm value={v.ecgR ?? 'nsr'} className={cls} onChange={e => set('ecgR', e.target.value)}>
         {ECG_RHYTHMS.map(([c, label]) => <option key={c} value={c}>{label}</option>)}
       </select>
       {ecgHasFollowUps(v.ecgR) && (<>
@@ -4964,6 +4964,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
     { key: 'gcs',  label: 'GCS'          },
     { key: 'bgl',  label: 'BGL'          },
     { key: 'temp', label: 'Temp'         },
+    { key: 'lactate', label: 'Lactate'   },
     { key: 'ecgR', label: 'ECG'          },
   ];
   return (
@@ -5496,6 +5497,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
     { label: 'BGL',            value: v.bgl,  unit: 'mmol/L' },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
+    { label: 'Lactate', value: v.lactate ?? '', unit: 'mmol/L' },
     { label: 'ECG',     value: ecgShort(v), unit: '' },
   ].filter(r => r.value !== '');
   return (
@@ -5826,7 +5828,7 @@ const buildHandoverContent = (
   // --- Signs not covered by R / A / B / C. SpO₂ only matters once there's a circulation to measure it in.
   const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const signDefs: [string, VitalKey, string][] = state.isROSCMode
-    ? [['SpO₂', 'spo2', '%'], ['EtCO₂', 'etco2', 'mmHg'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']]
+    ? [['SpO₂', 'spo2', '%'], ['EtCO₂', 'etco2', 'mmHg'], ['Lactate', 'lactate', 'mmol/L'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']]
     : [['EtCO₂', 'etco2', 'mmHg'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']];
   const signs: HandoverSign[] = signDefs.map(([label, key, unit]) => ({ label, key, unit, value: v[key] ?? '' }));
 
@@ -6247,7 +6249,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   if (content.arrest.firstState === 'ask') missing.info.push('First rhythm');
   if (content.arrest.askLatestRhythm && !h.latestRhythm) missing.info.push('Latest rhythm');
   if (!h.suspectedCause.trim()) missing.details.push('Suspected cause');
-  content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && s.key === 'etco2' ? missing.vitals2 : missing.vitals).push(s.label); });
+  content.signs.forEach(s => { if (!s.value && !unk(s.key)) (inRosc && ['etco2', 'lactate'].includes(s.key) ? missing.vitals2 : missing.vitals).push(s.label); });
   if (!h.allergies) missing.allergies.push('Allergies');
   else if (h.allergies === 'Yes' && !h.allergiesOther.trim()) missing.allergies.push('What they are allergic to');
   if (!h.background.trim() && !unk('history')) missing.allergies.push('Medical history');
@@ -6752,23 +6754,22 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
               const plainNsr = ev.ecgR === 'nsr' && !ev.ecgE && !ev.ecgB && !ev.ecgI && ev.ecgMore !== '1';
               const open = ev.ecgMore === '1' || (!!ev.ecgR && !plainNsr);
               const clearAll = () => ECG_KEYS.forEach(k => onVital(k, ''));
-              const btn = (on: boolean) => `${compact ? 'py-1.5 text-[13.5px]' : 'py-3 text-[15px]'} px-1 leading-tight rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
+              const btn = (on: boolean) => `${compact ? 'py-2.5 text-[15px]' : 'py-4 text-[16px]'} px-1 leading-tight rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
               return (
                 <HandoverBox label="ECG" state={(ev.ecgR || unk('ecg')) ? 'done' : 'missing'} className="col-span-2">
                   <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>ECG</span>
-                  <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
+                  <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
                     <button data-handover-choice="ECG: Sinus rhythm" aria-pressed={plainNsr} className={btn(plainNsr)}
                       onClick={() => { if (plainNsr) clearAll(); else { clearAll(); onVital('ecgR', 'nsr'); if (unk('ecg')) setUnk('ecg', false); } }}>Sinus rhythm</button>
                     <button data-handover-choice="ECG: Other findings" aria-pressed={open} className={btn(open)}
                       onClick={() => { if (open) clearAll(); else { onVital('ecgR', ev.ecgR || 'nsr'); onVital('ecgMore', '1'); if (unk('ecg')) setUnk('ecg', false); } }}>Other findings</button>
-                    <button data-handover-choice="ECG: No ECG" aria-pressed={unk('ecg')} className={btn(unk('ecg'))}
-                      onClick={() => toggleUnknownVital('ecg', [...ECG_KEYS])}>No ECG</button>
                   </div>
                   {open && <EcgGrid v={ev} set={setEcg} compact={compact} />}
+                  <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="ECG" on={unk('ecg')} onClick={() => toggleUnknownVital('ecg', [...ECG_KEYS])} /></div>
                 </HandoverBox>
               );
             })()}
-            {content.signs.filter(sg => sg.key === 'etco2').map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {content.signs.filter(sg => ['etco2', 'lactate'].includes(sg.key)).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>
         </HandoverPageCard>
       );
