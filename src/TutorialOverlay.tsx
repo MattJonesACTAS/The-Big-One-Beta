@@ -523,7 +523,7 @@ const LOG_NODES: RawNode[] = [
   }),
   nodeById('tabs'),
   nodeById('closeChecklist'),
-  withOverrides('vssTab', { pages: vssTabPages("Your values appear on the home page summary and the case summary, which we'll see later.", 'Open the VSS tab, record a temperature and an ECG, and close the tab to continue.') }),
+  withOverrides('vssTab', { pages: vssTabPages("Your values appear on the home page summary and the case summary, which we'll see later.", "Open the VSS tab, then record a temperature and ECG.\n\nWhen you're done, close the VSS tab to continue.") }),
   // The Add Tx menu was introduced on the setup slide (where an unsuccessful IV was logged); here it is a Naloxone dose
   withOverrides('addTxBtn', {
     pages: [{
