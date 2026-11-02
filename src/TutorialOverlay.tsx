@@ -68,7 +68,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
   log: {
     recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
     tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
-    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, record a temperature and an ECG, then press 'Close'.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, record a temperature and ECG, then press 'Close'.",
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen to open the menu.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Naloxone', and select a dose.",
     treatmentLogInfo: "Tap the small button beside the Naloxone entry in the treatment log on the home screen, and choose Edit, Reorder, or Delete.",
@@ -102,7 +102,7 @@ function vssTabPages(whereShown: string, giveItAGo = 'Open the VSS tab, record a
   }];
 }
 // True once a BGL and a temperature have been entered on the VSS tab (the handover autofills them)
-// General mode asks for a temperature and an ECG instead
+// General mode asks for a temperature and ECG instead
 const VITALS_SAVED_GENERAL = (s: any) => String(s.vitals?.temp ?? '').trim() !== '' && String(s.vitals?.ecgR ?? '').trim() !== '';
 // True once the handover has been read out to the end
 const HANDOVER_DONE = (s: any) => s.handover?.delivered === 'Yes';
@@ -112,7 +112,7 @@ const ELAPSED_RAW: RawNode[] = [
   // --- Home screen nodes ---
   {
     id: 'homeIntro', type: 'popup',
-    pages: [{ title: 'Home Page', description: "You've now made it to the home page for your case, let's take a look around." }],
+    pages: [{ title: 'Home Page', description: "You've now made it to the home page for your case.\n\nLet's take a look around." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
@@ -222,7 +222,7 @@ const ELAPSED_RAW: RawNode[] = [
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
-    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Give it a Go', description: "Change the patient's weight to move forward." }],
+    pages: [{ title: 'Recalibrate Button', description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine-tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval\n\n• Change the patient's weight\n\n• Change the app mode" }, { title: 'Give it a Go', description: "Change the patient's weight to move forward." }],
     condition: (s, sf) => s.running && s.currentOverlay === null && !sf
   },
   {
@@ -261,11 +261,11 @@ const ELAPSED_RAW: RawNode[] = [
     pages: [
       {
         title: 'Add Tx Submenu',
-        description: "The Add Tx submenu has four categories of treatments you can log:\n\n• Rhythm Check (shocks and disarms)\n\n• Medications\n\n• Airway\n\n• Other Tx\n\nYou can also free type custom interventions."
+        description: "The Add Tx submenu has four categories of treatments you can log:\n\n• Rhythm Check (shocks and disarms)\n\n• Medications\n\n• Airway\n\n• Other Tx\n\nYou can also free-type custom interventions."
       },
       {
         title: 'Successful / Unsuccessful',
-        description: "For some interventions in Airway and Other Tx, you can choose to log them as successful or unsuccessful to keep your record keeping accurate."
+        description: "For some interventions in Airway and Other Tx, you can choose to log them as successful or unsuccessful to keep your record-keeping accurate."
       },
       {
         title: 'Medications',
@@ -363,7 +363,7 @@ const ELAPSED_RAW: RawNode[] = [
   // --- Case summary ---
   {
     id: 'finalStats', type: 'positioned', x: 50, y: 61.64, anchor: '[data-tutorial-anchor="closed-treatment-log-banner"]',
-    pages: [{ title: 'Final Case Data', description: 'Now the case is over, the treatment log shows times to the second, not just to the minute.' }],
+    pages: [{ title: 'Final Case Data', description: 'Now that the case is over, the treatment log shows times to the second, not just to the minute.' }],
     condition: (s) => !s.running
   },
   {
@@ -453,7 +453,7 @@ const MINIMAL_NODES: RawNode[] = [
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
-      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval"
+      description: "The recalibrate button allows you to change how the app functions.\n\nHere you can:\n\n• Fine-tune the elapsed timer if you didn't get it quite right\n\n• Change the rhythm check interval"
     }, { title: 'Give it a Go', description: "Change the rhythm check interval to move forward." }]
   }),
   // no patient weight in this mode, so the checklists wait for a real rhythm check interval change instead
