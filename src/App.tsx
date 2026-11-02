@@ -6449,12 +6449,14 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     vit.hr ? { node: `HR of ${vit.hr}`, known: true } : unk('hr') ? { node: 'HR unknown', known: true } : { node: miss('HR ?'), known: false },
     (vit.bpSys && vit.bpDia) ? { node: `BP of ${vit.bpSys}/${vit.bpDia}`, known: true } : unk('bp') ? { node: 'BP unknown', known: true } : { node: miss('BP ?'), known: false },
   ];
-  const restSigns = [...recorded.map(s => `${s.label} of ${s.value}${s.unit === '%' ? '%' : ''}`), ...unknownSigns.map(s => `${s.label} unknown`), ...notRecorded.map(s => <span key={s.label} className="text-amber-500" data-handover-missing>{s.label} ?</span>)];
+  // The vital signs read in the VSS tab's order (GCS and the respiratory rate are said in the primary survey), each staying in its place whether it is recorded, Unknown or missing
+  const READOUT_ORDER = ['spo2', 'etco2', 'temp', 'bgl', 'lactate'];
+  const restSigns = [...content.signs].sort((x, y) => READOUT_ORDER.indexOf(x.key) - READOUT_ORDER.indexOf(y.key)).map(sg => sg.value ? `${sg.label} of ${sg.value}${sg.unit === '%' ? '%' : ''}` : unk(sg.key) ? `${sg.label} unknown` : <span key={sg.label} className="text-amber-500" data-handover-missing>{sg.label} ?</span>);
   const ecgPoint: React.ReactNode = !showCirc ? null : (ecgBullet(vit) || (unk('ecg') ? 'We have not been able to record an ECG' : miss('ECG ?')));
   const vitalsHeading = recorded.length || unknownSigns.length || circLines.some(l => l.known) ? 'For vital signs we have:' : 'No vital signs recorded:';
-  // In a ROSC or General handover the ECG is a dot point under HR, then BP and the rest
+  // In a ROSC or General handover: HR, BP, the ECG, then the rest
   const vitalsNodes: React.ReactNode[] = [
-    <div key="v">{vitalsHeading}{sub(showCirc ? [circLines[0].node, ecgPoint, circLines[1].node, ...restSigns] : restSigns)}</div>,
+    <div key="v">{vitalsHeading}{sub(showCirc ? [circLines[0].node, circLines[1].node, ecgPoint, ...restSigns] : restSigns)}</div>,
   ];
 
   const t = content.tx;
