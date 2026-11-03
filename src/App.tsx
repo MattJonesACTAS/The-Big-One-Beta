@@ -538,11 +538,13 @@ const renumberTreatments = (treatments: Treatment[]): Treatment[] => {
 const toCanonicalUnit = (amount: number, unit: string): { unit: string, amount: number } => {
   const u = unit.toLowerCase();
   if (u === 'mg') return { unit: 'mcg', amount: amount * 1000 };
+  if (u === 'g') return { unit: 'mcg', amount: amount * 1000000 };       // grams add up with milligrams (a drug given in both)
+  if (u === 'ml') return { unit: 'mL', amount };                          // 'ml', 'mL' and a typed 'mls' are one unit
   return { unit, amount };
 };
 
-const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }> => {
-  const summary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }> = {};
+const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }> => {
+  const summary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }> = {};
 
   treatments.forEach(tx => {
     // Special handling for morph/midaz infusion
@@ -558,6 +560,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
         if (directMatch) {
           const [_, rawAmount, rawUnit] = directMatch;
           const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
+          if (rawUnit.toLowerCase() === 'g') summary[medName].sawGrams = true;
           if (!summary[medName].unit) summary[medName].unit = unit;
           if (summary[medName].unit === unit) {
             summary[medName].totalDose += amount; summary[medName].amounts!.push(amount);
@@ -587,6 +590,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
           if (calculatedMatch) {
             const [_, rawAmount, rawUnit] = calculatedMatch;
             const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
+          if (rawUnit.toLowerCase() === 'g') summary[med].sawGrams = true;
             if (!summary[med].unit) summary[med].unit = unit;
             if (summary[med].unit === unit) {
               summary[med].totalDose += amount; summary[med].amounts!.push(amount);
@@ -597,6 +601,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
             if (directMatch) {
               const [_, rawAmount, rawUnit] = directMatch;
               const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
+          if (rawUnit.toLowerCase() === 'g') summary[med].sawGrams = true;
               if (!summary[med].unit) summary[med].unit = unit;
               if (summary[med].unit === unit) {
                 summary[med].totalDose += amount; summary[med].amounts!.push(amount);
@@ -615,7 +620,10 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
     const { totalDose, unit, count } = summary[med];
     if (totalDose > 0 && unit) {
       // mcg totals of 1000 or more read more naturally as mg
-      if (unit.toLowerCase() === 'mcg' && totalDose >= 1000) {
+      if (unit.toLowerCase() === 'mcg' && summary[med].sawGrams && totalDose >= 1000000) {
+        const gValue = parseFloat((totalDose / 1000000).toFixed(2));
+        summary[med].display = `${gValue}g (${count})`;
+      } else if (unit.toLowerCase() === 'mcg' && totalDose >= 1000) {
         const mgValue = parseFloat((totalDose / 1000).toFixed(2));
         summary[med].display = `${mgValue}mg (${count})`;
       } else if (unit.toLowerCase() === 'ml' && totalDose >= 1000) {
@@ -645,12 +653,14 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
 };
 
 // ---- Medications split at the most recent ROSC: what was given before it, and what was given after it ----
-const splitByLastRosc = (treatments: Treatment[]): { before: Treatment[], after: Treatment[] } | null => {
-  let last = -1;
-  treatments.forEach((t, i) => { if (isRoscName(t.name)) last = i; });
-  return last < 0 ? null : { before: treatments.slice(0, last), after: treatments.slice(last + 1) };
+const splitByLastChange = (treatments: Treatment[]): { kind: 'rosc' | 'rearrest', before: Treatment[], after: Treatment[] } | null => {
+  let last = -1; let kind: 'rosc' | 'rearrest' = 'rosc';
+  treatments.forEach((t, i) => {
+    if (isRoscName(t.name)) { last = i; kind = 'rosc'; } else if (t.name.startsWith('Rearrest')) { last = i; kind = 'rearrest'; }
+  });
+  return last < 0 ? null : { kind, before: treatments.slice(0, last), after: treatments.slice(last + 1) };
 };
-type PharmaInfo = { totalDose: number, unit: string, count: number, display: string, amounts?: number[] };
+type PharmaInfo = { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean };
 // The total (without the dose count) and, for two or more doses, how big each one was: "of 1mg" when they were all the same, "ranging from 50 to 100mcg" when they weren't
 function doseDetail(info: PharmaInfo): { total: string, per: string | null, count: number } {
   const total = info.display.replace(/\s*\(\d+\)\s*$/, '');
@@ -658,13 +668,15 @@ function doseDetail(info: PharmaInfo): { total: string, per: string | null, coun
   if (info.count < 2 || a.length < 2 || a.length !== info.count || !info.unit) return { total, per: null, count: info.count };
   const min = Math.min(...a), max = Math.max(...a);
   let unit = info.unit, div = 1;
-  if (unit.toLowerCase() === 'mcg' && max >= 1000) { unit = 'mg'; div = 1000; } else if (unit.toLowerCase() === 'ml' && max >= 1000) { unit = 'L'; div = 1000; }
+  if (unit.toLowerCase() === 'mcg' && info.sawGrams && max >= 1000000) { unit = 'g'; div = 1000000; } else if (unit.toLowerCase() === 'mcg' && max >= 1000) { unit = 'mg'; div = 1000; } else if (unit.toLowerCase() === 'ml' && max >= 1000) { unit = 'L'; div = 1000; }
   const f = (v: number) => `${parseFloat((v / div).toFixed(2))}`;
   return { total, count: info.count, per: Math.abs(max - min) < 1e-9 ? `of ${f(max)}${unit}` : `ranging from ${f(min)} to ${f(max)}${unit}` };
 }
 const multiDoseText = (name: string, info: PharmaInfo): string | undefined => {
   const d = doseDetail(info);
-  return d.per ? `${name}: ${d.count} doses ${d.per}, ${d.total} in total` : undefined;
+  if (d.per) return `${name}: ${d.count} doses ${d.per}, ${d.total} in total`;
+  // Two or more doses but not every size could be added up (a dose with no size, or a different unit): say how many, and that the total is only what was recorded
+  return d.count >= 2 && info.totalDose > 0 && info.unit ? `${name}: ${d.count} doses, ${d.total} recorded` : undefined;
 };
 
 // --- Previous case backup ---
@@ -4713,7 +4725,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   onClose: () => void, 
   addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void,
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
   isShockForced: boolean,
   onDelayRhythmCheck?: () => void,
   tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null,
@@ -5479,7 +5491,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
   );
 }
 
-function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }> }) {
+function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }> }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm') && !isRoscName(t.name)).length;
   const roscCount = state.treatments.filter(t => isRoscName(t.name)).length;
@@ -5642,6 +5654,21 @@ const approxPhrase = (seconds: number): string => {
   return `approximately ${hr} hour${hr === 1 ? '' : 's'}${rest ? ` and ${rest} minute${rest === 1 ? '' : 's'}` : ''}`;
 };
 
+const spanPhrase = (seconds: number): string => {
+  const m = Math.round(seconds / 60);
+  if (m < 1) return 'less than a minute';
+  if (m < 60) return `${m} minute${m === 1 ? '' : 's'}`;
+  const hr = Math.floor(m / 60), rest = m % 60;
+  return `${hr} hour${hr === 1 ? '' : 's'}${rest ? ` and ${rest} minute${rest === 1 ? '' : 's'}` : ''}`;
+};
+const agoPhrase = (seconds: number): string => {
+  const m = Math.round(seconds / 60);
+  if (m < 1) return 'less than a minute ago';
+  if (m < 60) return `${m} minute${m === 1 ? '' : 's'} ago`;
+  const hr = Math.floor(m / 60), rest = m % 60;
+  return `${hr} hour${hr === 1 ? '' : 's'}${rest ? ` and ${rest} minute${rest === 1 ? '' : 's'}` : ''} ago`;
+};
+
 const rhythmFromName = (name: string): string | null => {
   const m = name.match(/^(?:Shock|Disarm)(?: #\d+)? - (.+)$/);
   return m ? m[1] : null;
@@ -5667,6 +5694,9 @@ type HandoverInfoItem = { t: string, sub?: string[] };
 type HandoverArrest = {
   rhythm: { text: string, urgent: boolean } | null;   // the next rhythm check (arrest with timers only)
   durationSeconds: number | null;                     // first rhythm check to now, or to ROSC
+  arrestSeconds: number | null;                       // after a rearrest or with two or more ROSCs: the time actually spent in arrest (the ROSC periods taken out)
+  thisArrestSeconds: number | null;                   // in arrest again: how long since the latest rearrest
+  roscAgoSeconds: number | null;                      // in ROSC: how long since the latest ROSC
   rounds: number;
   shocks: number;
   disarms: number;
@@ -5690,7 +5720,8 @@ type HandoverTreatment = {
   io: number;
   iv: number;
   meds: { name: string, dose: string, note: string, text?: string }[];   // in the order each was first given
-  medGroups?: { key: 'before' | 'after', meds: { name: string, dose: string, note: string, text?: string }[] }[];   // once ROSC is achieved: given before the latest ROSC, and after it
+  medGroups?: { key: 'before' | 'after', meds: { name: string, dose: string, note: string, text?: string }[] }[];   // once ROSC is achieved: given before the latest change (a ROSC or a rearrest), and after it
+  medGroupsKind?: 'rosc' | 'rearrest';
   others: { line: string, note: string }[];
 };
 type HandoverContent = {
@@ -5726,7 +5757,7 @@ const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean 
 
 const buildHandoverContent = (
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
   h: HandoverFields
 ): HandoverContent => {
   const tx = state.treatments;
@@ -5849,14 +5880,37 @@ const buildHandoverContent = (
   }
   const rhythm = handoverRhythmStatus(state);
   const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
+  // The time spent in arrest: the span from the start of management, less each ROSC period (from a ROSC to the rearrest that followed it)
+  const arrestSeconds: number | null = (() => {
+    if (episodes.length < 2 || durationSeconds == null) return null;
+    let roscTime = 0;
+    for (const e of episodes.slice(1)) { if (!e.rearrest || e.rearrest.laterSeconds == null) return null; roscTime += e.rearrest.laterSeconds; }
+    return Math.max(0, durationSeconds - roscTime);
+  })();
+  // How long they have been in arrest this time: from the latest rearrest (a shock after ROSC counts as one) to now
+  const thisArrestSeconds: number | null = (() => {
+    if (state.isROSCMode || lastRoscIdx < 0) return null;
+    const after = tx.slice(lastRoscIdx + 1);
+    const ra = after.find(x => x.name.startsWith('Rearrest')) || after.find(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; });
+    if (!ra || ra.timeUnknown) return null;
+    if (monitorBased) return Math.max(0, Math.floor(endElapsed - ra.elapsed));
+    return ra.loggedAt != null ? Math.max(0, Math.floor((endMs - ra.loggedAt) / 1000)) : null;
+  })();
+  // In ROSC: how long ago the latest ROSC was
+  const roscAgoSeconds: number | null = (() => {
+    if (!state.isROSCMode || !lastRosc || lastRosc.timeUnknown) return null;
+    if (monitorBased) return Math.max(0, Math.floor(state.elapsedSeconds - lastRosc.elapsed));
+    return lastRosc.loggedAt != null ? Math.max(0, Math.floor(((state.caseClosedAt ?? Date.now()) - lastRosc.loggedAt) / 1000)) : null;
+  })();
   const arrest: HandoverArrest = {
-    rhythm, durationSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
+    rhythm, durationSeconds, arrestSeconds, thisArrestSeconds, roscAgoSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
     rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, monitorTimed: monitorBased, ownChecks: tx.filter(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; }).length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
-  if (durationSeconds != null) information.push({ t: `Arrest management for ${approxPhrase(durationSeconds)}` });
+  if (arrestSeconds != null) information.push({ t: `Time in arrest ${approxPhrase(arrestSeconds)} total` });
+  else if (durationSeconds != null) information.push({ t: `Arrest management for ${approxPhrase(durationSeconds)}` });
   information.push({ t: `${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}` });
   information.push({ t: `${shockCount} shock${shockCount === 1 ? '' : 's'}` });
   information.push({ t: `${disarmCount} disarm${disarmCount === 1 ? '' : 's'}` });
@@ -5896,7 +5950,7 @@ const buildHandoverContent = (
     return list.sort((p, q) => p.idx - q.idx);
   };
   const medList = buildMeds(tx);
-  const roscSplit = splitByLastRosc(tx);
+  const roscSplit = splitByLastChange(tx);
   const medGroups = roscSplit ? [{ key: 'before' as const, meds: buildMeds(roscSplit.before) }, { key: 'after' as const, meds: buildMeds(roscSplit.after) }] : undefined;
   // Anything else: Corpuls, Pacing, and anything typed into the log that isn't one of the app's own items
   const otherList: { idx: number, line: string, note: string }[] = [];
@@ -5920,6 +5974,7 @@ const buildHandoverContent = (
   const txData: HandoverTreatment = {
     airway, io: accessCount('IO access'), iv: accessCount('IV access'),
     meds: medList.map(m => ({ name: m.name, dose: m.dose, note: m.note, text: m.text })),
+    medGroupsKind: roscSplit?.kind,
     medGroups: medGroups?.map(g => ({ key: g.key, meds: g.meds.map(m => ({ name: m.name, dose: m.dose, note: m.note, text: m.text })) })),
     others: otherList.map(o => ({ line: o.line, note: o.note })),
   };
@@ -5928,7 +5983,7 @@ const buildHandoverContent = (
   if (txData.io) treatment.push(`${txData.io} x IO`);
   if (txData.iv) treatment.push(`${txData.iv} x IV`);
   const medLine = (m: { name: string, dose: string, note: string, text?: string }) => m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`;
-  if (txData.medGroups) txData.medGroups.forEach(g => g.meds.forEach(m => treatment.push(`${medLine(m)} (${g.key} ROSC${m.note ? `, ${m.note}` : ''})`)));
+  if (txData.medGroups) txData.medGroups.forEach(g => g.meds.forEach(m => treatment.push(`${medLine(m)} (${g.key === 'before' ? 'pre' : 'post'}-${txData.medGroupsKind === 'rearrest' ? 'rearrest' : 'ROSC'}${m.note ? `, ${m.note}` : ''})`)));
   else txData.meds.forEach(m => treatment.push(`${medLine(m)}${m.note ? ` (${m.note})` : ''}`));
   txData.others.forEach(o => treatment.push(`${o.line}${o.note ? ` (${o.note.toLowerCase()})` : ''}`));
   if (!treatment.length) treatment.push('None recorded');
@@ -6122,7 +6177,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   onView?: (v: 'fill' | 'read') => void,
   onWeight?: (w: number, type: 'adult' | 'paed', ageLabel: string | null) => void,
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
   onField: (key: keyof HandoverFields, value: string) => void,
   onVital: (key: VitalKey, value: string) => void,
   onClose: () => void
@@ -6415,14 +6470,27 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // ROSC can happen more than once in a long case: "twice", and "most recently at ..."
   const timesPhrase = (n: number) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
   const roscAt = a.rosc && a.rosc.clock ? t12(a.rosc.clock) : '';
+  const newShape = !a.inRosc && a.roscCount >= 1 && a.arrestSeconds != null;      // a rearrest after ROSC: the story in order (ROSC, rearrest, rhythm check, total time and shocks)
+  // The shocks are said in a sentence: "have received 3 shocks", "received 2 shocks", "have not received any shocks"
+  const shocksClause = (verb: 'received' | 'delivered', perfect: boolean) => a.shocks > 0
+    ? `${perfect ? 'have ' : ''}${verb} ${plural(a.shocks, 'shock', 'shocks')}`
+    : `${perfect ? 'have not' : `did not ${verb === 'received' ? 'receive' : 'deliver'}`} ${perfect ? verb : ''}${perfect ? ' ' : ''}any shocks`.replace('  ', ' ');
+  let shocksSaid = false;
   if (a.inRosc && a.ownChecks === 0 && a.roscCount >= 1) arrestNodes.push(<div key="d">{`We ${a.roscCount >= 2 ? 'have achieved' : 'achieved'} ROSC${a.roscCount >= 2 ? ` ${timesPhrase(a.roscCount)}, most recently` : ''}${roscAt ? ` at ${roscAt}` : ''}.`}</div>);
   else if (a.inRosc) {
-    if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
+    if (a.arrestSeconds != null && a.roscCount >= 2) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They have spent ${approxPhrase(a.arrestSeconds)} total in cardiac arrest and ${shocksClause('received', true)}.`}</div>); }
+    else if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
-    else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}${a.rosc ? ` until we achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}` : ''}.`}</div>);
+    else if (a.durationSeconds != null && a.rosc) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They were in cardiac arrest for ${approxPhrase(a.durationSeconds)} and ${shocksClause('received', false)}.`}</div>); }
+    else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
     else if (a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
-  } else if (a.durationSeconds != null && a.rhythm) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)} and ${lcFirst(a.rhythm.text)}.`}</div>);
-  else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
+  } else if (a.durationSeconds != null && a.arrestSeconds != null) {
+    if (!newShape) arrestNodes.push(<div key="d">{`They have spent ${approxPhrase(a.arrestSeconds)} total in cardiac arrest.`}</div>);
+  } else if (a.durationSeconds != null) {
+    shocksSaid = true;
+    arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)} and ${shocksClause('delivered', true)}.`}</div>);
+    if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
+  }
   else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   // A rearrest after ROSC: the arrest we're handing over is not the first one
   // The latest rearrest (when, and into what) is said here, with the ROSC it followed, and not again in the rhythm list
@@ -6433,8 +6501,15 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   };
   const rearEp = a.episodes.length > 1 ? a.episodes[a.episodes.length - 1] : null;
   const rearrestClause = rearEp && rearrestBits(rearEp) !== 'rearrested' ? rearrestBits(rearEp) : 'have since rearrested';
-  if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they ${rearrestClause}.`}</div>);
-  if (!(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? 'They received:' : 'They have received:'}{sub([plural(a.rounds, 'round of CPR', 'rounds of CPR'), plural(a.shocks, 'shock', 'shocks')])}</div>);
+  const lastArrestAt = rearEp && rearEp.rearrest && rearEp.rearrest.clock ? t12(rearEp.rearrest.clock) : '';
+  if (newShape) arrestNodes.push(
+    <div key="rr">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? (a.roscCount === 1 ? ` at ${roscAt}` : `, most recently at ${roscAt}`) : ''}${rearEp && rearEp.rearrest && rearEp.rearrest.laterSeconds != null ? `, which lasted ${spanPhrase(rearEp.rearrest.laterSeconds)}` : ''}.`}</div>,
+    ...(pheaAfterRosc ? [<div key="phea">To manage their presentation at that point we needed to perform emergency anaesthesia.</div>] : []),
+    <div key="rr2">{`They then rearrested${rearEp && rearEp.presenting ? ` into ${rhythmSentence(rearEp.presenting)}` : ''}${lastArrestAt ? ` at ${lastArrestAt}` : ''}${a.thisArrestSeconds != null ? `, which was ${agoPhrase(a.thisArrestSeconds)}` : ''}.`}</div>);
+  else if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they ${rearrestClause}.`}</div>);
+  if (!a.inRosc && a.durationSeconds != null && a.arrestSeconds != null && a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
+  if (newShape) { shocksSaid = true; arrestNodes.push(<div key="d">{`They have spent ${approxPhrase(a.arrestSeconds!)} total in cardiac arrest and ${shocksClause('received', true)}.`}</div>); }
+  if (!shocksSaid && !(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? `They ${shocksClause('received', false)}.` : `They ${shocksClause(a.roscCount === 0 ? 'delivered' : 'received', true)}.`}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
     const latestW = a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm';
@@ -6445,17 +6520,18 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
       if (a.firstState === 'known') arrestNodes.push(<div key="f">The presenting rhythm was {rhythmSentence(a.firstRhythm)}.</div>);
       if (h.latestRhythm === 'Unknown') arrestNodes.push(<div key="l">I can't recall the {latestW}.</div>);
-      if (a.latest) arrestNodes.push(<div key="l">Our {latestW} was {rhythmSentence(a.latest)}.</div>);
+      if (a.latest) arrestNodes.push(<div key="l">{a.inRosc ? 'The' : 'Our'} {latestW} was {rhythmSentence(a.latest)}.</div>);
     }
   } else {
     // The rhythms in the order they came, one block per arrest: "The presenting rhythm was VF. We then had: 1 x VF, 1 x PEA and then ROSC. They rearrested ... into pulseless VT. ..."
     // (with no rhythm recorded at all there's nothing to list: a ROSC alone is already said above)
     const anyRhythm = a.episodes.some(e => e.then.length > 0 || !!e.presenting);
-    const useEpisodes = anyRhythm && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
+    const compactMulti = a.roscCount >= 2;      // two or more ROSCs: the ROSC count and the latest arrest or ROSC are said above, not each arrest's rhythms
+    const useEpisodes = !compactMulti && anyRhythm && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
     const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
     if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
-    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes ? `The presenting rhythm was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
+    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes || compactMulti ? `${a.roscCount >= 1 ? 'The very first rhythm' : 'The presenting rhythm'} was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
     if (useEpisodes) {
       a.episodes.forEach((e, i) => {
         if (i > 0 && !(i === a.episodes.length - 1 && !a.inRosc && a.roscCount >= 1)) arrestNodes.push(<div key={`ra${i}`}>{`They ${rearrestBits(e)}.`}</div>);
@@ -6467,12 +6543,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     const lastEp = a.episodes[a.episodes.length - 1];
     const listEndsWith = lastEp && lastEp.endsWithRosc ? (lastEp.then.length ? lastEp.then[lastEp.then.length - 1].rhythm : lastEp.presenting) : '';
     const latestRedundant = useEpisodes && a.inRosc && !!a.latest && a.latest === listEndsWith;
-    if (a.latest && !latestRedundant && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">Our {a.inRosc ? 'last rhythm before ROSC' : 'latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
+    if (a.latest && !latestRedundant && (useEpisodes || compactMulti || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">{a.inRosc ? 'The last rhythm before ROSC' : 'Our latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
   if (pheaAfterRosc && a.inRosc) arrestNodes.push(<div key="phea">To manage their presentation we then needed to perform emergency anaesthesia.</div>);
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
-  const pAt = arrestNodes.findIndex(n => (n as React.ReactElement)?.key === 'p');
-  const splitAt = pAt >= 0 ? pAt + 1 : arrestNodes.length;
+  const rhythmStart = arrestNodes.findIndex(n => { const k = String((n as React.ReactElement)?.key ?? ''); return k === 'f' || k === 'l' || k.startsWith('th') || k.startsWith('ra'); });
+  const splitAt = rhythmStart >= 0 ? rhythmStart : arrestNodes.length;
   const arrestPage1 = arrestNodes.slice(0, splitAt);
   const arrestPage2 = arrestNodes.slice(splitAt);
 
@@ -6511,8 +6587,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     ...airwayNodes, accessNode,
     ...(t.medGroups
       ? t.medGroups.map(g => g.meds.length
-        ? <div key={`m-${g.key}`}>{g.key === 'before' ? 'Before ROSC we gave:' : 'After achieving ROSC we gave:'}{subWithNote(g.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div>
-        : <div key={`m-${g.key}`}>{g.key === 'before' ? 'Before ROSC we did not give any medications.' : 'After achieving ROSC we have not given any medications.'}</div>)
+        ? <div key={`m-${g.key}`}>{t.medGroupsKind === 'rearrest' ? (g.key === 'before' ? 'Before the rearrest we gave:' : 'After the rearrest we gave:') : (g.key === 'before' ? 'Before ROSC we gave:' : 'After achieving ROSC we gave:')}{subWithNote(g.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div>
+        : <div key={`m-${g.key}`}>{t.medGroupsKind === 'rearrest' ? (g.key === 'before' ? 'Before the rearrest we did not give any medications.' : 'After the rearrest we have not given any medications.') : (g.key === 'before' ? 'Before ROSC we did not give any medications.' : 'After achieving ROSC we have not given any medications.')}</div>)
       : [t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>]),
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
@@ -7042,7 +7118,7 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
 
 function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, activeInfusions, onUpdateInfusionDose, onUpdateInfusionUnit, treatments }: { 
   treatments?: Treatment[],
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
   infusionDoses?: Record<string, string>,
   infusionUnits?: Record<string, string>,
   activeInfusions?: string[],
@@ -7051,12 +7127,12 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
 }) {
   const unitFor = (drug: string) => infusionUnits?.[drug] ?? (drug === 'Adrenaline infusion' ? 'mcg' : 'mg');
   const nonInfusionEntries = Object.entries(pharmaSummary).filter(([name]) => !INFUSION_DRUGS.includes(name));
-  const split = treatments ? splitByLastRosc(treatments) : null;
+  const split = treatments ? splitByLastChange(treatments) : null;
   const hasContent = !!split || nonInfusionEntries.length > 0 || (activeInfusions && activeInfusions.length > 0);
   const medRow = (name: string, info: PharmaInfo, txs?: Treatment[]) => {
     const d = doseDetail(info);
     const dt = txs ? doseTimeNote(txs, name) : null;
-    return <StatRow key={name} label={name} value={d.total} detail={d.per ? `${d.count} doses ${d.per}` : undefined} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
+    return <StatRow key={name} label={name} value={d.total} detail={d.per ? `${d.count} doses ${d.per}` : (d.count >= 2 && info.totalDose > 0 && info.unit ? `${d.count} doses` : undefined)} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
   };
   const infusionRow = (drug: string) => (
               <div key={drug} className="flex items-center justify-between p-2 px-3">
@@ -7085,7 +7161,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
               </div>
   );
   // Once ROSC has been achieved: what was given before the latest ROSC, and what was given after it
-  const sections = split ? [['Before ROSC', split.before], ['After ROSC', split.after]].map(([title, txs]) => {
+  const sections = split ? [[split.kind === 'rearrest' ? 'Pre-rearrest' : 'Pre-ROSC', split.before], [split.kind === 'rearrest' ? 'Post-rearrest' : 'Post-ROSC', split.after]].map(([title, txs]) => {
     const list = txs as Treatment[];
     const sum = Object.entries(computePharmaSummary(list)).filter(([name]) => !INFUSION_DRUGS.includes(name));
     return { title: title as string, rows: sum.map(([name, info]) => medRow(name, info, list)), infusions: (activeInfusions ?? []).filter(d => list.some(t => t.name.startsWith(d))) };
@@ -7103,7 +7179,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
               <>
                 {sections.map(sec => (
                   <React.Fragment key={sec.title}>
-                    <div data-pharma-section={sec.title} className="bg-neutral-100 text-neutral-600 px-4 py-1.5 text-[12px] font-extrabold tracking-wider uppercase">{sec.title}</div>
+                    <div data-pharma-section={sec.title} className="bg-slate-100 text-neutral-600 px-4 py-1.5 text-[12px] font-extrabold tracking-wider uppercase">{sec.title}</div>
                     {sec.rows.length || sec.infusions.length ? <>{sec.rows}{sec.infusions.map(infusionRow)}</> : <div className="p-3 px-4 text-neutral-300 italic text-sm">None</div>}
                   </React.Fragment>
                 ))}
@@ -7121,7 +7197,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
+function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
       <div data-tutorial-section="arrestSummary">
