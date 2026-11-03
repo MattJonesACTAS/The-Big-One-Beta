@@ -541,15 +541,15 @@ const toCanonicalUnit = (amount: number, unit: string): { unit: string, amount: 
   return { unit, amount };
 };
 
-const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string }> => {
-  const summary: Record<string, { totalDose: number, unit: string, count: number, display: string }> = {};
+const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }> => {
+  const summary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }> = {};
 
   treatments.forEach(tx => {
     // Special handling for morph/midaz infusion
     if (tx.name.startsWith('Morph/midaz infusion')) {
       const medName = 'Morph/midaz infusion';
       if (!summary[medName]) {
-        summary[medName] = { totalDose: 0, unit: '', count: 0, display: '' };
+        summary[medName] = { totalDose: 0, unit: '', count: 0, display: '', amounts: [] };
       }
 
       const doseStr = tx.name.substring(medName.length).trim();
@@ -560,7 +560,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
           const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
           if (!summary[medName].unit) summary[medName].unit = unit;
           if (summary[medName].unit === unit) {
-            summary[medName].totalDose += amount;
+            summary[medName].totalDose += amount; summary[medName].amounts!.push(amount);
           }
         }
       }
@@ -574,7 +574,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
 
       if (tx.name.startsWith(med)) {
         if (!summary[med]) {
-          summary[med] = { totalDose: 0, unit: '', count: 0, display: '' };
+          summary[med] = { totalDose: 0, unit: '', count: 0, display: '', amounts: [] };
         }
 
         // Extract dose from treatment name (everything after medication name)
@@ -589,7 +589,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
             const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
             if (!summary[med].unit) summary[med].unit = unit;
             if (summary[med].unit === unit) {
-              summary[med].totalDose += amount;
+              summary[med].totalDose += amount; summary[med].amounts!.push(amount);
             }
           } else {
             // Direct dose: "1mg", "300mg", "100mL", etc.
@@ -599,7 +599,7 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
               const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
               if (!summary[med].unit) summary[med].unit = unit;
               if (summary[med].unit === unit) {
-                summary[med].totalDose += amount;
+                summary[med].totalDose += amount; summary[med].amounts!.push(amount);
               }
             }
           }
@@ -642,6 +642,29 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
   });
 
   return summary;
+};
+
+// ---- Medications split at the most recent ROSC: what was given before it, and what was given after it ----
+const splitByLastRosc = (treatments: Treatment[]): { before: Treatment[], after: Treatment[] } | null => {
+  let last = -1;
+  treatments.forEach((t, i) => { if (isRoscName(t.name)) last = i; });
+  return last < 0 ? null : { before: treatments.slice(0, last), after: treatments.slice(last + 1) };
+};
+type PharmaInfo = { totalDose: number, unit: string, count: number, display: string, amounts?: number[] };
+// The total (without the dose count) and, for two or more doses, how big each one was: "of 1mg" when they were all the same, "ranging from 50 to 100mcg" when they weren't
+function doseDetail(info: PharmaInfo): { total: string, per: string | null, count: number } {
+  const total = info.display.replace(/\s*\(\d+\)\s*$/, '');
+  const a = info.amounts ?? [];
+  if (info.count < 2 || a.length < 2 || a.length !== info.count || !info.unit) return { total, per: null, count: info.count };
+  const min = Math.min(...a), max = Math.max(...a);
+  let unit = info.unit, div = 1;
+  if (unit.toLowerCase() === 'mcg' && max >= 1000) { unit = 'mg'; div = 1000; } else if (unit.toLowerCase() === 'ml' && max >= 1000) { unit = 'L'; div = 1000; }
+  const f = (v: number) => `${parseFloat((v / div).toFixed(2))}`;
+  return { total, count: info.count, per: Math.abs(max - min) < 1e-9 ? `of ${f(max)}${unit}` : `ranging from ${f(min)} to ${f(max)}${unit}` };
+}
+const multiDoseText = (name: string, info: PharmaInfo): string | undefined => {
+  const d = doseDetail(info);
+  return d.per ? `${name}: ${d.count} doses ${d.per}, ${d.total} in total` : undefined;
 };
 
 // --- Previous case backup ---
@@ -4690,7 +4713,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   onClose: () => void, 
   addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void,
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
   isShockForced: boolean,
   onDelayRhythmCheck?: () => void,
   tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null,
@@ -5456,7 +5479,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
   );
 }
 
-function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }> }) {
+function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }> }) {
   const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
   const disarmCount = state.treatments.filter(t => t.name.includes('Disarm') && !isRoscName(t.name)).length;
   const roscCount = state.treatments.filter(t => isRoscName(t.name)).length;
@@ -5666,7 +5689,8 @@ type HandoverTreatment = {
   airway: string[];                                   // the most advanced airway that worked, then IGT
   io: number;
   iv: number;
-  meds: { name: string, dose: string, note: string }[];   // in the order each was first given
+  meds: { name: string, dose: string, note: string, text?: string }[];   // in the order each was first given
+  medGroups?: { key: 'before' | 'after', meds: { name: string, dose: string, note: string, text?: string }[] }[];   // once ROSC is achieved: given before the latest ROSC, and after it
   others: { line: string, note: string }[];
 };
 type HandoverContent = {
@@ -5702,7 +5726,7 @@ const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean 
 
 const buildHandoverContent = (
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
   h: HandoverFields
 ): HandoverContent => {
   const tx = state.treatments;
@@ -5853,20 +5877,27 @@ const buildHandoverContent = (
   // in the order each was first given, then anything else that was done
   const accessCount = (id: string) => tx.filter(x => getTreatmentIdentity(x.name) === id && succeeded(x.name)).length;
   const firstIdx = (match: (n: string) => boolean) => tx.findIndex(x => match(x.name));
-  const medList: { idx: number, name: string, dose: string, note: string }[] = [];
-  Object.entries(pharmaSummary).forEach(([med, info]) => {
-    const dt = doseTimeNote(tx, med);
-    const name = med.replace(/ push$/, '');
-    let dose: string;
-    if (INFUSION_DRUGS.includes(med)) {
-      const d = state.infusionDoses?.[med];
-      dose = d ? `${d}${state.infusionUnits?.[med] ?? (med === 'Adrenaline infusion' ? 'mcg' : 'mg')}` : '';
-    } else {
-      dose = info.display.replace(/\s*\(\d+\)\s*$/, '');
-    }
-    medList.push({ idx: firstIdx(n => n.startsWith(med)), name, dose, note: dt ? `${dt.label === 'Started' ? 'started' : 'last'} ${t12(dt.time)}` : '' });
-  });
-  medList.sort((p, q) => p.idx - q.idx);
+  const buildMeds = (txs: Treatment[]) => {
+    const list: { idx: number, name: string, dose: string, note: string, text?: string }[] = [];
+    Object.entries(computePharmaSummary(txs)).forEach(([med, info]) => {
+      const dt = doseTimeNote(txs, med);
+      const name = med.replace(/ push$/, '');
+      let dose: string;
+      let text: string | undefined;
+      if (INFUSION_DRUGS.includes(med)) {
+        const d = state.infusionDoses?.[med];
+        dose = d ? `${d}${state.infusionUnits?.[med] ?? (med === 'Adrenaline infusion' ? 'mcg' : 'mg')}` : '';
+      } else {
+        dose = info.display.replace(/\s*\(\d+\)\s*$/, '');
+        text = multiDoseText(name, info);
+      }
+      list.push({ idx: txs.findIndex(x => x.name.startsWith(med)), name, dose, text, note: dt ? `${dt.label === 'Started' ? 'started' : 'last'} ${t12(dt.time)}` : '' });
+    });
+    return list.sort((p, q) => p.idx - q.idx);
+  };
+  const medList = buildMeds(tx);
+  const roscSplit = splitByLastRosc(tx);
+  const medGroups = roscSplit ? [{ key: 'before' as const, meds: buildMeds(roscSplit.before) }, { key: 'after' as const, meds: buildMeds(roscSplit.after) }] : undefined;
   // Anything else: Corpuls, Pacing, and anything typed into the log that isn't one of the app's own items
   const otherList: { idx: number, line: string, note: string }[] = [];
   ['Corpuls', 'Pacing'].forEach(n => {
@@ -5888,13 +5919,17 @@ const buildHandoverContent = (
   otherList.sort((p, q) => p.idx - q.idx);
   const txData: HandoverTreatment = {
     airway, io: accessCount('IO access'), iv: accessCount('IV access'),
-    meds: medList.map(m => ({ name: m.name, dose: m.dose, note: m.note })), others: otherList.map(o => ({ line: o.line, note: o.note })),
+    meds: medList.map(m => ({ name: m.name, dose: m.dose, note: m.note, text: m.text })),
+    medGroups: medGroups?.map(g => ({ key: g.key, meds: g.meds.map(m => ({ name: m.name, dose: m.dose, note: m.note, text: m.text })) })),
+    others: otherList.map(o => ({ line: o.line, note: o.note })),
   };
   const treatment: string[] = [];
   if (airway.length) treatment.push(`Airway ${airway.join(', ')}`);
   if (txData.io) treatment.push(`${txData.io} x IO`);
   if (txData.iv) treatment.push(`${txData.iv} x IV`);
-  txData.meds.forEach(m => treatment.push(`${m.name}${m.dose ? ` ${m.dose}` : ''}${m.note ? ` (${m.note})` : ''}`));
+  const medLine = (m: { name: string, dose: string, note: string, text?: string }) => m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`;
+  if (txData.medGroups) txData.medGroups.forEach(g => g.meds.forEach(m => treatment.push(`${medLine(m)} (${g.key} ROSC${m.note ? `, ${m.note}` : ''})`)));
+  else txData.meds.forEach(m => treatment.push(`${medLine(m)}${m.note ? ` (${m.note})` : ''}`));
   txData.others.forEach(o => treatment.push(`${o.line}${o.note ? ` (${o.note.toLowerCase()})` : ''}`));
   if (!treatment.length) treatment.push('None recorded');
 
@@ -6087,7 +6122,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   onView?: (v: 'fill' | 'read') => void,
   onWeight?: (w: number, type: 'adult' | 'paed', ageLabel: string | null) => void,
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
   onField: (key: keyof HandoverFields, value: string) => void,
   onVital: (key: VitalKey, value: string) => void,
   onClose: () => void
@@ -6474,7 +6509,11 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
       : ioN || ivN ? <div key="x">For access we have:{sub([...(ioN ? [`${ioN} x IO${ioN > 1 ? 's' : ''}`] : []), ...(ivN ? [`${ivN} x IV${ivN > 1 ? 's' : ''}`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>;
   const standardTreatmentNodes: React.ReactNode[] = [
     ...airwayNodes, accessNode,
-    t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>,
+    ...(t.medGroups
+      ? t.medGroups.map(g => g.meds.length
+        ? <div key={`m-${g.key}`}>{g.key === 'before' ? 'Before ROSC we gave:' : 'After achieving ROSC we gave:'}{subWithNote(g.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div>
+        : <div key={`m-${g.key}`}>{g.key === 'before' ? 'Before ROSC we did not give any medications.' : 'After achieving ROSC we have not given any medications.'}</div>)
+      : [t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>]),
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
 
@@ -7003,7 +7042,7 @@ function ArrestSummarySection({ state, showRecordingDuration, showFinalDuration,
 
 function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, activeInfusions, onUpdateInfusionDose, onUpdateInfusionUnit, treatments }: { 
   treatments?: Treatment[],
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>,
+  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>,
   infusionDoses?: Record<string, string>,
   infusionUnits?: Record<string, string>,
   activeInfusions?: string[],
@@ -7012,21 +7051,14 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
 }) {
   const unitFor = (drug: string) => infusionUnits?.[drug] ?? (drug === 'Adrenaline infusion' ? 'mcg' : 'mg');
   const nonInfusionEntries = Object.entries(pharmaSummary).filter(([name]) => !INFUSION_DRUGS.includes(name));
-  const hasContent = nonInfusionEntries.length > 0 || (activeInfusions && activeInfusions.length > 0);
-
-  return (
-    <div className="rounded-xl border border-neutral-100">
-      <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">PHARMA SUMMARY</div>
-      <div className="bg-white divide-y divide-neutral-50 min-h-[60px] rounded-b-xl">
-        {!hasContent ? (
-          <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
-        ) : (
-          <>
-            {nonInfusionEntries.map(([name, info]) => {
-              const dt = treatments ? doseTimeNote(treatments, name) : null;
-              return <StatRow key={name} label={name} value={info.display} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
-            })}
-            {activeInfusions && activeInfusions.map(drug => (
+  const split = treatments ? splitByLastRosc(treatments) : null;
+  const hasContent = !!split || nonInfusionEntries.length > 0 || (activeInfusions && activeInfusions.length > 0);
+  const medRow = (name: string, info: PharmaInfo, txs?: Treatment[]) => {
+    const d = doseDetail(info);
+    const dt = txs ? doseTimeNote(txs, name) : null;
+    return <StatRow key={name} label={name} value={d.total} detail={d.per ? `${d.count} doses ${d.per}` : undefined} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
+  };
+  const infusionRow = (drug: string) => (
               <div key={drug} className="flex items-center justify-between p-2 px-3">
                 <span className="text-neutral-500 text-[16px] font-medium">{drug}{(() => { const dt = treatments ? doseTimeNote(treatments, drug) : null; return dt ? <span className="block text-[12px] text-neutral-400 font-medium tabular-nums print:hidden">{dt.label} {dt.time}</span> : null; })()}</span>
                 {onUpdateInfusionDose ? (
@@ -7051,7 +7083,37 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
                   </span>
                 )}
               </div>
-            ))}
+  );
+  // Once ROSC has been achieved: what was given before the latest ROSC, and what was given after it
+  const sections = split ? [['Before ROSC', split.before], ['After ROSC', split.after]].map(([title, txs]) => {
+    const list = txs as Treatment[];
+    const sum = Object.entries(computePharmaSummary(list)).filter(([name]) => !INFUSION_DRUGS.includes(name));
+    return { title: title as string, rows: sum.map(([name, info]) => medRow(name, info, list)), infusions: (activeInfusions ?? []).filter(d => list.some(t => t.name.startsWith(d))) };
+  }) : [];
+
+  return (
+    <div className="rounded-xl border border-neutral-100">
+      <div className="bg-emerald-50 text-emerald-800 px-4 py-3 font-bold text-sm tracking-wider text-center rounded-t-xl">PHARMA SUMMARY</div>
+      <div className="bg-white divide-y divide-neutral-50 min-h-[60px] rounded-b-xl">
+        {!hasContent ? (
+          <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
+        ) : (
+          <>
+            {split ? (
+              <>
+                {sections.map(sec => (
+                  <React.Fragment key={sec.title}>
+                    <div data-pharma-section={sec.title} className="bg-neutral-100 text-neutral-600 px-4 py-1.5 text-[12px] font-extrabold tracking-wider uppercase">{sec.title}</div>
+                    {sec.rows.length || sec.infusions.length ? <>{sec.rows}{sec.infusions.map(infusionRow)}</> : <div className="p-3 px-4 text-neutral-300 italic text-sm">None</div>}
+                  </React.Fragment>
+                ))}
+              </>
+            ) : (
+              <>
+                {nonInfusionEntries.map(([name, info]) => medRow(name, info, treatments))}
+                {activeInfusions && activeInfusions.map(infusionRow)}
+              </>
+            )}
           </>
         )}
       </div>
@@ -7059,7 +7121,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
+function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[] }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
       <div data-tutorial-section="arrestSummary">
@@ -7086,9 +7148,10 @@ interface StatRowProps {
   key?: React.Key;
   stacked?: boolean;
   sub?: string;
+  detail?: string;     // under the label, on screen and in print (sub is on screen only)
 }
 
-function StatRow({ label, value, color = "text-neutral-900", stacked = false, sub }: StatRowProps) {
+function StatRow({ label, value, color = "text-neutral-900", stacked = false, sub, detail }: StatRowProps) {
   if (stacked) {
     return (
       <div className="p-2 px-3">
@@ -7099,7 +7162,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false, su
   }
   return (
     <div className="flex justify-between items-center p-2 px-3">
-      <span className="text-neutral-500 text-[16px] font-medium">{label}{sub && <span className="block text-[12px] text-neutral-400 font-medium tabular-nums print:hidden">{sub}</span>}</span>
+      <span className="text-neutral-500 text-[16px] font-medium">{label}{(detail || sub) && <span className="block text-[12px] text-neutral-400 font-medium tabular-nums">{detail}{sub && <span className="print:hidden">{detail ? ' · ' : ''}{sub}</span>}</span>}</span>
       <span className={`text-[16px] font-black tabular-nums ${color}`}>{value}</span>
     </div>
   );
