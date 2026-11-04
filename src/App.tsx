@@ -5508,6 +5508,19 @@ const approxPhrase = (seconds: number): string => {
   return `approximately ${hr} hour${hr === 1 ? '' : 's'}${rest ? ` and ${rest} minute${rest === 1 ? '' : 's'}` : ''}`;
 };
 
+type PreArrival = { seconds: number, atLeast: boolean } | 'unknown' | null;
+// Time in cardiac arrest, counting the time before we arrived when the crew gave an estimate (the same midpoints as the arrest time).
+// 'Over 20 min' is only a lower bound ('more than'). When it is unknown, only our own time is said, with that made clear.
+const haveSpentPhrase = (ours: number, pre: PreArrival): string => {
+  if (pre === 'unknown') return `${approxPhrase(ours)} total in cardiac arrest with us, plus an unknown time before we arrived`;
+  if (pre && pre.atLeast) return `${approxPhrase(Math.floor((ours + pre.seconds) / 60) * 60).replace('approximately', 'more than')} total in cardiac arrest`;
+  return `${approxPhrase(ours + (pre ? pre.seconds : 0))} total in cardiac arrest`;
+};
+const wereForPhrase = (ours: number, pre: PreArrival): string => {
+  if (pre === 'unknown') return `in cardiac arrest for ${approxPhrase(ours)} with us, plus an unknown time before we arrived`;
+  if (pre && pre.atLeast) return `in cardiac arrest for ${approxPhrase(Math.floor((ours + pre.seconds) / 60) * 60).replace('approximately', 'more than')}`;
+  return `in cardiac arrest for ${approxPhrase(ours + (pre ? pre.seconds : 0))}`;
+};
 const spanPhrase = (seconds: number): string => {
   const m = Math.round(seconds / 60);
   if (m < 1) return 'less than a minute';
@@ -5543,6 +5556,7 @@ type HandoverArrest = {
   durationSeconds: number | null;                     // first rhythm check to now, or to ROSC
   arrestSeconds: number | null;                       // after a rearrest or with two or more ROSCs: the time actually spent in arrest (the ROSC periods taken out)
   thisArrestSeconds: number | null;                   // in arrest again: how long since the latest rearrest
+  preArrival: PreArrival;                             // the time in arrest before we arrived: the crew's estimate (a midpoint, or a lower bound), 'unknown', or nothing (it began after we arrived, or not answered)
   roscAgoSeconds: number | null;                      // in ROSC: how long since the latest ROSC
   rounds: number;
   shocks: number;
@@ -5732,6 +5746,10 @@ const buildHandoverContent = (
     for (const e of episodes.slice(1)) { if (!e.rearrest || e.rearrest.laterSeconds == null) return null; roscTime += e.rearrest.laterSeconds; }
     return Math.max(0, durationSeconds - roscTime);
   })();
+  const preArrival: PreArrival = h.arrestStart === 'Before'
+    ? (HANDOVER_BEFORE_MIDPOINT[h.startedBefore] != null ? { seconds: HANDOVER_BEFORE_MIDPOINT[h.startedBefore] * 60, atLeast: false }
+      : h.startedBefore === 'Over 20 min' ? { seconds: 20 * 60, atLeast: true } : h.startedBefore === 'Unknown' ? 'unknown' : null)
+    : h.arrestStart === 'Unknown' ? 'unknown' : null;
   // How long they have been in arrest this time: from the latest rearrest (a shock after ROSC counts as one) to now
   const thisArrestSeconds: number | null = (() => {
     if (state.isROSCMode || lastRoscIdx < 0) return null;
@@ -5748,13 +5766,13 @@ const buildHandoverContent = (
     return lastRosc.loggedAt != null ? Math.max(0, Math.floor(((state.caseClosedAt ?? Date.now()) - lastRosc.loggedAt) / 1000)) : null;
   })();
   const arrest: HandoverArrest = {
-    rhythm, durationSeconds, arrestSeconds, thisArrestSeconds, roscAgoSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
+    rhythm, durationSeconds, arrestSeconds, thisArrestSeconds, preArrival, roscAgoSeconds, rounds: state.cprRound, shocks: shockCount, disarms: disarmCount,
     firstRhythm, others, latest: recentRhythm, inRosc: !!state.isROSCMode,
     rosc: lastRosc ? { clock: lastRosc.clock, rearrestSince } : null, roscCount: roscIdx.length, monitorTimed: monitorBased, ownChecks: tx.filter(x => { const id = getTreatmentIdentity(x.name); return id === 'Shock' || id === 'Disarm'; }).length, episodes, priorChecks, askFirstRhythm: askFirst, askLatestRhythm: askLatest, firstState, startEstimate,
   };
   const information: HandoverInfoItem[] = [];
   if (rhythm) information.push({ t: rhythm.text });
-  if (arrestSeconds != null) information.push({ t: `Time in arrest ${approxPhrase(arrestSeconds)} total` });
+  if (arrestSeconds != null) information.push({ t: `Time in arrest ${haveSpentPhrase(arrestSeconds, preArrival).replace(' in cardiac arrest', '')}` });
   else if (durationSeconds != null) information.push({ t: `Arrest management for ${approxPhrase(durationSeconds)}` });
   information.push({ t: `${state.cprRound} CPR round${state.cprRound === 1 ? '' : 's'}` });
   information.push({ t: `${shockCount} shock${shockCount === 1 ? '' : 's'}` });
@@ -6195,11 +6213,11 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const oneSentence = (parts: React.ReactNode[]) => [<div key="s">{parts.map((n, i) => <React.Fragment key={i}>{n}{i < parts.length - 1 ? ', ' : '.'}</React.Fragment>)}</div>];
   const cap = (x: React.ReactNode) => (typeof x === 'string' && x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
   const sub = (items: React.ReactNode[]) => (
-    <div className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x)}</div>)}</div>
+    <div data-handover-list className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x)}</div>)}</div>
   );
   // Medication-style dot points with a smaller line underneath (when it was last given, or started)
   const subWithNote = (items: { text: string, note?: string }[]) => (
-    <div className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[22px]' : 'space-y-3 text-[28px]'} font-semibold text-neutral-700`}>
+    <div data-handover-list className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[22px]' : 'space-y-3 text-[28px]'} font-semibold text-neutral-700`}>
       {items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x.text)}{x.note && <div className={`${compact ? 'text-[14px]' : 'text-[19px]'} font-medium text-neutral-500`}>{x.note}</div>}</div>)}
     </div>
   );
@@ -6293,14 +6311,14 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   let shocksSaid = false;
   if (a.inRosc && a.ownChecks === 0 && a.roscCount >= 1) arrestNodes.push(<div key="d">{`We ${a.roscCount >= 2 ? 'have achieved' : 'achieved'} ROSC${a.roscCount >= 2 ? ` ${timesPhrase(a.roscCount)}, most recently` : ''}${roscAt ? ` at ${roscAt}` : ''}.`}</div>);
   else if (a.inRosc) {
-    if (a.arrestSeconds != null && a.roscCount >= 2) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They have spent ${approxPhrase(a.arrestSeconds)} total in cardiac arrest and ${shocksClause('received', true)}.`}</div>); }
+    if (a.arrestSeconds != null && a.roscCount >= 2) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They have spent ${haveSpentPhrase(a.arrestSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true)}.`}</div>); }
     else if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
-    else if (a.durationSeconds != null && a.rosc) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They were in cardiac arrest for ${approxPhrase(a.durationSeconds)} and ${shocksClause('received', false)}.`}</div>); }
+    else if (a.durationSeconds != null && a.rosc) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They were ${wereForPhrase(a.durationSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', false)}.`}</div>); }
     else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
     else if (a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
   } else if (a.durationSeconds != null && a.arrestSeconds != null) {
-    if (!newShape) arrestNodes.push(<div key="d">{`They have spent ${approxPhrase(a.arrestSeconds)} total in cardiac arrest.`}</div>);
+    if (!newShape) arrestNodes.push(<div key="d">{`They have spent ${haveSpentPhrase(a.arrestSeconds, a.preArrival)}.`}</div>);
   } else if (a.durationSeconds != null) {
     shocksSaid = true;
     arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)} and ${shocksClause('delivered', true)}.`}</div>);
@@ -6320,7 +6338,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     ...(pheaAfterRosc ? [<div key="phea">To manage their presentation at that point we needed to perform emergency anaesthesia.</div>] : []),
     <div key="rr2">{`They then rearrested${rearEp && rearEp.presenting ? ` into ${rhythmSentence(rearEp.presenting)}` : ''}${lastArrestAt ? ` at ${lastArrestAt}` : ''}${a.thisArrestSeconds != null ? `, which was ${agoPhrase(a.thisArrestSeconds)}` : ''}.`}</div>);
   else if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they ${rearrestClause}.`}</div>);
-  if (newShape) { shocksSaid = true; arrestNodes.push(<div key="d">{`They have spent ${approxPhrase(a.arrestSeconds!)} total in cardiac arrest and ${shocksClause('received', true)}.`}</div>); }
+  if (newShape) { shocksSaid = true; arrestNodes.push(<div key="d">{`They have spent ${haveSpentPhrase(a.arrestSeconds!, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true)}.`}</div>); }
   if (!shocksSaid && !(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? `They ${shocksClause('received', false)}.` : `They ${shocksClause(a.roscCount === 0 ? 'delivered' : 'received', true)}.`}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
@@ -6499,7 +6517,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
           <span className="text-center leading-tight"><span data-handover-title>{c.title}</span></span>
           <span className="justify-self-end text-sm opacity-80 tabular-nums">{card + 1}/{cards.length}</span>
         </div>
-        <div data-handover-card={c.key} className={`flex-1 overflow-y-auto ${compact ? 'p-4 space-y-3 text-[22px]' : 'p-6 space-y-5 text-[28px]'} leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
+        <div data-handover-card={c.key} data-density={compact ? 'compact' : 'normal'} className={`flex-1 overflow-y-auto ${compact ? 'p-4 space-y-3 text-[22px]' : 'p-6 space-y-5 text-[28px]'} leading-tight font-bold ${c.muted ? 'text-neutral-500' : 'text-neutral-900'}`}>
           {c.body}
         </div>
         {(() => {
