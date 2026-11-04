@@ -1070,6 +1070,47 @@ export default function App() {
     if (!tutorialMode) { setTutorialRhythmDone(false); return; }
     if (hasRhythmDemo && tutorialNodeIndex > demoEndIdx && !isShockForced) setTutorialRhythmDone(true);
   }, [tutorialMode, tutorialNodeIndex, isShockForced, hasRhythmDemo, demoEndIdx]);
+  // The walkthrough's practice outcomes (the first shock or disarm, the delay, the ROSC) are not part of the learner's case. When the
+  // practice ends, the case goes back to how it was when the first popup appeared (so whatever was entered on the catch-up screen
+  // stays, including its tally of rounds), plus the last outcome the learner chose, which is the one real check. The rhythm check
+  // timer then runs from the moment they chose it.
+  // The outcome keeps its place in the numbering of what is left in the log ('Shock #3 - VF' once two shocks are there already)
+  const renumberOutcome = (name: string, kept: Treatment[]) => {
+    const m = name.match(/^(Shock|Disarm)(?: #\d+)?(.*)$/);
+    if (!m) return name;
+    const n = kept.filter(t => getTreatmentIdentity(t.name) === m[1]).length + 1;
+    return `${m[1]}${n > 1 ? ` #${n}` : ''}${m[2]}`;
+  };
+  const tutorialDemoSnapshotRef = useRef<{ state: AppState, rhythmInterval: typeof rhythmInterval } | null>(null);
+  const tutorialDemoCleanedRef = useRef(false);
+  useEffect(() => {
+    if (!tutorialMode || !hasRhythmDemo || tutorialNodeIndex < demoStartIdx) { tutorialDemoSnapshotRef.current = null; tutorialDemoCleanedRef.current = false; return; }
+    if (!tutorialDemoSnapshotRef.current && tutorialNodeId === 'rhythmDemoFirstPopup' && isShockForced) tutorialDemoSnapshotRef.current = { state, rhythmInterval };
+  }, [tutorialMode, hasRhythmDemo, tutorialNodeIndex, demoStartIdx, tutorialNodeId, isShockForced, state, rhythmInterval]);
+  useEffect(() => {
+    const snap = tutorialDemoSnapshotRef.current;
+    if (!tutorialMode || !hasRhythmDemo || !snap || tutorialDemoCleanedRef.current) return;
+    if (!(tutorialNodeIndex > demoEndIdx && !isShockForced)) return;
+    const last = state.treatments[state.treatments.length - 1];
+    const lastId = last ? getTreatmentIdentity(last.name) : null;
+    if (!last || state.treatments.length <= snap.state.treatments.length || (lastId !== 'Shock' && lastId !== 'Disarm')) return;
+    tutorialDemoCleanedRef.current = true;
+    setRhythmInterval(snap.rhythmInterval);
+    setState(prev => ({
+      ...prev,
+      treatments: [...snap.state.treatments, { ...last, name: renumberOutcome(last.name, snap.state.treatments), round: snap.state.cprRound }],
+      cprRound: snap.state.cprRound,
+      isROSCMode: false,
+      rhythmCheckPaused: false,
+      frozenCountdown: undefined,
+      rhythmCheckDelayedAt: null,
+      rhythmCheckOvertime: 0,
+      rhythmCheckTarget: prev.elapsedSeconds + 120,
+      roscChecked: snap.state.roscChecked,
+      adrenalineWipedAt: snap.state.adrenalineWipedAt,
+      amiodaroneWipedAt: snap.state.amiodaroneWipedAt,
+    }));
+  }, [tutorialMode, hasRhythmDemo, tutorialNodeIndex, demoEndIdx, isShockForced, state]);
   // (A mode with no walkthrough, i.e. no timers, has nothing to hold back.)
   const tutorialAutoCloseOK = !tutorialMode || !hasRhythmDemo || tutorialRhythmDone;
   const tutorialPopupAtZeroOK = !tutorialMode || !hasRhythmDemo || tutorialRhythmDone
@@ -1096,6 +1137,7 @@ export default function App() {
     if (tutorialNodeId === 'rhythmDemoFirstPopup') setTutorialOutcomeRestriction('redblue');
     else if (tutorialNodeId === 'rhythmDemoDelayPopup') setTutorialOutcomeRestriction('delay');
     else if (tutorialNodeId === 'rhythmDemoRoscPopup') setTutorialOutcomeRestriction('rosc');
+    else if (tutorialNodeId === 'rhythmDemoLastPopup') setTutorialOutcomeRestriction('redblue');
   }, [tutorialMode, tutorialNodeId]);
   useEffect(() => {
     if (!isShockForced) setTutorialOutcomeRestriction(null);
@@ -2010,6 +2052,19 @@ export default function App() {
   const [catchupMenuKey, setCatchupMenuKey] = useState(0);
   const [catchupMenuOpen, setCatchupMenuOpen] = useState(false);
   const [catchupAddedOpen, setCatchupAddedOpen] = useState(false);   // the Added so far drop-down on the setup slide   // a section or a dose list is open in the setup slide's menu   // bumping it rebuilds the setup slide's menu: sections closed, nothing half chosen
+  // A rearrest is logged as an entry, whichever button was used: the Add Tx menu's, or the Rearrest button on the home screen
+  // (so the handover and the Pharma Summary know when it happened, even if ROSC is logged again straight away)
+  const rearrestEntry = (existing: Treatment[]): Treatment => {
+    const now = new Date();
+    const identity = getTreatmentIdentity('Rearrest');
+    const priorCount = existing.filter(t => getTreatmentIdentity(t.name) === identity).length;
+    return {
+      name: priorCount > 0 ? insertTreatmentNumber('Rearrest', identity, priorCount + 1) : 'Rearrest',
+      elapsed: state.elapsedSeconds, round: state.cprRound,
+      clock: getLocalTime(now), clockSeconds: getLocalTimeWithSeconds(now), loggedAt: now.getTime()
+    };
+  };
+
   const addTreatment = (name: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => {
     const now = new Date();
     // Shock, Disarm and ROSC outcomes move the rhythm check timers. (Cases saved by older versions of
@@ -3036,6 +3091,7 @@ export default function App() {
                   onClick={() => {
                     setState(prev => ({
                       ...prev,
+                      treatments: [...prev.treatments, rearrestEntry(prev.treatments)],
                       isROSCMode: false,
                       rhythmCheckPaused: false,
                       frozenCountdown: undefined,
@@ -3326,6 +3382,7 @@ export default function App() {
             onClick={() => {
               setState(prev => ({
                 ...prev,
+                treatments: [...prev.treatments, rearrestEntry(prev.treatments)],
                 isROSCMode: false,
                 currentOverlay: 'treatment'
               }));

@@ -156,7 +156,7 @@ const ELAPSED_RAW: RawNode[] = [
       description: "When the countdown reached 0:00, the 'rhythm check popup' appeared.\n\nYou use it to log what the outcome of the rhythm check was.\n\nThere are three kinds of outcome:\n\n• Shock or disarm (red and blue)\n\n• ROSC (green)\n\n• Delay Rhythm Check (amber)\n\nWe'll come back to Delay and ROSC shortly."
     }, {
       title: 'Give it a Go',
-      description: "Choose any red or blue option to continue."
+      description: "Choose any shock or disarm option to continue."
     }],
     condition: (_s, sf) => sf === true
   },
@@ -216,7 +216,7 @@ const ELAPSED_RAW: RawNode[] = [
       description: "That's every option the rhythm check popup offers."
     }, {
       title: "Give it a Go",
-      description: "Choose any rhythm check outcome you like to finish up, then we'll carry on with the rest of the tutorial."
+      description: "Choose any shock or disarm option to finish up, then we'll carry on with the rest of the tutorial."
     }],
     condition: (_s, sf) => sf === true
   },
@@ -314,7 +314,7 @@ const ELAPSED_RAW: RawNode[] = [
     pages: [
       {
         title: 'Pharma Summary',
-        description: 'Next, we have the pharmacological summary, which lists all logged medications with a cumulative tally of the total dose logged of each drug.'
+        description: "Next, we have the pharmacological summary, which lists all logged medications with a cumulative tally of the total dose logged of each drug.\n\nOnce ROSC is achieved, the list splits in two: Pre-ROSC and Post-ROSC.\n\nIf the patient rearrests, it splits at the rearrest instead: Pre-rearrest and Post-rearrest."
       }
     ],
     condition: (s) => s.currentOverlay === 'summary'
@@ -445,7 +445,15 @@ const MINIMAL_NODES: RawNode[] = [
   nodeById('rhythmDemoRhythmCheckNow'),
   nodeById('rhythmDemoRoscPopup'),
   nodeById('rhythmDemoRoscMode'),
-  nodeById('rhythmDemoLastPopup'),
+  withOverrides('rhythmDemoLastPopup', {
+    pages: [{
+      title: "You've Seen It All",
+      description: "That's every option the rhythm check popup offers."
+    }, {
+      title: "Give it a Go",
+      description: "Choose 'Shock' or 'Disarm' to finish up, then we'll carry on with the rest of the tutorial."
+    }]
+  }),
   withOverrides('recalibrate', {
     pages: [{
       title: 'Recalibrate Button',
