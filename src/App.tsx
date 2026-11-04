@@ -646,11 +646,18 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
 
 // ---- Medications split at the most recent ROSC: what was given before it, and what was given after it ----
 const splitByLastChange = (treatments: Treatment[]): { kind: 'rosc' | 'rearrest', before: Treatment[], after: Treatment[] } | null => {
-  let last = -1; let kind: 'rosc' | 'rearrest' = 'rosc';
-  treatments.forEach((t, i) => {
-    if (isRoscName(t.name)) { last = i; kind = 'rosc'; } else if (t.name.startsWith('Rearrest')) { last = i; kind = 'rearrest'; }
-  });
-  return last < 0 ? null : { kind, before: treatments.slice(0, last), after: treatments.slice(last + 1) };
+  let lastRosc = -1;
+  treatments.forEach((t, i) => { if (isRoscName(t.name)) lastRosc = i; });
+  // A rearrest after the latest ROSC is a 'Rearrest' entry (the Add Tx menu logs one) or, when the Rearrest button on the home screen was
+  // used (it logs nothing itself), the first shock or disarm after the ROSC.
+  let rearrestAt = -1;
+  for (let i = lastRosc + 1; i < treatments.length && lastRosc >= 0; i++) {
+    const id = getTreatmentIdentity(treatments[i].name);
+    if (treatments[i].name.startsWith('Rearrest') || id === 'Shock' || id === 'Disarm') { rearrestAt = i; break; }
+  }
+  if (rearrestAt >= 0) return { kind: 'rearrest', before: treatments.slice(0, rearrestAt), after: treatments.slice(rearrestAt + 1) };
+  if (lastRosc >= 0) return { kind: 'rosc', before: treatments.slice(0, lastRosc), after: treatments.slice(lastRosc + 1) };
+  return null;
 };
 type PharmaInfo = { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean };
 // The total (without the dose count) and, for two or more doses, how big each one was: "of 1mg" when they were all the same, "ranging from 50 to 100mcg" when they weren't
@@ -5660,7 +5667,7 @@ const buildHandoverContent = (
     if (seq.length || !episodes.length || rearrestAfterLast) closeEpisode(false, tx.length - 1);
   }
   const rhythm = handoverRhythmStatus(state);
-  const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => i > lastRoscIdx && x.name.startsWith('Rearrest'));
+  const rearrestSince = lastRoscIdx >= 0 && tx.some((x, i) => { if (i <= lastRoscIdx) return false; const id = getTreatmentIdentity(x.name); return x.name.startsWith('Rearrest') || id === 'Shock' || id === 'Disarm'; });      // a shock or disarm after the ROSC is a rearrest too (the home screen's Rearrest button logs no entry)
   // The time spent in arrest: the span from the start of management, less each ROSC period (from a ROSC to the rearrest that followed it)
   const arrestSeconds: number | null = (() => {
     if (episodes.length < 2 || durationSeconds == null) return null;
@@ -6420,7 +6427,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   ];
 
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
-  const cards = general
+  const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = general
     ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, eventsCard, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
