@@ -84,7 +84,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
   // Which notes have been read on each page, so going Back to a page that was
   // already cleared doesn't make anyone read its notes again.
   const readByScreen = useRef<Record<string, string[]>>({});
-  const [showingInfoBox, setShowingInfoBox] = useState(false);
   const [activeExplanation, setActiveExplanation] = useState<TutorialElement | null>(null);
   const [explanationPage, setExplanationPage] = useState(0);
 
@@ -209,7 +208,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
     setActiveExplanation(element);
     setExplanationPage(0);
     if (!element.morePages?.length) markRead(element.id);
-    setShowingInfoBox(true);
   };
 
   const markRead = (id: string) => {
@@ -223,7 +221,6 @@ const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({ onTimingNodes
       markRead(activeExplanation.id);
     }
     setActiveExplanation(null);
-    setShowingInfoBox(false);
     setExplanationPage(0);
   };
 

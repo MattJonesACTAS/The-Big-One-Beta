@@ -158,7 +158,7 @@ const ELAPSED_RAW: RawNode[] = [
       title: 'Give it a Go',
       description: "Choose any red or blue option to continue."
     }],
-    condition: (s, sf) => sf === true
+    condition: (_s, sf) => sf === true
   },
   {
     id: 'rhythmDemoAfterFirst', type: 'popup',
@@ -177,7 +177,7 @@ const ELAPSED_RAW: RawNode[] = [
       title: 'Give it a Go',
       description: "Select 'Delay Rhythm Check' to continue."
     }],
-    condition: (s, sf) => sf === true
+    condition: (_s, sf) => sf === true
   },
   {
     id: 'rhythmDemoRhythmCheckNow', type: 'popup',
@@ -196,7 +196,7 @@ const ELAPSED_RAW: RawNode[] = [
       title: 'ROSC',
       description: "Let's try the last remaining outcome, ROSC."
     }],
-    condition: (s, sf) => sf === true
+    condition: (_s, sf) => sf === true
   },
   {
     id: 'rhythmDemoRoscMode', type: 'popup',
@@ -218,7 +218,7 @@ const ELAPSED_RAW: RawNode[] = [
       title: "Give it a Go",
       description: "Choose any rhythm check outcome you like to finish up, then we'll carry on with the rest of the tutorial."
     }],
-    condition: (s, sf) => sf === true
+    condition: (_s, sf) => sf === true
   },
   {
     id: 'recalibrate', type: 'positioned', x: 25.4, y: 4.2, anchor: '[data-button="recalibrate"]',
@@ -420,14 +420,10 @@ const nodeById = (id: string): RawNode => {
 };
 const withOverrides = (id: string, overrides: Partial<RawNode>): RawNode => ({ ...nodeById(id), ...overrides });
 
-const ADRENALINE_LOGGED = (s: any) => s.treatments.some((t: any) => t.name.startsWith('Adrenaline push'));
 // Tx log only (General): Naloxone is logged from the home screen, then edited (or reordered / deleted) in the Tx log
 const NALOXONE_LOGGED = (s: any) => s.treatments.some((t: any) => t.name.startsWith('Naloxone') && !t.prior);
 const NALOXONE_HANDLED = (s: any) => !s.treatments.some((t: any) => t.name.startsWith('Naloxone'))
   || s.treatments.some((t: any) => t.name.startsWith('Naloxone') && (t.timeUnknown || t.edited));
-const ADRENALINE_HANDLED = (s: any) => !ADRENALINE_LOGGED(s)
-  || s.treatments.some((t: any) => t.name.startsWith('Adrenaline push') && (t.timeUnknown || t.edited));
-
 // --- Timers only: the same timers and the same rhythm check walkthrough as
 // Tx log & timers, but no Summary button/overlay, no dose picker, no weight,
 // and only rhythm check outcomes + adrenaline/amiodarone in Add Tx.
@@ -608,9 +604,7 @@ export function getTutorialNodes(mode: TutorialMode): GlobalNode[] {
 interface Props {
   appState: any;
   isShockForced?: boolean;
-  onExit: () => void;
   onNodeChange?: (globalNodeIndex: number, tutorialDone: boolean) => void;
-  isCaseClosed?: boolean;
   globalNodeIndex?: number;
   mode?: TutorialMode;
   // True while one of the app's own menus (Recalibrate, Change Mode, warnings...) is open: the
@@ -621,7 +615,7 @@ interface Props {
   intervalBaseline?: string | null;
 }
 
-export default function TutorialOverlay({ appState, isShockForced, onExit, onNodeChange, isCaseClosed, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed', appModalOpen = false, handoverOpen = false, intervalBaseline = null }: Props) {
+export default function TutorialOverlay({ appState, isShockForced, onNodeChange, globalNodeIndex: externalNodeIndex = 0, mode = 'elapsed', appModalOpen = false, handoverOpen = false, intervalBaseline = null }: Props) {
   const ALL_NODES = getTutorialNodes(mode);
   const [internalNodeIndex, setInternalNodeIndex] = useState(externalNodeIndex);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);

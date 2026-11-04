@@ -9,9 +9,6 @@ import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
-  RotateCcw, 
-  Pause, 
-  Play, 
   CheckCircle2, 
   FileText, 
   Plus, 
@@ -21,12 +18,7 @@ import {
   AlertTriangle,
   XCircle,
   X,
-  ShieldCheck,
-  Stethoscope,
-  Sliders,
   RefreshCw,
-  Hand,
-  User,
   Check,
   ClipboardList,
   MoreVertical,
@@ -891,7 +883,6 @@ export default function App() {
   const [weightInput, setWeightInput] = useState('');
   const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
-  const [useManualEntry, setUseManualEntry] = useState(false);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
   const [timingMode, setTimingMode] = useState<'elapsed' | 'log' | 'minimal' | null>(() => state.timingMode);
   // The mode the setup was last chosen in: choosing a different one before the case starts wipes what was entered as already applied
@@ -901,7 +892,7 @@ export default function App() {
   const [expandedMode, setExpandedMode] = useState<'elapsed' | 'log' | 'minimal' | null>(null);
 
   const [rhythmInterval, setRhythmInterval] = useState<'evens' | 'odds' | 'half-evens' | 'half-odds' | null>(() => state.rhythmInterval);
-  const [demoTick, setDemoTick] = useState(0); // drives animated timers on mode selection screen
+  const [, setDemoTick] = useState(0); // drives animated timers on mode selection screen
   const [isCaseClosed, setIsCaseClosed] = useState(() => {
     const saved = localStorage.getItem('theBigOneState');
     if (!saved) return false;
@@ -948,7 +939,6 @@ export default function App() {
     document.body.classList.toggle('viewing-previous-case', !!viewingPreviousCase);
     return () => document.body.classList.remove('viewing-previous-case');
   }, [viewingPreviousCase]);
-  const [showPauseWarning, setShowPauseWarning] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [showElapsedRecalibrate, setShowElapsedRecalibrate] = useState(false);
   const [showRecalibrateMenu, setShowRecalibrateMenu] = useState(false);
@@ -1005,7 +995,6 @@ export default function App() {
     }
   }, [isShockForced, editingTreatmentIndex]);
 
-  const [hasShownForcedShock, setHasShownForcedShock] = useState(false);
   const lastBeepSecond = useRef<number | null>(null);
   const hasAutoClosedAt10 = useRef<boolean>(false);
   const previousCountdown = useRef<number | null>(null);
@@ -1118,7 +1107,6 @@ export default function App() {
     setPaedWeightMethod(null);
     setPaedAgeLabel('');
     setCatchupElapsed({ hrs: 0, mins: 0, secs: 0 });
-    setUseManualEntry(false);
     setCatchupTxMode(false);
     setPriorTxs([]);
     setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 }); setLastSetupMode(null);
@@ -1141,7 +1129,6 @@ export default function App() {
     setPaedWeightMethod(null);
     setPaedAgeLabel('');
     setCatchupElapsed({ hrs: 0, mins: 0, secs: 0 });
-    setUseManualEntry(false);
     setCatchupTxMode(false);
     setPriorTxs([]);
     setPriorCounts({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 }); setLastSetupMode(null);
@@ -1593,13 +1580,6 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openWeightChange = () => {
-    setNewWeightInput(String(state.patientWeight ?? ''));
-    setNewPatientType(state.patientType as 'adult' | 'paed');
-    if (state.patientType === 'paed' && state.patientAge) { setNewPaedWeightMethod('age'); setNewPaedAgeLabel(state.patientAge); }
-    else { setNewPaedWeightMethod('weight'); setNewPaedAgeLabel(null); }
-    setShowWeightChange(true);
-  };
   // The Handover sits in the home screen box, under any screen that opens over it. The forced rhythm check popup simply covers it
   // (and it's still there when the popup is answered); a screen the crew opens themselves (a tab, Add Tx) takes its place.
   useEffect(() => { if (showHandover && state.currentOverlay && state.currentOverlay !== 'tutorial' && !isShockForced) setShowHandover(false); }, [state.currentOverlay]);
@@ -1622,7 +1602,6 @@ export default function App() {
     if (showTutorialModeBlocked) { setShowTutorialModeBlocked(false); return; }
     if (showCloseWarning) { setShowCloseWarning(false); return; }
     if (showEndWarning) { setShowEndWarning(false); return; }
-    if (showPauseWarning) { setShowPauseWarning(false); return; }
     if (showResetWarning) { setShowResetWarning(false); return; }
     if (showPatternSwitchModal) { setShowPatternSwitchModal(false); return; }
 
@@ -1655,7 +1634,7 @@ export default function App() {
       else if (catchupStep === 2) setCatchupStep(6);
       else if (catchupStep === 3) setCatchupStep(2);
       else if (catchupStep === 7) setCatchupStep(timingMode === 'minimal' ? 6 : 3);
-      else if (catchupStep === 4) { setCatchupStep(7); setUseManualEntry(false); }
+      else if (catchupStep === 4) { setCatchupStep(7); }
       return;
     }
 
@@ -1806,7 +1785,6 @@ export default function App() {
                   nextRound += 1;
                   nextOvertime = 0;
                   hasAutoClosedAt10.current = false;
-                  setHasShownForcedShock(false);
                 }
               } else {
                 // Fallback fixed 2-minute cycle with a 6-second overtime phase
@@ -1822,7 +1800,6 @@ export default function App() {
                   nextRound += 1;
                   nextOvertime = 0;
                   hasAutoClosedAt10.current = false;
-                  setHasShownForcedShock(false);
                 }
               }
             } else {
@@ -1879,39 +1856,6 @@ export default function App() {
       sentinel = null;
     };
   }, [state.running]);
-
-  const togglePause = () => {
-    setState(prev => {
-      // A delayed rhythm check is already holding the timer; pausing on top
-      // of that would re-anchor it when unpaused and lose the delay.
-      if (prev.rhythmCheckDelayedAt != null) return prev;
-      // Toggle rhythm check pause, but keep elapsed timer running
-      if (!prev.rhythmCheckPaused) {
-        // Pausing rhythm check - freeze the countdown by capturing current value
-        const currentCountdown = Math.max(0, prev.rhythmCheckTarget - prev.elapsedSeconds);
-        setShowPauseWarning(false);
-        return {
-          ...prev,
-          rhythmCheckPaused: true,
-          frozenCountdown: currentCountdown  // Store the frozen countdown value
-        };
-      } else {
-        // Unpausing rhythm check - adjust target to maintain the frozen countdown
-        const newTarget = prev.elapsedSeconds + (prev.frozenCountdown || 0);
-        return {
-          ...prev,
-          rhythmCheckPaused: false,
-          rhythmCheckTarget: newTarget,
-          frozenCountdown: undefined  // Clear frozen value
-        };
-      }
-    });
-  };
-
-  const confirmPause = () => {
-    // Simply toggle the pause state without resetting the timer
-    togglePause();
-  };
 
   const resetTimer = () => {
     setState(prev => ({
@@ -2272,7 +2216,6 @@ export default function App() {
     
     // Reset the forced shock flag when Shock/Disarm is applied (rhythm check resets to 2:00)
     if (isRhythmOutcomeName) {
-      setHasShownForcedShock(false);
       previousCountdown.current = null; // Reset countdown tracking
     }
     
@@ -2584,7 +2527,6 @@ export default function App() {
     setDisregardAmiodarone(null);
     setShowLoggedNotification(false);
     setIsShockForced(false);
-    setHasShownForcedShock(false);
     setCatchupStep(1);
     setWeightType(null);
     setPaedWeightMethod(null);
@@ -2777,20 +2719,13 @@ export default function App() {
           <TutorialOverlay
             appState={state}
             isShockForced={isShockForced}
-            isCaseClosed={isCaseClosed}
             globalNodeIndex={tutorialNodeIndex}
             mode={timingMode ?? 'elapsed'}
-            appModalOpen={showEndWarning || showPauseWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
+            appModalOpen={showEndWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
             handoverOpen={showHandover && !state.currentOverlay}
             intervalBaseline={tutorialIntervalBaseline}
-            onNodeChange={(nodeIndex, done) => {
+            onNodeChange={(nodeIndex) => {
               setTutorialNodeIndex(nodeIndex);
-            }}
-            onExit={() => {
-              setTutorialMode(false);
-              setTutorialNodeIndex(0);
-              setState(INITIAL_STATE);
-              setShowCatchup(true);
             }}
           />
         )}
@@ -2886,12 +2821,6 @@ export default function App() {
       )}
       {/* Top Controls */}
       <div className={`grid gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0 ${showHandoverBtn ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        {timingMode !== 'log' && timingMode !== 'elapsed' && timingMode !== 'minimal' && (
-          <button onClick={confirmPause} className="bg-neutral-200 p-2.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 btn-base">
-            {(state.running && !state.rhythmCheckPaused) ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4" />} 
-            {(state.running && !state.rhythmCheckPaused) ? 'Pause' : 'Play'}
-          </button>
-        )}
         <button 
           onClick={() => (timingMode === 'minimal' ? openTimerRecalibrate() : setShowRecalibrateMenu(true))} 
           disabled={tutorialRhythmDemoActive}
@@ -3010,7 +2939,6 @@ export default function App() {
                 <Overlay
                   key={state.currentOverlay}
                   type={state.currentOverlay as OverlayType}
-                  onClose={() => { setState(p => ({ ...p, currentOverlay: null })); setEditingTreatmentIndex(null); }}
                   addTreatment={editingTreatmentIndex !== null ? editTreatment : addTreatment}
                   state={state}
                   pharmaSummary={pharmaSummary}
@@ -3024,7 +2952,6 @@ export default function App() {
                   onEditTreatment={handleEditTreatment}
                   editingTreatmentIndex={editingTreatmentIndex}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))}
-                onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
                 />
               )}
             </AnimatePresence>
@@ -3034,20 +2961,13 @@ export default function App() {
               <TutorialOverlay
                 appState={state}
                 isShockForced={isShockForced}
-                isCaseClosed={isCaseClosed}
                 globalNodeIndex={tutorialNodeIndex}
                 mode={timingMode ?? 'elapsed'}
-                appModalOpen={showEndWarning || showPauseWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
+                appModalOpen={showEndWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
             handoverOpen={showHandover && !state.currentOverlay}
                 intervalBaseline={tutorialIntervalBaseline}
-                onNodeChange={(nodeIndex, done) => {
+                onNodeChange={(nodeIndex) => {
                   setTutorialNodeIndex(nodeIndex);
-                }}
-                onExit={() => {
-                  setTutorialMode(false);
-                  setTutorialNodeIndex(0);
-                  setState(INITIAL_STATE);
-                  setShowCatchup(true);
                 }}
               />
             )}
@@ -3079,7 +2999,7 @@ export default function App() {
               {/* Delayed rhythm check - full circle is tap target. Counts up how
                   long the check is overdue; tapping reopens the rhythm check
                   popup. No automatic re-prompt - this ring is the reminder. */}
-              {state.rhythmCheckDelayedAt != null && !state.isROSCMode && timingMode !== 'log' ? (
+              {state.rhythmCheckDelayedAt != null && !state.isROSCMode ? (
                 <>
                   <button
                     onClick={resumeDelayedRhythmCheck}
@@ -3228,7 +3148,6 @@ export default function App() {
               <Overlay
                 key="summary"
                 type="summary"
-                onClose={() => { setState(p => ({ ...p, currentOverlay: null })); setEditingTreatmentIndex(null); }}
                 addTreatment={addTreatment}
                 state={state}
                 pharmaSummary={pharmaSummary}
@@ -3240,7 +3159,6 @@ export default function App() {
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
                 onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))}
-                onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
               />
             )}
           </AnimatePresence>
@@ -3257,7 +3175,6 @@ export default function App() {
               <Overlay 
                 key={state.currentOverlay}
                 type={state.currentOverlay as OverlayType} 
-                onClose={() => { setState(p => ({ ...p, currentOverlay: null })); setEditingTreatmentIndex(null); }}
                 addTreatment={editingTreatmentIndex !== null ? editTreatment : addTreatment}
                 state={state}
                 pharmaSummary={pharmaSummary}
@@ -3271,7 +3188,6 @@ export default function App() {
                 onEditTreatment={handleEditTreatment}
                 editingTreatmentIndex={editingTreatmentIndex}
                   onUpdateInfusionDose={(drug, dose) => setState(prev => ({ ...prev, infusionDoses: { ...prev.infusionDoses, [drug]: dose } }))} onUpdateInfusionUnit={(drug, unit) => setState(prev => ({ ...prev, infusionUnits: { ...prev.infusionUnits, [drug]: unit } }))}
-                onHandover={tutorialMode ? undefined : () => { setShowHandover(true); setState(p => ({ ...p, currentOverlay: null })); }}
               />
             )}
           </AnimatePresence>
@@ -3293,20 +3209,13 @@ export default function App() {
             <TutorialOverlay
               appState={state}
               isShockForced={isShockForced}
-              isCaseClosed={isCaseClosed}
               globalNodeIndex={tutorialNodeIndex}
               mode={timingMode ?? 'elapsed'}
-              appModalOpen={showEndWarning || showPauseWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
+              appModalOpen={showEndWarning || showRecalibrateMenu || showWeightChange || showModeChange || showElapsedRecalibrate || showResetWarning || showPatternSwitchModal || showCloseWarning || showTutorialModeBlocked}
             handoverOpen={showHandover && !state.currentOverlay}
               intervalBaseline={tutorialIntervalBaseline}
-              onNodeChange={(nodeIndex, done) => {
+              onNodeChange={(nodeIndex) => {
                 setTutorialNodeIndex(nodeIndex);
-              }}
-              onExit={() => {
-                setTutorialMode(false);
-                setTutorialNodeIndex(0);
-                setState(INITIAL_STATE);
-                setShowCatchup(true);
               }}
             />
           )}
@@ -3379,7 +3288,7 @@ export default function App() {
             <motion.div key="handover" className="absolute inset-0 z-[45]"
               initial={{ y: '-100%' }} animate={{ y: 0 }} exit={{ y: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.8 }}>
-              <HandoverOverlay embedded state={state} pharmaSummary={pharmaSummary} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
+              <HandoverOverlay embedded state={state} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -3491,7 +3400,6 @@ export default function App() {
                         setTimingMode(null);          // nothing is pre-chosen: a mode picked in an earlier, abandoned setup isn't kept
                         setExpandedMode(null);
                         setCatchupStep(6);
-                        setUseManualEntry(true);
                       }} 
                       className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white p-5 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
                     >
@@ -3829,7 +3737,6 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setCatchupStep(7);
-                        setUseManualEntry(false);
                       }} 
                       className="bg-neutral-100 text-neutral-700 p-3 rounded-xl font-bold btn-base"
                     >
@@ -4006,7 +3913,7 @@ export default function App() {
                         disabled={showInteractiveTutorial && !catchupNodeCleared}
                         className={`p-3 rounded-xl font-bold btn-base ${showInteractiveTutorial && !catchupNodeCleared ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
                       >
-                        {timingMode === 'log' ? 'Start Case' : 'Next'}
+                        Next
                       </button>
                     </div>
                   </div>
@@ -4166,21 +4073,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {showPauseWarning && (
-        <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Pause Timer?</h2>
-            <p className="text-neutral-500 mb-8">The arrest timer will pause until you resume.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowPauseWarning(false)} className="bg-neutral-100 p-4 rounded-xl font-bold text-neutral-700 btn-base">Cancel</button>
-              <button onClick={togglePause} className="bg-red-600 p-4 rounded-xl font-bold text-white btn-base">Pause</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
 
       {showRecalibrateMenu && (
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
@@ -4651,60 +4543,6 @@ function ElapsedTimePicker({ value, onChange }: { value: { hrs: number, mins: nu
   );
 }
 
-function TimePicker({ value, onChange, maxSeconds }: { value: { mins: number, secs: number }, onChange: (v: { mins: number, secs: number }) => void, maxSeconds?: number }) {
-  const adjust = (type: 'mins' | 'secs', delta: number) => {
-    const newVal = { ...value };
-    if (type === 'mins') {
-      newVal.mins = Math.max(0, newVal.mins + delta);
-    } else {
-      const totalSecs = newVal.mins * 60 + newVal.secs + delta;
-      if (totalSecs < 0) return; // Don't go below 0:00
-      newVal.mins = Math.floor(totalSecs / 60);
-      newVal.secs = totalSecs % 60;
-    }
-    
-    // Enforce max limit if provided
-    if (maxSeconds !== undefined) {
-      const totalSeconds = newVal.mins * 60 + newVal.secs;
-      if (totalSeconds > maxSeconds) {
-        return;
-      }
-    }
-    
-    onChange(newVal);
-  };
-
-  return (
-    <div className="flex items-center justify-center gap-4">
-      {/* Minutes column */}
-      <div className="flex flex-col items-center">
-        <button onClick={() => adjust('mins', 1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-2">{value.mins}</div>
-        <button onClick={() => adjust('mins', -1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
-        <span className="text-neutral-400 font-bold uppercase text-xs mt-2">min</span>
-      </div>
-      
-      <div className="text-5xl font-bold text-neutral-400 mb-8">:</div>
-      
-      {/* Seconds column with three sets of arrows */}
-      <div className="flex flex-col items-center">
-        <div className="flex gap-2">
-          <button onClick={() => adjust('secs', 10)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-          <button onClick={() => adjust('secs', 1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▲</button>
-        </div>
-        
-        <div className="text-5xl font-bold text-neutral-900 tabular-nums my-2">{value.secs.toString().padStart(2, '0')}</div>
-        
-        <div className="flex gap-2">
-          <button onClick={() => adjust('secs', -10)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
-          <button onClick={() => adjust('secs', -1)} className="p-2 bg-neutral-100 rounded-lg text-lg font-bold text-neutral-400 hover:text-neutral-900">▼</button>
-        </div>
-        
-        <span className="text-neutral-400 font-bold uppercase text-xs mt-2">sec</span>
-      </div>
-    </div>
-  );
-}
 
 function CounterItem({ label, value, onChange, activeBorderClass }: { label: string, value: number, onChange: (v: number) => void, activeBorderClass?: string }) {
   return (
@@ -4719,10 +4557,9 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { 
+function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onUpdateInfusionUnit }: { 
   key?: string,
   type: OverlayType, 
-  onClose: () => void, 
   addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void,
   state: AppState,
   pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
@@ -4736,8 +4573,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
   onEditTreatment?: (idx: number) => void,
   editingTreatmentIndex?: number | null,
   onUpdateInfusionDose?: (drug: string, dose: string) => void,
-  onUpdateInfusionUnit?: (drug: string, unit: string) => void,
-  onHandover?: () => void
+  onUpdateInfusionUnit?: (drug: string, unit: string) => void
 }) {
   const isTop = ['reversibles', 'rosc', 'phea', 'vitals'].includes(type);
   
@@ -4754,7 +4590,7 @@ function Overlay({ type, onClose, addTreatment, state, pharmaSummary, isShockFor
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
         {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
-        {type === 'summary' && <SummaryOverlay onHandover={onHandover} state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />}
+        {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
           <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
         ) : (
@@ -5491,51 +5327,6 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
   );
 }
 
-function SummaryStats({ state, pharmaSummary }: { state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }> }) {
-  const shockCount = state.treatments.filter(t => t.name.includes('Shock') && !t.name.includes('Disarm')).length;
-  const disarmCount = state.treatments.filter(t => t.name.includes('Disarm') && !isRoscName(t.name)).length;
-  const roscCount = state.treatments.filter(t => isRoscName(t.name)).length;
-  const patientLabel = state.patientType === 'adult'
-    ? `Adult · ${state.patientWeight}kg`
-    : state.patientType === 'paed'
-    ? state.patientAge ? `Paediatric · ${state.patientAge} · ${state.patientWeight}kg` : `Paediatric · ${state.patientWeight}kg`
-    : null;
-
-  return (
-    <div className="space-y-6">
-      {patientLabel && (
-        <div className="rounded-xl border border-neutral-100">
-          <div className="bg-neutral-50 text-neutral-500 px-4 py-3 font-bold text-xs tracking-wider text-center">PATIENT</div>
-          <div className="bg-white px-4 py-3">
-            <span className="text-[17px] font-bold text-neutral-900 text-center block">{patientLabel}</span>
-          </div>
-        </div>
-      )}
-       <div>
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">ARREST SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm">
-          <StatRow label="CPR Rounds" value={state.cprRound} />
-          <StatRow label="Shocks" value={shockCount} color="text-red-600" />
-          <StatRow label="Disarmed" value={disarmCount} color="text-blue-600" />
-          <StatRow label="ROSC" value={roscCount} color="text-emerald-600" />
-        </div>
-      </div>
-
-      <div>
-        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-t-lg font-bold text-sm tracking-wider text-center">PHARMA SUMMARY</div>
-        <div className="bg-white border-x border-b border-neutral-100 rounded-b-lg divide-y divide-neutral-50 shadow-sm min-h-[60px]">
-          {Object.keys(pharmaSummary).length === 0 ? (
-            <div className="p-4 text-neutral-300 italic text-sm">No medications recorded</div>
-          ) : (
-            Object.entries(pharmaSummary).map(([name, info]) => (
-              <StatRow key={name} label={name} value={info.display} />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
   const v = vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
@@ -5635,7 +5426,6 @@ const HANDOVER_HEADING_PLAIN = 'block text-center text-[14px] font-bold text-neu
 const HANDOVER_HEADING_COMPACT = 'hh block text-center px-[52px] text-[14px] font-bold text-neutral-700 uppercase tracking-wide mb-1';
 const HANDOVER_RR = ['6', '8', '10', '12', '14', '16', '18', '20', '24'];
 const HANDOVER_ALLERGIES = ['Yes', 'No', 'Unknown'];
-const HANDOVER_NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 // Airways from least to most advanced: only the most advanced one that worked is listed
 const HANDOVER_AIRWAY_LADDER = ['NPA', 'OPA', 'LMA', 'ETT', 'FONA'];
 const HANDOVER_OTHER_KNOWN = ['Corpuls', 'Extrication', 'Pacing', 'Reassurance provided', 'Suction', 'IGT', 'IO access', 'IV access', 'Rearrest', 'Close case'];
@@ -5681,18 +5471,11 @@ const parseAgeLabel = (label: string | null): { value: string, unit: string } | 
   const m = label.match(/^(\d+)\s*(month|year)/i);
   return m ? { value: m[1], unit: /month/i.test(m[2]) ? 'Months' : 'Years' } : null;
 };
-const ageText = (value: string, unit: string): string => {
-  if (!value) return '';
-  if (value === '0' && unit === 'Months') return 'Newborn';
-  const u = unit === 'Months' ? 'month' : 'year';
-  return `${value} ${u}${value === '1' ? '' : 's'}`;
-};
 const genderText = (h: HandoverFields): string => (h.gender === 'Other' ? (h.genderOther.trim() || 'Other') : h.gender);
-const allergyText = (h: HandoverFields): string => (h.allergies === 'Yes' ? (h.allergiesOther.trim() || 'allergies (not specified)') : h.allergies);
 
 type HandoverInfoItem = { t: string, sub?: string[] };
 type HandoverArrest = {
-  rhythm: { text: string, urgent: boolean } | null;   // the next rhythm check (arrest with timers only)
+  rhythm: { text: string, urgent: boolean, start: string, end: string } | null;   // the next rhythm check (arrest with timers only): said before the handover starts and again at the end
   durationSeconds: number | null;                     // first rhythm check to now, or to ROSC
   arrestSeconds: number | null;                       // after a rearrest or with two or more ROSCs: the time actually spent in arrest (the ROSC periods taken out)
   thisArrestSeconds: number | null;                   // in arrest again: how long since the latest rearrest
@@ -5728,7 +5511,7 @@ type HandoverContent = {
   weight: string;
   defaultAge: { value: string, unit: string } | null;
   airway: string;
-  rhythm: { text: string, urgent: boolean } | null;
+  rhythm: { text: string, urgent: boolean, start: string, end: string } | null;
   arrest: HandoverArrest;
   information: HandoverInfoItem[];
   signs: HandoverSign[];
@@ -5744,20 +5527,18 @@ const spokenDuration = (total: number): string => {
   return m && sec ? `${mTxt} and ${sTxt}` : m ? mTxt : sTxt;
 };
 
-// When the next rhythm check is due, as on the home screen. Only while the patient is in arrest and the
-// app is running the rhythm check timer (not Tx log only, not ROSC).
-const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean } | null => {
+// When the next rhythm check is due, said before the handover starts and again at the end. Only while the patient is in
+// arrest and the app is running the rhythm check timer (not Tx log only, not ROSC). It is the timer, or 'overdue' if the check was delayed.
+const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean, start: string, end: string } | null => {
   if (state.timingMode === 'log' || state.isROSCMode || !state.running) return null;
-  if (state.rhythmCheckDelayedAt != null) return { text: 'Our rhythm check is delayed', urgent: true };
-  if (state.rhythmCheckPaused) return { text: `Our rhythm check timer is paused with ${spokenDuration(state.frozenCountdown || 0)} to go`, urgent: false };
-  const left = state.rhythmCheckTarget - state.elapsedSeconds;
-  if (state.rhythmCheckOvertime > 0 || left <= 0) return { text: 'Our rhythm check is due now', urgent: true };
-  return { text: `Our next rhythm check is in ${spokenDuration(left)}`, urgent: left <= 30 };
+  const before = 'Before I start handover, be aware that';
+  if (state.rhythmCheckDelayedAt != null) return { text: 'Our rhythm check is overdue', urgent: true, start: `${before} our rhythm check is overdue`, end: 'The rhythm check is now overdue' };
+  const left = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
+  return { text: `Our next rhythm check is in ${spokenDuration(left)}`, urgent: left <= 30, start: `${before} our next rhythm check is in ${spokenDuration(left)}`, end: `The next rhythm check is now due in ${spokenDuration(left)}` };
 };
 
 const buildHandoverContent = (
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
   h: HandoverFields
 ): HandoverContent => {
   const tx = state.treatments;
@@ -6001,17 +5782,6 @@ const buildHandoverContent = (
   };
 };
 
-function HandoverButton({ onClick, className = '' }: { onClick: () => void, className?: string }) {
-  return (
-    <button
-      onClick={onClick}
-      data-button="handover"
-      className={`w-full flex items-center justify-center gap-2 bg-[#4a6fa5] text-white py-3 px-4 rounded-xl font-bold btn-base ${className}`}
-    >
-      <ClipboardList size={20} /> Create handover
-    </button>
-  );
-}
 
 function HandoverSection({ letter, title, children, muted = false, done }: { letter: string, title: string, children: React.ReactNode, muted?: boolean, done?: boolean }) {
   return (
@@ -6168,7 +5938,7 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
   );
 }
 
-function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onView, onFinish, onClose, embedded = false, barEl, resumeKey, onPage }: {
+function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, onClose, embedded = false, barEl, resumeKey, onPage }: {
   barEl?: HTMLElement | null,
   resumeKey?: string | null,
   onPage?: (k: string) => void,
@@ -6177,7 +5947,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   onView?: (v: 'fill' | 'read') => void,
   onWeight?: (w: number, type: 'adult' | 'paed', ageLabel: string | null) => void,
   state: AppState,
-  pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>,
   onField: (key: keyof HandoverFields, value: string) => void,
   onVital: (key: VitalKey, value: string) => void,
   onClose: () => void
@@ -6200,13 +5969,12 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const [rrOtherOpen, setRrOtherOpen] = useState(false);
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
-  const content = buildHandoverContent(general ? { ...state, isROSCMode: true } : state, pharmaSummary, h);
+  const content = buildHandoverContent(general ? { ...state, isROSCMode: true } : state, h);
   const vit = state.vitals;
   const inRosc = state.isROSCMode || general;       // a General handover asks the same primary survey and vital signs as a ROSC one
   // A paediatric age the app already knows is filled in until it's changed
   const ageValue = state.handover?.age ?? content.defaultAge?.value ?? '';
   const ageUnit = state.handover?.ageUnit || content.defaultAge?.unit || 'Years';
-  const age = ageText(ageValue, ageUnit);
   // Things marked Unknown (instead of being left blank). Typing or choosing a value clears Unknown; choosing Unknown clears the value.
   const unkList = (h.unknowns || '').split(',').filter(Boolean);
   const unk = (k: string) => unkList.includes(k);
@@ -6240,20 +6008,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
 
   // A free-text field: white, left-aligned, inset, with a pencil and a placeholder, so it doesn't look like a button
   const textFieldClass = `w-full bg-white border-2 border-neutral-400 shadow-inner rounded-lg pl-4 pr-10 ${compact ? 'py-2.5 text-[16px]' : 'py-4 text-[17px]'} text-left text-neutral-900 outline-none focus:border-[#4a6fa5] placeholder:text-neutral-400 placeholder:italic`;
-  const inputClass = `w-full bg-neutral-50 border border-neutral-200 rounded-lg px-4 ${compact ? 'py-2.5 text-[16px]' : 'py-4 text-[17px]'} text-neutral-900 outline-none focus:border-[#4a6fa5]`;
   const labelClass = compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING;
-  const smallLabel = 'text-xs font-bold text-neutral-500 uppercase tracking-wide';
-  const bullets = (lines: (string | HandoverInfoItem)[]) => (
-    <ul className="space-y-1">{lines.map((item, i) => {
-      const l = typeof item === 'string' ? { t: item } : item;
-      return (
-        <li key={i} className="text-[15px] text-neutral-800">
-          <div className="flex gap-2"><span>•</span><span>{l.t}</span></div>
-          {l.sub && <ul className="ml-6 mt-1 space-y-1">{l.sub.map((x, j) => <li key={j} className="flex gap-2"><span>–</span><span>{x}</span></li>)}</ul>}
-        </li>
-      );
-    })}</ul>
-  );
   const text = (key: keyof HandoverFields, label: string, extra?: { rows?: number, words?: boolean, prompt?: boolean, clearUnknown?: string, placeholder?: string, state?: 'missing' | 'done' | 'none', footer?: React.ReactNode }) => (
     <HandoverBox label={label} state={extra?.state ?? (!extra?.prompt ? 'none' : h[key].trim() ? 'done' : 'missing')}>
     <label className="block"><span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>{label}</span>
@@ -6312,7 +6067,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const accessFromLog = logAccessAny || state.timingMode !== 'minimal';
   const ivVal = unk('access') ? '' : (h.accessIv !== '' ? h.accessIv : (accessFromLog ? String(Math.min(txLog.iv, 3)) : ''));
   const ioVal = unk('access') ? '' : (h.accessIo !== '' ? h.accessIo : (accessFromLog ? String(Math.min(txLog.io, 3)) : ''));
-  const airwayDone = !!airwayVal;
   const accessDone = unk('access') || (ivVal !== '' && ioVal !== '');
 
   // What's still to fill in, page by page (the Review page's list, and what stops Next). Unknown counts as an answer.
@@ -6373,10 +6127,8 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   // --- Read out: one card at a time, written as the words to say. Anything missing is shown amber with a question mark.
   const miss = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   // A sentence broken over lines: commas between the lines and a full stop after the last
-  const withCommas = (lines: React.ReactNode[]) => lines.map((n, i) => <div key={i}>{n}{i < lines.length - 1 ? ',' : '.'}</div>);
   // The clauses run on as one sentence, with no line break after each comma
   const oneSentence = (parts: React.ReactNode[]) => [<div key="s">{parts.map((n, i) => <React.Fragment key={i}>{n}{i < parts.length - 1 ? ', ' : '.'}</React.Fragment>)}</div>];
-  const lcFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
   const cap = (x: React.ReactNode) => (typeof x === 'string' && x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
   const sub = (items: React.ReactNode[]) => (
     <div className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x)}</div>)}</div>
@@ -6391,7 +6143,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const rhythmWords = (r: string) => (r === 'pVT' ? 'pulseless VT' : r);
   // inside a sentence "asystole" has no capital (VF, PEA and pulseless VT are as written)
   const rhythmSentence = (r: string) => (r === 'Asystole' ? 'asystole' : rhythmWords(r));
-  const bandWords: Record<string, string> = { 'Under 2 min': 'under 2 minutes', '2–5 min': '2 to 5 minutes', '5–10 min': '5 to 10 minutes', 'Over 10 min': 'over 10 minutes' };
   const lines = (txt: string) => txt.split('\n').map(l => l.trim()).filter(Boolean);
 
   // "Our patient is a 67 year old male, estimated weight 80kg."
@@ -6489,9 +6240,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   } else if (a.durationSeconds != null) {
     shocksSaid = true;
     arrestNodes.push(<div key="d">{`We have been running arrest management for ${approxPhrase(a.durationSeconds)} and ${shocksClause('delivered', true)}.`}</div>);
-    if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   }
-  else if (a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   // A rearrest after ROSC: the arrest we're handing over is not the first one
   // The latest rearrest (when, and into what) is said here, with the ROSC it followed, and not again in the rhythm list
   const rearrestBits = (e: typeof a.episodes[number]) => {
@@ -6507,7 +6256,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     ...(pheaAfterRosc ? [<div key="phea">To manage their presentation at that point we needed to perform emergency anaesthesia.</div>] : []),
     <div key="rr2">{`They then rearrested${rearEp && rearEp.presenting ? ` into ${rhythmSentence(rearEp.presenting)}` : ''}${lastArrestAt ? ` at ${lastArrestAt}` : ''}${a.thisArrestSeconds != null ? `, which was ${agoPhrase(a.thisArrestSeconds)}` : ''}.`}</div>);
   else if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they ${rearrestClause}.`}</div>);
-  if (!a.inRosc && a.durationSeconds != null && a.arrestSeconds != null && a.rhythm) arrestNodes.push(<div key="r">{a.rhythm.text}.</div>);
   if (newShape) { shocksSaid = true; arrestNodes.push(<div key="d">{`They have spent ${approxPhrase(a.arrestSeconds!)} total in cardiac arrest and ${shocksClause('received', true)}.`}</div>); }
   if (!shocksSaid && !(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? `They ${shocksClause('received', false)}.` : `They ${shocksClause(a.roscCount === 0 ? 'delivered' : 'received', true)}.`}</div>);
   if (a.askLatestRhythm) {
@@ -6618,11 +6366,10 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   const gcsPart: React.ReactNode = vit.gcs ? gcsText : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
   const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
-  const rateOf = (kind: 'breath' | 'vent') => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
+  const rateOf = () => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
   const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
     : h.breathing === 'Unknown' ? "We don't know if they are breathing"
-    : <>{h.breathing === 'Breathing' ? 'They are spontaneously ventilating' : 'We are ventilating'}{rateOf('breath') ?? <> at a rate of {ampm('rate ?')}</>}</>;
-  const hrKnown = !!vit.hr, bpKnown = !!(vit.bpSys && vit.bpDia);
+    : <>{h.breathing === 'Breathing' ? 'They are spontaneously ventilating' : 'We are ventilating'}{rateOf() ?? <> at a rate of {ampm('rate ?')}</>}</>;
   const circPart: React.ReactNode = h.radialPulse === 'Present' ? 'Radial pulse is present'
     : h.radialPulse === 'Absent' ? 'Radial pulse is not present'
     : unk('pulse') ? "We don't know if there is a radial pulse"
@@ -6660,7 +6407,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
   const eventLines = !eventsApply ? [] : lines(h.pertinentEvents).map((l, i) => (i === 0 && !/^our patient\b/i.test(l)) ? `Our patient ${l}` : l);
   const eventsCard = { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{general ? pheaGeneral : null}</> };
   const arrestCards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
-    { key: 'I', title: 'I – Identification', body: oneSentence(idLines) },
+    { key: 'I', title: 'I – Identification', body: <>{a.rhythm ? <div>{a.rhythm.start}.</div> : null}{oneSentence(idLines)}</> },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     ...(eventLines.length || h.arrestStart === 'During' ? [eventsCard] : []),
     { key: 'M', title: 'M – What happened', body: whatNodes },
@@ -6669,7 +6416,7 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
     { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
     { key: 'T', title: 'T – Treatment', body: treatmentNodes },
     { key: 'AMBO', title: 'AMBO', body: ambo },
-    { key: 'END', title: 'Finish', body: <div className={`text-center ${compact ? 'text-[34px] pt-10' : 'text-[44px] pt-20'}`}>Any questions?</div> },
+    { key: 'END', title: 'Finish', body: <div className="text-center">{a.rhythm ? <div className={`${compact ? 'text-[20px] pt-6 pb-6' : 'text-[26px] pt-10 pb-10'} font-medium px-2`}>{a.rhythm.end}.</div> : null}<div className={`${compact ? 'text-[34px]' : 'text-[44px]'} ${a.rhythm ? '' : (compact ? 'pt-10' : 'pt-20')}`}>Any questions?</div></div> },
   ];
 
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
@@ -6916,7 +6663,6 @@ function HandoverOverlay({ state, pharmaSummary, onField, onVital, onWeight, onV
         };
         const bcls = (on: boolean) => `${compact ? 'py-1.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
         const head = compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING;
-        const sub2 = `${compact ? 'mt-2' : 'mt-3'} ${HANDOVER_HEADING_PLAIN}`;
         const COUNTS = ['0', '1', '2', '3'];
         return (
           <HandoverPageCard>
@@ -7197,7 +6943,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
   );
 }
 
-function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit, onHandover }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, onHandover?: () => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
+function SummaryOverlay({ state, pharmaSummary, onDelete, onMove, onEdit, onUpdateInfusionDose, onUpdateInfusionUnit }: { onUpdateInfusionUnit?: (drug: string, unit: string) => void, state: AppState, pharmaSummary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }>, onDelete?: (idx: number) => void, onMove?: (fromIdx: number, toIdx: number) => void, onEdit?: (idx: number) => void, onUpdateInfusionDose?: (drug: string, dose: string) => void }) {
   return (
     <div className="space-y-6 pb-20">
       <div data-tutorial-section="arrestSummary">
@@ -7301,7 +7047,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       
       // For Ondansetron paed, cap at 4mg
       if (selectedMed === 'Ondansetron' && dose.includes('/kg')) {
-        const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
         const mgMatch = cleanDose.match(/([\d.]+)mg/);
         if (mgMatch) {
           const calculated = parseFloat(mgMatch[1]);
@@ -7312,7 +7057,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
       
       // For Amiodarone paed, apply max dose caps
       if (selectedMed === 'Amiodarone' && state.patientType === 'paed') {
-        const weight = typeof state.patientWeight === 'number' ? state.patientWeight : parseFloat(String(state.patientWeight));
         const mgMatch = cleanDose.match(/([\d.]+)mg/);
         if (mgMatch) {
           const calculated = parseFloat(mgMatch[1]);
