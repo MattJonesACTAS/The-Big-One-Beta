@@ -6391,13 +6391,13 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const roscAt = a.rosc && a.rosc.clock ? t12(a.rosc.clock) : '';
   const newShape = !a.inRosc && a.roscCount >= 1 && a.arrestSeconds != null;      // a rearrest after ROSC: the story in order (ROSC, rearrest, rhythm check, total time and shocks)
   // The shocks are said in a sentence: "have received 3 shocks", "received 2 shocks", "have not received any shocks"
-  const shocksClause = (verb: 'received' | 'delivered', perfect: boolean) => a.shocks > 0
-    ? `${perfect ? 'have ' : ''}${verb} ${plural(a.shocks, 'shock', 'shocks')}`
+  const shocksClause = (verb: 'received' | 'delivered', perfect: boolean, inTotal = false) => a.shocks > 0
+    ? `${perfect ? 'have ' : ''}${verb} ${plural(a.shocks, 'shock', 'shocks')}${inTotal ? ' in total' : ''}`
     : `${perfect ? 'have not' : `did not ${verb === 'received' ? 'receive' : 'deliver'}`} ${perfect ? verb : ''}${perfect ? ' ' : ''}any shocks`.replace('  ', ' ');
   let shocksSaid = false;
   if (a.inRosc && a.ownChecks === 0 && a.roscCount >= 1) arrestNodes.push(<div key="d">{`We ${a.roscCount >= 2 ? 'have achieved' : 'achieved'} ROSC${a.roscCount >= 2 ? ` ${timesPhrase(a.roscCount)}, most recently` : ''}${roscAt ? ` at ${roscAt}` : ''}.`}</div>);
   else if (a.inRosc) {
-    if (a.arrestSeconds != null && a.roscCount >= 2) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They have spent ${haveSpentPhrase(a.arrestSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true)}.`}</div>); }
+    if (a.arrestSeconds != null && a.roscCount >= 2) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They have spent ${haveSpentPhrase(a.arrestSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true, true)}.`}</div>); }
     else if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.durationSeconds != null && a.rosc) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They were ${wereForPhrase(a.durationSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', false)}.`}</div>); }
@@ -6422,9 +6422,9 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   if (newShape) arrestNodes.push(
     <div key="rr">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? (a.roscCount === 1 ? ` at ${roscAt}` : `, most recently at ${roscAt}`) : ''}${rearEp && rearEp.rearrest && rearEp.rearrest.laterSeconds != null ? `, which lasted ${spanPhrase(rearEp.rearrest.laterSeconds)}` : ''}.`}</div>,
     ...(pheaAfterRosc ? [<div key="phea">To manage their presentation at that point we needed to perform emergency anaesthesia.</div>] : []),
-    <div key="rr2">{`They then rearrested${rearEp && rearEp.presenting ? ` into ${rhythmSentence(rearEp.presenting)}` : ''}${lastArrestAt ? ` at ${lastArrestAt}` : ''}${a.thisArrestSeconds != null ? `, which was ${agoPhrase(a.thisArrestSeconds)}` : ''}.`}</div>);
+    <div key="rr2">{`They then rearrested${lastArrestAt ? ` at ${lastArrestAt}` : ''}${a.thisArrestSeconds != null ? `, which was ${agoPhrase(a.thisArrestSeconds)}` : ''}.`}</div>);
   else if (!a.inRosc && a.roscCount >= 1) arrestNodes.push(<div key="rr">{`We ${a.roscCount === 1 ? 'achieved' : 'have achieved'} ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, ${a.roscCount === 1 ? 'at' : 'most recently at'} ${roscAt}` : ''}${pheaAfterRosc ? '. To manage their presentation at that point we needed to perform emergency anaesthesia' : ''}, but they ${rearrestClause}.`}</div>);
-  if (newShape) { shocksSaid = true; arrestNodes.push(<div key="d">{`They have spent ${haveSpentPhrase(a.arrestSeconds!, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true)}.`}</div>); }
+  if (newShape) { shocksSaid = true; arrestNodes.push(<div key="d">{`They have spent ${haveSpentPhrase(a.arrestSeconds!, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true, true)}.`}</div>); }
   if (!shocksSaid && !(a.inRosc && a.ownChecks === 0)) arrestNodes.push(<div key="p">{a.inRosc ? `They ${shocksClause('received', false)}.` : `They ${shocksClause(a.roscCount === 0 ? 'delivered' : 'received', true)}.`}</div>);
   if (a.askLatestRhythm) {
     // Arrest – Timers: both rhythms come from the crew
@@ -6445,21 +6445,30 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     const compactMulti = a.roscCount >= 2;      // two or more ROSCs: the ROSC count and the latest arrest or ROSC are said above, not each arrest's rhythms
     const useEpisodes = !compactMulti && anyRhythm && (a.roscCount >= 1 || a.others.length > 0 || (!!a.latest && a.latest !== a.firstRhythm));
     const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+    // After more than one arrest only the first arrest's first rhythm is said, then every rhythm check outcome of the most recent arrest (the one still going,
+    // or the one that ended in the latest ROSC). The arrests in between are left out: the ROSC count and the total time in arrest already show they happened.
+    const multiArrest = a.episodes.length >= 2;
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
     if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
-    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes || compactMulti ? `${a.roscCount >= 1 ? 'The very first rhythm' : 'The presenting rhythm'} was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
-    if (useEpisodes) {
-      a.episodes.forEach((e, i) => {
-        if (i > 0 && !(i === a.episodes.length - 1 && !a.inRosc && a.roscCount >= 1)) arrestNodes.push(<div key={`ra${i}`}>{`They ${rearrestBits(e)}.`}</div>);
+    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes || multiArrest ? `${a.roscCount >= 1 ? 'The very first rhythm' : 'The presenting rhythm'} was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
+    if (multiArrest) {
+      const lastE = a.episodes[a.episodes.length - 1];
+      const counts: { rhythm: string, n: number }[] = [];
+      [...(lastE.presenting ? [{ rhythm: lastE.presenting, n: 1 }] : []), ...lastE.then].forEach(c => { const f = counts.find(x => x.rhythm === c.rhythm); if (f) f.n += c.n; else counts.push({ rhythm: c.rhythm, n: c.n }); });
+      const items = counts.map(c => `${c.n} x ${cap(rhythmWords(c.rhythm))}`);
+      if (items.length) arrestNodes.push(<div key="th-last">{a.inRosc ? 'In the arrest before this ROSC we had:' : 'Since the rearrest we have had:'}{sub(items)}</div>);
+      if (!a.inRosc && a.latest) arrestNodes.push(<div key="l">Our latest rhythm was {rhythmSentence(a.latest)}.</div>);
+    } else {
+      if (useEpisodes) a.episodes.forEach((e, i) => {
         const items = e.then.map(c => `${c.n} x ${cap(rhythmWords(c.rhythm))}`);
-        if (items.length) arrestNodes.push(<div key={`th${i}`}>{i > 0 && i === a.episodes.length - 1 && !a.inRosc && a.roscCount >= 1 ? 'Since the rearrest we have had:' : 'We then had:'}{sub(items)}</div>);
+        if (items.length) arrestNodes.push(<div key={`th${i}`}>We then had:{sub(items)}</div>);
       });
+      // (in ROSC the list already ends "... and then ROSC": when its last rhythm is the last rhythm, saying it again is redundant)
+      const lastEp = a.episodes[a.episodes.length - 1];
+      const listEndsWith = lastEp && lastEp.endsWithRosc ? (lastEp.then.length ? lastEp.then[lastEp.then.length - 1].rhythm : lastEp.presenting) : '';
+      const latestRedundant = useEpisodes && a.inRosc && !!a.latest && a.latest === listEndsWith;
+      if (a.latest && !latestRedundant && (useEpisodes || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">{a.inRosc ? 'The last rhythm before ROSC' : 'Our latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
     }
-    // (in ROSC the list already ends "... and then ROSC": when its last rhythm is the last rhythm, saying it again is redundant)
-    const lastEp = a.episodes[a.episodes.length - 1];
-    const listEndsWith = lastEp && lastEp.endsWithRosc ? (lastEp.then.length ? lastEp.then[lastEp.then.length - 1].rhythm : lastEp.presenting) : '';
-    const latestRedundant = useEpisodes && a.inRosc && !!a.latest && a.latest === listEndsWith;
-    if (a.latest && !latestRedundant && (useEpisodes || compactMulti || a.firstState !== 'known' || a.latest !== a.firstRhythm)) arrestNodes.push(<div key="l">{a.inRosc ? 'The last rhythm before ROSC' : 'Our latest rhythm'} was {rhythmSentence(a.latest)}.</div>);
   }
   if (pheaAfterRosc && a.inRosc) arrestNodes.push(<div key="phea">To manage their presentation we then needed to perform emergency anaesthesia.</div>);
   // The summary is split over two pages so neither needs scrolling: the counts first, then the rhythms and any notes
