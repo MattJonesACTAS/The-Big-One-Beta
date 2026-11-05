@@ -4933,7 +4933,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
     { key: 'hr',   label: 'HR'           },
     { key: 'rr',   label: 'Spontaneous RR' },
-    { key: 'rrt',  label: 'Total RR' },
+    { key: 'rrt',  label: 'Total RR (spontaneous + supplementary)' },
     { key: 'spo2', label: 'SpO₂'         },
     { key: 'etco2',label: 'EtCO₂'        },
     { key: 'bpSys',label: 'Systolic BP'  },
@@ -4999,7 +4999,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
           }
           return (
             <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
-              <span className="text-[15px] font-bold text-neutral-800">{label}</span>
+              <span className="text-[15px] font-bold text-neutral-800">{label}{key === 'rrt' && <span data-vss-hint="rrt" className="block text-[12px] font-normal text-neutral-400">Only enter if ventilating</span>}</span>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -5433,7 +5433,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
     { label: 'ECG',     value: ecgShort(v), unit: '', lines: ecgLines(v) },
     { label: 'Spontaneous RR', value: v.rr, unit: 'br/min' },
-    { label: 'Total RR',  value: v.rrt ?? '', unit: 'br/min' },
+    { label: 'Total RR (spontaneous + supplementary)',  value: v.rrt ?? '', unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
@@ -6237,7 +6237,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   if (inRosc) {
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
     if (!spontAnswer) missing.breath.push('Spontaneously breathing');
-    else if (spontAnswer === 'Yes' && !vit.rr && !unk('rr')) missing.breath.push('Respiratory rate');
+    else if (spontAnswer === 'Yes' && !vit.rr && !unk('rr')) missing.breath.push('Spontaneous RR');
     if (!ventAnswer) missing.breath.push('Ventilation provided');
     else if (ventAnswer === 'Yes' && !vit.rrt && !unk('rrt')) missing.breath.push('Total respiratory rate');
   }
@@ -6530,7 +6530,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const totalRate: string | null = vit.rrt ? vit.rrt : null;
   const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
     : !ventAnswer ? <>{spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</> : spontAnswer === 'No' ? 'They are not breathing' : "We don't know if they are breathing"}, {ampm('ventilation ?')}</>
-    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are assisting them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
+    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are ventilating them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
     : spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</>
     : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
     : spontAnswer === 'No' ? 'They are not breathing, and we are not ventilating'
@@ -6721,11 +6721,11 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
       case 'breath': return (
         <HandoverPageCard>
           <HandoverChoice label="Spontaneously breathing?" options={['Yes', 'No', 'Unknown']} value={spontAnswer} onChange={setSpont} columns={3} />
-          {spontAnswer === 'Yes' && rateQuestion('rr', 'Respiratory rate')}
+          {spontAnswer === 'Yes' && rateQuestion('rr', 'Spontaneous RR')}
           {spontAnswer && (
             <HandoverChoice label="Ventilation provided?" options={['Yes', 'No']} value={ventAnswer} onChange={setVent} columns={2} />
           )}
-          {ventAnswer === 'Yes' && rateQuestion('rrt', spontAnswer === 'No' ? 'Ventilation rate' : 'Total respiratory rate (theirs plus ours)')}
+          {ventAnswer === 'Yes' && rateQuestion('rrt', spontAnswer === 'No' ? 'Ventilation rate' : 'Total respiratory rate (theirs plus yours)')}
           {showCirc && (
               <HandoverBox label="Radial pulse" state={(h.radialPulse || unk('pulse')) ? 'done' : 'missing'} className="col-span-2">
                 <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Radial pulse</span>
