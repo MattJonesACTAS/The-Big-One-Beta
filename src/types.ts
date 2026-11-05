@@ -40,8 +40,8 @@ export interface HandoverFields {
   ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
   gender: string;           // 'Male' | 'Female' | 'Other' | ''
   genderOther: string;
-  breathing: string;        // 'Yes' | 'No' | 'Unknown' | '' (ROSC: are they breathing on their own? The rate is the VSS tab's Intrinsic RR)
-  ventilation: string;      // 'Yes' | 'No' | '' (ROSC: are we giving ventilations? The rate is the VSS tab's Total RR: their breaths and ours together)
+  breathing: string;        // 'Yes' | 'No' | 'Unknown' | '' (ROSC: are they breathing on their own? The rate is the VSS tab's RR intrinsic)
+  ventilation: string;      // 'Yes' | 'No' | '' (ROSC: are we giving ventilations? The rate is the VSS tab's RR total: their breaths and ours together)
   witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
   bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
   arrestStart: string;      // 'Before' (we arrived) | 'During' (the case) | ''
@@ -60,7 +60,7 @@ export interface AppState {
   running: boolean;
   reversiblesChecklistOpened: boolean;
   caseOpenedAt: number | null;
-  ratesV?: number;          // 2 once the respiratory rates are Intrinsic RR and Total RR (older saved cases are converted when they are loaded)
+  ratesV?: number;          // 2 once the respiratory rates are RR intrinsic and RR total (older saved cases are converted when they are loaded)
   caseClosedAt: number | null;
   // Tx log only: the popup suggesting the arrest mode has been shown for this case (it is shown once)
   arrestModeSuggested?: boolean;
@@ -106,7 +106,7 @@ export interface AppState {
   pendingRhythmCheckDueAt?: number | null;
   handover?: HandoverFields;
   vitals: {
-    hr: string; rr: string; gcs: string; rrt?: string;      // rr is the patient's own breathing rate (Intrinsic RR); rrt is every breath a minute, theirs and ours (Total RR; blank when we aren't ventilating)
+    hr: string; rr: string; gcs: string; rrt?: string;      // rr is the patient's own breathing rate (RR intrinsic); rrt is every breath a minute, theirs and ours (RR total; blank when we aren't ventilating)
     bpSys: string; bpDia: string; spo2: string;
     etco2: string; bgl: string; temp: string; lactate?: string;
     ecgR?: string; ecgT?: string; ecgE?: string; ecgB?: string; ecgI?: string; ecgMore?: string;     // the ECG: rhythm, a typed rhythm (Other), ectopics, block, ischaemic changes; ecgMore: the handover's 'Other findings' grid is open

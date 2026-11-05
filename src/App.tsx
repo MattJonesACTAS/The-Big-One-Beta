@@ -713,7 +713,7 @@ const LEGACY_TEXT: Array<[RegExp, string]> = [
   [/"EtCO2"/g, '"EtCO₂"'],
 ];
 // Saved cases: (1) one respiratory rate and a handover answer saying what it was (Breathing or Ventilated); (2) the version where the second rate was
-// only the breaths we give. Both become Intrinsic RR (rr) and Total RR (rrt: every breath a minute, theirs and ours).
+// only the breaths we give. Both become RR intrinsic (rr) and Total RR (rrt: every breath a minute, theirs and ours).
 const migrateRates = (c: any): any => {
   if (Array.isArray(c)) return c.map(migrateRates);
   if (!c || typeof c !== 'object' || !c.handover) return c;
@@ -1665,6 +1665,8 @@ export default function App() {
   useEffect(() => { if (showHandover && state.currentOverlay && state.currentOverlay !== 'tutorial' && !isShockForced) setShowHandover(false); }, [state.currentOverlay]);
   const setVital = (key: keyof AppState['vitals'], value: string) =>
     setState(p => ({ ...p, vitals: { ...p.vitals, [key]: value } }));
+  // Ventilating or not: one answer, whether it is given on the VSS tab or in the handover setup ('No' also clears the RR total)
+  const setVentilation = (v: 'Yes' | 'No') => setState(p => ({ ...p, handover: { ...HANDOVER_EMPTY, ...(p.handover ?? {}), ventilation: v }, vitals: v === 'No' ? { ...p.vitals, rrt: '' } : p.vitals }));
   const setHandoverField = (key: keyof HandoverFields, value: string) =>
     setState(p => ({ ...p, handover: { ...HANDOVER_EMPTY, ...(p.handover ?? {}), [key]: value } }));
 
@@ -3040,6 +3042,7 @@ export default function App() {
                   tutorialOutcomeRestriction={tutorialOutcomeRestriction}
                   toggleChecklistItem={toggleChecklistItem}
                   onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
+                onVentilation={setVentilation}
                   onDeleteTreatment={deleteTreatment}
                   onMoveTreatment={moveTreatment}
                   onEditTreatment={handleEditTreatment}
@@ -3248,6 +3251,7 @@ export default function App() {
                 isShockForced={isShockForced}
                 toggleChecklistItem={toggleChecklistItem}
                 onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
+                onVentilation={setVentilation}
                 onDeleteTreatment={deleteTreatment}
                 onMoveTreatment={moveTreatment}
                 onEditTreatment={handleEditTreatment}
@@ -3277,6 +3281,7 @@ export default function App() {
                 tutorialOutcomeRestriction={tutorialOutcomeRestriction}
                 toggleChecklistItem={toggleChecklistItem}
                 onVitalsChange={(v) => setState(p => ({ ...p, vitals: v }))}
+                onVentilation={setVentilation}
                 onDeleteTreatment={deleteTreatment}
                 onMoveTreatment={moveTreatment}
                 onEditTreatment={handleEditTreatment}
@@ -4652,7 +4657,7 @@ function CounterItem({ label, value, onChange, activeBorderClass }: { label: str
   );
 }
 
-function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onUpdateInfusionUnit }: { 
+function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDelayRhythmCheck, tutorialOutcomeRestriction, toggleChecklistItem, onVitalsChange, onVentilation, onDeleteTreatment, onMoveTreatment, onEditTreatment, editingTreatmentIndex, onUpdateInfusionDose, onUpdateInfusionUnit }: { 
   key?: string,
   type: OverlayType, 
   addTreatment: (n: string, options?: { customDose?: boolean; rhythmOutcome?: boolean }) => void,
@@ -4663,6 +4668,7 @@ function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDe
   tutorialOutcomeRestriction?: 'redblue' | 'rosc' | 'delay' | null,
   toggleChecklistItem: (checklist: 'reversibles' | 'rosc' | 'phea', label: string) => void,
   onVitalsChange: (v: AppState['vitals']) => void,
+  onVentilation: (v: 'Yes' | 'No') => void,
   onDeleteTreatment?: (idx: number) => void,
   onMoveTreatment?: (fromIdx: number, toIdx: number) => void,
   onEditTreatment?: (idx: number) => void,
@@ -4684,7 +4690,7 @@ function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDe
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
-        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} ventilation={state.handover?.ventilation ?? ''} onVentilation={onVentilation} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
           <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
@@ -4915,7 +4921,9 @@ const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])
   { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'rrt', 'spo2', 'etco2'] },
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
-function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
+function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void, ventilation: string, onVentilation: (v: 'Yes' | 'No') => void }) {
+  // The RR total row is only there when we are ventilating (the same answer as 'Ventilation provided?' in the handover setup), or a total is already entered
+  const ventShown = !!vitals.rrt || ventilation === 'Yes';
   // Every keystroke is saved straight away. The green tick is not a button: it
   // only confirms that a field has been changed since the VSS tab was opened,
   // and it clears when the tab closes (the values stay).
@@ -4932,8 +4940,8 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
 
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
     { key: 'hr',   label: 'HR'           },
-    { key: 'rr',   label: 'Intrinsic RR' },
-    { key: 'rrt',  label: 'Total RR (intrinsic + supplementary)' },
+    { key: 'rr',   label: 'RR intrinsic' },
+    { key: 'rrt',  label: 'RR total' },
     { key: 'spo2', label: 'SpO₂'         },
     { key: 'etco2',label: 'EtCO₂'        },
     { key: 'bpSys',label: 'Systolic BP'  },
@@ -4997,14 +5005,19 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
               </React.Fragment>
             );
           }
-          return (
+          if (key === 'rrt' && !ventShown) return (
+            <button key="rrt-add" type="button" data-vss-add-total onClick={() => { onVentilation('Yes'); setTimeout(() => document.querySelector<HTMLInputElement>('input[data-vss-rrt]')?.focus(), 80); }}
+              className="w-full border-2 border-dashed border-slate-300 rounded-xl py-3 text-[15px] font-bold text-slate-600 bg-slate-50 active:bg-slate-100">+ Ventilating? Add RR total</button>
+          );
+          const row = (
             <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
-              <span className="text-[15px] font-bold text-neutral-800">{key === 'rrt' ? label.replace(/ \(.*$/, '') : label}{key === 'rrt' && <span data-vss-bracket="rrt" className="block text-[13px] font-semibold text-neutral-500">{label.match(/\(.*\)$/)?.[0]}</span>}{key === 'rrt' && <span data-vss-hint="rrt" className="block text-[12px] font-normal text-neutral-400">Only enter if ventilating</span>}</span>
+              <span className="text-[15px] font-bold text-neutral-800">{label}{key === 'rrt' && <span data-vss-bracket="rrt" className="block text-[12.5px] font-normal text-neutral-500">intrinsic + supplementary</span>}</span>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   inputMode="decimal"
                   aria-label={label}
+                  {...(key === 'rrt' ? { 'data-vss-rrt': '' } : {})}
                   value={vitals[key] ?? ''}
                   onChange={e => update(key, e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -5020,6 +5033,12 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
               </div>
             </div>
           );
+          return key === 'rrt' ? (
+            <React.Fragment key={key}>
+              {row}
+              <button type="button" data-vss-not-ventilating onClick={() => onVentilation('No')} className="block ml-auto -mt-1 mr-2 text-[13px] text-rose-700 underline">Not ventilating</button>
+            </React.Fragment>
+          ) : row;
         })}
           </React.Fragment>
         ))}
@@ -5432,8 +5451,8 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'HR',     value: v.hr,   unit: 'bpm'    },
     { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
     { label: 'ECG',     value: ecgShort(v), unit: '', lines: ecgLines(v) },
-    { label: 'Intrinsic RR', value: v.rr, unit: 'br/min' },
-    { label: 'Total RR (intrinsic + supplementary)',  value: v.rrt ?? '', unit: 'br/min' },
+    { label: 'RR intrinsic', value: v.rr, unit: 'br/min' },
+    { label: 'RR total (intrinsic + supplementary)',  value: v.rrt ?? '', unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
@@ -6166,7 +6185,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     else if (unk('gcs')) setUnk('gcs', false);
   };
   // Breathing: two questions that read and write the VSS tab's two rates, so the handover and the VSS tab can't disagree
-  // (Intrinsic RR: 0 is not breathing; Total RR: every breath a minute, theirs and ours). A rate typed on the VSS tab answers its question here.
+  // (RR intrinsic: 0 is not breathing; Total RR: every breath a minute, theirs and ours). A rate typed on the VSS tab answers its question here.
   const spontAnswer = vit.rr === '0' ? 'No' : vit.rr ? 'Yes' : (h.breathing || '');
   const ventAnswer = vit.rrt ? 'Yes' : (h.ventilation || '');
   const rateChoice = (key: 'rr' | 'rrt') => { const val = vit[key] ?? ''; return rrOther[key] ? 'Other' : (HANDOVER_RR.includes(val) ? val : (val ? 'Other' : '')); };
@@ -6237,7 +6256,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   if (inRosc) {
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
     if (!spontAnswer) missing.breath.push('Spontaneously breathing');
-    else if (spontAnswer === 'Yes' && !vit.rr && !unk('rr')) missing.breath.push('Intrinsic RR');
+    else if (spontAnswer === 'Yes' && !vit.rr && !unk('rr')) missing.breath.push('RR intrinsic');
     if (!ventAnswer) missing.breath.push('Ventilation provided');
     else if (ventAnswer === 'Yes' && !vit.rrt && !unk('rrt')) missing.breath.push('Total respiratory rate');
   }
@@ -6721,7 +6740,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
       case 'breath': return (
         <HandoverPageCard>
           <HandoverChoice label="Spontaneously breathing?" options={['Yes', 'No', 'Unknown']} value={spontAnswer} onChange={setSpont} columns={3} />
-          {spontAnswer === 'Yes' && rateQuestion('rr', 'Intrinsic RR')}
+          {spontAnswer === 'Yes' && rateQuestion('rr', 'RR intrinsic')}
           {spontAnswer && (
             <HandoverChoice label="Ventilation provided?" options={['Yes', 'No']} value={ventAnswer} onChange={setVent} columns={2} />
           )}
