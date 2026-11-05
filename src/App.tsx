@@ -63,7 +63,8 @@ const INITIAL_STATE: AppState = {
   isROSCMode: false,
   timingMode: null,
   rhythmInterval: null,
-  vitals: { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }
+  ratesV: 2,
+  vitals: { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }
 };
 
 const MEDICATIONS = [
@@ -711,17 +712,25 @@ const LEGACY_TEXT: Array<[RegExp, string]> = [
   [/"SpO2"/g, '"SpO₂"'],
   [/"EtCO2"/g, '"EtCO₂"'],
 ];
-// A case saved when there was one respiratory rate and a handover answer saying what it was (Breathing or Ventilated): the rate goes to the matching one of the two
+// Saved cases: (1) one respiratory rate and a handover answer saying what it was (Breathing or Ventilated); (2) the version where the second rate was
+// only the breaths we give. Both become Spontaneous RR (rr) and Total RR (rrt: every breath a minute, theirs and ours).
 const migrateRates = (c: any): any => {
   if (Array.isArray(c)) return c.map(migrateRates);
   if (!c || typeof c !== 'object' || !c.handover) return c;
-  const h = c.handover;
+  if (c.ratesV === 2) return c;
+  const h = c.handover; const v = c.vitals ?? {};
+  const renameUnknown = (from: string) => { if (typeof h.unknowns === 'string' && h.unknowns.split(',').includes(from)) h.unknowns = h.unknowns.split(',').map((x: string) => (x === from ? 'rrt' : x)).join(','); };
   if (h.breathing === 'Breathing') { h.breathing = 'Yes'; if (!h.ventilation) h.ventilation = 'No'; }
   else if (h.breathing === 'Ventilated') {
     h.breathing = 'No'; if (!h.ventilation) h.ventilation = 'Yes';
-    c.vitals = { ...(c.vitals ?? {}), rrv: c.vitals?.rrv || c.vitals?.rr || '', rr: '0' };
-    if (typeof h.unknowns === 'string' && h.unknowns.split(',').includes('rr')) h.unknowns = h.unknowns.split(',').map((x: string) => (x === 'rr' ? 'rrv' : x)).join(',');
+    c.vitals = { ...v, rrt: v.rrv || v.rr || '', rr: '0' }; renameUnknown('rr');
+  } else if ('rrv' in v) {
+    const own = parseFloat(v.rr) || 0;
+    c.vitals = { ...v, rrt: v.rrv !== '' && own > 0 ? String(own + (parseFloat(v.rrv) || 0)) : (v.rrv ?? '') };
   }
+  if (c.vitals && 'rrv' in c.vitals) delete c.vitals.rrv;
+  renameUnknown('rrv');
+  c.ratesV = 2;
   return c;
 };
 const parseSaved = (raw: string) => migrateRates(JSON.parse(LEGACY_TEXT.reduce((text, [re, to]) => text.replace(re, to), raw)));
@@ -4675,7 +4684,7 @@ function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDe
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
-        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
           <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
@@ -4903,7 +4912,7 @@ function EcgGrid({ v, set, compact = false }: { v: EcgFields, set: (key: keyof E
 const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])[] }[] = [
   { title: 'Neuro', cls: 'bg-purple-50 text-purple-800 border-purple-200', keys: ['gcs'] },
   { title: 'Cardiac', cls: 'bg-rose-50 text-rose-800 border-rose-200', keys: ['hr', 'bpSys', 'bpDia', 'ecgR'] },
-  { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'rrv', 'spo2', 'etco2'] },
+  { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'rrt', 'spo2', 'etco2'] },
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
@@ -4924,7 +4933,7 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
     { key: 'hr',   label: 'HR'           },
     { key: 'rr',   label: 'Spontaneous RR' },
-    { key: 'rrv',  label: 'Ventilated RR' },
+    { key: 'rrt',  label: 'Total RR' },
     { key: 'spo2', label: 'SpO₂'         },
     { key: 'etco2',label: 'EtCO₂'        },
     { key: 'bpSys',label: 'Systolic BP'  },
@@ -5416,7 +5425,7 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
 
 
 function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
-  const v = vitals ?? { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+  const v = vitals ?? { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   // The VSS tab's order, without the headings
   const vitalRows: { label: string, value: string, unit: string, lines?: string[] }[] = [
     { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
@@ -5424,7 +5433,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
     { label: 'ECG',     value: ecgShort(v), unit: '', lines: ecgLines(v) },
     { label: 'Spontaneous RR', value: v.rr, unit: 'br/min' },
-    { label: 'Ventilated RR',  value: v.rrv ?? '', unit: 'br/min' },
+    { label: 'Total RR',  value: v.rrt ?? '', unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
@@ -5804,7 +5813,7 @@ const buildHandoverContent = (
   if (lastRosc) information.push({ t: `ROSC ${t12(lastRosc.clock)}${rearrestSince ? ', rearrested since' : ''}` });
 
   // --- Signs not covered by R / A / B / C. SpO₂ only matters once there's a circulation to measure it in.
-  const v = state.vitals ?? { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+  const v = state.vitals ?? { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const signDefs: [string, VitalKey, string][] = state.isROSCMode
     ? [['SpO₂', 'spo2', '%'], ['EtCO₂', 'etco2', 'mmHg'], ['Lactate', 'lactate', 'mmol/L'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']]
     : [['EtCO₂', 'etco2', 'mmHg'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']];
@@ -6081,7 +6090,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const [card, setCard] = useState(0);
   const [pageKey, setPageKey] = useState<string>(() => resumeKey ?? (Object.values(state.handover ?? {}).some(v => (typeof v === 'string' ? v.trim() !== '' : !!v)) ? 'review' : 'id'));      // a handover that's been started reopens on Review, a new one starts at the first page
   useEffect(() => { onPage?.(pageKey); }, [pageKey]);
-  const [rrOther, setRrOther] = useState<{ rr: boolean, rrv: boolean }>({ rr: false, rrv: false });
+  const [rrOther, setRrOther] = useState<{ rr: boolean, rrt: boolean }>({ rr: false, rrt: false });
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
   const content = buildHandoverContent(general ? { ...state, isROSCMode: true } : state, h);
@@ -6157,11 +6166,11 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     else if (unk('gcs')) setUnk('gcs', false);
   };
   // Breathing: two questions that read and write the VSS tab's two rates, so the handover and the VSS tab can't disagree
-  // (Spontaneous RR: 0 is not breathing; Ventilated RR: the breaths we give). A rate typed on the VSS tab answers its question here.
+  // (Spontaneous RR: 0 is not breathing; Total RR: every breath a minute, theirs and ours). A rate typed on the VSS tab answers its question here.
   const spontAnswer = vit.rr === '0' ? 'No' : vit.rr ? 'Yes' : (h.breathing || '');
-  const ventAnswer = vit.rrv ? 'Yes' : (h.ventilation || '');
-  const rateChoice = (key: 'rr' | 'rrv') => { const val = vit[key] ?? ''; return rrOther[key] ? 'Other' : (HANDOVER_RR.includes(val) ? val : (val ? 'Other' : '')); };
-  const rateQuestion = (key: 'rr' | 'rrv', label: string) => {
+  const ventAnswer = vit.rrt ? 'Yes' : (h.ventilation || '');
+  const rateChoice = (key: 'rr' | 'rrt') => { const val = vit[key] ?? ''; return rrOther[key] ? 'Other' : (HANDOVER_RR.includes(val) ? val : (val ? 'Other' : '')); };
+  const rateQuestion = (key: 'rr' | 'rrt', label: string) => {
     const choice = rateChoice(key);
     return (
       <>
@@ -6180,7 +6189,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   };
   const setVent = (v: string) => {
     onField('ventilation', v);
-    if (v !== 'Yes') { setRrOther(o => ({ ...o, rrv: false })); onVital('rrv', ''); if (unk('rrv')) setUnk('rrv', false); }
+    if (v !== 'Yes') { setRrOther(o => ({ ...o, rrt: false })); onVital('rrt', ''); if (unk('rrt')) setUnk('rrt', false); }
   };
 
   // Airway and access: the Tx log fills these in; the crew can correct them for the handover (the Tx log itself is never changed).
@@ -6230,7 +6239,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     if (!spontAnswer) missing.breath.push('Spontaneously breathing');
     else if (spontAnswer === 'Yes' && !vit.rr && !unk('rr')) missing.breath.push('Respiratory rate');
     if (!ventAnswer) missing.breath.push('Ventilation provided');
-    else if (ventAnswer === 'Yes' && !vit.rrv && !unk('rrv')) missing.breath.push('Ventilation rate');
+    else if (ventAnswer === 'Yes' && !vit.rrt && !unk('rrt')) missing.breath.push('Total respiratory rate');
   }
   if (showCirc) {
     if (!h.radialPulse && !unk('pulse')) missing.breath.push('Radial pulse');
@@ -6518,15 +6527,14 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const gcsPart: React.ReactNode = vit.gcs ? gcsText : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
   const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
   const spontRate: React.ReactNode = vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>;
-  const ventRate: string | null = vit.rrv ? vit.rrv : null;
-  const ventWithUs: React.ReactNode = ventRate ? ` ${ventRate === '1' ? 'ventilation' : 'ventilations'} a minute` : unk('rrv') ? ', rate unknown' : null;
+  const totalRate: string | null = vit.rrt ? vit.rrt : null;
   const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
     : !ventAnswer ? <>{spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</> : spontAnswer === 'No' ? 'They are not breathing' : "We don't know if they are breathing"}, {ampm('ventilation ?')}</>
-    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are {ventRate ? `giving a further ${ventRate}` : 'assisting'}{ventWithUs ?? <>, rate {ampm('?')}</>}</>
+    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are assisting them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
     : spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</>
-    : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{ventRate ? ` at a rate of ${ventRate}` : unk('rrv') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
+    : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
     : spontAnswer === 'No' ? 'They are not breathing, and we are not ventilating'
-    : ventAnswer === 'Yes' ? <>We don't know if they are breathing, and we are ventilating{ventRate ? ` at a rate of ${ventRate}` : unk('rrv') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
+    : ventAnswer === 'Yes' ? <>We don't know if they are breathing, and we are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
     : "We don't know if they are breathing";
   const circPart: React.ReactNode = h.radialPulse === 'Present' ? 'Radial pulse is present'
     : h.radialPulse === 'Absent' ? 'Radial pulse is not present'
@@ -6717,7 +6725,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
           {spontAnswer && (
             <HandoverChoice label="Ventilation provided?" options={['Yes', 'No']} value={ventAnswer} onChange={setVent} columns={2} />
           )}
-          {ventAnswer === 'Yes' && rateQuestion('rrv', 'Ventilation rate')}
+          {ventAnswer === 'Yes' && rateQuestion('rrt', spontAnswer === 'No' ? 'Ventilation rate' : 'Total respiratory rate (theirs plus ours)')}
           {showCirc && (
               <HandoverBox label="Radial pulse" state={(h.radialPulse || unk('pulse')) ? 'done' : 'missing'} className="col-span-2">
                 <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Radial pulse</span>
