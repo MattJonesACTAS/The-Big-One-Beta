@@ -63,7 +63,7 @@ const INITIAL_STATE: AppState = {
   isROSCMode: false,
   timingMode: null,
   rhythmInterval: null,
-  vitals: { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }
+  vitals: { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }
 };
 
 const MEDICATIONS = [
@@ -233,7 +233,7 @@ const INFUSION_DRUGS = ['Adrenaline infusion', 'Ketamine infusion', 'Morph/midaz
 // When a drug was given, as a time of day: the last dose, or for an infusion when it was started.
 // Doses with an unknown time are skipped; catch-up doses show as "< hh:mm". (Shown on screen and in the Handover only.)
 const doseTimeNote = (treatments: Treatment[], med: string): { label: string, time: string } | null => {
-  const mine = treatments.filter(t => t.name.startsWith(med) && !t.timeUnknown && t.clock);
+  const mine = treatments.filter(t => pharmaKeyOf(t) === med && !t.timeUnknown && t.clock);
   if (!mine.length) return null;
   const at = (t: Treatment) => (t.prior ? `< ${t.clock}` : t.clock);       // a catch-up dose is shown as before that time, like the Tx log
   return INFUSION_DRUGS.includes(med) ? { label: 'Started', time: at(mine[0]) } : { label: 'Last', time: at(mine[mine.length - 1]) };
@@ -535,6 +535,14 @@ const toCanonicalUnit = (amount: number, unit: string): { unit: string, amount: 
   return { unit, amount };
 };
 
+// Adrenaline's small pushes (a custom dose, as given after ROSC) are totalled and listed apart from the arrest doses: the doses and the purpose are
+// so different that adding them together misleads.
+const SMALL_PUSHES = 'Adrenaline small pushes';
+const pharmaKeyOf = (t: Treatment): string | null => {
+  if (t.name.startsWith('Morph/midaz infusion')) return 'Morph/midaz infusion';
+  const med = MEDICATIONS.find(m => m !== 'Oxygen' && t.name.startsWith(m));
+  return med ? (med === 'Adrenaline push' && t.customDose ? SMALL_PUSHES : med) : null;
+};
 const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }> => {
   const summary: Record<string, { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean }> = {};
 
@@ -568,8 +576,9 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
       if (med === 'Oxygen') continue;
 
       if (tx.name.startsWith(med)) {
-        if (!summary[med]) {
-          summary[med] = { totalDose: 0, unit: '', count: 0, display: '', amounts: [] };
+        const key = pharmaKeyOf(tx) ?? med;
+        if (!summary[key]) {
+          summary[key] = { totalDose: 0, unit: '', count: 0, display: '', amounts: [] };
         }
 
         // Extract dose from treatment name (everything after medication name)
@@ -582,10 +591,10 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
           if (calculatedMatch) {
             const [_, rawAmount, rawUnit] = calculatedMatch;
             const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
-          if (rawUnit.toLowerCase() === 'g') summary[med].sawGrams = true;
-            if (!summary[med].unit) summary[med].unit = unit;
-            if (summary[med].unit === unit) {
-              summary[med].totalDose += amount; summary[med].amounts!.push(amount);
+          if (rawUnit.toLowerCase() === 'g') summary[key].sawGrams = true;
+            if (!summary[key].unit) summary[key].unit = unit;
+            if (summary[key].unit === unit) {
+              summary[key].totalDose += amount; summary[key].amounts!.push(amount);
             }
           } else {
             // Direct dose: "1mg", "300mg", "100mL", etc.
@@ -593,15 +602,15 @@ const computePharmaSummary = (treatments: Treatment[]): Record<string, { totalDo
             if (directMatch) {
               const [_, rawAmount, rawUnit] = directMatch;
               const { unit, amount } = toCanonicalUnit(parseFloat(rawAmount), rawUnit);
-          if (rawUnit.toLowerCase() === 'g') summary[med].sawGrams = true;
-              if (!summary[med].unit) summary[med].unit = unit;
-              if (summary[med].unit === unit) {
-                summary[med].totalDose += amount; summary[med].amounts!.push(amount);
+          if (rawUnit.toLowerCase() === 'g') summary[key].sawGrams = true;
+              if (!summary[key].unit) summary[key].unit = unit;
+              if (summary[key].unit === unit) {
+                summary[key].totalDose += amount; summary[key].amounts!.push(amount);
               }
             }
           }
         }
-        summary[med].count++;
+        summary[key].count++;
         break;
       }
     }
@@ -702,7 +711,20 @@ const LEGACY_TEXT: Array<[RegExp, string]> = [
   [/"SpO2"/g, '"SpO₂"'],
   [/"EtCO2"/g, '"EtCO₂"'],
 ];
-const parseSaved = (raw: string) => JSON.parse(LEGACY_TEXT.reduce((text, [re, to]) => text.replace(re, to), raw));
+// A case saved when there was one respiratory rate and a handover answer saying what it was (Breathing or Ventilated): the rate goes to the matching one of the two
+const migrateRates = (c: any): any => {
+  if (Array.isArray(c)) return c.map(migrateRates);
+  if (!c || typeof c !== 'object' || !c.handover) return c;
+  const h = c.handover;
+  if (h.breathing === 'Breathing') { h.breathing = 'Yes'; if (!h.ventilation) h.ventilation = 'No'; }
+  else if (h.breathing === 'Ventilated') {
+    h.breathing = 'No'; if (!h.ventilation) h.ventilation = 'Yes';
+    c.vitals = { ...(c.vitals ?? {}), rrv: c.vitals?.rrv || c.vitals?.rr || '', rr: '0' };
+    if (typeof h.unknowns === 'string' && h.unknowns.split(',').includes('rr')) h.unknowns = h.unknowns.split(',').map((x: string) => (x === 'rr' ? 'rrv' : x)).join(',');
+  }
+  return c;
+};
+const parseSaved = (raw: string) => migrateRates(JSON.parse(LEGACY_TEXT.reduce((text, [re, to]) => text.replace(re, to), raw)));
 const MAX_PREVIOUS_CASES = 3;
 
 const loadPreviousCases = (): AppState[] => {
@@ -4653,7 +4675,7 @@ function Overlay({ type, addTreatment, state, pharmaSummary, isShockForced, onDe
         {type === 'reversibles' && <ReversiblesOverlay checkedItems={state.reversiblesChecked} onToggle={(label) => toggleChecklistItem('reversibles', label)} />}
         {type === 'rosc' && <ROSCSelection checkedItems={state.roscChecked} onToggle={(label) => toggleChecklistItem('rosc', label)} patientType={state.patientType} patientWeight={state.patientWeight} />}
         {type === 'phea' && <PHEASelection checkedItems={state.pheaChecked} onToggle={(label) => toggleChecklistItem('phea', label)} />}
-        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
+        {type === 'vitals' && <VitalsOverlay vitals={state.vitals ?? { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' }} onChange={onVitalsChange} />}
         {type === 'summary' && <SummaryOverlay state={state} pharmaSummary={pharmaSummary} onDelete={onDeleteTreatment} onMove={onMoveTreatment} onEdit={onEditTreatment} onUpdateInfusionDose={onUpdateInfusionDose} onUpdateInfusionUnit={onUpdateInfusionUnit} />}
         {type === 'treatment' && (state.timingMode === 'minimal' && editingTreatmentIndex == null ? (
           <TimersOnlySelection state={state} isShockForced={isShockForced} addTreatment={addTreatment} onDelayRhythmCheck={onDelayRhythmCheck} tutorialOutcomeRestriction={tutorialOutcomeRestriction} />
@@ -4881,7 +4903,7 @@ function EcgGrid({ v, set, compact = false }: { v: EcgFields, set: (key: keyof E
 const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])[] }[] = [
   { title: 'Neuro', cls: 'bg-purple-50 text-purple-800 border-purple-200', keys: ['gcs'] },
   { title: 'Cardiac', cls: 'bg-rose-50 text-rose-800 border-rose-200', keys: ['hr', 'bpSys', 'bpDia', 'ecgR'] },
-  { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'spo2', 'etco2'] },
+  { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'rrv', 'spo2', 'etco2'] },
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
 function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void }) {
@@ -4901,7 +4923,8 @@ function VitalsOverlay({ vitals, onChange }: { vitals: AppState['vitals'], onCha
 
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
     { key: 'hr',   label: 'HR'           },
-    { key: 'rr',   label: 'RR'           },
+    { key: 'rr',   label: 'Spontaneous RR' },
+    { key: 'rrv',  label: 'Ventilated RR' },
     { key: 'spo2', label: 'SpO₂'         },
     { key: 'etco2',label: 'EtCO₂'        },
     { key: 'bpSys',label: 'Systolic BP'  },
@@ -5393,14 +5416,15 @@ function TreatmentLog({ treatments, elapsedSeconds, caseOpenedAt, isSummary = fa
 
 
 function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
-  const v = vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+  const v = vitals ?? { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   // The VSS tab's order, without the headings
   const vitalRows: { label: string, value: string, unit: string, lines?: string[] }[] = [
     { label: 'GCS',            value: v.gcs,  unit: '/ 15'   },
     { label: 'HR',     value: v.hr,   unit: 'bpm'    },
     { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
     { label: 'ECG',     value: ecgShort(v), unit: '', lines: ecgLines(v) },
-    { label: 'RR',      value: v.rr,   unit: 'br/min' },
+    { label: 'Spontaneous RR', value: v.rr, unit: 'br/min' },
+    { label: 'Ventilated RR',  value: v.rrv ?? '', unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
@@ -5436,7 +5460,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
 // Anything not filled in is prompted for (amber) rather than left out.
 // ---------------------------------------------------------------------------------------------
 const HANDOVER_EMPTY: HandoverFields = {
-  unknowns: '', airway: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', radialPulse: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
+  unknowns: '', ventilation: '', airway: '', accessIv: '', accessIo: '', gcsE: '', gcsV: '', gcsM: '', otherTx: '', otherMeds: '', pertinentEvents: '', radialPulse: '', phea: '', delivered: '', causeWhy: '', weightFor: '', latestRhythm: '', ageUnknown: '', gender: '', genderOther: '', arrestStart: '', startedBefore: '', firstRhythm: '', witnessed: '', bystanderCpr: '', breathing: '',
   suspectedCause: '', allergies: '', allergiesOther: '', medications: '', background: '', otherInfo: ''
 };
 // The handover differs by case, so the crew chooses which one they're giving. PHEA and Both are still to be built.
@@ -5449,7 +5473,6 @@ const HANDOVER_FIRST_RHYTHMS = ['VF', 'pVT', 'Asystole', 'PEA', 'Unknown'];
 const HANDOVER_CHECK_SECONDS = 120;
 // The middle of each "how long before we arrived" band, in minutes (Over 20 has no middle, so it only gives a limit)
 const HANDOVER_BEFORE_MIDPOINT: Record<string, number> = { 'Under 5 min': 2.5, '5–10 min': 7.5, '10–15 min': 12.5, '15–20 min': 17.5 };
-const HANDOVER_BREATHING = ['Breathing', 'Ventilated', 'Unknown'];
 // True when the Handover sits inside the home screen box (squished to fit) rather than filling the screen
 const HandoverDensity = React.createContext(false);
 // The question headings on the Fill in pages: large and centred
@@ -5583,6 +5606,7 @@ type HandoverTreatment = {
   meds: { name: string, dose: string, note: string, text?: string }[];   // in the order each was first given
   medGroups?: { key: 'before' | 'after', meds: { name: string, dose: string, note: string, text?: string }[] }[];   // once ROSC is achieved: given before the latest change (a ROSC or a rearrest), and after it
   medGroupsKind?: 'rosc' | 'rearrest';
+  medGroupsEarlier?: boolean;          // more than one arrest: the first block covers everything earlier (arrests and ROSC periods), so it says so
   others: { line: string, note: string }[];
 };
 type HandoverContent = {
@@ -5630,10 +5654,6 @@ const buildHandoverContent = (
   const airwayDone = (id: string) => tx.some(x => getTreatmentIdentity(x.name) === id && succeeded(x.name));
   const topAirway = [...HANDOVER_AIRWAY_LADDER].reverse().find(airwayDone);
   const airway = [topAirway, airwayDone('IGT') ? 'IGT' : null].filter((a): a is string => !!a);
-  const oxygen = tx.filter(x => getTreatmentIdentity(x.name) === 'Oxygen' && succeeded(x.name));
-  const oxygenDevices: string[] = [];
-  // BVM is covered by "ventilated", so it isn't named as an oxygen device
-  oxygen.forEach(x => { const d = x.name.replace(/^Oxygen\s*(#\d+\s*)?/, '').trim(); if (d && d !== 'BVM' && !oxygenDevices.includes(d)) oxygenDevices.push(d); });
 
   // --- Arrest summary
   const roscIdx = tx.map((x, i) => (isRoscName(x.name) ? i : -1)).filter(i => i >= 0);
@@ -5784,7 +5804,7 @@ const buildHandoverContent = (
   if (lastRosc) information.push({ t: `ROSC ${t12(lastRosc.clock)}${rearrestSince ? ', rearrested since' : ''}` });
 
   // --- Signs not covered by R / A / B / C. SpO₂ only matters once there's a circulation to measure it in.
-  const v = state.vitals ?? { hr: '', rr: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
+  const v = state.vitals ?? { hr: '', rr: '', rrv: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
   const signDefs: [string, VitalKey, string][] = state.isROSCMode
     ? [['SpO₂', 'spo2', '%'], ['EtCO₂', 'etco2', 'mmHg'], ['Lactate', 'lactate', 'mmol/L'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']]
     : [['EtCO₂', 'etco2', 'mmHg'], ['BGL', 'bgl', 'mmol/L'], ['Temp', 'temp', '°C']];
@@ -5798,7 +5818,7 @@ const buildHandoverContent = (
     const list: { idx: number, name: string, dose: string, note: string, text?: string }[] = [];
     Object.entries(computePharmaSummary(txs)).forEach(([med, info]) => {
       const dt = doseTimeNote(txs, med);
-      const name = med.replace(/ push$/, '');
+      const name = med === SMALL_PUSHES && info.count === 1 ? 'Adrenaline small push' : med.replace(/ push$/, '');
       let dose: string;
       let text: string | undefined;
       if (INFUSION_DRUGS.includes(med)) {
@@ -5808,7 +5828,7 @@ const buildHandoverContent = (
         dose = info.display.replace(/\s*\(\d+\)\s*$/, '');
         text = multiDoseText(name, info);
       }
-      list.push({ idx: txs.findIndex(x => x.name.startsWith(med)), name, dose, text, note: dt ? `${dt.label === 'Started' ? 'started' : 'last'} ${t12(dt.time)}` : '' });
+      list.push({ idx: txs.findIndex(x => pharmaKeyOf(x) === med), name, dose, text, note: dt ? `${dt.label === 'Started' ? 'started' : 'last'} ${t12(dt.time)}` : '' });
     });
     return list.sort((p, q) => p.idx - q.idx);
   };
@@ -5823,6 +5843,18 @@ const buildHandoverContent = (
     const timed = tx.find(x => (getTreatmentIdentity(x.name) === n || x.name.startsWith(n)) && !x.timeUnknown && x.clock);
     otherList.push({ idx: i, line: n, note: timed ? `Started ${timed.prior ? '< ' : ''}${t12(timed.clock)}` : '' });
   });
+  // Oxygen is handed over only for a patient in ROSC (or a General handover, which has no arrest), and only what was given since the latest ROSC.
+  // Just the most advanced method is said. BVM is covered by "ventilated", so it isn't named.
+  if (state.isROSCMode) {
+    const given: { i: number, d: string }[] = [];
+    tx.forEach((x, i) => {
+      if (i <= lastRoscIdx || getTreatmentIdentity(x.name) !== 'Oxygen' || !succeeded(x.name)) return;
+      const d = x.name.replace(/^Oxygen\s*(#\d+\s*)?/, '').trim();
+      if (d && d !== 'BVM') given.push({ i, d });
+    });
+    const best = ['NRB', 'Nasal cannulae'].map(d => given.find(x => x.d === d)).find(Boolean) ?? given[0];
+    if (best) otherList.push({ idx: best.i, line: `Oxygen via ${best.d === best.d.toUpperCase() ? best.d : best.d.toLowerCase()}`, note: '' });
+  }
   tx.forEach((x, i) => {
     const n = x.name;
     const known = isOutcome(n) || n.startsWith('Rhythm check') || n.startsWith('Mode changed') || n.startsWith('Weight changed')
@@ -5838,6 +5870,7 @@ const buildHandoverContent = (
     airway, io: accessCount('IO access'), iv: accessCount('IV access'),
     meds: medList.map(m => ({ name: m.name, dose: m.dose, note: m.note, text: m.text })),
     medGroupsKind: roscSplit?.kind,
+    medGroupsEarlier: !!roscSplit && (roscSplit.kind === 'rearrest' || tx.filter(x => isRoscName(x.name)).length >= 2),
     medGroups: medGroups?.map(g => ({ key: g.key, meds: g.meds.map(m => ({ name: m.name, dose: m.dose, note: m.note, text: m.text })) })),
     others: otherList.map(o => ({ line: o.line, note: o.note })),
   };
@@ -6048,7 +6081,7 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const [card, setCard] = useState(0);
   const [pageKey, setPageKey] = useState<string>(() => resumeKey ?? (Object.values(state.handover ?? {}).some(v => (typeof v === 'string' ? v.trim() !== '' : !!v)) ? 'review' : 'id'));      // a handover that's been started reopens on Review, a new one starts at the first page
   useEffect(() => { onPage?.(pageKey); }, [pageKey]);
-  const [rrOtherOpen, setRrOtherOpen] = useState(false);
+  const [rrOther, setRrOther] = useState<{ rr: boolean, rrv: boolean }>({ rr: false, rrv: false });
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
   const content = buildHandoverContent(general ? { ...state, isROSCMode: true } : state, h);
@@ -6123,9 +6156,32 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     if (next.gcsE && next.gcsV && next.gcsM) setVitalValue('gcs', 'gcs', String(parseInt(next.gcsE, 10) + parseInt(next.gcsV, 10) + parseInt(next.gcsM, 10)));
     else if (unk('gcs')) setUnk('gcs', false);
   };
-  const rrIsPreset = HANDOVER_RR.includes(vit.rr);
-  const rrChoice = rrOtherOpen ? 'Other' : (rrIsPreset ? vit.rr : (vit.rr ? 'Other' : ''));
-  const rrLabel = h.breathing === 'Ventilated' ? 'Ventilation rate' : 'Respiratory rate';
+  // Breathing: two questions that read and write the VSS tab's two rates, so the handover and the VSS tab can't disagree
+  // (Spontaneous RR: 0 is not breathing; Ventilated RR: the breaths we give). A rate typed on the VSS tab answers its question here.
+  const spontAnswer = vit.rr === '0' ? 'No' : vit.rr ? 'Yes' : (h.breathing || '');
+  const ventAnswer = vit.rrv ? 'Yes' : (h.ventilation || '');
+  const rateChoice = (key: 'rr' | 'rrv') => { const val = vit[key] ?? ''; return rrOther[key] ? 'Other' : (HANDOVER_RR.includes(val) ? val : (val ? 'Other' : '')); };
+  const rateQuestion = (key: 'rr' | 'rrv', label: string) => {
+    const choice = rateChoice(key);
+    return (
+      <>
+        <HandoverChoice label={label} options={[...HANDOVER_RR, 'Other']} value={unk(key) ? '' : choice} columns={5} answered={!!choice || unk(key)}
+          onChange={v => { if (v === 'Other') { setRrOther(o => ({ ...o, [key]: true })); if (unk(key)) setUnk(key, false); } else { setRrOther(o => ({ ...o, [key]: false })); setVitalValue(key, key, v); } }}
+          footer={<HandoverUnknown label={label} on={unk(key)} onClick={() => { setRrOther(o => ({ ...o, [key]: false })); toggleUnknownVital(key, [key]); }} />} />
+        {choice === 'Other' && !unk(key) && <HandoverNumber label="Rate (other)" value={vit[key] ?? ''} onChange={v => setVitalValue(key, key, v)} unit="/min" />}
+      </>
+    );
+  };
+  const setSpont = (v: string) => {
+    onField('breathing', v);
+    setRrOther(o => ({ ...o, rr: false }));
+    if (v === 'No') { onVital('rr', '0'); if (unk('rr')) setUnk('rr', false); }
+    else { if (vit.rr === '0') onVital('rr', ''); if (v === 'Unknown') { onVital('rr', ''); if (unk('rr')) setUnk('rr', false); } }
+  };
+  const setVent = (v: string) => {
+    onField('ventilation', v);
+    if (v !== 'Yes') { setRrOther(o => ({ ...o, rrv: false })); onVital('rrv', ''); if (unk('rrv')) setUnk('rrv', false); }
+  };
 
   // Airway and access: the Tx log fills these in; the crew can correct them for the handover (the Tx log itself is never changed).
   const txLog = content.tx;
@@ -6171,8 +6227,10 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   if (weightNeed && !weightConfirmed) missing.id.push('Weight');
   if (inRosc) {
     if (!vit.gcs && !unk('gcs')) missing.resp.push('GCS');
-    if (!h.breathing) missing.breath.push('Breathing');
-    else if (h.breathing !== 'Unknown' && !vit.rr && !unk('rr')) missing.breath.push(rrLabel);
+    if (!spontAnswer) missing.breath.push('Spontaneously breathing');
+    else if (spontAnswer === 'Yes' && !vit.rr && !unk('rr')) missing.breath.push('Respiratory rate');
+    if (!ventAnswer) missing.breath.push('Ventilation provided');
+    else if (ventAnswer === 'Yes' && !vit.rrv && !unk('rrv')) missing.breath.push('Ventilation rate');
   }
   if (showCirc) {
     if (!h.radialPulse && !unk('pulse')) missing.breath.push('Radial pulse');
@@ -6413,12 +6471,23 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     unk('access') ? <div key="x">We don't know what access is in place.</div>
       : !accessDone ? <div key="x">{miss('Access ?')}</div>
       : ioN || ivN ? <div key="x">For access we have:{sub([...(ioN ? [`${ioN} x IO${ioN > 1 ? 's' : ''}`] : []), ...(ivN ? [`${ivN} x IV${ivN > 1 ? 's' : ''}`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>;
+  // After more than one arrest the first block is "Earlier in the case" (it includes a ROSC period, and the arrests before it), not "Before ROSC"
+  const medHeading = (tt: HandoverTreatment, which: string, has: boolean): string => {
+    const before = which === 'before';
+    if (tt.medGroupsEarlier) {
+      if (before) return has ? 'Earlier in the case we gave:' : 'Earlier in the case we did not give any medications.';
+      const since = tt.medGroupsKind === 'rearrest' ? 'Since they rearrested we' : 'Since the latest ROSC we';
+      return has ? `${since} have given:` : `${since} have not given any medications.`;
+    }
+    if (before) return has ? 'Before ROSC we gave:' : 'Before ROSC we did not give any medications.';
+    return has ? 'After achieving ROSC we gave:' : 'After achieving ROSC we have not given any medications.';
+  };
   const standardTreatmentNodes: React.ReactNode[] = [
     ...airwayNodes, accessNode,
     ...(t.medGroups
       ? t.medGroups.map(g => g.meds.length
-        ? <div key={`m-${g.key}`}>{t.medGroupsKind === 'rearrest' ? (g.key === 'before' ? 'Before the rearrest we gave:' : 'After the rearrest we gave:') : (g.key === 'before' ? 'Before ROSC we gave:' : 'After achieving ROSC we gave:')}{subWithNote(g.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div>
-        : <div key={`m-${g.key}`}>{t.medGroupsKind === 'rearrest' ? (g.key === 'before' ? 'Before the rearrest we did not give any medications.' : 'After the rearrest we have not given any medications.') : (g.key === 'before' ? 'Before ROSC we did not give any medications.' : 'After achieving ROSC we have not given any medications.')}</div>)
+        ? <div key={`m-${g.key}`}>{medHeading(t, g.key, true)}{subWithNote(g.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div>
+        : <div key={`m-${g.key}`}>{medHeading(t, g.key, false)}</div>)
       : [t.meds.length ? <div key="m">For medications we have given:{subWithNote(t.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div> : <div key="m">No medications given.</div>]),
     ...(t.others.length ? [<div key="o">We have also used:{subWithNote(t.others.map(o => ({ text: o.line, note: o.note })))}</div>] : []),
   ];
@@ -6448,10 +6517,17 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   const gcsPart: React.ReactNode = vit.gcs ? gcsText : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
   const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
-  const rateOf = () => (vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : null);
-  const breathPart: React.ReactNode = !h.breathing ? ampm('Breathing ?')
-    : h.breathing === 'Unknown' ? "We don't know if they are breathing"
-    : <>{h.breathing === 'Breathing' ? 'They are spontaneously ventilating' : 'We are ventilating'}{rateOf() ?? <> at a rate of {ampm('rate ?')}</>}</>;
+  const spontRate: React.ReactNode = vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>;
+  const ventRate: string | null = vit.rrv ? vit.rrv : null;
+  const ventWithUs: React.ReactNode = ventRate ? ` ${ventRate === '1' ? 'ventilation' : 'ventilations'} a minute` : unk('rrv') ? ', rate unknown' : null;
+  const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
+    : !ventAnswer ? <>{spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</> : spontAnswer === 'No' ? 'They are not breathing' : "We don't know if they are breathing"}, {ampm('ventilation ?')}</>
+    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are {ventRate ? `giving a further ${ventRate}` : 'assisting'}{ventWithUs ?? <>, rate {ampm('?')}</>}</>
+    : spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</>
+    : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{ventRate ? ` at a rate of ${ventRate}` : unk('rrv') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
+    : spontAnswer === 'No' ? 'They are not breathing, and we are not ventilating'
+    : ventAnswer === 'Yes' ? <>We don't know if they are breathing, and we are ventilating{ventRate ? ` at a rate of ${ventRate}` : unk('rrv') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
+    : "We don't know if they are breathing";
   const circPart: React.ReactNode = h.radialPulse === 'Present' ? 'Radial pulse is present'
     : h.radialPulse === 'Absent' ? 'Radial pulse is not present'
     : unk('pulse') ? "We don't know if there is a radial pulse"
@@ -6636,15 +6712,12 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
       );
       case 'breath': return (
         <HandoverPageCard>
-          <HandoverChoice label="Breathing?" options={HANDOVER_BREATHING} value={h.breathing} onChange={v => onField('breathing', v)} columns={3} />
-          {(h.breathing === 'Breathing' || h.breathing === 'Ventilated') && (
-            <>
-              <HandoverChoice label={rrLabel} options={[...HANDOVER_RR, 'Other']} value={unk('rr') ? '' : rrChoice} columns={5} answered={!!rrChoice || unk('rr')}
-                onChange={v => { if (v === 'Other') { setRrOtherOpen(true); if (unk('rr')) setUnk('rr', false); } else { setRrOtherOpen(false); setVitalValue('rr', 'rr', v); } }}
-                footer={<HandoverUnknown label={rrLabel} on={unk('rr')} onClick={() => { setRrOtherOpen(false); toggleUnknownVital('rr', ['rr']); }} />} />
-              {rrChoice === 'Other' && !unk('rr') && <HandoverNumber label="Rate (other)" value={vit.rr} onChange={v => setVitalValue('rr', 'rr', v)} unit="/min" />}
-            </>
+          <HandoverChoice label="Spontaneously breathing?" options={['Yes', 'No', 'Unknown']} value={spontAnswer} onChange={setSpont} columns={3} />
+          {spontAnswer === 'Yes' && rateQuestion('rr', 'Respiratory rate')}
+          {spontAnswer && (
+            <HandoverChoice label="Ventilation provided?" options={['Yes', 'No']} value={ventAnswer} onChange={setVent} columns={2} />
           )}
+          {ventAnswer === 'Yes' && rateQuestion('rrv', 'Ventilation rate')}
           {showCirc && (
               <HandoverBox label="Radial pulse" state={(h.radialPulse || unk('pulse')) ? 'done' : 'missing'} className="col-span-2">
                 <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Radial pulse</span>

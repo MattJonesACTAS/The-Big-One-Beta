@@ -40,7 +40,8 @@ export interface HandoverFields {
   ageUnit?: string;         // 'Years' | 'Months'; not set until chosen (then Years, or the paediatric age's own unit)
   gender: string;           // 'Male' | 'Female' | 'Other' | ''
   genderOther: string;
-  breathing: string;        // 'Breathing' | 'Ventilated' | '' (ROSC: is the patient breathing, or are we ventilating)
+  breathing: string;        // 'Yes' | 'No' | 'Unknown' | '' (ROSC: are they breathing on their own? The rate is the VSS tab's Spontaneous RR)
+  ventilation: string;      // 'Yes' | 'No' | '' (ROSC: are we giving ventilations? The rate is the VSS tab's Ventilated RR, the breaths we give)
   witnessed: string;        // 'Yes' | 'No' | 'Unknown' | ''
   bystanderCpr: string;     // 'Yes' | 'No' | 'Unknown' | ''
   arrestStart: string;      // 'Before' (we arrived) | 'During' (the case) | ''
@@ -104,7 +105,7 @@ export interface AppState {
   pendingRhythmCheckDueAt?: number | null;
   handover?: HandoverFields;
   vitals: {
-    hr: string; rr: string; gcs: string;
+    hr: string; rr: string; gcs: string; rrv?: string;      // rr is the patient's own breathing rate (Spontaneous RR); rrv is the rate of the breaths we give (Ventilated RR)
     bpSys: string; bpDia: string; spo2: string;
     etco2: string; bgl: string; temp: string; lactate?: string;
     ecgR?: string; ecgT?: string; ecgE?: string; ecgB?: string; ecgI?: string; ecgMore?: string;     // the ECG: rhythm, a typed rhythm (Other), ectopics, block, ischaemic changes; ecgMore: the handover's 'Other findings' grid is open
@@ -116,6 +117,7 @@ export type OverlayType = 'reversibles' | 'rosc' | 'phea' | 'summary' | 'treatme
 export interface Vitals {
   hr: string;
   rr: string;
+  rrv?: string;
   gcs: string;
   bpSys: string;
   bpDia: string;
