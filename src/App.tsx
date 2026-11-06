@@ -5619,7 +5619,7 @@ type HandoverArrest = {
   rosc: { clock: string, rearrestSince: boolean } | null;
   roscCount: number;                                  // how many times ROSC was logged in the case
   ownChecks: number;                                  // shocks and disarms we logged (none means the patient may have had ROSC before we arrived)
-  episodes: { presenting: string, then: { rhythm: string, n: number }[], endsWithRosc: boolean, rearrest: { laterSeconds: number | null, clock: string } | null }[];   // one per arrest: ROSC ends one and a rearrest begins the next
+  episodes: { presenting: string, then: { rhythm: string, n: number }[], runs: { rhythm: string, n: number }[], endsWithRosc: boolean, rearrest: { laterSeconds: number | null, clock: string } | null }[];   // one per arrest: ROSC ends one and a rearrest begins the next
   askFirstRhythm: boolean;
   askLatestRhythm: boolean;                           // Arrest – Timers also asks the most recent rhythm                            // the crew are asked the first rhythm (shocks or disarms entered at setup, or Arrest – Timers, which doesn't record rhythms)
   priorChecks: boolean;                               // shocks or disarms were entered at setup, so they happened before the app started
@@ -5770,7 +5770,10 @@ const buildHandoverContent = (
         };
         if (!ra) rearrest = { laterSeconds: null, clock: '' };
       }
-      episodes.push({ presenting, then: thenCounts, endsWithRosc, rearrest });
+      // every outcome in the order it came (the presenting rhythm first), with the same rhythm several times in a row as one entry
+      const runs: { rhythm: string, n: number }[] = [];
+      [...(presenting ? [presenting] : []), ...rest].forEach(r => { const last = runs[runs.length - 1]; if (last && last.rhythm === r) last.n++; else runs.push({ rhythm: r, n: 1 }); });
+      episodes.push({ presenting, then: thenCounts, runs, endsWithRosc, rearrest });
       seq = [];
     };
     tx.forEach((x, idx) => {
@@ -6301,6 +6304,10 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const sub = (items: React.ReactNode[]) => (
     <div data-handover-list className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i} style={{ paddingLeft: '1.1em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.1em', marginLeft: '-1.1em' }}>•</span><span style={{ fontSize: 0 }}> </span>{cap(x)}</div>)}</div>
   );
+  // Numbered points (the order things happened in)
+  const subNumbered = (items: React.ReactNode[]) => (
+    <div data-handover-list className={`mt-2 ml-5 ${compact ? 'space-y-1.5 text-[22px]' : 'space-y-2 text-[28px]'} font-semibold text-neutral-700`}>{items.map((x, i) => <div key={i} style={{ paddingLeft: '1.6em' }}><span aria-hidden="true" style={{ display: 'inline-block', width: '1.6em', marginLeft: '-1.6em' }}>{i + 1}.</span><span style={{ fontSize: 0 }}> </span>{x}</div>)}</div>
+  );
   // Medication-style dot points with a smaller line underneath (when it was last given, or started)
   const subWithNote = (items: { text: string, note?: string }[]) => (
     <div data-handover-list className={`mt-2 ml-5 ${compact ? 'space-y-2 text-[22px]' : 'space-y-3 text-[28px]'} font-semibold text-neutral-700`}>
@@ -6448,16 +6455,25 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
     // After more than one arrest only the first arrest's first rhythm is said, then every rhythm check outcome of the most recent arrest (the one still going,
     // or the one that ended in the latest ROSC). The arrests in between are left out: the ROSC count and the total time in arrest already show they happened.
     const multiArrest = a.episodes.length >= 2;
+    const curE = a.episodes[a.episodes.length - 1];
+    // Still in arrest: every rhythm check outcome of the current arrest, in order, repeats in a row grouped (the trend of this arrest)
+    const listNow = !a.inRosc && !!curE && curE.runs.length > 1;
     if (a.firstState === 'ask') arrestNodes.push(<div key="f">{miss('First rhythm ?')}</div>);
     if (a.firstState === 'unknown') arrestNodes.push(<div key="f">I can't recall the presenting rhythm.</div>);
-    if (a.firstState === 'known' && a.firstRhythm) arrestNodes.push(<div key="f">{useEpisodes || multiArrest ? `${a.roscCount >= 1 ? 'The very first rhythm' : 'The presenting rhythm'} was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
-    if (multiArrest) {
-      const lastE = a.episodes[a.episodes.length - 1];
+    if (a.firstState === 'known' && a.firstRhythm && !(listNow && !multiArrest)) arrestNodes.push(<div key="f">{useEpisodes || multiArrest ? `${a.roscCount >= 1 ? 'The very first rhythm' : 'The presenting rhythm'} was ${rhythmSentence(a.firstRhythm)}.` : `Rhythm has been ${rhythmSentence(a.firstRhythm)} throughout.`}</div>);
+    if (!a.inRosc && curE && curE.runs.length > 0) {
+      if (listNow) {
+        arrestNodes.push(<div key="th-now">{multiArrest ? 'Since the rearrest we have had:' : a.firstState === 'unknown' ? 'We then had:' : "So far we've had:"}{subNumbered(curE.runs.map(r => `${r.n > 1 ? `${r.n} x ` : ''}${cap(rhythmWords(r.rhythm))}`))}</div>);
+      } else if (multiArrest) {
+        arrestNodes.push(<div key="th-now">Since the rearrest they've been in {rhythmSentence(curE.runs[0].rhythm)} throughout.</div>);
+      }
+    } else if (multiArrest) {
+      // In ROSC after more than one arrest: the first arrest's first rhythm, then every outcome of the arrest before this ROSC
+      const lastE = curE;
       const counts: { rhythm: string, n: number }[] = [];
       [...(lastE.presenting ? [{ rhythm: lastE.presenting, n: 1 }] : []), ...lastE.then].forEach(c => { const f = counts.find(x => x.rhythm === c.rhythm); if (f) f.n += c.n; else counts.push({ rhythm: c.rhythm, n: c.n }); });
       const items = counts.map(c => `${c.n} x ${cap(rhythmWords(c.rhythm))}`);
-      if (items.length) arrestNodes.push(<div key="th-last">{a.inRosc ? 'In the arrest before this ROSC we had:' : 'Since the rearrest we have had:'}{sub(items)}</div>);
-      if (!a.inRosc && a.latest) arrestNodes.push(<div key="l">Our latest rhythm was {rhythmSentence(a.latest)}.</div>);
+      if (items.length) arrestNodes.push(<div key="th-last">In the arrest before this ROSC we had:{sub(items)}</div>);
     } else {
       if (useEpisodes) a.episodes.forEach((e, i) => {
         const items = e.then.map(c => `${c.n} x ${cap(rhythmWords(c.rhythm))}`);
