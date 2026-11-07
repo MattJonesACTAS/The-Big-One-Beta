@@ -4931,11 +4931,25 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
   // While the tab slides closed this component can still be mounted, and a quick
   // reopen reuses it - so clear the ticks as soon as the tab starts closing.
   const isPresent = useIsPresent();
-  useEffect(() => { if (!isPresent) setChanged(new Set()); }, [isPresent]);
+  // Blood pressure is entered on an on-screen number pad that drops down under its row (the phone's keyboard never opens). One pad is open at a time.
+  const [padKey, setPadKey] = useState<'bpSys' | 'bpDia' | null>(null);
+  const padFresh = useRef(false);       // just opened: the first digit replaces the value, then digits add to it
+  useEffect(() => { if (!isPresent) { setChanged(new Set()); setPadKey(null); } }, [isPresent]);
 
   const update = (key: keyof AppState['vitals'], value: string) => {
     onChange({ ...vitals, [key]: value });
     setChanged(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+  };
+
+  const togglePad = (key: 'bpSys' | 'bpDia') => { padFresh.current = true; setPadKey(k => (k === key ? null : key)); };
+  const padPress = (key: 'bpSys' | 'bpDia', k: string) => {
+    const existing = vitals[key] ?? '';
+    let next: string;
+    if (k === 'back') next = existing.slice(0, -1);
+    else if (k === 'clear') next = '';
+    else { const base = padFresh.current ? '' : existing; if (base.length >= 3) return; next = base + k; }
+    padFresh.current = false;
+    update(key, next);
   };
 
   const fields: { key: keyof AppState['vitals'], label: string }[] = [
@@ -5002,6 +5016,33 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                   {noneRow('Blocks', 'ecgB', ECG_BLOCKS.map(([c, l]): [string, string] => [c, l]), 'data-ecg-block')}
                   {noneRow('Ischaemic changes', 'ecgI', ECG_ISCHAEMIA, 'data-ecg-ischaemia')}
                 </>)}
+              </React.Fragment>
+            );
+          }
+          if (key === 'bpSys' || key === 'bpDia') {
+            const open = padKey === key;
+            return (
+              <React.Fragment key={key}>
+                <button type="button" data-vss-pad-toggle={key} aria-expanded={open} aria-label={label} onClick={() => togglePad(key)}
+                  className={`w-full flex items-center justify-between px-4 py-3 border text-left ${open ? 'bg-sky-50 border-sky-200 rounded-t-xl' : 'bg-neutral-50 border-neutral-100 rounded-xl'}`}>
+                  <span className="text-[15px] font-bold text-neutral-800">{label}</span>
+                  <span className="flex items-center gap-2">
+                    <span data-vss-value={key} className="w-24 text-right text-[18px] font-bold text-sky-700 border-b-2 border-sky-200 py-1 tabular-nums min-h-[2.1rem]">{vitals[key] || '\u00A0'}</span>
+                    <span data-vss-tick={key} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${isChanged ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
+                    <span aria-hidden="true" className="text-[11px] text-sky-700 w-3">{open ? '▲' : '▼'}</span>
+                  </span>
+                </button>
+                {open && (
+                  <div data-vss-pad={key} className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3 -mt-2">
+                    <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
+                      {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'].map(k => (
+                        <button key={k} type="button" data-vss-key={k} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k} onClick={() => padPress(key, k)}
+                          className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
+                      ))}
+                    </div>
+                    <div className="text-center text-[12px] text-neutral-500 mt-2">mmHg · tap the row again to close</div>
+                  </div>
+                )}
               </React.Fragment>
             );
           }
