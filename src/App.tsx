@@ -4920,6 +4920,13 @@ const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])
   { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'rrt', 'spo2', 'etco2'] },
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
+// The number pad for each vital sign on the VSS tab: the most whole-number digits, whether one decimal place is allowed, and the unit shown under the pad
+const VSS_PAD = {
+  hr: { max: 3, dec: 0, unit: 'bpm' }, rr: { max: 3, dec: 0, unit: 'br/min' }, rrt: { max: 3, dec: 0, unit: 'br/min' }, spo2: { max: 3, dec: 0, unit: '%' },
+  etco2: { max: 3, dec: 0, unit: 'mmHg' }, bpSys: { max: 3, dec: 0, unit: 'mmHg' }, bpDia: { max: 3, dec: 0, unit: 'mmHg' }, gcs: { max: 2, dec: 0, unit: '/ 15' },
+  bgl: { max: 2, dec: 1, unit: 'mmol/L' }, temp: { max: 2, dec: 1, unit: '°C' }, lactate: { max: 2, dec: 1, unit: 'mmol/L' },
+} as const;
+type PadKey = keyof typeof VSS_PAD;
 function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void, ventilation: string, onVentilation: (v: 'Yes' | 'No') => void }) {
   // The Ventilating? control (Yes / No) is the same answer as 'Ventilation provided?' in the handover setup. The RR total row is only there when it is Yes, or a total is already entered.
   const ventShown = !!vitals.rrt || ventilation === 'Yes';
@@ -4931,8 +4938,8 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
   // While the tab slides closed this component can still be mounted, and a quick
   // reopen reuses it - so clear the ticks as soon as the tab starts closing.
   const isPresent = useIsPresent();
-  // Blood pressure is entered on an on-screen number pad that drops down under its row (the phone's keyboard never opens). One pad is open at a time.
-  const [padKey, setPadKey] = useState<'bpSys' | 'bpDia' | null>(null);
+  // Every number on this tab is entered on an on-screen pad that drops down under its row (the phone's keyboard never opens). One pad is open at a time.
+  const [padKey, setPadKey] = useState<PadKey | null>(null);
   const padFresh = useRef(false);       // just opened: the first digit replaces the value, then digits add to it
   useEffect(() => { if (!isPresent) { setChanged(new Set()); setPadKey(null); } }, [isPresent]);
 
@@ -4941,13 +4948,22 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
     setChanged(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
   };
 
-  const togglePad = (key: 'bpSys' | 'bpDia') => { padFresh.current = true; setPadKey(k => (k === key ? null : key)); };
-  const padPress = (key: 'bpSys' | 'bpDia', k: string) => {
-    const existing = vitals[key] ?? '';
+  const togglePad = (key: PadKey) => { padFresh.current = true; setPadKey(k => (k === key ? null : key)); };
+  const padPress = (key: PadKey, k: string) => {
+    const cfg = VSS_PAD[key]; const existing = vitals[key] ?? '';
     let next: string;
     if (k === 'back') next = existing.slice(0, -1);
     else if (k === 'clear') next = '';
-    else { const base = padFresh.current ? '' : existing; if (base.length >= 3) return; next = base + k; }
+    else {
+      const base = padFresh.current ? '' : existing;
+      if (k === '.') { if (!cfg.dec || base.includes('.')) return; next = (base || '0') + '.'; }
+      else {
+        const b2 = base === '0' ? '' : base;                                   // no leading zero (0 then 5 is 5)
+        if (b2.includes('.')) { if (b2.split('.')[1].length >= cfg.dec) return; }
+        else if (b2.length >= cfg.max) return;
+        next = b2 + k;
+      }
+    }
     padFresh.current = false;
     update(key, next);
   };
@@ -5019,57 +5035,35 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </React.Fragment>
             );
           }
-          if (key === 'bpSys' || key === 'bpDia') {
-            const open = padKey === key;
-            return (
-              <React.Fragment key={key}>
-                <button type="button" data-vss-pad-toggle={key} aria-expanded={open} aria-label={label} onClick={() => togglePad(key)}
-                  className={`w-full flex items-center justify-between px-4 py-3 border text-left ${open ? 'bg-sky-50 border-sky-200 rounded-t-xl' : 'bg-neutral-50 border-neutral-100 rounded-xl'}`}>
-                  <span className="text-[15px] font-bold text-neutral-800">{label}</span>
-                  <span className="flex items-center gap-2">
-                    <span data-vss-value={key} className="w-24 text-right text-[18px] font-bold text-sky-700 border-b-2 border-sky-200 py-1 tabular-nums min-h-[2.1rem]">{vitals[key] || '\u00A0'}</span>
-                    <span data-vss-tick={key} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${isChanged ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
-                    <span aria-hidden="true" className="text-[11px] text-sky-700 w-3">{open ? '▲' : '▼'}</span>
-                  </span>
-                </button>
-                {open && (
-                  <div data-vss-pad={key} className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3 -mt-2">
-                    <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
-                      {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'].map(k => (
-                        <button key={k} type="button" data-vss-key={k} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k} onClick={() => padPress(key, k)}
-                          className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
-                      ))}
-                    </div>
-                    <div className="text-center text-[12px] text-neutral-500 mt-2">mmHg · tap the row again to close</div>
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          }
           if (key === 'rrt' && !ventShown) return null;
-          const row = (
-            <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
-              <span className="text-[15px] font-bold text-neutral-800">{label}{key === 'rrt' && <span data-vss-bracket="rrt" className="block text-[12.5px] font-normal text-neutral-500">intrinsic + supplementary</span>}</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  aria-label={label}
-                  {...(key === 'rrt' ? { 'data-vss-rrt': '' } : {})}
-                  value={vitals[key] ?? ''}
-                  onChange={e => update(key, e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  className="w-24 text-right text-[18px] font-bold text-sky-700 bg-transparent border-b-2 border-sky-200 focus:border-sky-500 outline-none py-1 tabular-nums"
-                />
-                <span
-                  data-vss-tick={key}
-                  aria-hidden="true"
-                  className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${isChanged ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  <Check size={10} />
+          const cfg = VSS_PAD[key as PadKey];
+          const open = padKey === key;
+          const padRow = (
+            <React.Fragment key={key}>
+              <button type="button" data-vss-pad-toggle={key} aria-expanded={open} aria-label={label} onClick={() => togglePad(key as PadKey)}
+                className={`w-full flex items-center justify-between px-4 py-3 border text-left ${open ? 'bg-sky-50 border-sky-200 rounded-t-xl' : 'bg-neutral-50 border-neutral-100 rounded-xl'}`}>
+                <span className="text-[15px] font-bold text-neutral-800">{label}{key === 'rrt' && <span data-vss-bracket="rrt" className="block text-[12.5px] font-normal text-neutral-500">intrinsic + supplementary</span>}</span>
+                <span className="flex items-center gap-2">
+                  <span data-vss-value={key} className="w-24 text-right text-[18px] font-bold text-sky-700 border-b-2 border-sky-200 py-1 tabular-nums min-h-[2.1rem]">{vitals[key] || '\u00A0'}</span>
+                  <span data-vss-tick={key} aria-hidden="true" className={`w-5 h-5 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center transition-opacity ml-1 pointer-events-none ${isChanged ? 'opacity-100' : 'opacity-0'}`}><Check size={10} /></span>
+                  <span aria-hidden="true" className="text-[11px] text-sky-700 w-3">{open ? '▲' : '▼'}</span>
                 </span>
-              </div>
-            </div>
+              </button>
+              {open && (
+                <div data-vss-pad={key} className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3 -mt-2">
+                  <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', cfg.dec ? '.' : 'clear', '0', 'back'].map(k => (
+                      <button key={k} type="button" data-vss-key={k} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => padPress(key as PadKey, k)}
+                        className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between w-[270px] max-w-full mx-auto mt-2 text-[12px] text-neutral-500">
+                    {cfg.dec ? <button type="button" data-vss-key="clear" onClick={() => padPress(key as PadKey, 'clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button> : <span />}
+                    <span>{cfg.unit ? `${cfg.unit} · ` : ''}tap the row again to close</span>
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
           );
           return key === 'rr' ? (
             <React.Fragment key={key}>
@@ -5083,9 +5077,9 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                   ))}
                 </div>
               </div>
-              {row}
+              {padRow}
             </React.Fragment>
-          ) : row;
+          ) : padRow;
         })}
           </React.Fragment>
         ))}
