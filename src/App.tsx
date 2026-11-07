@@ -3784,19 +3784,10 @@ export default function App() {
                       
                       <div>
                         <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            placeholder="Enter weight"
-                            value={paedWeightMethod === 'weight' ? weightInput : ''}
-                            onChange={(e) => {
+                        <WeightPadBox value={paedWeightMethod === 'weight' ? weightInput : ''} onChange={(v) => {
                               setPaedWeightMethod('weight');
-                              setWeightInput(e.target.value);
-                            }}
-                            className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
-                        </div>
+                              setWeightInput(v);
+                            }} />
                       </div>
                     </motion.div>
                   )}
@@ -4333,20 +4324,11 @@ export default function App() {
 
                 <div>
                   <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      placeholder="Enter weight"
-                      value={newPaedWeightMethod === 'weight' ? newWeightInput : ''}
-                      onChange={(e) => {
+                  <WeightPadBox value={newPaedWeightMethod === 'weight' ? newWeightInput : ''} onChange={(v) => {
                         setNewPaedWeightMethod('weight');
-                        setNewWeightInput(e.target.value);
+                        setNewWeightInput(v);
                         setNewPaedAgeLabel(null);
-                      }}
-                      className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
-                  </div>
+                      }} />
                 </div>
               </div>
             )}
@@ -4920,6 +4902,102 @@ const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])
   { title: 'Respiratory', cls: 'bg-blue-50 text-blue-800 border-blue-200', keys: ['rr', 'rrt', 'spo2', 'etco2'] },
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
+// ---- One number pad for every number typed in the app. It drops down under the box and the phone's keyboard never opens.
+// padNext works out what an entry becomes after a key (null: the key does nothing). The first digit after the pad opens replaces what was there.
+const padNext = (existing: string, k: string, fresh: boolean, max: number, dec: number): string | null => {
+  if (k === 'back') return existing.slice(0, -1);
+  if (k === 'clear') return '';
+  const base = fresh ? '' : existing;
+  if (k === '.') return (!dec || base.includes('.')) ? null : (base || '0') + '.';
+  const b2 = base === '0' ? '' : base;                                   // no leading zero (0 then 5 is 5)
+  if (b2.includes('.')) { if (b2.split('.')[1].length >= dec) return null; }
+  else if (b2.length >= max) return null;
+  return b2 + k;
+};
+// the open/closed state and key handling for one number box (a hook, so each box has its own)
+function usePadField(value: string, onChange: (v: string) => void, max: number, dec: number, onClose?: () => void) {
+  const [open, setOpen] = useState(false);
+  const fresh = useRef(false);
+  const close = () => { if (open) { setOpen(false); onClose?.(); } };
+  const toggle = () => { if (open) close(); else { fresh.current = true; setOpen(true); } };
+  const press = (k: string) => { const next = padNext(value, k, fresh.current, max, dec); if (next === null) return; fresh.current = false; onChange(next); };
+  return { open, toggle, close, press };
+}
+function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
+  return (
+    <div data-pad {...(padAttr ?? {})}>
+      <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9', decimals ? '.' : 'clear', '0', 'back'].map(k => (
+          <button key={k} type="button" {...{ [keyAttr]: k }} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => onKey(k)}
+            className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
+        ))}
+      </div>
+      <div className="flex items-center justify-between w-[270px] max-w-full mx-auto mt-2 text-[12px] text-neutral-500">
+        {decimals ? <button type="button" {...{ [keyAttr]: 'clear' }} onClick={() => onKey('clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button> : <span />}
+        <span>{unit ? `${unit} · ` : ''}tap the box again to close</span>
+      </div>
+      {onDone && <button type="button" data-pad-done onClick={onDone} className="mt-2 block w-[270px] max-w-full mx-auto py-2.5 rounded-xl bg-[#4a6fa5] text-white font-bold">Done</button>}
+    </div>
+  );
+}
+// the Add Tx custom dose box (one per custom dose option, and the 'Other' one)
+function CustomDoseRow({ label, value, onChange, onAdd, unitNode, strong }: { label?: string, value: string, onChange: (v: string) => void, onAdd: () => void, unitNode?: React.ReactNode, strong?: boolean }) {
+  const pf = usePadField(value, onChange, 4, 2);
+  return (
+    <div className="w-full">
+      {label && <label className="block text-xs text-neutral-600 mb-1 font-medium">{label}</label>}
+      <div className="flex gap-2 items-center">
+        <div className={`flex-1 relative flex items-center bg-white ${strong ? 'border-2 border-emerald-500' : 'border border-neutral-200'} rounded-xl min-w-0 ${pf.open ? 'ring-2 ring-emerald-600' : ''}`}>
+          <button type="button" data-pad-field data-dose-field aria-label="Enter dose" aria-expanded={pf.open} {...{ placeholder: 'Enter dose...' }} onClick={pf.toggle} className="flex-1 bg-transparent px-4 py-3 text-base min-w-0 text-right">{value || <span className="text-neutral-400">Enter dose...</span>}</button>
+          {unitNode}
+        </div>
+        <button data-dose-send onClick={() => { pf.close(); onAdd(); }} disabled={!value} className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold btn-base disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+      {pf.open && <div className="mt-2 rounded-xl bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals onKey={pf.press} /></div>}
+    </div>
+  );
+}
+// the custom weight box (Recalibrate and case setup)
+function WeightPadBox({ value, onChange }: { value: string, onChange: (v: string) => void }) {
+  const pf = usePadField(value, onChange, 3, 1);
+  return (
+    <div>
+      <div className="relative">
+        <button type="button" data-pad-field aria-label="Custom weight" aria-expanded={pf.open} {...{ placeholder: 'Enter weight' }} onClick={pf.toggle}
+          className={`w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold text-left transition-all ${pf.open ? 'ring-2 ring-pink-400 border-pink-400' : ''}`}>{value || <span className="font-normal text-neutral-400">Enter weight</span>}</button>
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+      </div>
+      {pf.open && <div className="mt-2 rounded-xl bg-pink-50 border border-pink-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} /></div>}
+    </div>
+  );
+}
+// an infusion's total dose on the Pharma Summary
+function InfusionRow({ drug, doseNote, dose, unit, onDose, onUnit }: { drug: string, doseNote: React.ReactNode, dose: string, unit: string, onDose?: (v: string) => void, onUnit?: () => void }) {
+  const pf = usePadField(dose, v => onDose?.(v), 6, 2);
+  return (
+    <div>
+      <div className="flex items-center justify-between p-2 px-3">
+        <span className="text-neutral-500 text-[16px] font-medium">{drug}{doseNote}</span>
+        {onDose ? (
+          <div className={`flex items-center bg-neutral-50 border rounded-lg overflow-hidden ${pf.open ? 'border-emerald-400' : 'border-neutral-200'}`}>
+            <button type="button" data-pad-field data-infusion-dose={drug} aria-label={`${drug} total dose`} aria-expanded={pf.open} onClick={pf.toggle} className="w-16 text-right text-[16px] font-black text-neutral-900 bg-transparent px-2 py-1">{dose || <span className="font-normal text-neutral-400">0</span>}</button>
+            {onUnit ? (
+              <button type="button" data-infusion-unit={drug} aria-label={`Toggle ${drug} unit`} onClick={onUnit} className="mr-1.5 px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-[13px] font-bold whitespace-nowrap flex-shrink-0">{unit}</button>
+            ) : (
+              <span className="text-[13px] font-medium text-neutral-400 pr-2 w-8 text-left flex-shrink-0">{unit}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-[16px] font-black text-neutral-900">{dose ? `${dose}${unit}` : '—'}</span>
+        )}
+      </div>
+      {pf.open && onDose && <div className="mx-3 mb-2 rounded-lg bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals unit={unit} onKey={pf.press} /></div>}
+    </div>
+  );
+}
+
 // The number pad for each vital sign on the VSS tab: the most whole-number digits, whether one decimal place is allowed, and the unit shown under the pad
 const VSS_PAD = {
   hr: { max: 3, dec: 0, unit: 'bpm' }, rr: { max: 3, dec: 0, unit: 'br/min' }, rrt: { max: 3, dec: 0, unit: 'br/min' }, spo2: { max: 3, dec: 0, unit: '%' },
@@ -4950,20 +5028,9 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
 
   const togglePad = (key: PadKey) => { padFresh.current = true; setPadKey(k => (k === key ? null : key)); };
   const padPress = (key: PadKey, k: string) => {
-    const cfg = VSS_PAD[key]; const existing = vitals[key] ?? '';
-    let next: string;
-    if (k === 'back') next = existing.slice(0, -1);
-    else if (k === 'clear') next = '';
-    else {
-      const base = padFresh.current ? '' : existing;
-      if (k === '.') { if (!cfg.dec || base.includes('.')) return; next = (base || '0') + '.'; }
-      else {
-        const b2 = base === '0' ? '' : base;                                   // no leading zero (0 then 5 is 5)
-        if (b2.includes('.')) { if (b2.split('.')[1].length >= cfg.dec) return; }
-        else if (b2.length >= cfg.max) return;
-        next = b2 + k;
-      }
-    }
+    const cfg = VSS_PAD[key];
+    const next = padNext(vitals[key] ?? '', k, padFresh.current, cfg.max, cfg.dec);
+    if (next === null) return;
     padFresh.current = false;
     update(key, next);
   };
@@ -5050,17 +5117,8 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                 </span>
               </button>
               {open && (
-                <div data-vss-pad={key} className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3 -mt-2">
-                  <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
-                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', cfg.dec ? '.' : 'clear', '0', 'back'].map(k => (
-                      <button key={k} type="button" data-vss-key={k} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => padPress(key as PadKey, k)}
-                        className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between w-[270px] max-w-full mx-auto mt-2 text-[12px] text-neutral-500">
-                    {cfg.dec ? <button type="button" data-vss-key="clear" onClick={() => padPress(key as PadKey, 'clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button> : <span />}
-                    <span>{cfg.unit ? `${cfg.unit} · ` : ''}tap the row again to close</span>
-                  </div>
+                <div className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3 -mt-2">
+                  <NumberPad decimals={!!cfg.dec} unit={cfg.unit} onKey={k => padPress(key as PadKey, k)} padAttr={{ 'data-vss-pad': key }} keyAttr="data-vss-key" />
                 </div>
               )}
             </React.Fragment>
@@ -6028,21 +6086,23 @@ function HandoverChoice({ label, options, value, onChange, columns = 3, footer, 
 }
 
 // A number box (number pad on a phone), with an optional Unknown button. Empty ones are amber so they're noticed.
-function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur, boxed = true, narrow = false }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void, boxed?: boolean, narrow?: boolean }) {
+function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, disabled, onBlur, boxed = true, narrow = false, padKey }: { label: string, value: string, onChange: (v: string) => void, unit: string, unknownOn?: boolean, onUnknown?: () => void, disabled?: boolean, onBlur?: () => void, boxed?: boolean, narrow?: boolean, padKey?: string }) {
   const off = unknownOn || disabled;
   const compact = React.useContext(HandoverDensity);
-  // (a plain function, not a component, so the input keeps focus while typing)
+  const cfg = (padKey && (VSS_PAD as Record<string, { max: number, dec: number, unit: string }>)[padKey]) || { max: 3, dec: 1, unit };
+  const pf = usePadField(value, onChange, cfg.max, cfg.dec, onBlur);
   const wrap = (children: React.ReactNode) => boxed ? <HandoverBox label={label} narrow={narrow} state={(value || off) ? 'done' : 'missing'}>{children}</HandoverBox> : <div>{children}</div>;
   return wrap(
     <>
-      <label className="block">
+      <div className="block">
         <span className={!boxed ? HANDOVER_HEADING_PLAIN : (compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING)}>{label}</span>
         <div className="relative">
-          <input aria-label={label} inputMode="decimal" enterKeyHint="done" onKeyDown={closeKeyboardOnEnter} onKeyUp={closeKeyboardOnEnter} value={value} disabled={off} onBlur={onBlur} onChange={e => onChange(e.target.value.replace(/[^0-9./]/g, '').slice(0, 6))} autoComplete="off" placeholder="—"
-            className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 outline-none focus:border-[#4a6fa5] ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-[#4a6fa5]'} ${off ? 'opacity-50' : ''}`} />
+          <button type="button" data-pad-field aria-label={label} aria-expanded={pf.open && !off} disabled={off} onClick={pf.toggle}
+            className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-[#4a6fa5]'} ${pf.open && !off ? 'border-[#4a6fa5] ring-2 ring-[#4a6fa5]/30' : ''} ${off ? 'opacity-50' : ''}`}>{value || '—'}</button>
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
-      </label>
+        {pf.open && !off && <div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals={!!cfg.dec} unit={unit} onKey={pf.press} /></div>}
+      </div>
       {onUnknown && <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label={label} on={!!unknownOn} onClick={onUnknown} /></div>}
     </>
   );
@@ -6106,6 +6166,10 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
   useEffect(() => { if (!confirmed) { setCustom(false); setCustomText(''); } }, [ageKey]);
   const sentRef = React.useRef<number | null>(null);          // Enter commits and then blurs: the blur must not commit (and log) it a second time
   const commitCustom = () => { const w = parseFloat(customText); if (!isNaN(w) && w > 0 && w !== sentRef.current && !(confirmed && w === weight)) { sentRef.current = w; onCustom(w); } };
+  // the weight is committed when the pad closes (not on every digit, so typing 85 doesn't log a change to 8 first), and if the box is left open when the crew move on
+  const commitRef = React.useRef(commitCustom); commitRef.current = commitCustom;
+  const pf = usePadField(customText, setCustomText, 3, 1, () => commitRef.current());
+  useEffect(() => () => commitRef.current(), []);
   const tcls = (on: boolean) => `${compact ? 'py-2.5' : 'py-3.5'} rounded-lg font-bold text-[15px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
   return (
     <HandoverBox label="Weight" state={confirmed ? 'done' : 'missing'}>
@@ -6115,10 +6179,13 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
         <button data-handover-choice="Weight: Custom" aria-pressed={custom || wasCustom} onClick={() => { setCustom(true); setCustomText(wasCustom ? String(weight) : ''); }} className={tcls(custom || wasCustom)}>Custom weight</button>
       </div>
       {custom && (
-        <div className={`relative ${compact ? 'mt-2' : 'mt-3'}`}>
-          <input data-handover-weight-custom type="number" inputMode="decimal" aria-label="Custom weight" placeholder="Custom weight" value={customText} onChange={e => setCustomText(e.target.value)} onBlur={commitCustom} onKeyDown={e => { if (e.key === 'Enter') { commitCustom(); (e.target as HTMLInputElement).blur(); } }}
-            className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-center`} />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+        <div className={compact ? 'mt-2' : 'mt-3'}>
+          <div className="relative">
+            <button type="button" data-handover-weight-custom data-pad-field aria-label="Custom weight" aria-expanded={pf.open} {...{ placeholder: 'Custom weight' }} onClick={pf.toggle}
+              className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-center`}>{customText || <span className="font-normal text-neutral-400">Custom weight</span>}</button>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
+          </div>
+          {pf.open && <div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} onDone={pf.close} /></div>}
         </div>
       )}
     </HandoverBox>
@@ -6244,7 +6311,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
         <HandoverChoice label={label} options={[...HANDOVER_RR, 'Other']} value={unk(key) ? '' : choice} columns={5} answered={!!choice || unk(key)}
           onChange={v => { if (v === 'Other') { setRrOther(o => ({ ...o, [key]: true })); if (unk(key)) setUnk(key, false); } else { setRrOther(o => ({ ...o, [key]: false })); setVitalValue(key, key, v); } }}
           footer={<HandoverUnknown label={label} on={unk(key)} onClick={() => { setRrOther(o => ({ ...o, [key]: false })); toggleUnknownVital(key, [key]); }} />} />
-        {choice === 'Other' && !unk(key) && <HandoverNumber label="Rate (other)" value={vit[key] ?? ''} onChange={v => setVitalValue(key, key, v)} unit="/min" />}
+        {choice === 'Other' && !unk(key) && <HandoverNumber padKey={key} label="Rate (other)" value={vit[key] ?? ''} onChange={v => setVitalValue(key, key, v)} unit="/min" />}
       </>
     );
   };
@@ -6874,20 +6941,20 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
       case 'vitals': return (
         <HandoverPageCard>
  <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-            {showCirc && <HandoverNumber narrow label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />}
-            {vsSigns.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {showCirc && <HandoverNumber padKey="hr" narrow label="HR" value={vit.hr} onChange={v => setVitalValue('hr', 'hr', v)} unit="bpm" unknownOn={unk('hr')} onUnknown={() => toggleUnknownVital('hr', ['hr'])} />}
+            {vsSigns.slice(0, 1).map(sg => <React.Fragment key={sg.key}><HandoverNumber padKey={sg.key} narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
             {showCirc && (
               <HandoverBox label="BP" state={((vit.bpSys && vit.bpDia) || unk('bp')) ? 'done' : 'missing'} className="col-span-2">
                 <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>BP</span>
                 <div className="grid grid-cols-2 gap-3">
-                  <HandoverNumber boxed={false} label="Systolic" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
-                  <HandoverNumber boxed={false} label="Diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
+                  <HandoverNumber padKey="bpSys" boxed={false} label="Systolic" value={vit.bpSys} onChange={v => { onVital('bpSys', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
+                  <HandoverNumber padKey="bpDia" boxed={false} label="Diastolic" value={vit.bpDia} onChange={v => { onVital('bpDia', v); if (unk('bp') && v) setUnk('bp', false); }} unit="mmHg" disabled={unk('bp')} />
                 </div>
                 <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="BP" on={unk('bp')} onClick={() => toggleUnknownVital('bp', ['bpSys', 'bpDia'])} /></div>
               </HandoverBox>
             )}
             {showCirc && !inRosc && gcsBox}
-            {vsSigns.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {vsSigns.slice(1).map(sg => <React.Fragment key={sg.key}><HandoverNumber padKey={sg.key} narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>
         </HandoverPageCard>
       );
@@ -6915,7 +6982,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
                 </HandoverBox>
               );
             })()}
-            {content.signs.filter(sg => ['etco2', 'lactate'].includes(sg.key)).map(sg => <React.Fragment key={sg.key}><HandoverNumber narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
+            {content.signs.filter(sg => ['etco2', 'lactate'].includes(sg.key)).map(sg => <React.Fragment key={sg.key}><HandoverNumber padKey={sg.key} narrow label={sg.label} value={sg.value} onChange={v => setVitalValue(sg.key, sg.key, v)} unit={sg.unit} unknownOn={unk(sg.key)} onUnknown={() => toggleUnknownVital(sg.key, [sg.key])} /></React.Fragment>)}
           </div>
         </HandoverPageCard>
       );
@@ -7144,30 +7211,10 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
     return <StatRow key={name} label={name} value={d.total} detail={d.per ? `${d.count} doses ${d.per}` : (d.count >= 2 && info.totalDose > 0 && info.unit ? `${d.count} doses` : undefined)} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
   };
   const infusionRow = (drug: string) => (
-              <div key={drug} className="flex items-center justify-between p-2 px-3">
-                <span className="text-neutral-500 text-[16px] font-medium">{drug}{(() => { const dt = treatments ? doseTimeNote(treatments, drug) : null; return dt ? <span className="block text-[12px] text-neutral-400 font-medium tabular-nums print:hidden">{dt.label} {dt.time}</span> : null; })()}</span>
-                {onUpdateInfusionDose ? (
-                  <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded-lg overflow-hidden focus-within:border-emerald-400">
-                    <input
-                      type="text"
-                      value={infusionDoses?.[drug] ?? ''}
-                      onChange={e => onUpdateInfusionDose(drug, e.target.value)}
-                      placeholder="0"
-                      className="w-16 text-right text-[16px] font-black text-neutral-900 bg-transparent px-2 py-1 outline-none"
-                    />
-                    {onUpdateInfusionUnit ? (
-                      <button type="button" data-infusion-unit={drug} aria-label={`Toggle ${drug} unit`} onClick={() => onUpdateInfusionUnit(drug, unitFor(drug) === 'mg' ? 'mcg' : 'mg')}
-                        className="mr-1.5 px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-[13px] font-bold whitespace-nowrap flex-shrink-0">{unitFor(drug)}</button>
-                    ) : (
-                      <span className="text-[13px] font-medium text-neutral-400 pr-2 w-8 text-left flex-shrink-0">{unitFor(drug)}</span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-[16px] font-black text-neutral-900">
-                    {infusionDoses?.[drug] ? `${infusionDoses[drug]}${unitFor(drug)}` : '—'}
-                  </span>
-                )}
-              </div>
+    <InfusionRow key={drug} drug={drug} dose={infusionDoses?.[drug] ?? ''} unit={unitFor(drug)}
+      doseNote={(() => { const dt = treatments ? doseTimeNote(treatments, drug) : null; return dt ? <span className="block text-[12px] text-neutral-400 font-medium tabular-nums print:hidden">{dt.label} {dt.time}</span> : null; })()}
+      onDose={onUpdateInfusionDose ? (v: string) => onUpdateInfusionDose(drug, v) : undefined}
+      onUnit={onUpdateInfusionUnit ? () => onUpdateInfusionUnit(drug, unitFor(drug) === 'mg' ? 'mcg' : 'mg') : undefined} />
   );
   // Once ROSC has been achieved: what was given before the latest ROSC, and what was given after it
   const sections = split ? [[split.kind === 'rearrest' ? 'Pre-rearrest' : 'Pre-ROSC', split.before], [split.kind === 'rearrest' ? 'Post-rearrest' : 'Post-ROSC', split.after]].map(([title, txs]) => {
@@ -7559,36 +7606,8 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
             {customInputDoses.map(doseOpt => {
               const key = `${doseOpt.dose}-${doseOpt.indication}`;
               return (
-                <div key={key} className="w-full">
-                  {doseOpt.indication && (
-                    <label className="block text-xs text-neutral-600 mb-1 font-medium">
-                      {doseOpt.indication}
-                    </label>
-                  )}
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1 relative flex items-center bg-white border-2 border-emerald-500 rounded-xl focus-within:ring-2 focus-within:ring-emerald-600 min-w-0">
-                      <input
-                        type="text"
-                        value={customInputValues[key] || ''}
-                        onChange={e => setCustomInputValues({ ...customInputValues, [key]: e.target.value })}
-                        onKeyPress={e => e.key === 'Enter' && customInputValues[key] && handleCustomInputAdd(doseOpt)}
-                        placeholder={`Enter dose...`}
-                        className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
-                      />
-                      <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">{doseOpt.dose}</span>
-                    </div>
-                    <button
-                      onClick={() => handleCustomInputAdd(doseOpt)}
-                      className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold btn-base disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                      disabled={!customInputValues[key]}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                <CustomDoseRow key={key} strong label={doseOpt.indication} value={customInputValues[key] || ''} onChange={v => setCustomInputValues({ ...customInputValues, [key]: v })} onAdd={() => handleCustomInputAdd(doseOpt)}
+                  unitNode={<span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">{doseOpt.dose}</span>} />
               );
             })}
             
@@ -7596,7 +7615,6 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               const defaultUnit = getDefaultCustomUnit(selectedMed);
               const unit = selectedCustomUnit ?? defaultUnit;
               const canToggleUnit = defaultUnit === 'mg' || defaultUnit === 'mcg';
-              const placeholder = unit ? `Enter dose...` : 'Enter dose...';
               
               // Calculate secondary unit for live display
               const getSecondaryUnit = () => {
@@ -7619,42 +7637,12 @@ function TreatmentSelection({ addTreatment, state, isShockForced, patientTypeOve
               const secondaryUnit = getSecondaryUnit();
               
               return (
-              <div className="w-full flex gap-2 items-center">
-                <div className="flex-1 relative flex items-center bg-white border border-neutral-200 rounded-xl focus-within:ring-2 focus-within:ring-emerald-500 min-w-0">
-                  <input
-                    type="text"
-                    value={customDose}
-                    onChange={e => setCustomDose(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && customDose && handleCustomDoseAdd()}
-                    placeholder={placeholder}
-                    className="flex-1 bg-transparent px-4 py-3 text-base outline-none min-w-0 text-right"
-                  />
-                  {canToggleUnit ? (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCustomUnit(unit === 'mg' ? 'mcg' : 'mg')}
-                      className="mr-2 px-2 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-sm font-bold whitespace-nowrap flex-shrink-0"
-                      aria-label="Toggle dose unit"
-                    >
-                      {unit}
-                    </button>
-                  ) : (unit || secondaryUnit) && (
-                    <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">
-                      {unit}{secondaryUnit ? ` ${secondaryUnit}` : ''}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={handleCustomDoseAdd}
-                  className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold btn-base disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                  disabled={!customDose}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </button>
-              </div>
+                <CustomDoseRow value={customDose} onChange={setCustomDose} onAdd={handleCustomDoseAdd}
+                  unitNode={canToggleUnit ? (
+                    <button type="button" onClick={() => setSelectedCustomUnit(unit === 'mg' ? 'mcg' : 'mg')} className="mr-2 px-2 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-sm font-bold whitespace-nowrap flex-shrink-0" aria-label="Toggle dose unit">{unit}</button>
+                  ) : (unit || secondaryUnit) ? (
+                    <span className="pr-4 text-neutral-400 text-sm font-medium whitespace-nowrap">{unit}{secondaryUnit ? ` ${secondaryUnit}` : ''}</span>
+                  ) : null} />
               );
             })()}
           </div>
