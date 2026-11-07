@@ -5037,7 +5037,7 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                 <div role="group" aria-label="Ventilating?" className="flex bg-slate-200 rounded-xl p-1 w-44">
                   {(['No', 'Yes'] as const).map(v => (
                     <button key={v} type="button" data-vss-vent={v} aria-pressed={ventSel === v}
-                      onClick={() => { if (ventSel === v) return; onVentilation(v); if (v === 'Yes') setTimeout(() => document.querySelector<HTMLInputElement>('input[data-vss-rrt]')?.focus(), 80); }}
+                      onClick={() => { if (ventSel !== v) onVentilation(v); }}
                       className={`flex-1 py-2 rounded-lg text-[15px] font-bold ${ventSel === v ? 'bg-[#4a6fa5] text-white' : 'text-slate-600'}`}>{v}</button>
                   ))}
                 </div>
