@@ -4924,8 +4924,15 @@ function usePadField(value: string, onChange: (v: string) => void, max: number, 
   return { open, toggle, close, press };
 }
 function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
+  // When a pad opens the screen scrolls, quickly and smoothly, so the whole pad is on screen. scrollMarginBottom leaves room for a bar fixed to the bottom of the screen (Back / Continue, Cancel / Save).
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const id = window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 40);
+    return () => window.clearTimeout(id);
+  }, []);
   return (
-    <div data-pad {...(padAttr ?? {})}>
+    <div ref={ref} data-pad style={{ scrollMarginBottom: 104, scrollMarginTop: 8 }} {...(padAttr ?? {})}>
       <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', decimals ? '.' : 'clear', '0', 'back'].map(k => (
           <button key={k} type="button" {...{ [keyAttr]: k }} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => onKey(k)}
@@ -5931,7 +5938,7 @@ const buildHandoverContent = (
   if (firstState === 'unknown') information.push({ t: 'First rhythm unknown' });
   if (others.length) information.push({ t: 'Other rhythms', sub: others });
   if (recentRhythm) information.push({ t: `${state.isROSCMode ? 'Last rhythm before ROSC' : 'Latest rhythm'} ${recentRhythm}` });
-  if (lastRosc) information.push({ t: `ROSC ${t12(lastRosc.clock)}${rearrestSince ? ', rearrested since' : ''}` });
+  if (lastRosc) information.push({ t: `ROSC${lastRosc.clock ? ` ${t12(lastRosc.clock)}` : ''}${rearrestSince ? ', rearrested since' : ''}` });
 
   // --- Signs not covered by R / A / B / C. SpO₂ only matters once there's a circulation to measure it in.
   const v = state.vitals ?? { hr: '', rr: '', rrt: '', gcs: '', bpSys: '', bpDia: '', spo2: '', etco2: '', bgl: '', temp: '' };
@@ -6526,9 +6533,9 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     if (a.arrestSeconds != null && a.roscCount >= 2) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They have spent ${haveSpentPhrase(a.arrestSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', true, true)}.`}</div>); }
     else if (a.durationSeconds != null && a.roscCount >= 2) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}, achieving ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
     else if (a.roscCount >= 2) arrestNodes.push(<div key="d">{`We have achieved ROSC ${timesPhrase(a.roscCount)}${roscAt ? `, most recently at ${roscAt}` : ''}.`}</div>);
-    else if (a.durationSeconds != null && a.rosc) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They were ${wereForPhrase(a.durationSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', false)}.`}</div>); }
+    else if (a.durationSeconds != null && a.rosc) { shocksSaid = true; arrestNodes.push(<div key="d">{`We achieved ROSC${roscAt ? ` at ${roscAt}` : ''}${a.rosc.rearrestSince ? ', rearrested since' : ''}${a.roscAgoSeconds != null ? `, which was ${agoPhrase(a.roscAgoSeconds)}` : ''}.`}</div>, <div key="d2">{`They were ${wereForPhrase(a.durationSeconds, a.preArrival)}${a.preArrival === 'unknown' ? ',' : ''} and ${shocksClause('received', false)}.`}</div>); }
     else if (a.durationSeconds != null) arrestNodes.push(<div key="d">{`We ran arrest management for ${approxPhrase(a.durationSeconds)}.`}</div>);
-    else if (a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC at ${t12(a.rosc.clock)}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
+    else if (a.rosc) arrestNodes.push(<div key="d">{`We achieved ROSC${roscAt ? ` at ${roscAt}` : ''}${a.rosc.rearrestSince ? ', rearrested since' : ''}.`}</div>);
   } else if (a.durationSeconds != null && a.arrestSeconds != null) {
     if (!newShape) arrestNodes.push(<div key="d">{`They have spent ${haveSpentPhrase(a.arrestSeconds, a.preArrival)}.`}</div>);
   } else if (a.durationSeconds != null) {
