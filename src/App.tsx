@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
@@ -952,7 +952,6 @@ export default function App() {
   const [handoverBar, setHandoverBar] = useState<HTMLElement | null>(null);
   // Which Fill in page the crew had reached, so being interrupted (the 0:20 close, another screen) doesn't lose their place.
   // Closing it (or being interrupted) keeps it, so it reopens where they were; a handover that's begun but never opened comes up on Review.
-  const handoverResumeRef = useRef<string | null>(null);
   const closeHandover = () => { setShowHandover(false); };
   // The Handover button in the top row: opens the handover in the central box (closing any other screen over it), and closes it again
   const handoverOpen = showHandover && !state.currentOverlay;
@@ -3387,7 +3386,7 @@ export default function App() {
             <motion.div key="handover" className="absolute inset-0 z-[45]"
               initial={{ y: '-100%' }} animate={{ y: 0 }} exit={{ y: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 220, mass: 0.8 }}>
-              <HandoverOverlay embedded state={state} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} resumeKey={handoverResumeRef.current} onPage={k => { handoverResumeRef.current = k; }} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
+              <HandoverOverlay embedded state={state} onField={setHandoverField} onVital={setVital} onView={v => { handoverViewRef.current = v; }} barEl={handoverBar} onFinish={() => { closeHandover(); setState(p => ({ ...p, currentOverlay: null })); }} onClose={closeHandover} onWeight={setHandoverWeight} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -4922,8 +4921,9 @@ const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])
   { title: 'Supplementary', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', keys: ['temp', 'bgl', 'lactate'] },
 ];
 function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void, ventilation: string, onVentilation: (v: 'Yes' | 'No') => void }) {
-  // The RR total row is only there when we are ventilating (the same answer as 'Ventilation provided?' in the handover setup), or a total is already entered
+  // The Ventilating? control (Yes / No) is the same answer as 'Ventilation provided?' in the handover setup. The RR total row is only there when it is Yes, or a total is already entered.
   const ventShown = !!vitals.rrt || ventilation === 'Yes';
+  const ventSel = vitals.rrt ? 'Yes' : (ventilation === 'Yes' || ventilation === 'No') ? ventilation : '';
   // Every keystroke is saved straight away. The green tick is not a button: it
   // only confirms that a field has been changed since the VSS tab was opened,
   // and it clears when the tab closes (the values stay).
@@ -5005,10 +5005,7 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </React.Fragment>
             );
           }
-          if (key === 'rrt' && !ventShown) return (
-            <button key="rrt-add" type="button" data-vss-add-total onClick={() => { onVentilation('Yes'); setTimeout(() => document.querySelector<HTMLInputElement>('input[data-vss-rrt]')?.focus(), 80); }}
-              className="w-full border-2 border-dashed border-slate-300 rounded-xl py-3 text-[15px] font-bold text-slate-600 bg-slate-50 active:bg-slate-100">+ Ventilating? Add RR total</button>
-          );
+          if (key === 'rrt' && !ventShown) return null;
           const row = (
             <div key={key} className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-100">
               <span className="text-[15px] font-bold text-neutral-800">{label}{key === 'rrt' && <span data-vss-bracket="rrt" className="block text-[12.5px] font-normal text-neutral-500">intrinsic + supplementary</span>}</span>
@@ -5033,10 +5030,19 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </div>
             </div>
           );
-          return key === 'rrt' ? (
+          return key === 'rr' ? (
             <React.Fragment key={key}>
+              <div data-vss-ventilating className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-2.5 border border-neutral-100">
+                <span className="text-[15px] font-bold text-neutral-800">Ventilating?</span>
+                <div role="group" aria-label="Ventilating?" className="flex bg-slate-200 rounded-xl p-1 w-44">
+                  {(['No', 'Yes'] as const).map(v => (
+                    <button key={v} type="button" data-vss-vent={v} aria-pressed={ventSel === v}
+                      onClick={() => { if (ventSel === v) return; onVentilation(v); if (v === 'Yes') setTimeout(() => document.querySelector<HTMLInputElement>('input[data-vss-rrt]')?.focus(), 80); }}
+                      className={`flex-1 py-2 rounded-lg text-[15px] font-bold ${ventSel === v ? 'bg-[#4a6fa5] text-white' : 'text-slate-600'}`}>{v}</button>
+                  ))}
+                </div>
+              </div>
               {row}
-              <button type="button" data-vss-not-ventilating onClick={() => onVentilation('No')} className="block ml-auto -mt-1 mr-2 text-[13px] text-rose-700 underline">Not ventilating</button>
             </React.Fragment>
           ) : row;
         })}
@@ -6084,10 +6090,8 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
   );
 }
 
-function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, onClose, embedded = false, barEl, resumeKey, onPage }: {
+function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWeight, onView, onFinish, onClose, embedded = false, barEl }: {
   barEl?: HTMLElement | null,
-  resumeKey?: string | null,
-  onPage?: (k: string) => void,
   embedded?: boolean,
   onFinish?: () => void,
   onView?: (v: 'fill' | 'read') => void,
@@ -6110,11 +6114,17 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const frame = embedded ? 'absolute inset-0 z-[45]' : 'fixed inset-0 z-[2000]';
   const [view, setView] = useState<'fill' | 'read'>('fill');
   const [card, setCard] = useState(0);
-  const [pageKey, setPageKey] = useState<string>(() => resumeKey ?? (Object.values(state.handover ?? {}).some(v => (typeof v === 'string' ? v.trim() !== '' : !!v)) ? 'review' : 'id'));      // a handover that's been started reopens on Review, a new one starts at the first page
-  useEffect(() => { onPage?.(pageKey); }, [pageKey]);
+  // Where the handover opens (worked out once the pages and what's still to fill are known, just below): the first page for a handover not yet started, the next page
+  // that still needs something for one that has, and Review (Still to fill) only if the app has moved between arrest and ROSC since the crew last answered
+  const AUTO_PAGE = '__auto';
+  const [pageKey, setPageKey] = useState<string>(AUTO_PAGE);
   const [rrOther, setRrOther] = useState<{ rr: boolean, rrt: boolean }>({ rr: false, rrt: false });
   useEffect(() => { onView?.(view); return () => onView?.('fill'); }, [view]);
   const h: HandoverFields = { ...HANDOVER_EMPTY, ...(state.handover ?? {}) };
+  const doneList = (h.donePages || '').split(',').filter(Boolean);
+  // Answering anything here (a handover answer or a vital sign) records the mode the app was in
+  const onField = (key: keyof HandoverFields, value: string) => { onFieldRaw(key, value); if (key !== 'startedMode' && h.startedMode !== modeLabel) onFieldRaw('startedMode', modeLabel); };
+  const onVital = (key: VitalKey, value: string) => { onVitalRaw(key, value); if (h.startedMode !== modeLabel) onFieldRaw('startedMode', modeLabel); };
   const content = buildHandoverContent(general ? { ...state, isROSCMode: true } : state, h);
   const vit = state.vitals;
   const inRosc = state.isROSCMode || general;       // a General handover asks the same primary survey and vital signs as a ROSC one
@@ -6289,6 +6299,13 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   if (!airwayVal) missing.treatment.push('Airway');
   if (!accessDone) missing.treatment.push('Access');
   if (showPhea && !pheaVal) missing.treatment.push('PHEA');
+  // Decide the opening page, before it is first drawn: Review (Still to fill) if the app has moved between modes since the crew last worked on it; otherwise the first page they
+  // haven't clicked through with Next (a prefilled page still has to be confirmed, as a vital sign could be old) or that now needs something. That is page one for a handover not yet started.
+  useLayoutEffect(() => {
+    if (pageKey !== AUTO_PAGE) return;
+    const next = pageKeys.find(k => k !== 'review' && (!doneList.includes(k) || (missing[k]?.length ?? 0) > 0));
+    setPageKey((h.startedMode && h.startedMode !== modeLabel) ? 'review' : (next ?? 'review'));
+  }, []);
   const pageTitle: Record<string, string> = { other: 'Handover', events: 'Presenting complaint', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: inRosc ? 'Breathing / Circulation' : 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'Vital Signs (1/2)' : 'Vital Signs', vitals2: 'Vital Signs (2/2)', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
@@ -6666,7 +6683,11 @@ function HandoverOverlay({ state, onField, onVital, onWeight, onView, onFinish, 
   const firstIncomplete = pageKeys.findIndex(pageIncomplete);          // -1 when every page is complete
   const reachable = (k: string, i: number) => firstIncomplete === -1 || i <= firstIncomplete || k === curKey;
   const canNext = !pageIncomplete(curKey);
-  const goNext = () => { if (canNext && curIdx < pageKeys.length - 1) setPageKey(pageKeys[curIdx + 1]); };
+  const goNext = () => {
+    if (!(canNext && curIdx < pageKeys.length - 1)) return;
+    if (!doneList.includes(curKey)) onField('donePages', [...doneList, curKey].join(','));
+    setPageKey(pageKeys[curIdx + 1]);
+  };
   const goBack = () => { if (curIdx > 0) setPageKey(pageKeys[curIdx - 1]); };
   // The suspected cause of arrest: on the Witnessed and CPR page when there is one (the patient had arrested before we arrived), otherwise on What happened
   const causeBox = text('suspectedCause', 'Suspected cause of arrest?', { prompt: true, placeholder: 'Cardiac', footer: (
