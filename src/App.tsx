@@ -7,6 +7,8 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 're
 import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
+// The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
+const BUILD_LABEL = 'build 200';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -2885,7 +2887,7 @@ export default function App() {
       {!disclaimerAccepted && (
         <div className="fixed inset-0 bg-black/90 z-[3000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">{APP_VERSION}</span></h1>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-1">The Big One <span className="text-sm font-medium text-neutral-400">{APP_VERSION}</span> <span data-build-label className="text-xs font-medium text-neutral-300">{BUILD_LABEL}</span></h1>
             <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-6">Important — please read before use</p>
             <div className="space-y-4 text-[14px] text-neutral-600 leading-relaxed mb-6">
               <p><strong className="text-neutral-900">Prototype in development.</strong> This application is a prototype in development and may contain errors. Access is by invitation only, for testing in simulation and providing feedback. It is not yet for use in real patient care.</p>
@@ -3527,7 +3529,7 @@ export default function App() {
                   </div>
 
                   <div className="text-[11px] text-neutral-400 text-center pt-2 space-y-0.5">
-                    <p>The Big One {APP_VERSION}</p>
+                    <p>The Big One {APP_VERSION} · <span data-build-label>{BUILD_LABEL}</span></p>
                     <p>ACTAS CMG v1.1.0.3</p>
                     <p>Last reviewed October 2026</p>
                   </div>
@@ -5163,13 +5165,14 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
             <React.Fragment key={key}>
               <div data-vss-ventilating className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-2.5 border border-neutral-100">
                 <span className="text-[15px] font-bold text-neutral-800">Ventilating?</span>
-                <div role="group" aria-label="Ventilating?" className="flex bg-slate-200 rounded-xl p-1 w-44">
-                  {(['No', 'Yes'] as const).map(v => (
-                    <button key={v} type="button" data-vss-vent={v} aria-pressed={ventSel === v}
-                      onClick={() => { if (ventSel !== v) onVentilation(v); }}
-                      className={`flex-1 py-2 rounded-lg text-[15px] font-bold ${ventSel === v ? 'bg-[#4a6fa5] text-white' : 'text-slate-600'}`}>{v}</button>
-                  ))}
-                </div>
+                <button type="button" data-vss-vent-switch role="switch" aria-checked={ventSel === 'Yes'} aria-label="Ventilating?"
+                  onClick={() => onVentilation(ventSel === 'Yes' ? 'No' : 'Yes')}
+                  className={`flex-shrink-0 relative w-[120px] h-9 rounded-full transition-colors duration-200 ${ventSel === 'Yes' ? 'bg-sky-100' : 'bg-neutral-200'}`}>
+                  <span className={`absolute top-1 w-[88px] h-7 rounded-full shadow flex items-center justify-center gap-1 text-[12px] font-bold text-white transition-all duration-200 ${ventSel === 'Yes' ? 'left-[28px] bg-[#4a6fa5]' : 'left-1 bg-neutral-500'}`}>
+                    {ventSel === 'Yes' ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
+                    {ventSel === 'Yes' ? 'Yes' : 'No'}
+                  </span>
+                </button>
               </div>
               {padRow}
             </React.Fragment>
