@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 209';
+const BUILD_LABEL = 'build 210';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -4907,7 +4907,6 @@ const VSS_GROUPS: { title: string, cls: string, keys: (keyof AppState['vitals'])
 // ---- One number pad for every number typed in the app. It drops down under the box and the phone's keyboard never opens.
 // padNext works out what an entry becomes after a key (null: the key does nothing). The first digit after the pad opens replaces what was there.
 const padNext = (existing: string, k: string, fresh: boolean, max: number, dec: number): string | null => {
-  if (k === 'back') return existing.slice(0, -1);
   if (k === 'clear') return '';
   const base = fresh ? '' : existing;
   if (k === '.') return (!dec || base.includes('.')) ? null : (base || '0') + '.';
@@ -4994,14 +4993,13 @@ function NumberPad({ decimals, onKey, padAttr, keyAttr = 'data-pad-key', onDone 
   return (
     <div data-pad {...(padAttr ?? {})}>
       <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9', decimals ? '.' : 'clear', '0', 'back'].map(k => (
-          <button key={k} type="button" {...{ [keyAttr]: k }} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => onKey(k)}
-            className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9', decimals ? '.' : 'clear', '0', 'enter'].map(k => (
+          <button key={k} type="button" {...{ [keyAttr]: k }} aria-label={k === 'enter' ? 'Enter' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => (k === 'enter' ? onDone?.() : onKey(k))}
+            className={`py-3.5 rounded-xl border-2 font-bold ${k === 'enter' ? 'border-[#3a5a8a] bg-[#4a6fa5] active:bg-[#3a5a8a] text-[14px] text-white' : k === 'clear' ? 'border-neutral-200 bg-white active:bg-neutral-100 text-[14px] text-rose-700' : 'border-neutral-200 bg-white active:bg-neutral-100 text-[20px] text-neutral-800'}`}>{k === 'enter' ? 'Enter' : k === 'clear' ? 'Clear' : k}</button>
         ))}
       </div>
       {decimals && <div className="w-[270px] max-w-full mx-auto mt-2"><button type="button" {...{ [keyAttr]: 'clear' }} onClick={() => onKey('clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button></div>}
       {PAD_DIAG && <div data-pad-diag className="w-[270px] max-w-full mx-auto mt-1 text-[9px] leading-tight text-neutral-400 break-all">{diag}</div>}
-      {onDone && <button type="button" data-pad-done onClick={onDone} className="mt-2 block w-[270px] max-w-full mx-auto py-2.5 rounded-xl bg-[#4a6fa5] text-white font-bold">Done</button>}
     </div>
   );
 }
@@ -5020,7 +5018,7 @@ function CustomDoseRow({ label, value, onChange, onAdd, unitNode, strong }: { la
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
-      <Reveal open={pf.open}><div className="mt-2 rounded-xl bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals onKey={pf.press} /></div></Reveal>
+      <Reveal open={pf.open}><div className="mt-2 rounded-xl bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals onKey={pf.press} onDone={pf.close} /></div></Reveal>
     </div>
   );
 }
@@ -5056,7 +5054,7 @@ function InfusionRow({ drug, doseNote, dose, unit, onDose, onUnit }: { drug: str
           <span className="text-[16px] font-black text-neutral-900">{dose ? `${dose}${unit}` : '—'}</span>
         )}
       </div>
-      <Reveal open={pf.open && !!onDose}><div className="mx-3 mb-2 rounded-lg bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals unit={unit} onKey={pf.press} /></div></Reveal>
+      <Reveal open={pf.open && !!onDose}><div className="mx-3 mb-2 rounded-lg bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals unit={unit} onKey={pf.press} onDone={pf.close} /></div></Reveal>
     </div>
   );
 }
@@ -5181,7 +5179,7 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </button>
               <Reveal open={open} className={key === 'rrt' ? '' : '-mt-2'}>
                 <div className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3">
-                  <NumberPad decimals={!!cfg.dec} unit={cfg.unit} onKey={k => padPress(key as PadKey, k)} padAttr={{ 'data-vss-pad': key }} keyAttr="data-vss-key" />
+                  <NumberPad decimals={!!cfg.dec} unit={cfg.unit} onKey={k => padPress(key as PadKey, k)} onDone={() => setPadKey(null)} padAttr={{ 'data-vss-pad': key }} keyAttr="data-vss-key" />
                 </div>
               </Reveal>
             </React.Fragment>
@@ -6164,7 +6162,7 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
             className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-[#4a6fa5]'} ${pf.open && !off ? 'border-[#4a6fa5] ring-2 ring-[#4a6fa5]/30' : ''} ${off ? 'opacity-50' : ''}`}>{value || '—'}</button>
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
-        <Reveal open={pf.open && !off}><div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals={!!cfg.dec} unit={unit} onKey={pf.press} /></div></Reveal>
+        <Reveal open={pf.open && !off}><div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals={!!cfg.dec} unit={unit} onKey={pf.press} onDone={pf.close} /></div></Reveal>
       </div>
       {onUnknown && <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label={label} on={!!unknownOn} onClick={onUnknown} /></div>}
     </>
