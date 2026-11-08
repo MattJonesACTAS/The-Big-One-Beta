@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 204';
+const BUILD_LABEL = 'build 205';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -3461,11 +3461,11 @@ export default function App() {
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
               initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
+              animate={{ x: 0, opacity: 1, ...(!catchupTxMode && catchupStep === 2 ? { height: weightType === 'paed' ? Math.min(window.innerHeight - 32, 786) : 'auto' } : {}) }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
               className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : catchupStep === 2 ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
-              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : catchupStep === 2 ? { height: 'min(calc(100dvh - 2rem), 786px)' } : {}}
+              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : catchupStep === 2 ? { maxHeight: 'calc(100dvh - 2rem)' } : {}}
             >
               {catchupTxMode && (
                 <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
