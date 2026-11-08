@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 208';
+const BUILD_LABEL = 'build 209';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -4988,7 +4988,7 @@ function Reveal({ open, children, className = '', follow = true, gap }: { open: 
     </div>
   );
 }
-function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
+function NumberPad({ decimals, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
   const [diag, setDiag] = useState('');
   useEffect(() => { if (!PAD_DIAG) return; const id = window.setInterval(() => setDiag(lastPadDiag), 400); return () => window.clearInterval(id); }, []);
   return (
@@ -4999,10 +4999,7 @@ function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', o
             className={`py-3.5 rounded-xl border-2 border-neutral-200 bg-white active:bg-neutral-100 font-bold ${k === 'clear' ? 'text-[14px] text-rose-700' : 'text-[20px] text-neutral-800'}`}>{k === 'back' ? '⌫' : k === 'clear' ? 'Clear' : k}</button>
         ))}
       </div>
-      <div className="flex items-center justify-between w-[270px] max-w-full mx-auto mt-2 text-[12px] text-neutral-500">
-        {decimals ? <button type="button" {...{ [keyAttr]: 'clear' }} onClick={() => onKey('clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button> : <span />}
-        <span>{unit ? `${unit} · ` : ''}tap the box again to close</span>
-      </div>
+      {decimals && <div className="w-[270px] max-w-full mx-auto mt-2"><button type="button" {...{ [keyAttr]: 'clear' }} onClick={() => onKey('clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button></div>}
       {PAD_DIAG && <div data-pad-diag className="w-[270px] max-w-full mx-auto mt-1 text-[9px] leading-tight text-neutral-400 break-all">{diag}</div>}
       {onDone && <button type="button" data-pad-done onClick={onDone} className="mt-2 block w-[270px] max-w-full mx-auto py-2.5 rounded-xl bg-[#4a6fa5] text-white font-bold">Done</button>}
     </div>
@@ -5182,7 +5179,7 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                   <span aria-hidden="true" className="text-[11px] text-sky-700 w-3">{open ? '▲' : '▼'}</span>
                 </span>
               </button>
-              <Reveal open={open} className="-mt-2">
+              <Reveal open={open} className={key === 'rrt' ? '' : '-mt-2'}>
                 <div className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3">
                   <NumberPad decimals={!!cfg.dec} unit={cfg.unit} onKey={k => padPress(key as PadKey, k)} padAttr={{ 'data-vss-pad': key }} keyAttr="data-vss-key" />
                 </div>
