@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 210';
+const BUILD_LABEL = 'build 212';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -673,15 +673,16 @@ const splitByLastChange = (treatments: Treatment[]): { kind: 'rosc' | 'rearrest'
 };
 type PharmaInfo = { totalDose: number, unit: string, count: number, display: string, amounts?: number[], sawGrams?: boolean };
 // The total (without the dose count) and, for two or more doses, how big each one was: "of 1mg" when they were all the same, "ranging from 50 to 100mcg" when they weren't
-function doseDetail(info: PharmaInfo): { total: string, per: string | null, count: number } {
+function doseDetail(info: PharmaInfo): { total: string, per: string | null, between: string | null, count: number } {
   const total = info.display.replace(/\s*\(\d+\)\s*$/, '');
   const a = info.amounts ?? [];
-  if (info.count < 2 || a.length < 2 || a.length !== info.count || !info.unit) return { total, per: null, count: info.count };
+  if (info.count < 2 || a.length < 2 || a.length !== info.count || !info.unit) return { total, per: null, between: null, count: info.count };
   const min = Math.min(...a), max = Math.max(...a);
   let unit = info.unit, div = 1;
   if (unit.toLowerCase() === 'mcg' && info.sawGrams && max >= 1000000) { unit = 'g'; div = 1000000; } else if (unit.toLowerCase() === 'mcg' && max >= 1000) { unit = 'mg'; div = 1000; } else if (unit.toLowerCase() === 'ml' && max >= 1000) { unit = 'L'; div = 1000; }
   const f = (v: number) => `${parseFloat((v / div).toFixed(2))}`;
-  return { total, count: info.count, per: Math.abs(max - min) < 1e-9 ? `of ${f(max)}${unit}` : `ranging from ${f(min)} to ${f(max)}${unit}` };
+  const same = Math.abs(max - min) < 1e-9;
+  return { total, count: info.count, per: same ? `of ${f(max)}${unit}` : `ranging from ${f(min)} to ${f(max)}${unit}`, between: same ? `of ${f(max)}${unit}` : `between ${f(min)} and ${f(max)}${unit}` };
 }
 const multiDoseText = (name: string, info: PharmaInfo): string | undefined => {
   const d = doseDetail(info);
@@ -2956,7 +2957,6 @@ export default function App() {
           data-button="reversibles"
           className={`p-4 sm:p-6 rounded-xl text-sm sm:text-xl font-bold btn-base transition-colors text-center ${
             state.currentOverlay === 'reversibles' ? 'bg-red-100 text-red-800' :
-            !state.reversiblesChecklistOpened ? 'bg-red-600 text-white animate-pulse' :
             'bg-blue-100 text-blue-700'
           } ${isShockForced ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
         >
@@ -5612,7 +5612,7 @@ function VitalSignsSection({ vitals }: { vitals: AppState['vitals'] }) {
     { label: 'BP', value: v.bpSys && v.bpDia ? `${v.bpSys}/${v.bpDia}` : v.bpSys || v.bpDia || '', unit: 'mmHg' },
     { label: 'ECG',     value: ecgShort(v), unit: '', lines: ecgLines(v) },
     { label: 'RR intrinsic', value: v.rr, unit: 'br/min' },
-    { label: 'RR total (intrinsic + supplementary)',  value: v.rrt ?? '', unit: 'br/min' },
+    { label: 'RR total',  value: v.rrt ?? '', unit: 'br/min' },
     { label: 'SpO₂',           value: v.spo2, unit: '%'      },
     { label: 'EtCO₂',          value: v.etco2,unit: 'mmHg'   },
     { label: 'Temp',    value: v.temp, unit: '°C'     },
@@ -7261,7 +7261,7 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
   const medRow = (name: string, info: PharmaInfo, txs?: Treatment[]) => {
     const d = doseDetail(info);
     const dt = txs ? doseTimeNote(txs, name) : null;
-    return <StatRow key={name} label={name} value={d.total} detail={d.per ? `${d.count} doses ${d.per}` : (d.count >= 2 && info.totalDose > 0 && info.unit ? `${d.count} doses` : undefined)} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
+    return <StatRow key={name} label={name} value={d.total} detail={d.between ? `${d.count} doses ${d.between}` : (d.count >= 2 && info.totalDose > 0 && info.unit ? `${d.count} doses` : undefined)} sub={dt ? `${dt.label} ${dt.time}` : undefined} />;
   };
   const infusionRow = (drug: string) => (
     <InfusionRow key={drug} drug={drug} dose={infusionDoses?.[drug] ?? ''} unit={unitFor(drug)}
@@ -7347,7 +7347,7 @@ function StatRow({ label, value, color = "text-neutral-900", stacked = false, su
   }
   return (
     <div className="flex justify-between items-center p-2 px-3">
-      <span className="text-neutral-500 text-[16px] font-medium">{label}{(detail || sub) && <span className="block text-[12px] text-neutral-400 font-medium tabular-nums">{detail}{sub && <span className="print:hidden">{detail ? ' · ' : ''}{sub}</span>}</span>}</span>
+      <span className="text-neutral-500 text-[16px] font-medium">{label}{(detail || sub) && <span className="block text-[12px] text-neutral-400 font-medium tabular-nums">{detail && <span className="block">{detail}</span>}{sub && <span className="block print:hidden">{sub}</span>}</span>}</span>
       <span className={`text-[16px] font-black tabular-nums ${color}`}>{value}</span>
     </div>
   );
