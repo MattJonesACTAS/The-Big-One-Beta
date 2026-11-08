@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 207';
+const BUILD_LABEL = 'build 208';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -4960,14 +4960,15 @@ const revealInView = (el: HTMLElement, settle = false) => {
 };
 const PAD_DIAG = false;   // (a small readout under every pad of what the scrolling code saw: off; switch on to investigate a phone)
 // A pad (or anything else) that opens and closes smoothly: it grows from nothing, the screen follows it so the whole pad ends up in view, and on closing it shrinks and is removed.
-function Reveal({ open, children, className = '', follow = true }: { open: boolean, children: React.ReactNode, className?: string, follow?: boolean }) {
+// gap: the space left under it when it is open (px). It shrinks with it, so the rows below don't jump when it is finally removed.
+function Reveal({ open, children, className = '', follow = true, gap }: { open: boolean, children: React.ReactNode, className?: string, follow?: boolean, gap?: number }) {
   const reduce = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(open);
   const inner = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (open) { setMounted(true); const id = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true))); return () => cancelAnimationFrame(id); }
-    setShown(false); const t = window.setTimeout(() => setMounted(false), reduce ? 0 : 240); return () => window.clearTimeout(t);
+    setShown(false); const t = window.setTimeout(() => setMounted(false), reduce ? 0 : 700); return () => window.clearTimeout(t);      // (it is removed when its animation ends; this is only the backstop)
   }, [open]);
   useEffect(() => {
     if (!shown || !follow || !inner.current) return;
@@ -4981,7 +4982,8 @@ function Reveal({ open, children, className = '', follow = true }: { open: boole
   }, [shown]);
   if (!mounted) return null;
   return (
-    <div className={className} style={{ display: 'grid', gridTemplateRows: shown ? '1fr' : '0fr', transition: reduce ? 'none' : 'grid-template-rows 220ms ease' }}>
+    <div className={className} onTransitionEnd={e => { if (!open && e.target === e.currentTarget && e.propertyName === 'grid-template-rows') setMounted(false); }}
+      style={{ display: 'grid', gridTemplateRows: shown ? '1fr' : '0fr', ...(gap != null ? { marginBottom: shown ? gap : 0 } : {}), transition: reduce ? 'none' : `grid-template-rows 220ms ease${gap != null ? ', margin-bottom 220ms ease' : ''}` }}>
       <div ref={inner} style={{ overflow: 'hidden', minHeight: 0 }}>{children}</div>
     </div>
   );
@@ -5201,7 +5203,7 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </div>
               {padRow}
             </React.Fragment>
-          ) : key === 'rrt' ? <Reveal key={key} open={ventShown} follow={false}>{padRow}</Reveal> : padRow;
+          ) : key === 'rrt' ? <Reveal key={key} open={ventShown} follow={false} gap={8}>{padRow}</Reveal> : padRow;
         })}
           </React.Fragment>
         ))}
