@@ -57,7 +57,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
   elapsed: {
     recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the patient's weight.",
     tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
-    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, enter a value, then press 'Close'.",
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can log our first Tx.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen, open the 'Medications' section, choose 'Adrenaline push', and select a dose.",
     treatmentLogInfo: "Press the 'Summary' button at the bottom left of the home screen, tap the small button beside the adrenaline push entry in the treatment log, and choose Edit, Reorder, or Delete.",
@@ -79,7 +79,7 @@ const LOST_TEXT: Record<TutorialMode, Record<string, string>> = {
   minimal: {
     recalibrate: "Press the 'Recalibrate' button at the top left of the home screen and follow the option to change the rhythm check interval.",
     tabs: "Press the '4H 4T' button in the row of buttons near the top of the home screen and tick one item off.",
-    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, type in a vital sign, then press 'Close'.",
+    vssTab: "Press the 'VSS' button at the right end of the row of buttons near the top of the home screen, enter a value, then press 'Close'.",
     addTxBtn: "Press the '+ Add Tx' button at the bottom right of the home screen so we can start an adrenaline timer.",
     addTxSubmenu: "Press the '+ Add Tx' button at the bottom right of the home screen and choose 'Adrenaline' to start its timer.",
     handover: "Press the 'Handover' button at the top of the home screen, fill in the blanks with whatever you like, then deliver the handover and read it out to the end.",
@@ -95,7 +95,7 @@ function vssTabPages(whereShown: string, giveItAGo = 'Open the VSS tab, record a
     description: "The VSS tab works differently to the checklists.\n\nYou can use this tab to create a list of the most recent vital signs you've taken during the case.\n\nThere are three benefits to this:\n\n• It gives you a place to quickly record the vital signs you might only take once during a case and then forget (such as temp and BGL)\n\n• It shows you which vital signs you might have missed\n\n• It creates a complete list in one place to use at handover"
   }, {
     title: 'VSS Tab',
-    description: "The VSS tab does not record values over time; it only displays the most recent entry for each vital sign, so it is best kept up to date closer to handover.\n\nAs you type a value, a green tick appears next to it, confirming that a change has been made.\n\nEntering a new value replaces the old one.\n\n" + whereShown
+    description: "The VSS tab does not record values over time; it only displays the most recent entry for each vital sign, so it is best kept up to date closer to handover.\n\nAs you enter a value, a green tick appears next to it, confirming that a change has been made.\n\nEntering a new value replaces the old one.\n\n" + whereShown
   }, {
     title: 'Give it a Go',
     description: giveItAGo

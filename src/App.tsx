@@ -4923,16 +4923,45 @@ function usePadField(value: string, onChange: (v: string) => void, max: number, 
   const press = (k: string) => { const next = padNext(value, k, fresh.current, max, dec); if (next === null) return; fresh.current = false; onChange(next); };
   return { open, toggle, close, press };
 }
-function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
-  // When a pad opens the screen scrolls, quickly and smoothly, so the whole pad is on screen. scrollMarginBottom leaves room for a bar fixed to the bottom of the screen (Back / Continue, Cancel / Save).
-  const ref = useRef<HTMLDivElement>(null);
+// Keeps an element on screen inside whatever scrolls it, clear of a bar stuck to the bottom of that scroller (Back / Continue, Cancel / Save).
+const revealInView = (el: HTMLElement) => {
+  let sc: HTMLElement | null = el.parentElement;
+  while (sc && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY) && sc.scrollHeight > sc.clientHeight + 1)) sc = sc.parentElement;
+  const r = el.getBoundingClientRect();
+  const c = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+  const bar = sc ? Array.from(sc.querySelectorAll<HTMLElement>('[class*="sticky"]')).find(x => { const cs = getComputedStyle(x); return cs.position === 'sticky' && cs.bottom !== 'auto'; }) : undefined;
+  const bottom = Math.min(c.bottom, window.innerHeight) - (bar ? bar.getBoundingClientRect().height + 8 : 12);
+  const top = Math.max(c.top, 0) + 8;
+  const dy = r.bottom > bottom ? Math.min(r.bottom - bottom, r.top - top) : 0;   // never scroll the top of the pad off the screen to show its bottom
+  if (dy > 0) { if (sc) sc.scrollTop += dy; else window.scrollBy(0, dy); }
+};
+// A pad (or anything else) that opens and closes smoothly: it grows from nothing, the screen follows it so the whole pad ends up in view, and on closing it shrinks and is removed.
+function Reveal({ open, children, className = '' }: { open: boolean, children: React.ReactNode, className?: string }) {
+  const reduce = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const [mounted, setMounted] = useState(open);
+  const [shown, setShown] = useState(false);
+  const inner = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const id = window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 40);
-    return () => window.clearTimeout(id);
-  }, []);
+    if (open) { setMounted(true); const id = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true))); return () => cancelAnimationFrame(id); }
+    setShown(false); const t = window.setTimeout(() => setMounted(false), reduce ? 0 : 240); return () => window.clearTimeout(t);
+  }, [open]);
+  useEffect(() => {
+    if (!shown || !inner.current) return;
+    const el = inner.current; const t0 = performance.now(); let raf = 0;
+    const tick = () => { revealInView(el); if (performance.now() - t0 < 320) raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [shown]);
+  if (!mounted) return null;
   return (
-    <div ref={ref} data-pad style={{ scrollMarginBottom: 104, scrollMarginTop: 8 }} {...(padAttr ?? {})}>
+    <div className={className} style={{ display: 'grid', gridTemplateRows: shown ? '1fr' : '0fr', transition: reduce ? 'none' : 'grid-template-rows 220ms ease' }}>
+      <div ref={inner} style={{ overflow: 'hidden', minHeight: 0 }}>{children}</div>
+    </div>
+  );
+}
+function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
+  return (
+    <div data-pad {...(padAttr ?? {})}>
       <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', decimals ? '.' : 'clear', '0', 'back'].map(k => (
           <button key={k} type="button" {...{ [keyAttr]: k }} aria-label={k === 'back' ? 'Delete' : k === 'clear' ? 'Clear' : k === '.' ? 'Decimal point' : k} onClick={() => onKey(k)}
@@ -4962,7 +4991,7 @@ function CustomDoseRow({ label, value, onChange, onAdd, unitNode, strong }: { la
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
-      {pf.open && <div className="mt-2 rounded-xl bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals onKey={pf.press} /></div>}
+      <Reveal open={pf.open}><div className="mt-2 rounded-xl bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals onKey={pf.press} /></div></Reveal>
     </div>
   );
 }
@@ -4976,7 +5005,7 @@ function WeightPadBox({ value, onChange }: { value: string, onChange: (v: string
           className={`w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold text-left transition-all ${pf.open ? 'ring-2 ring-pink-400 border-pink-400' : ''}`}>{value || <span className="font-normal text-neutral-400">Enter weight</span>}</button>
         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
       </div>
-      {pf.open && <div className="mt-2 rounded-xl bg-pink-50 border border-pink-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} /></div>}
+      <Reveal open={pf.open}><div className="mt-2 rounded-xl bg-pink-50 border border-pink-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} /></div></Reveal>
     </div>
   );
 }
@@ -5000,7 +5029,7 @@ function InfusionRow({ drug, doseNote, dose, unit, onDose, onUnit }: { drug: str
           <span className="text-[16px] font-black text-neutral-900">{dose ? `${dose}${unit}` : '—'}</span>
         )}
       </div>
-      {pf.open && onDose && <div className="mx-3 mb-2 rounded-lg bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals unit={unit} onKey={pf.press} /></div>}
+      <Reveal open={pf.open && !!onDose}><div className="mx-3 mb-2 rounded-lg bg-neutral-50 border border-neutral-200 px-2 py-3"><NumberPad decimals unit={unit} onKey={pf.press} /></div></Reveal>
     </div>
   );
 }
@@ -5123,11 +5152,11 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                   <span aria-hidden="true" className="text-[11px] text-sky-700 w-3">{open ? '▲' : '▼'}</span>
                 </span>
               </button>
-              {open && (
-                <div className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3 -mt-2">
+              <Reveal open={open} className="-mt-2">
+                <div className="bg-sky-50 border border-t-0 border-sky-200 rounded-b-xl px-3 pt-3 pb-3">
                   <NumberPad decimals={!!cfg.dec} unit={cfg.unit} onKey={k => padPress(key as PadKey, k)} padAttr={{ 'data-vss-pad': key }} keyAttr="data-vss-key" />
                 </div>
-              )}
+              </Reveal>
             </React.Fragment>
           );
           return key === 'rr' ? (
@@ -6108,7 +6137,7 @@ function HandoverNumber({ label, value, onChange, unit, unknownOn, onUnknown, di
             className={`w-full border rounded-lg px-4 ${unit ? 'pr-14' : ''} ${compact ? 'py-2 text-[17px]' : 'py-4 text-[18px]'} text-center text-neutral-900 ${value || off ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-[#4a6fa5]'} ${pf.open && !off ? 'border-[#4a6fa5] ring-2 ring-[#4a6fa5]/30' : ''} ${off ? 'opacity-50' : ''}`}>{value || '—'}</button>
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-400 pointer-events-none">{unit}</span>
         </div>
-        {pf.open && !off && <div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals={!!cfg.dec} unit={unit} onKey={pf.press} /></div>}
+        <Reveal open={pf.open && !off}><div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals={!!cfg.dec} unit={unit} onKey={pf.press} /></div></Reveal>
       </div>
       {onUnknown && <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label={label} on={!!unknownOn} onClick={onUnknown} /></div>}
     </>
@@ -6192,7 +6221,7 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
               className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-center`}>{customText || <span className="font-normal text-neutral-400">Custom weight</span>}</button>
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
           </div>
-          {pf.open && <div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} onDone={pf.close} /></div>}
+          <Reveal open={pf.open}><div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} onDone={pf.close} /></div></Reveal>
         </div>
       )}
     </HandoverBox>
