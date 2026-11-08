@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 206';
+const BUILD_LABEL = 'build 207';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -5072,6 +5072,7 @@ type PadKey = keyof typeof VSS_PAD;
 function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vitals: AppState['vitals'], onChange: (v: AppState['vitals']) => void, ventilation: string, onVentilation: (v: 'Yes' | 'No') => void }) {
   // The Ventilating? control (Yes / No) is the same answer as 'Ventilation provided?' in the handover setup. The RR total row is only there when it is Yes, or a total is already entered.
   const ventShown = !!vitals.rrt || ventilation === 'Yes';
+  useEffect(() => { if (!ventShown && padKey === 'rrt') setPadKey(null); }, [ventShown]);      // the row has gone: so has its pad
   const ventSel = vitals.rrt ? 'Yes' : (ventilation === 'Yes' || ventilation === 'No') ? ventilation : '';
   // Every keystroke is saved straight away. The green tick is not a button: it
   // only confirms that a field has been changed since the VSS tab was opened,
@@ -5166,7 +5167,6 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </React.Fragment>
             );
           }
-          if (key === 'rrt' && !ventShown) return null;
           const cfg = VSS_PAD[key as PadKey];
           const open = padKey === key;
           const padRow = (
@@ -5201,7 +5201,7 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
               </div>
               {padRow}
             </React.Fragment>
-          ) : padRow;
+          ) : key === 'rrt' ? <Reveal key={key} open={ventShown} follow={false}>{padRow}</Reveal> : padRow;
         })}
           </React.Fragment>
         ))}
