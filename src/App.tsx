@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 202 (pad diagnostic)';
+const BUILD_LABEL = 'build 203 (pad diagnostic)';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -921,6 +921,8 @@ export default function App() {
   const [paedWeightMethod, setPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
   const [paedAgeLabel, setPaedAgeLabel] = useState<string>('');
   const [weightInput, setWeightInput] = useState('');
+  // While the custom weight pad is open the parts of the screen above it fold away, so the box and the whole pad fit above the Back / Continue bar without any scrolling.
+  const [weightPadOpen, setWeightPadOpen] = useState(false);
   const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
@@ -995,6 +997,7 @@ export default function App() {
   // only (which never asked for one) - the mode change carries on once saved.
   const [pendingWeightForMode, setPendingWeightForMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [newWeightInput, setNewWeightInput] = useState('');
+  const [newWeightPadOpen, setNewWeightPadOpen] = useState(false);
   const [newPatientType, setNewPatientType] = useState<'adult' | 'paed' | null>(null);
   const [newPaedWeightMethod, setNewPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
   const [newPaedAgeLabel, setNewPaedAgeLabel] = useState<string | null>(null);
@@ -3636,6 +3639,8 @@ export default function App() {
 
               {!catchupTxMode && catchupStep === 2 && (
                 <div className="space-y-6 px-4 max-w-md mx-auto">
+                  <Reveal open={!weightPadOpen} follow={false}>
+                  <div className="space-y-6">
                   <div className="text-center space-y-2">
                     <h2 className="text-2xl font-bold text-neutral-900">Patient Details</h2>
                     <p className="text-neutral-500 text-sm">Select patient type for dosage calculations</p>
@@ -3705,6 +3710,8 @@ export default function App() {
                     </button>
                   </div>
                   
+                  </div>
+                  </Reveal>
                   {/* Weight Selection - Adult */}
                   {weightType === 'adult' && (
                     <motion.div
@@ -3750,6 +3757,8 @@ export default function App() {
                       transition={{ duration: 0.3 }}
                       className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4"
                     >
+                      <Reveal open={!weightPadOpen} follow={false}>
+                      <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-bold text-pink-900 mb-3">Select weight by age</label>
                         <select
@@ -3784,9 +3793,11 @@ export default function App() {
                         </div>
                       </div>
                       
+                      </div>
+                      </Reveal>
                       <div>
                         <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
-                        <WeightPadBox value={paedWeightMethod === 'weight' ? weightInput : ''} onChange={(v) => {
+                        <WeightPadBox onOpenChange={setWeightPadOpen} value={paedWeightMethod === 'weight' ? weightInput : ''} onChange={(v) => {
                               setPaedWeightMethod('weight');
                               setWeightInput(v);
                             }} />
@@ -4290,6 +4301,8 @@ export default function App() {
               </select>
             ) : (
               <div className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4">
+                <Reveal open={!newWeightPadOpen} follow={false}>
+                <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-pink-900 mb-3">Select weight by age</label>
                   <select
@@ -4324,9 +4337,11 @@ export default function App() {
                   </div>
                 </div>
 
+                </div>
+                </Reveal>
                 <div>
                   <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
-                  <WeightPadBox value={newPaedWeightMethod === 'weight' ? newWeightInput : ''} onChange={(v) => {
+                  <WeightPadBox onOpenChange={setNewWeightPadOpen} value={newPaedWeightMethod === 'weight' ? newWeightInput : ''} onChange={(v) => {
                         setNewPaedWeightMethod('weight');
                         setNewWeightInput(v);
                         setNewPaedAgeLabel(null);
@@ -4960,17 +4975,17 @@ const revealInView = (el: HTMLElement, settle = false) => {
 };
 const PAD_DIAG = true;   // temporary: shows a small line under every pad with what the scrolling code saw (removed once the overlap on the phone is understood)
 // A pad (or anything else) that opens and closes smoothly: it grows from nothing, the screen follows it so the whole pad ends up in view, and on closing it shrinks and is removed.
-function Reveal({ open, children, className = '' }: { open: boolean, children: React.ReactNode, className?: string }) {
+function Reveal({ open, children, className = '', follow = true }: { open: boolean, children: React.ReactNode, className?: string, follow?: boolean }) {
   const reduce = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [mounted, setMounted] = useState(open);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(open);
   const inner = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (open) { setMounted(true); const id = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true))); return () => cancelAnimationFrame(id); }
     setShown(false); const t = window.setTimeout(() => setMounted(false), reduce ? 0 : 240); return () => window.clearTimeout(t);
   }, [open]);
   useEffect(() => {
-    if (!shown || !inner.current) return;
+    if (!shown || !follow || !inner.current) return;
     const el = inner.current;
     const run = () => revealInView(el);
     run();
@@ -5026,8 +5041,9 @@ function CustomDoseRow({ label, value, onChange, onAdd, unitNode, strong }: { la
   );
 }
 // the custom weight box (Recalibrate and case setup)
-function WeightPadBox({ value, onChange }: { value: string, onChange: (v: string) => void }) {
+function WeightPadBox({ value, onChange, onOpenChange }: { value: string, onChange: (v: string) => void, onOpenChange?: (open: boolean) => void }) {
   const pf = usePadField(value, onChange, 3, 1);
+  useEffect(() => { onOpenChange?.(pf.open); return () => onOpenChange?.(false); }, [pf.open]);
   return (
     <div>
       <div className="relative">
