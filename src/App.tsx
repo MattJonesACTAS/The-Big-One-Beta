@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 212';
+const BUILD_LABEL = 'build 214';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6034,9 +6034,11 @@ const buildHandoverContent = (
     const timed = tx.find(x => (getTreatmentIdentity(x.name) === n || x.name.startsWith(n)) && !x.timeUnknown && x.clock);
     otherList.push({ idx: i, line: n, note: timed ? `Started ${timed.prior ? '< ' : ''}${t12(timed.clock)}` : '' });
   });
-  // Oxygen is handed over only for a patient in ROSC (or a General handover, which has no arrest), and only what was given since the latest ROSC.
-  // Just the most advanced method is said. BVM is covered by "ventilated", so it isn't named.
-  if (state.isROSCMode) {
+  // Oxygen is handed over only for a patient in ROSC (or a General handover, which has no arrest), and only what was given in the current state (since the latest ROSC).
+  // Just the most advanced method is said (NRB, then nasal cannulae). BVM is covered by "ventilated", so it is never named, and when they are being ventilated oxygen isn't mentioned at all:
+  // the ventilation answer decides (the VSS switch and the handover question are one answer; an entered RR total counts as Yes).
+  const beingVentilated = !!state.vitals?.rrt || state.handover?.ventilation === 'Yes';
+  if (state.isROSCMode && !beingVentilated) {
     const given: { i: number, d: string }[] = [];
     tx.forEach((x, i) => {
       if (i <= lastRoscIdx || getTreatmentIdentity(x.name) !== 'Oxygen' || !succeeded(x.name)) return;
@@ -7269,11 +7271,15 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
       onDose={onUpdateInfusionDose ? (v: string) => onUpdateInfusionDose(drug, v) : undefined}
       onUnit={onUpdateInfusionUnit ? () => onUpdateInfusionUnit(drug, unitFor(drug) === 'mg' ? 'mcg' : 'mg') : undefined} />
   );
+  // Medications and infusions together, alphabetically
+  const alphabetical = (meds: [string, PharmaInfo][], txs: Treatment[] | undefined, infusions: string[]) =>
+    [...meds.map(([name, info]) => ({ name, node: medRow(name, info, txs) })), ...infusions.map(d => ({ name: d, node: infusionRow(d) }))]
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(x => x.node);
   // Once ROSC has been achieved: what was given before the latest ROSC, and what was given after it
   const sections = split ? [[split.kind === 'rearrest' ? 'Pre-rearrest' : 'Pre-ROSC', split.before], [split.kind === 'rearrest' ? 'Post-rearrest' : 'Post-ROSC', split.after]].map(([title, txs]) => {
     const list = txs as Treatment[];
     const sum = Object.entries(computePharmaSummary(list)).filter(([name]) => !INFUSION_DRUGS.includes(name));
-    return { title: title as string, rows: sum.map(([name, info]) => medRow(name, info, list)), infusions: (activeInfusions ?? []).filter(d => list.some(t => t.name.startsWith(d))) };
+    return { title: title as string, rows: alphabetical(sum, list, (activeInfusions ?? []).filter(d => list.some(t => t.name.startsWith(d)))) };
   }) : [];
 
   return (
@@ -7289,14 +7295,13 @@ function PharmaSummarySection({ pharmaSummary, infusionDoses, infusionUnits, act
                 {sections.map(sec => (
                   <React.Fragment key={sec.title}>
                     <div data-pharma-section={sec.title} className="bg-slate-100 text-neutral-600 px-4 py-1.5 text-[12px] font-extrabold tracking-wider uppercase">{sec.title}</div>
-                    {sec.rows.length || sec.infusions.length ? <>{sec.rows}{sec.infusions.map(infusionRow)}</> : <div className="p-3 px-4 text-neutral-300 italic text-sm">None</div>}
+                    {sec.rows.length ? <>{sec.rows}</> : <div className="p-3 px-4 text-neutral-300 italic text-sm">None</div>}
                   </React.Fragment>
                 ))}
               </>
             ) : (
               <>
-                {nonInfusionEntries.map(([name, info]) => medRow(name, info, treatments))}
-                {activeInfusions && activeInfusions.map(infusionRow)}
+                {alphabetical(nonInfusionEntries, treatments, activeInfusions ?? [])}
               </>
             )}
           </>
