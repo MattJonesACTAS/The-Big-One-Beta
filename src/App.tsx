@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 214';
+const BUILD_LABEL = 'build 215';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6346,7 +6346,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   // GCS as E / V / M. The total is what's kept in the vital signs (the VSS tab shares it); the parts are kept to read out "GCS 14 (E4, V4, M6)".
   const gcsPartsOk = !!(h.gcsE && h.gcsV && h.gcsM) && (parseInt(h.gcsE, 10) + parseInt(h.gcsV, 10) + parseInt(h.gcsM, 10) === parseInt(vit.gcs, 10));
   const gcsText = vit.gcs ? `GCS ${vit.gcs}${gcsPartsOk && vit.gcs !== '3' ? ` (E${h.gcsE}, V${h.gcsV}, M${h.gcsM})` : ''}` : '';      // (GCS 3 can only be E1 V1 M1, so the parts aren't said)
-  const gcsEff = (f: 'gcsE' | 'gcsV' | 'gcsM') => h[f] || (vit.gcs === '3' ? '1' : '');          // a total of 3 filled in on the VSS tab shows as E1, V1, M1
+  const gcsEff = (f: 'gcsE' | 'gcsV' | 'gcsM') => h[f] || (vit.gcs === '3' ? '1' : vit.gcs === '15' ? { gcsE: '4', gcsV: '5', gcsM: '6' }[f] : '');          // a total of 3 filled in on the VSS tab shows as E1, V1, M1, and a total of 15 as E4, V5, M6 (each total can only be made one way)
   const pickGcs = (field: 'gcsE' | 'gcsV' | 'gcsM', v: string) => {
     const eff = { gcsE: gcsEff('gcsE'), gcsV: gcsEff('gcsV'), gcsM: gcsEff('gcsM') };
     const next = { ...eff, [field]: eff[field] === v ? '' : v };
