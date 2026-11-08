@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 200';
+const BUILD_LABEL = 'build 201';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -4925,16 +4925,24 @@ function usePadField(value: string, onChange: (v: string) => void, max: number, 
   const press = (k: string) => { const next = padNext(value, k, fresh.current, max, dec); if (next === null) return; fresh.current = false; onChange(next); };
   return { open, toggle, close, press };
 }
-// Keeps an element on screen inside whatever scrolls it, clear of a bar stuck to the bottom of that scroller (Back / Continue, Cancel / Save).
+// Keeps an element on screen inside whatever scrolls it, clear of anything stuck over the bottom of that scroller (the Back / Continue bar, Cancel / Save).
+// What covers the element is found by looking at what is actually on top of it, so it doesn't depend on how a bar is styled or on which browser is running.
 const revealInView = (el: HTMLElement) => {
   let sc: HTMLElement | null = el.parentElement;
   while (sc && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY) && sc.scrollHeight > sc.clientHeight + 1)) sc = sc.parentElement;
   const r = el.getBoundingClientRect();
   const c = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
-  const bar = sc ? Array.from(sc.querySelectorAll<HTMLElement>('[class*="sticky"]')).find(x => { const cs = getComputedStyle(x); return cs.position === 'sticky' && cs.bottom !== 'auto'; }) : undefined;
-  const bottom = Math.min(c.bottom, window.innerHeight) - (bar ? bar.getBoundingClientRect().height + 8 : 12);
+  const viewBottom = Math.min(c.bottom, window.innerHeight);
   const top = Math.max(c.top, 0) + 8;
-  const dy = r.bottom > bottom ? Math.min(r.bottom - bottom, r.top - top) : 0;   // never scroll the top of the pad off the screen to show its bottom
+  let limit = viewBottom - 12;
+  const x = r.left + r.width / 2;
+  for (let y = Math.max(r.top, top) + 1; y < Math.min(r.bottom, viewBottom) - 1; y += 4) {      // from the top of what is on screen downwards: the first point something else is on top of
+    const t = document.elementFromPoint(x, y);
+    if (t && !el.contains(t)) { limit = Math.min(limit, y - 8); break; }
+  }
+  const bar = sc ? Array.from(sc.querySelectorAll<HTMLElement>('[class*="sticky"]')).find(x => { const cs = getComputedStyle(x); return cs.position === 'sticky' && cs.bottom !== 'auto' && x.getBoundingClientRect().height > 0; }) : undefined;
+  if (bar) limit = Math.min(limit, bar.getBoundingClientRect().top - 8);
+  const dy = r.bottom > limit ? Math.min(r.bottom - limit, r.top - top) : 0;   // never scroll the top of the pad off the screen to show its bottom
   if (dy > 0) { if (sc) sc.scrollTop += dy; else window.scrollBy(0, dy); }
 };
 // A pad (or anything else) that opens and closes smoothly: it grows from nothing, the screen follows it so the whole pad ends up in view, and on closing it shrinks and is removed.
@@ -4949,10 +4957,13 @@ function Reveal({ open, children, className = '' }: { open: boolean, children: R
   }, [open]);
   useEffect(() => {
     if (!shown || !inner.current) return;
-    const el = inner.current; const t0 = performance.now(); let raf = 0;
-    const tick = () => { revealInView(el); if (performance.now() - t0 < 320) raf = requestAnimationFrame(tick); };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const el = inner.current;
+    const run = () => revealInView(el);
+    run();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(run) : null;      // follows the pad as it grows, however fast or slow the phone is
+    ro?.observe(el);
+    const t1 = window.setTimeout(run, 350), t2 = window.setTimeout(run, 800), t3 = window.setTimeout(() => ro?.disconnect(), 1500);   // and settles once the animation is over
+    return () => { ro?.disconnect(); window.clearTimeout(t1); window.clearTimeout(t2); window.clearTimeout(t3); };
   }, [shown]);
   if (!mounted) return null;
   return (
@@ -5167,9 +5178,8 @@ function VitalsOverlay({ vitals, onChange, ventilation, onVentilation }: { vital
                 <span className="text-[15px] font-bold text-neutral-800">Ventilating?</span>
                 <button type="button" data-vss-vent-switch role="switch" aria-checked={ventSel === 'Yes'} aria-label="Ventilating?"
                   onClick={() => onVentilation(ventSel === 'Yes' ? 'No' : 'Yes')}
-                  className={`flex-shrink-0 relative w-[120px] h-9 rounded-full transition-colors duration-200 ${ventSel === 'Yes' ? 'bg-sky-100' : 'bg-neutral-200'}`}>
-                  <span className={`absolute top-1 w-[88px] h-7 rounded-full shadow flex items-center justify-center gap-1 text-[12px] font-bold text-white transition-all duration-200 ${ventSel === 'Yes' ? 'left-[28px] bg-[#4a6fa5]' : 'left-1 bg-neutral-500'}`}>
-                    {ventSel === 'Yes' ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
+                  className={`flex-shrink-0 relative w-[100px] h-11 rounded-xl transition-colors duration-200 ${ventSel === 'Yes' ? 'bg-sky-100' : 'bg-neutral-200'}`}>
+                  <span className={`absolute top-1 w-[46px] h-9 rounded-lg shadow flex items-center justify-center text-[14px] font-bold text-white transition-all duration-200 ${ventSel === 'Yes' ? 'left-[50px] bg-[#4a6fa5]' : 'left-1 bg-neutral-500'}`}>
                     {ventSel === 'Yes' ? 'Yes' : 'No'}
                   </span>
                 </button>
