@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 203 (pad diagnostic)';
+const BUILD_LABEL = 'build 204';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -3464,8 +3464,8 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
-              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : {}}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : catchupStep === 2 ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
+              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : catchupStep === 2 ? { height: 'min(calc(100dvh - 2rem), 786px)' } : {}}
             >
               {catchupTxMode && (
                 <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -3638,7 +3638,8 @@ export default function App() {
               )}
 
               {!catchupTxMode && catchupStep === 2 && (
-                <div className="space-y-6 px-4 max-w-md mx-auto">
+                <div className="flex flex-col flex-1 min-h-0 w-full max-w-md mx-auto">
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-6 px-4">
                   <Reveal open={!weightPadOpen} follow={false}>
                   <div className="space-y-6">
                   <div className="text-center space-y-2">
@@ -3806,7 +3807,8 @@ export default function App() {
                   )}
                   
                   {/* Navigation Buttons */}
-                  <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-2">
+                </div>
+                  <div className="flex-shrink-0 px-4 pt-3 grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => setCatchupStep(6)} 
                       className="py-4 rounded-xl font-bold transition-colors bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
@@ -4241,6 +4243,8 @@ export default function App() {
       {showWeightChange && (
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <Reveal open={!newWeightPadOpen} follow={false}>
+            <div className="space-y-6">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">{pendingWeightForMode ? 'Enter Patient Weight' : 'Change Weight'}</h2>
 
             <div className="grid grid-cols-2 gap-3">
@@ -4273,6 +4277,8 @@ export default function App() {
               </button>
             </div>
 
+                        </div>
+            </Reveal>
             {newPatientType === 'adult' ? (
               <select
                 value={newWeightInput}
@@ -4973,7 +4979,7 @@ const revealInView = (el: HTMLElement, settle = false) => {
     lastPadDiag = `n${padDiagCalls} sc:${scrollables.length}/${sc ? (typeof sc.className === 'string' ? sc.className.slice(0, 10) : '') : '-'} st:${sc ? Math.round(sc.scrollTop) : '-'} sh:${sc ? sc.scrollHeight : '-'} ch:${sc ? sc.clientHeight : '-'} ih:${window.innerHeight} pad:${Math.round(r.top)}-${Math.round(r.bottom)} lim:${Math.round(limit)} cov:${coveredAt} bar:${bar ? 1 : 0} dy:${Math.round(dy)} mv:${Math.round(moved)}${end ? ' END' : ''}`;
   } catch (e) { lastPadDiag = 'ERR ' + (e instanceof Error ? e.message : String(e)).slice(0, 80); }
 };
-const PAD_DIAG = true;   // temporary: shows a small line under every pad with what the scrolling code saw (removed once the overlap on the phone is understood)
+const PAD_DIAG = false;   // (a small readout under every pad of what the scrolling code saw: off; switch on to investigate a phone)
 // A pad (or anything else) that opens and closes smoothly: it grows from nothing, the screen follows it so the whole pad ends up in view, and on closing it shrinks and is removed.
 function Reveal({ open, children, className = '', follow = true }: { open: boolean, children: React.ReactNode, className?: string, follow?: boolean }) {
   const reduce = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -5051,7 +5057,7 @@ function WeightPadBox({ value, onChange, onOpenChange }: { value: string, onChan
           className={`w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold text-left transition-all ${pf.open ? 'ring-2 ring-pink-400 border-pink-400' : ''}`}>{value || <span className="font-normal text-neutral-400">Enter weight</span>}</button>
         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
       </div>
-      <Reveal open={pf.open}><div className="mt-2 rounded-xl bg-pink-50 border border-pink-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} /></div></Reveal>
+      <Reveal open={pf.open} follow={!onOpenChange}><div className="mt-2 rounded-xl bg-pink-50 border border-pink-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} /></div></Reveal>
     </div>
   );
 }
