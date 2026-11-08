@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 201';
+const BUILD_LABEL = 'build 202 (pad diagnostic)';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -4926,25 +4926,39 @@ function usePadField(value: string, onChange: (v: string) => void, max: number, 
   return { open, toggle, close, press };
 }
 // Keeps an element on screen inside whatever scrolls it, clear of anything stuck over the bottom of that scroller (the Back / Continue bar, Cancel / Save).
-// What covers the element is found by looking at what is actually on top of it, so it doesn't depend on how a bar is styled or on which browser is running.
-const revealInView = (el: HTMLElement) => {
-  let sc: HTMLElement | null = el.parentElement;
-  while (sc && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY) && sc.scrollHeight > sc.clientHeight + 1)) sc = sc.parentElement;
-  const r = el.getBoundingClientRect();
-  const c = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
-  const viewBottom = Math.min(c.bottom, window.innerHeight);
-  const top = Math.max(c.top, 0) + 8;
-  let limit = viewBottom - 12;
-  const x = r.left + r.width / 2;
-  for (let y = Math.max(r.top, top) + 1; y < Math.min(r.bottom, viewBottom) - 1; y += 4) {      // from the top of what is on screen downwards: the first point something else is on top of
-    const t = document.elementFromPoint(x, y);
-    if (t && !el.contains(t)) { limit = Math.min(limit, y - 8); break; }
-  }
-  const bar = sc ? Array.from(sc.querySelectorAll<HTMLElement>('[class*="sticky"]')).find(x => { const cs = getComputedStyle(x); return cs.position === 'sticky' && cs.bottom !== 'auto' && x.getBoundingClientRect().height > 0; }) : undefined;
-  if (bar) limit = Math.min(limit, bar.getBoundingClientRect().top - 8);
-  const dy = r.bottom > limit ? Math.min(r.bottom - limit, r.top - top) : 0;   // never scroll the top of the pad off the screen to show its bottom
-  if (dy > 0) { if (sc) sc.scrollTop += dy; else window.scrollBy(0, dy); }
+// What covers the element is found by looking at what is actually on top of it, and every scrollable ancestor is tried, so it doesn't depend on styling or on the browser.
+let lastPadDiag = '';       // (a temporary readout under the pad, to see what a phone does; see PAD_DIAG)
+let padDiagCalls = 0;
+const revealInView = (el: HTMLElement, settle = false) => {
+  try {
+    padDiagCalls++;
+    const scrollables: HTMLElement[] = [];
+    for (let p = el.parentElement; p; p = p.parentElement) if (p.scrollHeight > p.clientHeight + 1 && p.clientHeight > 0) scrollables.push(p);
+    const sc = scrollables[0] ?? null;
+    const r = el.getBoundingClientRect();
+    const c = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    const viewBottom = Math.min(c.bottom, window.innerHeight);
+    const top = Math.max(c.top, 0) + 8;
+    let limit = viewBottom - 12;
+    const x = r.left + r.width / 2;
+    let coveredAt = -1;
+    for (let y = Math.max(r.top, top) + 1; y < Math.min(r.bottom, viewBottom) - 1; y += 4) {      // from the top of what is on screen downwards: the first point something else is on top of
+      const t = document.elementFromPoint(x, y);
+      if (t && !el.contains(t)) { coveredAt = Math.round(y); limit = Math.min(limit, y - 8); break; }
+    }
+    const bar = sc ? Array.from(sc.querySelectorAll<HTMLElement>('[class*="sticky"]')).find(q => { const cs = getComputedStyle(q); return (cs.position === 'sticky' || cs.position === '-webkit-sticky') && cs.bottom !== 'auto' && q.getBoundingClientRect().height > 0; }) : undefined;
+    if (bar) limit = Math.min(limit, bar.getBoundingClientRect().top - 8);
+    let dy = r.bottom > limit ? Math.min(r.bottom - limit, r.top - top) : 0;   // never scroll the top of the pad off the screen to show its bottom
+    let moved = 0;
+    for (const a of scrollables) { if (dy - moved <= 0) break; const before = a.scrollTop; a.scrollTop = before + (dy - moved); moved += a.scrollTop - before; }
+    if (!scrollables.length && dy > 0) { const b0 = window.scrollY; window.scrollBy(0, dy); moved = window.scrollY - b0; }
+    // last resort, once the animation is over: if the pad is still covered, scroll to the very end, where a bar stuck to the bottom sits after the content, not over it
+    let end = false;
+    if (settle && sc) { const r2 = el.getBoundingClientRect(); const t2 = document.elementFromPoint(x, Math.min(r2.bottom, viewBottom) - 3); if ((t2 && !el.contains(t2)) || r2.bottom > viewBottom) { sc.scrollTop = sc.scrollHeight; end = true; } }
+    lastPadDiag = `n${padDiagCalls} sc:${scrollables.length}/${sc ? (typeof sc.className === 'string' ? sc.className.slice(0, 10) : '') : '-'} st:${sc ? Math.round(sc.scrollTop) : '-'} sh:${sc ? sc.scrollHeight : '-'} ch:${sc ? sc.clientHeight : '-'} ih:${window.innerHeight} pad:${Math.round(r.top)}-${Math.round(r.bottom)} lim:${Math.round(limit)} cov:${coveredAt} bar:${bar ? 1 : 0} dy:${Math.round(dy)} mv:${Math.round(moved)}${end ? ' END' : ''}`;
+  } catch (e) { lastPadDiag = 'ERR ' + (e instanceof Error ? e.message : String(e)).slice(0, 80); }
 };
+const PAD_DIAG = true;   // temporary: shows a small line under every pad with what the scrolling code saw (removed once the overlap on the phone is understood)
 // A pad (or anything else) that opens and closes smoothly: it grows from nothing, the screen follows it so the whole pad ends up in view, and on closing it shrinks and is removed.
 function Reveal({ open, children, className = '' }: { open: boolean, children: React.ReactNode, className?: string }) {
   const reduce = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -4962,7 +4976,7 @@ function Reveal({ open, children, className = '' }: { open: boolean, children: R
     run();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(run) : null;      // follows the pad as it grows, however fast or slow the phone is
     ro?.observe(el);
-    const t1 = window.setTimeout(run, 350), t2 = window.setTimeout(run, 800), t3 = window.setTimeout(() => ro?.disconnect(), 1500);   // and settles once the animation is over
+    const t1 = window.setTimeout(run, 350), t2 = window.setTimeout(() => revealInView(el, true), 800), t3 = window.setTimeout(() => ro?.disconnect(), 1500);   // and settles once the animation is over
     return () => { ro?.disconnect(); window.clearTimeout(t1); window.clearTimeout(t2); window.clearTimeout(t3); };
   }, [shown]);
   if (!mounted) return null;
@@ -4973,6 +4987,8 @@ function Reveal({ open, children, className = '' }: { open: boolean, children: R
   );
 }
 function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', onDone }: { decimals: boolean, unit?: string, onKey: (k: string) => void, padAttr?: Record<string, string>, keyAttr?: string, onDone?: () => void }) {
+  const [diag, setDiag] = useState('');
+  useEffect(() => { if (!PAD_DIAG) return; const id = window.setInterval(() => setDiag(lastPadDiag), 400); return () => window.clearInterval(id); }, []);
   return (
     <div data-pad {...(padAttr ?? {})}>
       <div className="grid grid-cols-3 gap-1.5 w-[270px] max-w-full mx-auto">
@@ -4985,6 +5001,7 @@ function NumberPad({ decimals, unit, onKey, padAttr, keyAttr = 'data-pad-key', o
         {decimals ? <button type="button" {...{ [keyAttr]: 'clear' }} onClick={() => onKey('clear')} className="text-[14px] font-bold text-rose-700 px-1 py-1">Clear</button> : <span />}
         <span>{unit ? `${unit} · ` : ''}tap the box again to close</span>
       </div>
+      {PAD_DIAG && <div data-pad-diag className="w-[270px] max-w-full mx-auto mt-1 text-[9px] leading-tight text-neutral-400 break-all">{diag}</div>}
       {onDone && <button type="button" data-pad-done onClick={onDone} className="mt-2 block w-[270px] max-w-full mx-auto py-2.5 rounded-xl bg-[#4a6fa5] text-white font-bold">Done</button>}
     </div>
   );
