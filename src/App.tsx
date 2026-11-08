@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 205';
+const BUILD_LABEL = 'build 206';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -921,8 +921,6 @@ export default function App() {
   const [paedWeightMethod, setPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
   const [paedAgeLabel, setPaedAgeLabel] = useState<string>('');
   const [weightInput, setWeightInput] = useState('');
-  // While the custom weight pad is open the parts of the screen above it fold away, so the box and the whole pad fit above the Back / Continue bar without any scrolling.
-  const [weightPadOpen, setWeightPadOpen] = useState(false);
   const [priorCounts, setPriorCounts] = useState({ shock: 0, disarm: 0, adrenaline: 0, amiodarone: 0 });
   const [priorTxs, setPriorTxs] = useState<string[]>([]);
   const [elapsedTimestamp, setElapsedTimestamp] = useState<number | null>(null);
@@ -997,7 +995,6 @@ export default function App() {
   // only (which never asked for one) - the mode change carries on once saved.
   const [pendingWeightForMode, setPendingWeightForMode] = useState<'log' | 'minimal' | 'elapsed' | null>(null);
   const [newWeightInput, setNewWeightInput] = useState('');
-  const [newWeightPadOpen, setNewWeightPadOpen] = useState(false);
   const [newPatientType, setNewPatientType] = useState<'adult' | 'paed' | null>(null);
   const [newPaedWeightMethod, setNewPaedWeightMethod] = useState<'weight' | 'age' | null>(null);
   const [newPaedAgeLabel, setNewPaedAgeLabel] = useState<string | null>(null);
@@ -3461,11 +3458,11 @@ export default function App() {
             <motion.div 
               key={catchupTxMode ? 'catchupTx' : catchupStep}
               initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1, ...(!catchupTxMode && catchupStep === 2 ? { height: weightType === 'paed' ? Math.min(window.innerHeight - 32, 786) : 'auto' } : {}) }}
+              animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : catchupStep === 2 ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
-              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : catchupStep === 2 ? { maxHeight: 'calc(100dvh - 2rem)' } : {}}
+              className={`bg-white rounded-[28px] max-w-md w-[90%] shadow-2xl overflow-hidden overflow-x-hidden ${catchupTxMode ? '' : catchupLogSlide ? 'p-6 absolute flex flex-col' : 'p-6 absolute max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}
+              style={catchupTxMode ? { height: 'min(calc(100dvh - 10vh - 1rem), 786px)' } : catchupLogSlide ? { maxHeight: 'calc(100dvh - 10vh - 1rem)' } : {}}
             >
               {catchupTxMode && (
                 <div className="flex flex-col h-full overflow-hidden" style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -3638,10 +3635,7 @@ export default function App() {
               )}
 
               {!catchupTxMode && catchupStep === 2 && (
-                <div className="flex flex-col flex-1 min-h-0 w-full max-w-md mx-auto">
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-6 px-4">
-                  <Reveal open={!weightPadOpen} follow={false}>
-                  <div className="space-y-6">
+                <div className="space-y-6 px-4 max-w-md mx-auto">
                   <div className="text-center space-y-2">
                     <h2 className="text-2xl font-bold text-neutral-900">Patient Details</h2>
                     <p className="text-neutral-500 text-sm">Select patient type for dosage calculations</p>
@@ -3711,8 +3705,6 @@ export default function App() {
                     </button>
                   </div>
                   
-                  </div>
-                  </Reveal>
                   {/* Weight Selection - Adult */}
                   {weightType === 'adult' && (
                     <motion.div
@@ -3758,8 +3750,6 @@ export default function App() {
                       transition={{ duration: 0.3 }}
                       className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4"
                     >
-                      <Reveal open={!weightPadOpen} follow={false}>
-                      <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-bold text-pink-900 mb-3">Select weight by age</label>
                         <select
@@ -3794,11 +3784,9 @@ export default function App() {
                         </div>
                       </div>
                       
-                      </div>
-                      </Reveal>
                       <div>
                         <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
-                        <WeightPadBox onOpenChange={setWeightPadOpen} value={paedWeightMethod === 'weight' ? weightInput : ''} onChange={(v) => {
+                        <PaedWeightSelect className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all" value={paedWeightMethod === 'weight' ? weightInput : ''} onChange={(v) => {
                               setPaedWeightMethod('weight');
                               setWeightInput(v);
                             }} />
@@ -3807,8 +3795,7 @@ export default function App() {
                   )}
                   
                   {/* Navigation Buttons */}
-                </div>
-                  <div className="flex-shrink-0 px-4 pt-3 grid grid-cols-2 gap-3">
+                  <div className="sticky bottom-0 bg-white grid grid-cols-2 gap-3 pt-2">
                     <button 
                       onClick={() => setCatchupStep(6)} 
                       className="py-4 rounded-xl font-bold transition-colors bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
@@ -4243,8 +4230,6 @@ export default function App() {
       {showWeightChange && (
         <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
-            <Reveal open={!newWeightPadOpen} follow={false}>
-            <div className="space-y-6">
             <h2 className="text-2xl font-bold text-neutral-900 text-center">{pendingWeightForMode ? 'Enter Patient Weight' : 'Change Weight'}</h2>
 
             <div className="grid grid-cols-2 gap-3">
@@ -4277,9 +4262,7 @@ export default function App() {
               </button>
             </div>
 
-                        </div>
-            </Reveal>
-            {newPatientType === 'adult' ? (
+                        {newPatientType === 'adult' ? (
               <select
                 value={newWeightInput}
                 onChange={e => setNewWeightInput(e.target.value)}
@@ -4307,8 +4290,6 @@ export default function App() {
               </select>
             ) : (
               <div className="bg-pink-50 rounded-2xl p-6 border-2 border-pink-200 space-y-4">
-                <Reveal open={!newWeightPadOpen} follow={false}>
-                <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-pink-900 mb-3">Select weight by age</label>
                   <select
@@ -4343,11 +4324,9 @@ export default function App() {
                   </div>
                 </div>
 
-                </div>
-                </Reveal>
                 <div>
                   <label className="block text-sm font-bold text-pink-900 mb-3">Custom Weight</label>
-                  <WeightPadBox onOpenChange={setNewWeightPadOpen} value={newPaedWeightMethod === 'weight' ? newWeightInput : ''} onChange={(v) => {
+                  <PaedWeightSelect className="w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 text-base font-semibold focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all" value={newPaedWeightMethod === 'weight' ? newWeightInput : ''} onChange={(v) => {
                         setNewPaedWeightMethod('weight');
                         setNewWeightInput(v);
                         setNewPaedAgeLabel(null);
@@ -5046,19 +5025,16 @@ function CustomDoseRow({ label, value, onChange, onAdd, unitNode, strong }: { la
     </div>
   );
 }
-// the custom weight box (Recalibrate and case setup)
-function WeightPadBox({ value, onChange, onOpenChange }: { value: string, onChange: (v: string) => void, onOpenChange?: (open: boolean) => void }) {
-  const pf = usePadField(value, onChange, 3, 1);
-  useEffect(() => { onOpenChange?.(pf.open); return () => onOpenChange?.(false); }, [pf.open]);
+// Custom paediatric weights are chosen from a list: 2 to 50 kg in 1kg steps (like the adult weight list). A weight already held that isn't on the list (a decimal from an older case) is kept as an extra entry.
+const PAED_CUSTOM_WEIGHTS = Array.from({ length: 49 }, (_, i) => i + 2);
+function PaedWeightSelect({ value, onChange, className, dataAttr }: { value: string, onChange: (v: string) => void, className: string, dataAttr?: Record<string, string> }) {
+  const extra = value && !PAED_CUSTOM_WEIGHTS.includes(Number(value)) ? value : '';
   return (
-    <div>
-      <div className="relative">
-        <button type="button" data-pad-field aria-label="Custom weight" aria-expanded={pf.open} {...{ placeholder: 'Enter weight' }} onClick={pf.toggle}
-          className={`w-full bg-white border-2 border-pink-300 rounded-xl px-4 py-4 pr-12 text-base font-semibold text-left transition-all ${pf.open ? 'ring-2 ring-pink-400 border-pink-400' : ''}`}>{value || <span className="font-normal text-neutral-400">Enter weight</span>}</button>
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
-      </div>
-      <Reveal open={pf.open} follow={!onOpenChange}><div className="mt-2 rounded-xl bg-pink-50 border border-pink-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} /></div></Reveal>
-    </div>
+    <select aria-label="Custom weight" {...(dataAttr ?? {})} value={value} onChange={e => onChange(e.target.value)} className={className}>
+      <option value="">Choose weight</option>
+      {extra && <option value={extra}>{extra}kg</option>}
+      {PAED_CUSTOM_WEIGHTS.map(w => <option key={w} value={String(w)}>{w}kg</option>)}
+    </select>
   );
 }
 // an infusion's total dose on the Pharma Summary
@@ -6253,11 +6229,7 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
   const [customText, setCustomText] = useState(wasCustom ? String(weight) : '');
   useEffect(() => { if (!confirmed) { setCustom(false); setCustomText(''); } }, [ageKey]);
   const sentRef = React.useRef<number | null>(null);          // Enter commits and then blurs: the blur must not commit (and log) it a second time
-  const commitCustom = () => { const w = parseFloat(customText); if (!isNaN(w) && w > 0 && w !== sentRef.current && !(confirmed && w === weight)) { sentRef.current = w; onCustom(w); } };
-  // the weight is committed when the pad closes (not on every digit, so typing 85 doesn't log a change to 8 first), and if the box is left open when the crew move on
-  const commitRef = React.useRef(commitCustom); commitRef.current = commitCustom;
-  const pf = usePadField(customText, setCustomText, 3, 1, () => commitRef.current());
-  useEffect(() => () => commitRef.current(), []);
+  const commitCustom = (text: string) => { const w = parseFloat(text); if (!isNaN(w) && w > 0 && w !== sentRef.current && !(confirmed && w === weight)) { sentRef.current = w; onCustom(w); } };
   const tcls = (on: boolean) => `${compact ? 'py-2.5' : 'py-3.5'} rounded-lg font-bold text-[15px] border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`;
   return (
     <HandoverBox label="Weight" state={confirmed ? 'done' : 'missing'}>
@@ -6268,12 +6240,8 @@ function HandoverPaedWeight({ ageKey, suggested, weight, confirmedFor, onConfirm
       </div>
       {custom && (
         <div className={compact ? 'mt-2' : 'mt-3'}>
-          <div className="relative">
-            <button type="button" data-handover-weight-custom data-pad-field aria-label="Custom weight" aria-expanded={pf.open} {...{ placeholder: 'Custom weight' }} onClick={pf.toggle}
-              className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold text-center`}>{customText || <span className="font-normal text-neutral-400">Custom weight</span>}</button>
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 font-bold pointer-events-none">kg</span>
-          </div>
-          <Reveal open={pf.open}><div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 px-2 py-3"><NumberPad decimals unit="kg" onKey={pf.press} onDone={pf.close} /></div></Reveal>
+          <PaedWeightSelect dataAttr={{ 'data-handover-weight-custom': '' }} value={customText} onChange={v => { setCustomText(v); commitCustom(v); }}
+            className={`w-full bg-white border-2 border-[#4a6fa5] rounded-lg ${compact ? 'px-3 py-2.5' : 'px-3 py-3.5'} text-[16px] font-semibold`} />
         </div>
       )}
     </HandoverBox>
