@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 215';
+const BUILD_LABEL = 'build 217';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6385,8 +6385,8 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const txLog = content.tx;
   const logAirwayDev = txLog.airway.find(a => a !== 'IGT') ?? '';
   // no airway logged (the Tx log would have it): None is already chosen. Arrest – Timers records no airway, so there the crew are asked.
-  const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev || (state.timingMode !== 'minimal' ? 'None' : ''));
-  const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown';
+  const airwayVal = unk('airway') ? 'Unknown' : (h.airway || logAirwayDev || '');       // no default: until the crew choose (or the Tx log shows a device) it is a missing answer
+  const airwayHasDevice = !!airwayVal && airwayVal !== 'None' && airwayVal !== 'Unknown' && airwayVal !== 'Self maintained';
   // Was PHEA performed? Asked when an ETT is in, or when the Tx log has suxamethonium or one of the two anaesthetic ketamine doses (1 or 2 mg/kg, adult).
   // The log suggests the answer: suxamethonium or the 2 mg/kg ketamine (for when sux is contraindicated) is a Yes; so is an intubation (or the 1 mg/kg dose) with no arrest
   // treatments logged. Arrest – Timers has no log, so there the crew answer it (and it is only asked once an ETT is chosen).
@@ -6693,7 +6693,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const airwayPhrase = airwayHasDevice ? airwayName[airwayVal] : '';
   const ivN = parseInt(ivVal, 10) || 0, ioN = parseInt(ioVal, 10) || 0;
   // (in a ROSC or General handover the primary survey has already said the airway, so the Treatment card leaves it out)
-  const airwayNodes: React.ReactNode[] = inRosc ? [] : [<div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>];
+  const airwayNodes: React.ReactNode[] = inRosc ? [] : [<div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'Self maintained' ? 'Airway is self maintained.' : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>];
   const accessNode: React.ReactNode =
     unk('access') ? <div key="x">We don't know what access is in place.</div>
       : !accessDone ? <div key="x">{miss('Access ?')}</div>
@@ -6743,7 +6743,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
   const gcsPart: React.ReactNode = vit.gcs ? gcsText : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
-  const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
+  const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'Self maintained' ? 'Airway is self maintained' : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
   const spontRate: React.ReactNode = vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>;
   const totalRate: string | null = vit.rrt ? vit.rrt : null;
   const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
@@ -7054,8 +7054,8 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
             <HandoverBox label="Airway" state={airwayVal ? 'done' : 'missing'}>
               <span className={head}>Confirm airway</span>
               <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
-                {['ETT', 'LMA', 'FONA', 'OPA', 'NPA', 'None'].map(o => (
-                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => pick(airwayVal, 'airway', o, 'airway')} className={bcls(airwayVal === o)}>{o}</button>
+                {['Self maintained', 'NPA', 'OPA', 'LMA', 'ETT', 'FONA', 'None'].map(o => (
+                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => pick(airwayVal, 'airway', o, 'airway')} className={`${bcls(airwayVal === o)} ${o === 'Self maintained' ? 'col-span-3' : ''}`}>{o}</button>
                 ))}
               </div>
               <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) onField('airway', ''); }} /></div>
