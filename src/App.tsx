@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 217';
+const BUILD_LABEL = 'build 218';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -7055,7 +7055,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
               <span className={head}>Confirm airway</span>
               <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-3'}`}>
                 {['Self maintained', 'NPA', 'OPA', 'LMA', 'ETT', 'FONA', 'None'].map(o => (
-                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => pick(airwayVal, 'airway', o, 'airway')} className={`${bcls(airwayVal === o)} ${o === 'Self maintained' ? 'col-span-3' : ''}`}>{o}</button>
+                  <button key={o} data-handover-choice={`Airway: ${o}`} aria-pressed={airwayVal === o} onClick={() => pick(airwayVal, 'airway', o, 'airway')} className={`${bcls(airwayVal === o)} ${o === 'Self maintained' ? 'col-span-3' : ''}`} style={o === 'None' ? { paddingLeft: 4, paddingRight: 4, fontSize: 14, whiteSpace: 'nowrap' } : undefined}>{o === 'None' ? 'Not secured' : o}</button>
                 ))}
               </div>
               <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Airway" on={airwayVal === 'Unknown'} onClick={() => { const on = !unk('airway'); setUnk('airway', on); if (on) onField('airway', ''); }} /></div>
