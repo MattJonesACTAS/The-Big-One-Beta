@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 220';
+const BUILD_LABEL = 'build 221';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6298,7 +6298,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
   const timersOnly = state.timingMode === 'minimal';       // Arrest – Timers
-  const pageKeys: string[] = isArrestCase ? ['id', ...(inRosc ? ['resp', 'breath'] : []), 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), 'vitals', ...(inRosc ? ['vitals2'] : []), 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'otherinfo', 'review'] : ['id', 'events', 'resp', 'breath', 'vitals', 'vitals2', 'treatment', 'allergies', 'otherinfo', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
+  const pageKeys: string[] = isArrestCase ? ['id', 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), ...(inRosc ? ['resp'] : []), 'vitals', ...(inRosc ? ['vitals2', 'breath'] : []), 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'otherinfo', 'review'] : ['id', 'events', 'resp', 'vitals', 'vitals2', 'breath', 'treatment', 'allergies', 'otherinfo', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -6432,7 +6432,6 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     else if (ventAnswer === 'Yes' && !vit.rrt && !unk('rrt')) missing.breath.push('Total respiratory rate');
   }
   if (showCirc) {
-    if (!h.radialPulse && !unk('pulse')) missing.breath.push('Radial pulse');
     if (!vit.hr && !unk('hr')) missing.vitals.push('HR');
     if ((!vit.bpSys || !vit.bpDia) && !unk('bp')) missing.vitals.push('BP');
     if (!vit.ecgR && !unk('ecg')) missing.vitals2.push('ECG');
@@ -6464,11 +6463,11 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     const next = pageKeys.find(k => k !== 'review' && (!doneList.includes(k) || (missing[k]?.length ?? 0) > 0));
     setPageKey((h.startedMode && h.startedMode !== modeLabel) ? 'review' : (next ?? 'review'));
   }, []);
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Presenting complaint', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: inRosc ? 'Breathing / Circulation' : 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'Vital Signs (1/2)' : 'Vital Signs', vitals2: 'Vital Signs (2/2)', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Presenting complaint', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'Vital Signs (1/2)' : 'Vital Signs', vitals2: 'Vital Signs (2/2)', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
-  const pageForCard: Record<string, string> = { I: 'id', E: 'events', RABC: 'resp', M: 'what', I2: content.arrest.askFirstRhythm ? 'info' : 'what', I3: content.arrest.askFirstRhythm ? 'info' : 'what', S: 'vitals', T: 'treatment', AMBO: 'allergies', END: 'review' };
+  const pageForCard: Record<string, string> = { I: 'id', E: 'events', M: 'what', I2: content.arrest.askFirstRhythm ? 'info' : 'what', I3: content.arrest.askFirstRhythm ? 'info' : 'what', S: 'vitals', T: 'treatment', AMBO: 'allergies', END: 'review' };
 
   // --- Read out: one card at a time, written as the words to say. Anything missing is shown amber with a question mark.
   const miss = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
@@ -6668,12 +6667,13 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const arrestPage1 = arrestNodes.slice(0, splitAt);
   const arrestPage2 = arrestNodes.slice(splitAt);
 
-  // The vital signs, in the VSS tab's master order (GCS and the respiratory rate are said in the primary survey).
+  // The vital signs: GCS first (ROSC and General handovers), then the VSS tab's master order (the respiratory rates are said in Treatment, with the breathing and ventilation).
   // What has a value comes first, in that order; then "We have not recorded:" lists the rest by name only (no Unknown, no amber prompt).
   const READOUT_ORDER = ['spo2', 'etco2', 'temp', 'bgl', 'lactate'];
   const orderedSigns = [...content.signs].sort((x, y) => READOUT_ORDER.indexOf(x.key) - READOUT_ORDER.indexOf(y.key));
   type VsItem = { label: string, value: string | null, unknown?: boolean };
   const vsItems: VsItem[] = [
+    ...(inRosc ? [{ label: 'GCS', value: vit.gcs ? `GCS of ${vit.gcs}${gcsPartsOk && vit.gcs !== '3' ? ` (E${h.gcsE}, V${h.gcsV}, M${h.gcsM})` : ''}` : null, unknown: unk('gcs') }] : []),
     ...(showCirc ? [
       { label: 'HR', value: vit.hr ? `HR of ${vit.hr}` : null, unknown: unk('hr') },
       { label: 'BP', value: (vit.bpSys && vit.bpDia) ? `BP of ${vit.bpSys}/${vit.bpDia}` : null, unknown: unk('bp') },
@@ -6688,13 +6688,25 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     ...(notRecordedNodes.length ? [<div key="nr">We have not recorded:{sub(notRecordedNodes)}</div>] : []),
   ];
 
+  // Breathing and ventilation, said in the Treatment section straight after the airway (ROSC and General handovers)
+  const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
+  const spontRate: React.ReactNode = vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>;
+  const totalRate: string | null = vit.rrt ? vit.rrt : null;
+  const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
+    : !ventAnswer ? <>{spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</> : spontAnswer === 'No' ? 'They are not breathing' : "We don't know if they are breathing"}, {ampm('ventilation ?')}</>
+    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are ventilating them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
+    : spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</>
+    : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
+    : spontAnswer === 'No' ? 'They are not breathing, and we are not ventilating'
+    : ventAnswer === 'Yes' ? <>We don't know if they are breathing, and we are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
+    : "We don't know if they are breathing";
+  const breathingNodes: React.ReactNode[] = inRosc ? [<div key="br">{breathPart}.</div>] : [];
   const t = content.tx;
   const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA' };
   // (the crew's airway and access answers, or what the Tx log says)
   const airwayPhrase = airwayHasDevice ? airwayName[airwayVal] : '';
   const ivN = parseInt(ivVal, 10) || 0, ioN = parseInt(ioVal, 10) || 0;
-  // (in a ROSC or General handover the primary survey has already said the airway, so the Treatment card leaves it out)
-  const airwayNodes: React.ReactNode[] = inRosc ? [] : [<div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'Self maintained' ? 'Airway is self maintained.' : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>];
+  const airwayNodes: React.ReactNode[] = [<div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'Self maintained' ? 'Airway is self maintained.' : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>];
   const accessNode: React.ReactNode =
     unk('access') ? <div key="x">We don't know what access is in place.</div>
       : !accessDone ? <div key="x">{miss('Access ?')}</div>
@@ -6713,7 +6725,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     return has ? 'After achieving ROSC we gave:' : 'After achieving ROSC we have not given any medications.';
   };
   const standardTreatmentNodes: React.ReactNode[] = [
-    ...airwayNodes, accessNode,
+    ...airwayNodes, ...breathingNodes, accessNode,
     ...(t.medGroups
       ? t.medGroups.map(g => g.meds.length
         ? <div key={`m-${g.key}`}>{medHeading(t, g.key, true)}{subWithNote(g.meds.map(m => ({ text: m.text ?? `${m.name}${m.dose ? ` ${m.dose}` : ''}`, note: m.note ? noteWords(m.note) : '' })))}</div>
@@ -6734,7 +6746,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const medItems = [...timerMeds, ...lines(h.otherMeds).map(x => ({ text: x, note: '' }))];
   const otherItems = [...t.others.map(o => ({ text: o.line, note: o.note })), ...lines(h.otherTx).map(x => ({ text: x, note: '' }))];
   const timersTreatmentNodes: React.ReactNode[] = [
-    ...airwayNodes, accessNode,
+    ...airwayNodes, ...breathingNodes, accessNode,
     medItems.length ? <div key="m">For medications we have given:{subWithNote(medItems)}</div>
       : unk('othermeds') ? <div key="m">We have not given any medications.</div> : <div key="m">{miss('Medications ?')}</div>,
     otherItems.length ? <div key="o">For additional treatments we have:{subWithNote(otherItems)}</div>
@@ -6742,26 +6754,6 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   ];
   const treatmentNodes = timersOnly ? timersTreatmentNodes : standardTreatmentNodes;
 
-  // The primary survey (ROSC), as sentences: "For our primary survey we have GCS 6, airway is an ETT tube, we are ventilating at a rate of 10,
-  // for circulation we have a heart rate of 112 and a blood pressure of 128/76."
-  const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
-  const gcsPart: React.ReactNode = vit.gcs ? gcsText : unk('gcs') ? 'GCS unknown' : ampm('GCS ?');
-  const airwayPart: React.ReactNode = airwayVal === 'Unknown' ? 'Airway is unknown' : airwayPhrase ? `Airway is ${airwayPhrase}` : airwayVal === 'Self maintained' ? 'Airway is self maintained' : airwayVal === 'None' ? 'Airway is not yet secured' : <>Airway is {ampm('Airway ?')}</>;
-  const spontRate: React.ReactNode = vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>;
-  const totalRate: string | null = vit.rrt ? vit.rrt : null;
-  const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
-    : !ventAnswer ? <>{spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</> : spontAnswer === 'No' ? 'They are not breathing' : "We don't know if they are breathing"}, {ampm('ventilation ?')}</>
-    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are ventilating them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
-    : spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</>
-    : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
-    : spontAnswer === 'No' ? 'They are not breathing, and we are not ventilating'
-    : ventAnswer === 'Yes' ? <>We don't know if they are breathing, and we are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
-    : "We don't know if they are breathing";
-  const circPart: React.ReactNode = h.radialPulse === 'Present' ? 'Radial pulse is present'
-    : h.radialPulse === 'Absent' ? 'Radial pulse is not present'
-    : unk('pulse') ? "We don't know if there is a radial pulse"
-    : ampm('Radial pulse ?');
-  const roscBlock: React.ReactNode[] = [<>For a quick primary survey we have {gcsPart}</>, airwayPart, breathPart, circPart].map((n, i) => <div key={i}>{n}.</div>);
   // Allergies, medical history and medications read as one sentence, e.g. "They have no known allergies, we don't know
   // their medical history or medications." What isn't known because it wasn't filled in is amber, as a prompt.
   const joinList = (xs: string[], word: string) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${word} ${xs[xs.length - 1]}`);
@@ -6795,7 +6787,6 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const eventsCard = { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{general ? pheaGeneral : null}</> };
   const arrestCards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
     { key: 'I', title: 'I – Identification', body: <>{a.rhythm ? <div>{a.rhythm.start}{a.rhythm.startTime ? <span data-rhythm-time="start" className="block">{a.rhythm.startTime}.</span> : '.'}</div> : null}{oneSentence(idLines)}</> },
-    ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     ...(eventLines.length || h.arrestStart === 'During' ? [eventsCard] : []),
     { key: 'M', title: 'M – What happened', body: whatNodes },
     { key: 'I2', title: 'I – Info / Arrest Summary', body: arrestPage1 },
@@ -6808,7 +6799,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
 
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
   const cards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = general
-    ? [arrestCards.find(c => c.key === 'I')!, arrestCards.find(c => c.key === 'RABC')!, eventsCard, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
+    ? [arrestCards.find(c => c.key === 'I')!, eventsCard, ...arrestCards.filter(c => ['S', 'T', 'AMBO', 'END'].includes(c.key))]
     : arrestCards;
 
   if (view === 'read') {
@@ -6951,19 +6942,6 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
             <HandoverChoice label="Ventilation provided?" options={['Yes', 'No']} value={ventAnswer} onChange={setVent} columns={2} />
           )}
           {ventAnswer === 'Yes' && rateQuestion('rrt', spontAnswer === 'No' ? 'Ventilation rate' : 'Total respiratory rate (theirs plus yours)')}
-          {showCirc && (
-              <HandoverBox label="Radial pulse" state={(h.radialPulse || unk('pulse')) ? 'done' : 'missing'} className="col-span-2">
-                <span className={compact ? HANDOVER_HEADING_COMPACT : HANDOVER_HEADING}>Radial pulse</span>
-                <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-                  {[['Present', 'Present'], ['Absent', 'Not present']].map(([v, lbl]) => {
-                    const on = h.radialPulse === v && !unk('pulse');
-                    return <button key={v} data-handover-choice={`Radial pulse: ${lbl}`} aria-pressed={on} onClick={() => { if (unk('pulse')) setUnk('pulse', false); onField('radialPulse', on ? '' : v); }}
-                      className={`${compact ? 'py-1.5 text-[15px]' : 'py-4 text-[16px]'} rounded-lg font-bold border btn-base ${on ? 'bg-[#4a6fa5] text-white border-[#4a6fa5]' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>{lbl}</button>;
-                  })}
-                </div>
-                <div className={compact ? 'mt-2' : 'mt-3'}><HandoverUnknown label="Radial pulse" on={unk('pulse')} onClick={() => { const on = !unk('pulse'); setUnk('pulse', on); if (on) onField('radialPulse', ''); }} /></div>
-              </HandoverBox>
-            )}
         </HandoverPageCard>
       );
       case 'what': return (
