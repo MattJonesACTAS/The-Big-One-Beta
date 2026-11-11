@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 218';
+const BUILD_LABEL = 'build 219';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6014,7 +6014,7 @@ const buildHandoverContent = (
       let text: string | undefined;
       if (INFUSION_DRUGS.includes(med)) {
         const d = state.infusionDoses?.[med];
-        dose = d ? `${d}${state.infusionUnits?.[med] ?? (med === 'Adrenaline infusion' ? 'mcg' : 'mg')}` : '';
+        dose = d ? `${d}${state.infusionUnits?.[med] ?? (med === 'Adrenaline infusion' ? 'mcg' : 'mg')} total` : '';
       } else {
         dose = info.display.replace(/\s*\(\d+\)\s*$/, '');
         text = multiDoseText(name, info);
@@ -6526,7 +6526,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     : roscStamp != null ? 'afterRosc' : 'before';
   const pheaGeneral: React.ReactNode[] = pheaTiming === 'general' ? [<div key="phea">To manage their presentation we needed to perform emergency anaesthesia.</div>] : [];
   const pheaAfterRosc = pheaTiming === 'afterRosc';
-  // "They arrested at approximately 10:20am. It was a witnessed arrest, but they received no CPR between their arrest and our arrival
+  // "They arrested at approximately 10:20am. It was a witnessed arrest, but they received no CPR between their arrest and the beginning of our management
   // 10 to 15 minutes later. We suspect the cause of arrest was sepsis."
   const bandLater: Record<string, string> = { 'Under 5 min': 'less than 5 minutes', '5–10 min': '5 to 10 minutes', '10–15 min': '10 to 15 minutes', '15–20 min': '15 to 20 minutes', 'Over 20 min': 'more than 20 minutes' };
   const laterText = (roughly: boolean) => { const bt = bandLater[h.startedBefore]; return bt ? ` ${roughly && /^\d/.test(bt) ? 'roughly ' : ''}${bt} later` : ''; };
@@ -6546,8 +6546,8 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     : `They arrested ${beforeWords[h.startedBefore]} before our arrival.`;
   const wit = h.witnessed, byc = h.bystanderCpr;
   const witText = wit === 'Yes' ? 'a witnessed' : wit === 'No' ? 'an unwitnessed' : '';
-  const bycClause = byc === 'Yes' ? `they received bystander CPR until our arrival${laterText(true)}`
-    : byc === 'No' ? `they received no CPR between their arrest and our arrival${laterText(false)}`
+  const bycClause = byc === 'Yes' ? `they received bystander CPR until the beginning of our management${laterText(true)}`
+    : byc === 'No' ? `they received no CPR between their arrest and the beginning of our management${laterText(false)}`
     : byc === 'Unknown' ? "we don't know if they received bystander CPR" : '';
   const witnessSentences: React.ReactNode[] = [];
   if ((wit === 'Yes' || wit === 'No') && (byc === 'Yes' || byc === 'No')) {
@@ -6683,7 +6683,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const haveNodes: React.ReactNode[] = vsItems.filter(i => i.value).map(i => i.value);
   const notRecordedNodes: React.ReactNode[] = vsItems.filter(i => !i.value).map(i => i.label);
   const vitalsNodes: React.ReactNode[] = [
-    ...(haveNodes.length ? [<div key="v">For vital signs we have:{sub(haveNodes)}</div>] : []),
+    ...(haveNodes.length ? [<div key="v">For vital signs now we have:{sub(haveNodes)}</div>] : []),
     ...(notRecordedNodes.length ? [<div key="nr">We have not recorded:{sub(notRecordedNodes)}</div>] : []),
   ];
 
@@ -6698,11 +6698,13 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     unk('access') ? <div key="x">We don't know what access is in place.</div>
       : !accessDone ? <div key="x">{miss('Access ?')}</div>
       : ioN || ivN ? <div key="x">For access we have:{sub([...(ioN ? [`${ioN} x IO${ioN > 1 ? 's' : ''}`] : []), ...(ivN ? [`${ivN} x IV${ivN > 1 ? 's' : ''}`] : [])])}</div> : <div key="x">We do not have IV or IO access.</div>;
-  // After more than one arrest the first block is "Earlier in the case" (it includes a ROSC period, and the arrests before it), not "Before ROSC"
+  // After more than one arrest the first block runs from the start of the case to the latest ROSC (or to the rearrest), and says so; it includes a ROSC period and the arrests before it
+  // (with a single arrest it is "Before ROSC")
   const medHeading = (tt: HandoverTreatment, which: string, has: boolean): string => {
     const before = which === 'before';
     if (tt.medGroupsEarlier) {
-      if (before) return has ? 'Earlier in the case we gave:' : 'Earlier in the case we did not give any medications.';
+      const upTo = tt.medGroupsKind === 'rearrest' ? 'their rearrest' : 'our latest ROSC';
+      if (before) return has ? `Between the start of the case and ${upTo} we gave:` : `Between the start of the case and ${upTo} we did not give any medications.`;
       const since = tt.medGroupsKind === 'rearrest' ? 'Since they rearrested we' : 'Since the latest ROSC we';
       return has ? `${since} have given:` : `${since} have not given any medications.`;
     }
