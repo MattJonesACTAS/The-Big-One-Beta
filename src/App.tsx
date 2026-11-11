@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 219';
+const BUILD_LABEL = 'build 220';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -5763,7 +5763,7 @@ const genderText = (h: HandoverFields): string => (h.gender === 'Other' ? (h.gen
 
 type HandoverInfoItem = { t: string, sub?: string[] };
 type HandoverArrest = {
-  rhythm: { text: string, urgent: boolean, start: string, end: string } | null;   // the next rhythm check (arrest with timers only): said before the handover starts and again at the end
+  rhythm: { text: string, urgent: boolean, start: string, startTime: string | null, end: string, endTime: string | null } | null;   // the next rhythm check (arrest with timers only): said before the handover starts and again at the end
   durationSeconds: number | null;                     // first rhythm check to now, or to ROSC
   arrestSeconds: number | null;                       // after a rearrest or with two or more ROSCs: the time actually spent in arrest (the ROSC periods taken out)
   thisArrestSeconds: number | null;                   // in arrest again: how long since the latest rearrest
@@ -5801,7 +5801,7 @@ type HandoverContent = {
   weight: string;
   defaultAge: { value: string, unit: string } | null;
   airway: string;
-  rhythm: { text: string, urgent: boolean, start: string, end: string } | null;
+  rhythm: { text: string, urgent: boolean, start: string, startTime: string | null, end: string, endTime: string | null } | null;
   arrest: HandoverArrest;
   information: HandoverInfoItem[];
   signs: HandoverSign[];
@@ -5819,12 +5819,13 @@ const spokenDuration = (total: number): string => {
 
 // When the next rhythm check is due, said before the handover starts and again at the end. Only while the patient is in
 // arrest and the app is running the rhythm check timer (not Tx log only, not ROSC). It is the timer, or 'overdue' if the check was delayed.
-const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean, start: string, end: string } | null => {
+// (the time is kept apart from the sentence so the handover can put it on a line of its own, and it never splits across two lines)
+const handoverRhythmStatus = (state: AppState): { text: string, urgent: boolean, start: string, startTime: string | null, end: string, endTime: string | null } | null => {
   if (state.timingMode === 'log' || state.isROSCMode || !state.running) return null;
   const before = 'Before I start handover, be aware that';
-  if (state.rhythmCheckDelayedAt != null) return { text: 'Our rhythm check is overdue', urgent: true, start: `${before} our rhythm check is overdue`, end: 'The rhythm check is now overdue' };
+  if (state.rhythmCheckDelayedAt != null) return { text: 'Our rhythm check is overdue', urgent: true, start: `${before} our rhythm check is overdue`, startTime: null, end: 'The rhythm check is now overdue', endTime: null };
   const left = Math.max(0, state.rhythmCheckTarget - state.elapsedSeconds);
-  return { text: `Our next rhythm check is in ${spokenDuration(left)}`, urgent: left <= 30, start: `${before} our next rhythm check is in ${spokenDuration(left)}`, end: `The next rhythm check is now due in ${spokenDuration(left)}` };
+  return { text: `Our next rhythm check is in ${spokenDuration(left)}`, urgent: left <= 30, start: `${before} our next rhythm check is in`, startTime: spokenDuration(left), end: 'The next rhythm check is now due in', endTime: spokenDuration(left) };
 };
 
 const buildHandoverContent = (
@@ -6793,7 +6794,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const eventLines = !eventsApply ? [] : lines(h.pertinentEvents).map((l, i) => (i === 0 && !/^our patient\b/i.test(l)) ? `Our patient ${l}` : l);
   const eventsCard = { key: 'E', title: 'M – Why ACTAS was called', body: <>{eventLines.length ? eventLines.map((l, i) => <div key={i}>{/[.!?]$/.test(l) ? l : `${l}.`}</div>) : <div>{miss('Why ACTAS was called ?')}</div>}{general ? pheaGeneral : null}</> };
   const arrestCards: { key: string, title: string, muted?: boolean, body: React.ReactNode }[] = [
-    { key: 'I', title: 'I – Identification', body: <>{a.rhythm ? <div>{a.rhythm.start}.</div> : null}{oneSentence(idLines)}</> },
+    { key: 'I', title: 'I – Identification', body: <>{a.rhythm ? <div>{a.rhythm.start}{a.rhythm.startTime ? <span data-rhythm-time="start" className="block">{a.rhythm.startTime}.</span> : '.'}</div> : null}{oneSentence(idLines)}</> },
     ...(inRosc ? [{ key: 'RABC', title: 'R / A / B / C', body: roscBlock }] : []),
     ...(eventLines.length || h.arrestStart === 'During' ? [eventsCard] : []),
     { key: 'M', title: 'M – What happened', body: whatNodes },
@@ -6802,7 +6803,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     { key: 'S', title: 'S – Vital Signs', body: vitalsNodes },
     { key: 'T', title: 'T – Treatment', body: treatmentNodes },
     { key: 'AMBO', title: 'AMBO', body: ambo },
-    { key: 'END', title: 'Finish', body: <div className="text-center">{a.rhythm ? <div className={`${compact ? 'text-[20px] pt-6 pb-6' : 'text-[26px] pt-10 pb-10'} font-medium px-2`}>{a.rhythm.end}.</div> : null}<div className={`${compact ? 'text-[34px]' : 'text-[44px]'} ${a.rhythm ? '' : (compact ? 'pt-10' : 'pt-20')}`}>Any questions?</div></div> },
+    { key: 'END', title: 'Finish', body: <div className="text-center">{a.rhythm ? <div className={`${compact ? 'text-[20px] pt-6 pb-6' : 'text-[26px] pt-10 pb-10'} font-medium px-2`}>{a.rhythm.end}{a.rhythm.endTime ? <span data-rhythm-time="end" className="block">{a.rhythm.endTime}.</span> : '.'}</div> : null}<div className={`${compact ? 'text-[34px]' : 'text-[44px]'} ${a.rhythm ? '' : (compact ? 'pt-10' : 'pt-20')}`}>Any questions?</div></div> },
   ];
 
   // General: Identification, what happened before we arrived (when there's something to say), then the primary survey, vital signs, treatment and AMBO
