@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 221';
+const BUILD_LABEL = 'build 222';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6298,7 +6298,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
 
   // Fill in is a series of pages. An arrest has them all; anything else is still to be built, so it only has the one page saying so.
   const timersOnly = state.timingMode === 'minimal';       // Arrest – Timers
-  const pageKeys: string[] = isArrestCase ? ['id', 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), ...(inRosc ? ['resp'] : []), 'vitals', ...(inRosc ? ['vitals2', 'breath'] : []), 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'otherinfo', 'review'] : ['id', 'events', 'resp', 'vitals', 'vitals2', 'breath', 'treatment', 'allergies', 'otherinfo', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
+  const pageKeys: string[] = isArrestCase ? ['id', 'what', ...(h.arrestStart === 'Before' ? ['witness'] : []), 'details', ...(content.arrest.askFirstRhythm ? ['info'] : []), ...(inRosc ? ['resp', 'breath'] : []), 'vitals', ...(inRosc ? ['vitals2'] : []), 'treatment', ...(timersOnly ? ['othertx'] : []), 'allergies', 'otherinfo', 'review'] : ['id', 'events', 'resp', 'breath', 'vitals', 'vitals2', 'treatment', 'allergies', 'otherinfo', 'review'];     // General: what happened first, then GCS and breathing (own pages) just before Vital Signs
   const curKey = pageKeys.includes(pageKey) ? pageKey : pageKeys[0];
   const curIdx = pageKeys.indexOf(curKey);
 
@@ -6463,7 +6463,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
     const next = pageKeys.find(k => k !== 'review' && (!doneList.includes(k) || (missing[k]?.length ?? 0) > 0));
     setPageKey((h.startedMode && h.startedMode !== modeLabel) ? 'review' : (next ?? 'review'));
   }, []);
-  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Presenting complaint', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'Response', breath: 'Breathing', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'Vital Signs (1/2)' : 'Vital Signs', vitals2: 'Vital Signs (2/2)', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
+  const pageTitle: Record<string, string> = { other: 'Handover', events: 'Presenting complaint', details: 'Cause of arrest', treatment: 'Treatment', othertx: 'Medications and Tx', id: 'Identification', resp: 'VS 1/4', breath: 'VS 2/4', what: 'What happened', witness: 'Witnessed and CPR', info: 'Info / Arrest Summary', vitals: inRosc ? 'VS 3/4' : 'Vital Signs', vitals2: 'VS 4/4', allergies: 'Allergies and history', otherinfo: 'Medications and other info', review: 'Review' };
   const pageDone: Record<string, boolean> = { review: false, other: false };
   Object.keys(missing).forEach(k => { pageDone[k] = missing[k].length === 0; });
   // Which Fill in page a Read out card belongs to (the Edit button goes there)
