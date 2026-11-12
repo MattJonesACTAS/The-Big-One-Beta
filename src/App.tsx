@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 222';
+const BUILD_LABEL = 'build 223';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6667,7 +6667,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   const arrestPage1 = arrestNodes.slice(0, splitAt);
   const arrestPage2 = arrestNodes.slice(splitAt);
 
-  // The vital signs: GCS first (ROSC and General handovers), then the VSS tab's master order (the respiratory rates are said in Treatment, with the breathing and ventilation).
+  // The vital signs: GCS first (ROSC and General handovers), then the VSS tab's order, with their own respiratory rate just before SpO₂ (the ventilation is said in Treatment, after the airway).
   // What has a value comes first, in that order; then "We have not recorded:" lists the rest by name only (no Unknown, no amber prompt).
   const READOUT_ORDER = ['spo2', 'etco2', 'temp', 'bgl', 'lactate'];
   const orderedSigns = [...content.signs].sort((x, y) => READOUT_ORDER.indexOf(x.key) - READOUT_ORDER.indexOf(y.key));
@@ -6679,6 +6679,7 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
       { label: 'BP', value: (vit.bpSys && vit.bpDia) ? `BP of ${vit.bpSys}/${vit.bpDia}` : null, unknown: unk('bp') },
       { label: 'ECG', value: ecgBullet(vit), unknown: unk('ecg') },
     ] : []),
+    ...(inRosc ? [{ label: ventAnswer === 'Yes' ? 'Intrinsic RR' : 'RR', value: spontAnswer === 'No' ? 'They have no intrinsic RR' : (spontAnswer === 'Yes' && vit.rr) ? `${ventAnswer === 'Yes' ? 'Intrinsic RR' : 'RR'} of ${vit.rr}` : null, unknown: unk('rr') }] : []),
     ...orderedSigns.map(sg => ({ label: sg.label, value: sg.value ? `${sg.label} of ${sg.value}${sg.unit === '%' ? '%' : ''}` : null, unknown: unk(sg.key) })),
   ];
   const haveNodes: React.ReactNode[] = vsItems.filter(i => i.value).map(i => i.value);
@@ -6690,17 +6691,13 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
 
   // Breathing and ventilation, said in the Treatment section straight after the airway (ROSC and General handovers)
   const ampm = (t: string) => <span className="text-amber-500" data-handover-missing-frag={t}>{t}</span>;
-  const spontRate: React.ReactNode = vit.rr ? ` at a rate of ${vit.rr}` : unk('rr') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>;
   const totalRate: string | null = vit.rrt ? vit.rrt : null;
-  const breathPart: React.ReactNode = !spontAnswer ? ampm('Breathing ?')
-    : !ventAnswer ? <>{spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</> : spontAnswer === 'No' ? 'They are not breathing' : "We don't know if they are breathing"}, {ampm('ventilation ?')}</>
-    : spontAnswer === 'Yes' && ventAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}, and we are ventilating them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
-    : spontAnswer === 'Yes' ? <>They are spontaneously ventilating{spontRate}</>
-    : spontAnswer === 'No' && ventAnswer === 'Yes' ? <>We are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
-    : spontAnswer === 'No' ? 'They are not breathing, and we are not ventilating'
-    : ventAnswer === 'Yes' ? <>We don't know if they are breathing, and we are ventilating{totalRate ? ` at a rate of ${totalRate}` : unk('rrt') ? ', rate unknown' : <> at a rate of {ampm('rate ?')}</>}</>
-    : "We don't know if they are breathing";
-  const breathingNodes: React.ReactNode[] = inRosc ? [<div key="br">{breathPart}.</div>] : [];
+  // Their own respiratory rate is a vital sign (below). After the airway we say only what we are doing about their breathing.
+  const ventLine: React.ReactNode = ventAnswer === 'Yes' ? <>We are ventilating them{totalRate ? ` to a total rate of ${totalRate}` : unk('rrt') ? ', total rate unknown' : <> to a total rate of {ampm('?')}</>}</>
+    : !ventAnswer ? ampm('Ventilation ?')
+    : spontAnswer === 'No' ? 'We are not ventilating them'
+    : null;
+  const breathingNodes: React.ReactNode[] = inRosc && ventLine ? [<div key="br">{ventLine}.</div>] : [];
   const t = content.tx;
   const airwayName: Record<string, string> = { ETT: 'an ETT tube', LMA: 'an LMA', OPA: 'an OPA', NPA: 'an NPA', FONA: 'a FONA' };
   // (the crew's airway and access answers, or what the Tx log says)
