@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { APP_VERSION, LAST_SEEN_VERSION_KEY, pendingReleaseNotes } from './releaseNotes';
 // The build of this delivery, shown beside the version number (first screen and About), so it is easy to tell which build a phone is running.
-const BUILD_LABEL = 'build 223';
+const BUILD_LABEL = 'build 224';
 import { motion, AnimatePresence, useIsPresent } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -6703,7 +6703,9 @@ function HandoverOverlay({ state, onField: onFieldRaw, onVital: onVitalRaw, onWe
   // (the crew's airway and access answers, or what the Tx log says)
   const airwayPhrase = airwayHasDevice ? airwayName[airwayVal] : '';
   const ivN = parseInt(ivVal, 10) || 0, ioN = parseInt(ioVal, 10) || 0;
-  const airwayNodes: React.ReactNode[] = [<div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'Self maintained' ? 'Airway is self maintained.' : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>];
+  // A patient with a GCS of 15 whose airway is self maintained needs no airway line in the handover
+  const airwayOmitted = vit.gcs === '15' && airwayVal === 'Self maintained';
+  const airwayNodes: React.ReactNode[] = airwayOmitted ? [] : [<div key="a">{airwayVal === 'Unknown' ? "We don't know what airway is in place." : airwayPhrase ? `For airway we have ${airwayPhrase}.` : airwayVal === 'Self maintained' ? 'Airway is self maintained.' : airwayVal === 'None' ? 'Airway is not yet secured.' : miss('Airway ?')}</div>];
   const accessNode: React.ReactNode =
     unk('access') ? <div key="x">We don't know what access is in place.</div>
       : !accessDone ? <div key="x">{miss('Access ?')}</div>
